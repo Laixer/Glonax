@@ -8,8 +8,8 @@ use clap::{App, Arg};
 use glonax::runtime::{Runtime, RuntimeSettings};
 
 #[allow(dead_code)]
-const SERIAL_HYDRAU1: &str = "/dev/ttyUSB1";
-// #[allow(dead_code)]
+const SERIAL_HYDRAU1: &str = "/dev/ttyUSB0";
+// #[allow(dead_code)]st
 // const SERIAL_HYDRAU2: &str = "/dev/ttyUSB1";
 #[allow(dead_code)]
 const SERIAL_INTERTIAL1: &str = "/dev/ttyUSB0";
@@ -30,15 +30,15 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
     // log::info!("Name: {}", hydraulic_motion2.name());
     // hydraulic_motion2.probe();
 
-    let mut hydraulic_compose = Composer::with_index(0);
-    log::info!("Name: {}", hydraulic_compose.name());
-    hydraulic_compose.insert(hydraulic_motion);
-    hydraulic_compose.probe();
+    // let mut hydraulic_compose = Composer::with_index(0);
+    // log::info!("Name: {}", hydraulic_compose.name());
+    // hydraulic_compose.insert(hydraulic_motion);
+    // hydraulic_compose.probe();
 
     // TODO: Runtime builder.
 
     let mut rt = Runtime {
-        motion_device: hydraulic_compose,
+        motion_device: hydraulic_motion,
         actuator_map: None,
         event_bus: tokio::sync::mpsc::channel(128),
         settings: RuntimeSettings::from(&config),
@@ -89,7 +89,7 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
 
     rt.run().await;
 
-    // TODO: This should really be an error.
+    // TODO: This should really be an error because we dont expect to return.
     Ok(())
 }
 
@@ -180,8 +180,7 @@ async fn main() {
     // .init();
 
     // NOTE: We'll never reach beyond this point on success.
-    match run(config).await {
-        Ok(()) => {}
-        Err(e) => log::error!("{}", e),
+    if let Err(e) = run(config).await {
+        log::error!("{}", e);
     }
 }

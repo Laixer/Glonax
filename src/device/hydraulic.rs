@@ -1,10 +1,11 @@
-use crate::gloproto::{Session, Sugar};
+use crate::ice::Session;
 
 use super::{Device, MotionDevice};
 
 use serial::{SerialPort, SystemPort};
 
 const DEVICE_NAME: &str = "hydraulic";
+const DEVICE_ADDR: u16 = 0x7;
 
 pub struct Hydraulic {
     session: Session<SystemPort>,
@@ -18,7 +19,7 @@ impl Hydraulic {
 
         channel
             .reconfigure(&|settings| {
-                settings.set_baud_rate(serial::BaudOther(460800))?;
+                settings.set_baud_rate(serial::Baud115200)?;
                 settings.set_parity(serial::Parity::ParityNone);
                 settings.set_stop_bits(serial::StopBits::Stop1);
                 settings.set_flow_control(serial::FlowControl::FlowNone);
@@ -29,7 +30,7 @@ impl Hydraulic {
             })?;
 
         Ok(Self {
-            session: Session::new(channel),
+            session: Session::new(channel, DEVICE_ADDR),
         })
     }
 }
@@ -40,18 +41,17 @@ impl Device for Hydraulic {
     }
 
     fn probe(&mut self) {
-        self.session.wait_for_init();
         self.halt();
     }
 }
 
 impl MotionDevice for Hydraulic {
     fn actuate(&mut self, actuator: u32, value: i16) {
-        self.session.request(Sugar::PulsePin(actuator as u8, value));
+        self.session.dispatch_valve_control(actuator as u8, value);
     }
 
     fn halt(&mut self) {
-        self.session.request(Sugar::PulsePin(u8::MAX, 0));
+        self.session.dispatch_valve_control(u8::MAX, 0);
     }
 }
 

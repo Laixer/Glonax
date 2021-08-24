@@ -130,6 +130,7 @@ impl<D> Device for Composer<D> {
     // TODO: Impl probe.
 }
 
+// TODO: Maybe remove ?
 impl<D: MotionDevice> MotionDevice for Composer<D> {
     fn actuate(&mut self, actuator: u32, value: i16) {
         match self.list.get_mut(&(actuator / ACTUATORS_PER_CONTROLLER)) {
