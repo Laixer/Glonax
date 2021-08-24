@@ -2,9 +2,9 @@ use std::{ops::Range, u32};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Actuator {
-    Boom = 0,
+    Boom = 2,
     Arm = 1,
-    Bucket = 2,
+    Bucket = 0,
     Slew = 3,
     LimpLeft = 4,
     LimpRight = 5,

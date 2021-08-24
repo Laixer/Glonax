@@ -56,7 +56,7 @@ impl MetricDevice for Inertial {
                 Sugar::Acceleration(x, y, z) => {
                     Some(MetricValue::Position(Position::from_raw(x, y, z)))
                 }
-                Sugar::Orientation(x, y, z) => {
+                Sugar::Orientation(_x, _y, _z) => {
                     // debug!("Arm Raw Orientation: X {} Y {} Z {}", x, y, z);
                     None
                 }

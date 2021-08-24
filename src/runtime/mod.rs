@@ -142,6 +142,8 @@ impl<A: MotionDevice> Runtime<A> {
             None => motion_control.actuator,
         };
 
+        debug!("Move actuator {} with {}", actuator, motion_control.value);
+
         self.motion_device.actuate(actuator, motion_control.value);
     }
 
@@ -154,6 +156,7 @@ impl<A: MotionDevice> Runtime<A> {
         let task_handle = tokio::task::spawn(async move {
             use crate::orchestrator::Actuator;
 
+            // Map the gamepad scancodes to the actuators.
             const COMMAND_MAP: [(i16, Actuator); 6] = [
                 (0, Actuator::Arm),
                 (1, Actuator::Slew),
