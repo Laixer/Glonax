@@ -153,31 +153,26 @@ async fn main() {
         .set_target_level(log::LevelFilter::Trace)
         .build();
 
+    let log_level = match matches.occurrences_of("v") {
+        0 => log::LevelFilter::Error,
+        1 => log::LevelFilter::Info,
+        2 | _ => log::LevelFilter::Debug,
+    };
+
     simplelog::CombinedLogger::init(vec![
         simplelog::TermLogger::new(
-            log::LevelFilter::Debug,
+            log_level,
             log_config.clone(),
             simplelog::TerminalMode::Mixed,
             simplelog::ColorChoice::Auto,
         ),
         simplelog::WriteLogger::new(
-            log::LevelFilter::Debug,
+            log_level,
             log_config.clone(),
             std::fs::File::create(format!("log/manual_{}.log", std::process::id())).unwrap(),
         ),
     ])
     .unwrap();
-
-    // env_logger::Builder::from_env(Env::default().filter_or(
-    //     env_logger::DEFAULT_FILTER_ENV,
-    //     match matches.occurrences_of("v") {
-    //         0 => "error",
-    //         1 => "info",
-    //         2 | _ => "debug",
-    //     },
-    // ))
-    // .format_module_path(false)
-    // .init();
 
     // NOTE: We'll never reach beyond this point on success.
     if let Err(e) = run(config).await {
