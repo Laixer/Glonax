@@ -2,7 +2,6 @@ pub mod common;
 mod config;
 pub mod daemon;
 pub mod device;
-pub mod gloproto;
 pub mod ice;
 pub mod kernel;
 pub mod orchestrator;
