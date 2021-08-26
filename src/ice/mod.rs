@@ -98,7 +98,9 @@ impl Frame {
     const SIZE: usize = 14; // TODO: Calculate this.
 
     fn new() -> Self {
-        Self { buffer: [0; 14] }
+        Self {
+            buffer: [0; Frame::SIZE],
+        }
     }
 
     // TODO: AsRef<[u8]>
@@ -363,5 +365,54 @@ impl<T: std::io::Write> Session<T> {
         builder.set_payload(SolenoidControl { id, value }, PayloadType::SolenoidControl);
 
         self.write_frame(builder.build());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct MemoryDevice {
+        buf: [u8; Frame::SIZE],
+    }
+
+    impl MemoryDevice {
+        fn new() -> Self {
+            Self {
+                buf: [0; Frame::SIZE],
+            }
+        }
+    }
+
+    impl std::io::Read for MemoryDevice {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            buf[..self.buf.len()].copy_from_slice(&self.buf[..]);
+            Ok(self.buf.len())
+        }
+    }
+
+    impl std::io::Write for MemoryDevice {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.buf.copy_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn session_write_read() {
+        const ADDR: u16 = 0x15;
+
+        let device = MemoryDevice::new();
+
+        let mut session = Session::new(device, ADDR);
+        session.announce_device();
+        let frame = session.accept();
+
+        assert!(frame.is_broadcast());
+        assert_eq!(frame.address(), u16::MAX);
     }
 }

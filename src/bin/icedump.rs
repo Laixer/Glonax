@@ -11,6 +11,9 @@ use clap::{App, Arg};
 use glonax::ice::{DeviceInfo, PayloadType, Session, Vector3x16};
 use serial::{SerialPort, SystemPort};
 
+/// This is our local device address.
+const DEVICE_ADDR: u16 = 0x21;
+
 /// Read the incoming packets.
 ///
 /// Data is read from the underlaying device. Incoming packets are
@@ -19,7 +22,7 @@ use serial::{SerialPort, SystemPort};
 fn read_packet<T: Read + Write>(device: T) {
     info!("Reading packets...");
 
-    let mut session = Session::new(device, 0x21);
+    let mut session = Session::new(device, DEVICE_ADDR);
 
     let start = std::time::Instant::now();
 
