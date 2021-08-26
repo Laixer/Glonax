@@ -351,18 +351,17 @@ impl<T: std::io::Write> Session<T> {
             },
             PayloadType::DeviceInfo,
         );
-        let frame = builder.build();
 
-        self.write_frame(frame);
+        self.write_frame(builder.build());
     }
 
+    /// Dispatch valve control message.
     pub fn dispatch_valve_control(&mut self, id: u8, value: i16) {
         let mut builder = FrameBuilder::new();
 
         builder.set_address(AddressFamily::Unicast(0x7));
         builder.set_payload(SolenoidControl { id, value }, PayloadType::SolenoidControl);
-        let frame = builder.build();
 
-        self.write_frame(frame);
+        self.write_frame(builder.build());
     }
 }

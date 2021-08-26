@@ -9,10 +9,10 @@ use glonax::runtime::{Runtime, RuntimeSettings};
 
 #[allow(dead_code)]
 const SERIAL_HYDRAU1: &str = "/dev/ttyUSB0";
-// #[allow(dead_code)]st
-// const SERIAL_HYDRAU2: &str = "/dev/ttyUSB1";
+
 #[allow(dead_code)]
 const SERIAL_INTERTIAL1: &str = "/dev/ttyUSB0";
+
 // #[allow(dead_code)]
 // const SERIAL_INTERTIAL2: &str = "/dev/ttyUSB1";
 
@@ -26,14 +26,6 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
     let mut hydraulic_motion = Hydraulic::new(SERIAL_HYDRAU1)?;
     log::info!("Name: {}", hydraulic_motion.name());
     hydraulic_motion.probe();
-    // let mut hydraulic_motion2 = Hydraulic::new(SERIAL_HYDRAU2)?;
-    // log::info!("Name: {}", hydraulic_motion2.name());
-    // hydraulic_motion2.probe();
-
-    // let mut hydraulic_compose = Composer::with_index(0);
-    // log::info!("Name: {}", hydraulic_compose.name());
-    // hydraulic_compose.insert(hydraulic_motion);
-    // hydraulic_compose.probe();
 
     // TODO: Runtime builder.
 
@@ -83,10 +75,7 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
         rt.spawn_command_device(gamepad);
     }
 
-    //
     // Start the runtime.
-    //
-
     rt.run().await;
 
     // TODO: This should really be an error because we dont expect to return.

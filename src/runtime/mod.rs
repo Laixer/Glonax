@@ -110,18 +110,21 @@ impl Default for RuntimeSettings {
 pub struct Runtime<A> {
     /// Actuator device.
     pub motion_device: A,
-    /// Metric device.
-    // pub metric_device: Option<M>, // TODO: If we're taking the device anyway then do not `own` this var.
     /// Optional actuator mapping.
     pub actuator_map: Option<ActuatorMap>,
     /// Runtime event bus.
     pub event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Runtime settings.
     pub settings: RuntimeSettings,
+    /// Task pool.
     pub task_pool: Vec<JoinHandle<()>>,
 }
 
 impl<A> Runtime<A> {
+    /// Create a runtime dispatcher.
+    ///
+    /// The dispatcher is the input channel to the
+    /// runtime event queue.
     #[inline]
     pub fn dispatch(&self) -> Dispatch {
         Dispatch(self.event_bus.0.clone())
@@ -188,6 +191,11 @@ impl<A: MotionDevice> Runtime<A> {
         self
     }
 
+    /// Start the runtime.
+    ///
+    /// The runtime will process the events from the
+    /// event bus. The runtime should only every break
+    /// out of the loop if shutdown was requested.
     pub async fn run(&mut self) {
         loop {
             if let Some(event) = self.event_bus.1.recv().await {
