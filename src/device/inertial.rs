@@ -1,13 +1,13 @@
-use crate::{
-    common::position::Position,
-    gloproto::{Session, Sugar},
-};
+use std::convert::TryInto;
+
+use crate::ice::{PayloadType, Session, Vector3x16};
 
 use super::{Device, MetricDevice, MetricValue};
 
 use serial::{SerialPort, SystemPort};
 
 const DEVICE_NAME: &str = "imu";
+const DEVICE_ADDR: u16 = 0x7;
 
 pub struct Inertial {
     session: Session<SystemPort>,
@@ -32,7 +32,7 @@ impl Inertial {
             })?;
 
         Ok(Self {
-            session: Session::new(channel),
+            session: Session::new(channel, DEVICE_ADDR),
         })
     }
 }
@@ -43,28 +43,44 @@ impl Device for Inertial {
     }
 
     fn probe(&mut self) {
-        self.session.wait_for_init();
+        // self.session.wait_for_init();
     }
 }
 
 impl MetricDevice for Inertial {
     // TODO: Code can be improved.
     fn next(&mut self) -> Option<MetricValue> {
-        if let Some(packet) = self.session.next() {
-            match packet {
-                Sugar::Temperature(temp) => Some(MetricValue::Temperature(temp)),
-                Sugar::Acceleration(x, y, z) => {
-                    Some(MetricValue::Position(Position::from_raw(x, y, z)))
-                }
-                Sugar::Orientation(_x, _y, _z) => {
-                    // debug!("Arm Raw Orientation: X {} Y {} Z {}", x, y, z);
-                    None
-                }
-                Sugar::Direction(_, _, _) => None,
-                _ => None,
+        let frame = self.session.accept();
+        match frame.packet().payload_type.try_into().unwrap() {
+            PayloadType::MeasurementAcceleration => {
+                let acc: Vector3x16 = frame.get(6).unwrap();
+                let acc_x = acc.x;
+                let acc_y = acc.y;
+                let acc_z = acc.z;
+                debug!(
+                    "Acceleration: X: {:>+5} Y: {:>+5} Z: {:>+5}",
+                    acc_x, acc_y, acc_z
+                );
+                None
             }
-        } else {
-            None
+            _ => None,
         }
+
+        // if let Some(packet) = self.session.accept() {
+        //     match packet {
+        //         Sugar::Temperature(temp) => Some(MetricValue::Temperature(temp)),
+        //         Sugar::Acceleration(x, y, z) => {
+        //             Some(MetricValue::Position(Position::from_raw(x, y, z)))
+        //         }
+        //         Sugar::Orientation(_x, _y, _z) => {
+        //             // debug!("Arm Raw Orientation: X {} Y {} Z {}", x, y, z);
+        //             None
+        //         }
+        //         Sugar::Direction(_, _, _) => None,
+        //         _ => None,
+        //     }
+        // } else {
+        //     None
+        // }
     }
 }
