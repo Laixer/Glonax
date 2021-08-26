@@ -22,20 +22,20 @@ impl Stats {
     }
 
     /// Calculate ingress faillure rate in percentage.
-    pub fn rx_faillure_rate(&self) -> usize {
+    pub fn rx_failure_rate(&self) -> f64 {
         if self.rx_count > 0 {
-            (self.rx_failure / self.rx_count) * 100
+            (self.rx_failure as f64 / self.rx_count as f64) * 100.0
         } else {
-            0
+            0.0
         }
     }
 
     /// Calculate egress faillure rate in percentage.
-    pub fn tx_faillure_rate(&self) -> usize {
+    pub fn tx_failure_rate(&self) -> f64 {
         if self.tx_count > 0 {
-            (self.tx_failure / self.tx_count) * 100
+            (self.tx_failure as f64 / self.tx_count as f64) * 100.0
         } else {
-            0
+            0.0
         }
     }
 
@@ -48,5 +48,38 @@ impl Stats {
 impl Default for Stats {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reset_is_empty() {
+        let mut stats = Stats::new();
+
+        stats.rx_count += 1;
+        stats.reset();
+
+        assert_eq!(stats.rx_count, 0);
+        assert_eq!(stats.rx_failure, 0);
+        assert_eq!(stats.tx_count, 0);
+        assert_eq!(stats.tx_failure, 0);
+    }
+
+    #[test]
+    fn failure_rate() {
+        let mut stats = Stats::new();
+
+        stats.rx_count += 100;
+        stats.rx_failure += 5;
+
+        assert_eq!(stats.rx_failure_rate(), 5.0);
+
+        stats.tx_count += 50;
+        stats.tx_failure += 9;
+
+        assert_eq!(stats.tx_failure_rate(), 18.0);
     }
 }

@@ -30,10 +30,10 @@ fn read_packet<T: Read + Write>(device: T) {
                 "Statistics: RX: {}/{} [{}%] TX: {}/{} [{}%]",
                 stats.rx_count - stats.rx_failure,
                 stats.rx_count,
-                stats.rx_faillure_rate(),
+                stats.rx_failure_rate(),
                 stats.tx_count - stats.tx_failure,
                 stats.tx_count,
-                stats.tx_faillure_rate(),
+                stats.tx_failure_rate(),
             );
             info!(
                 "Average packets/s: {}",
@@ -46,7 +46,7 @@ fn read_packet<T: Read + Write>(device: T) {
         }
 
         // TODO; Remove
-        session.dispatch_valve_control(0, 255);
+        // session.dispatch_valve_control(0, 255);
 
         let frame = session.accept();
         match frame.packet().payload_type.try_into().unwrap() {
