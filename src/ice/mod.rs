@@ -414,5 +414,10 @@ mod tests {
 
         assert!(frame.is_broadcast());
         assert_eq!(frame.address(), u16::MAX);
+
+        let dev_info: DeviceInfo = frame.get(6).unwrap();
+        let address = dev_info.address;
+
+        assert_eq!(address, ADDR);
     }
 }
