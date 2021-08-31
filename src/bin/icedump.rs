@@ -45,11 +45,10 @@ fn read_packet<T: Read + Write>(device: T) {
         }
 
         if stats.rx_count % 50 == 0 {
-            session.announce_device();
+            if let Err(err) = session.announce_device() {
+                error!("Session error: {:?}", err);
+            }
         }
-
-        // TODO; Remove
-        // session.dispatch_valve_control(0, 255);
 
         let frame = session.accept();
         match frame.packet().payload_type.try_into().unwrap() {

@@ -47,11 +47,15 @@ impl Device for Hydraulic {
 
 impl MotionDevice for Hydraulic {
     fn actuate(&mut self, actuator: u32, value: i16) {
-        self.session.dispatch_valve_control(actuator as u8, value);
+        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
+            error!("Session error: {:?}", err);
+        }
     }
 
     fn halt(&mut self) {
-        self.session.dispatch_valve_control(u8::MAX, 0);
+        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
+            error!("Session error: {:?}", err);
+        }
     }
 }
 

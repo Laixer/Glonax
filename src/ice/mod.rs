@@ -212,14 +212,18 @@ impl FrameBuilder {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum SessionError {
     /// Packet was not send to this address.
     SpuriousAddress,
     /// Frame was not complete.
     Incomplete,
+    /// Frame was invalid.
+    Invalid,
     /// Frame parse errror.
     FrameParseError(FrameError),
+    /// I/O error in the underlaying device.
+    IoError(std::io::Error),
 }
 
 pub struct Session<T> {
@@ -263,7 +267,10 @@ impl<T: std::io::Read> Session<T> {
     /// This method can block if the underlaying reader device
     /// blocks on read calls.
     pub fn next(&mut self) -> std::result::Result<Frame, SessionError> {
-        let taken = self.inner.read(self.buffer.get_mut_avail()).unwrap();
+        let taken = self
+            .inner
+            .read(self.buffer.get_mut_avail())
+            .map_err(|err| SessionError::IoError(err))?;
         self.buffer.fill(taken);
 
         if let Some(offset) = self.buffer.buffer().iter().position(|&b| b == MAGIC[0]) {
@@ -289,12 +296,10 @@ impl<T: std::io::Read> Session<T> {
                     }
                 }
             } else {
-                eprintln!("Buffer: {:?}", self.buffer.buffer());
                 Err(SessionError::Incomplete)
             }
         } else {
-            eprintln!("inc 2");
-            Err(SessionError::Incomplete)
+            Err(SessionError::Invalid)
         }
     }
 
@@ -335,13 +340,20 @@ impl<T: std::io::Read> Session<T> {
 }
 
 impl<T: std::io::Write> Session<T> {
-    fn write_frame(&mut self, frame: Frame) {
-        self.inner.write(frame.buffer()).unwrap();
+    /// Write raw frame to the inner device.
+    ///
+    /// Any IO errors will propagate upwards.
+    fn write_frame(&mut self, frame: Frame) -> std::result::Result<(), SessionError> {
+        self.inner.write(frame.buffer()).map_err(|err| {
+            self.stats.tx_failure += 1;
+            SessionError::IoError(err)
+        })?;
         self.stats.tx_count += 1;
+        Ok(())
     }
 
     /// Announce this device on the network.
-    pub fn announce_device(&mut self) {
+    pub fn announce_device(&mut self) -> std::result::Result<(), SessionError> {
         let mut builder = FrameBuilder::new();
 
         builder.set_address(AddressFamily::Broadcast);
@@ -354,17 +366,21 @@ impl<T: std::io::Write> Session<T> {
             PayloadType::DeviceInfo,
         );
 
-        self.write_frame(builder.build());
+        self.write_frame(builder.build())
     }
 
     /// Dispatch valve control message.
-    pub fn dispatch_valve_control(&mut self, id: u8, value: i16) {
+    pub fn dispatch_valve_control(
+        &mut self,
+        id: u8,
+        value: i16,
+    ) -> std::result::Result<(), SessionError> {
         let mut builder = FrameBuilder::new();
 
         builder.set_address(AddressFamily::Unicast(0x7));
         builder.set_payload(SolenoidControl { id, value }, PayloadType::SolenoidControl);
 
-        self.write_frame(builder.build());
+        self.write_frame(builder.build())
     }
 }
 
