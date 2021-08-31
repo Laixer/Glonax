@@ -1,7 +1,14 @@
+pub mod excavator;
 pub mod machine;
 
 use crate::device::MetricValue;
 
+/// Program trait.
+///
+/// A program is run on the runtime. It reads input from various
+/// sources and returns an optional motion instruction. A program
+/// is run to completion. The completion condition is polled on
+/// every cycle.
 pub trait Program {
     type Motion;
 

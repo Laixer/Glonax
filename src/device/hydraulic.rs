@@ -47,12 +47,14 @@ impl Device for Hydraulic {
 
 impl MotionDevice for Hydraulic {
     fn actuate(&mut self, actuator: u32, value: i16) {
+        // FUTURE: Handle error, translate to device error?
         if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
             error!("Session error: {:?}", err);
         }
     }
 
     fn halt(&mut self) {
+        // FUTURE: Handle error, translate to device error?
         if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
             error!("Session error: {:?}", err);
         }
@@ -60,6 +62,10 @@ impl MotionDevice for Hydraulic {
 }
 
 impl Drop for Hydraulic {
+    /// On drop try to stop any enduring motion.
+    ///
+    /// This is a best effort and there are no guarantees
+    /// this has any effect.
     fn drop(&mut self) {
         self.halt();
     }

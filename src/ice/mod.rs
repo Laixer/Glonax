@@ -62,11 +62,24 @@ pub struct Vector3x16 {
 }
 
 #[repr(C, packed)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct DeviceInfo {
     address: u16,
     version: u8,
     status: u8,
+}
+
+impl std::fmt::Debug for DeviceInfo {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let address = self.address;
+        write!(
+            fmt,
+            "Device announcement: Address: {} Version: {}.{}",
+            address,
+            (self.version >> 4),
+            (self.version & !0xf0),
+        )
+    }
 }
 
 #[repr(C, packed)]
@@ -425,7 +438,7 @@ mod tests {
         let device = MemoryDevice::new();
 
         let mut session = Session::new(device, ADDR);
-        session.announce_device();
+        session.announce_device().unwrap();
         let frame = session.accept();
 
         assert!(frame.is_broadcast());

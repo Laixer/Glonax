@@ -18,7 +18,11 @@ pub trait Device {
     /// Return the device name.
     fn name(&self) -> String;
 
-    fn probe(&mut self) {}
+    /// Probe the device.
+    ///
+    /// Can be used to signal that the device is ready.
+    /// Implementation is optional.
+    fn probe(&mut self) {}  // TODO: Return result.
 }
 
 /// Device which can exercise motion.
@@ -34,6 +38,7 @@ pub trait MotionDevice: Device {
     fn halt(&mut self) {} // TODO: Return result.
 }
 
+// Change to scancode.
 #[derive(Debug, Clone, Copy)]
 pub enum CommandEvent {
     DirectMotion { code: i16, value: f32 },
