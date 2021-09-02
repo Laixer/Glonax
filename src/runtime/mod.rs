@@ -169,7 +169,7 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
         let operand = self.operand.clone();
 
         let task_handle = tokio::task::spawn(async move {
-            let mut program = operand.order_program(66);
+            let mut program = operand.fetch_program(42);
 
             let mut ctx = Context::new();
             program.boot(&mut ctx);

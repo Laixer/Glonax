@@ -63,10 +63,10 @@ impl Operand for Excavator {
         }
     }
 
-    /// Order program from identifier.
+    /// Fetch program from identifier.
     ///
     /// The method returns a pointer to the excavator program.
-    fn order_program(&self, _order: i32) -> Box<dyn Program + Send + Sync> {
+    fn fetch_program(&self, _order: i32) -> Box<dyn Program + Send + Sync> {
         Box::new(DriveProgram::new())
     }
 }
