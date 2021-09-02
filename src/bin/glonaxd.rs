@@ -8,16 +8,6 @@ use clap::{App, Arg};
 
 const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB0";
 
-async fn run(config: glonax::Config) -> std::result::Result<(), ()> {
-    // Start the runtime service.
-    glonax::ExcavatorService::from_config(&config)
-        .rt_service()
-        .await;
-
-    // TODO: This should really be an error because we dont expect to return.
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() {
     let matches = App::new("Glonax daemon")
@@ -102,9 +92,7 @@ async fn main() {
     ])
     .unwrap();
 
-    // NOTE: We'll never reach beyond this point on success.
-    if let Err(_e) = run(config).await {
-        // log::error!("{}", e);
-        log::error!("Error in runtime");
-    }
+    glonax::ExcavatorService::from_config(&config)
+        .rt_service()
+        .await;
 }

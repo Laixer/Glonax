@@ -73,18 +73,17 @@ impl Default for RuntimeSettings {
     }
 }
 
-// TODO: None of the fields should be pub.
 pub struct Runtime<A, K> {
     /// Runtime operand.
-    pub operand: K,
+    pub(super) operand: K,
     /// Motion device.
-    pub motion_device: A,
+    pub(super) motion_device: A,
     /// Runtime event bus.
-    pub event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
+    pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Runtime settings.
-    pub settings: RuntimeSettings,
+    pub(super) settings: RuntimeSettings,
     /// Task pool.
-    pub task_pool: Vec<JoinHandle<()>>,
+    pub(super) task_pool: Vec<JoinHandle<()>>,
 }
 
 impl<A, K> Runtime<A, K> {
