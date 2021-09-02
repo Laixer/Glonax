@@ -173,6 +173,8 @@ impl<A: MotionDevice, K> Runtime<A, K> {
             let mut ctx = Context::new();
             program.boot(&mut ctx);
 
+            // Loop until this program reaches its termination condition. If
+            // the program does not terminate we'll run forever.
             while !program.can_terminate(&mut ctx) {
                 for (idx, device) in &mut metric_devices.iter_mut() {
                     match device.next() {

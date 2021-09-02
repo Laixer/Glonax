@@ -40,7 +40,7 @@ pub trait Program {
     /// must determine if and how the value is used.
     /// The id represents the device from which this
     /// value originates.
-    fn push(&mut self, id: u32, value: MetricValue, context: &mut Context);
+    fn push(&mut self, _: u32, _: MetricValue, _: &mut Context) {}
 
     /// Propagate the program forwards.
     ///

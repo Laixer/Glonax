@@ -1,10 +1,12 @@
-use crate::{
-    device::MetricValue,
-    runtime::{Context, Motion, Program},
-};
+use crate::runtime::{Context, Motion, Program};
 
 use super::Actuator;
 
+/// Drive strait forward.
+///
+/// This program is part of the excavator kernel. It
+/// drives both tracks straight forward for 5 seconds
+/// then stops.
 pub struct DriveProgram;
 
 impl DriveProgram {
@@ -14,22 +16,6 @@ impl DriveProgram {
 }
 
 impl Program for DriveProgram {
-    fn boot(&mut self, _: &mut Context) {
-        info!("Drive program called");
-    }
-
-    fn push(&mut self, id: u32, value: MetricValue, _: &mut Context) {
-        match value {
-            MetricValue::Temperature(value) => info!(
-                "Temperature metric pushed with id: {}; value: {:?}",
-                id, value
-            ),
-            MetricValue::Position(value) => {
-                info!("Position metric pushed with id: {}; value: {:?}", id, value)
-            }
-        }
-    }
-
     fn step(&mut self, _: &mut Context) -> Option<Motion> {
         Some(Motion::Change(vec![
             (Actuator::LimpLeft.into(), 200),
@@ -39,7 +25,7 @@ impl Program for DriveProgram {
 
     fn can_terminate(&self, context: &mut Context) -> bool {
         let sec_since_boot = context.start.elapsed().as_secs();
-        info!("Running for {} seconds now", sec_since_boot);
+        info!("Programm running for {} seconds", sec_since_boot);
         sec_since_boot >= 5
     }
 
