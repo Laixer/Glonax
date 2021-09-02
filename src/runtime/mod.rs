@@ -157,19 +157,20 @@ where
     }
 }
 
-impl<A: MotionDevice, K> Runtime<A, K> {
-    pub fn spawn_program_queue<D, P>(
+impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
+    pub fn spawn_program_queue<D>(
         &mut self,
         mut metric_devices: crate::device::Composer<Box<D>>,
-        mut program: P,
     ) -> &mut Self
     where
         D: crate::device::MetricDevice + Send + Sync + 'static + ?Sized,
-        P: Program + Send + Sync + 'static,
     {
         let dispatcher = self.dispatch();
+        let operand = self.operand.clone();
 
         let task_handle = tokio::task::spawn(async move {
+            let mut program = operand.order_program(66);
+
             let mut ctx = Context::new();
             program.boot(&mut ctx);
 

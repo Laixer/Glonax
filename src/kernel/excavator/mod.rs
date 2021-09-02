@@ -1,7 +1,9 @@
-use crate::runtime::{Motion, NormalControl, Operand, Scancode};
+use crate::runtime::{Motion, NormalControl, Operand, Program, Scancode};
 
-pub mod arm_balance;
-pub mod drive;
+use self::drive::DriveProgram;
+
+mod arm_balance;
+mod drive;
 
 enum Actuator {
     Boom = 2,
@@ -59,5 +61,12 @@ impl Operand for Excavator {
                 Err(()) // TODO:
             }
         }
+    }
+
+    /// Order program from identifier.
+    ///
+    /// The method returns a pointer to the excavator program.
+    fn order_program(&self, _order: i32) -> Box<dyn Program + Send + Sync> {
+        Box::new(DriveProgram::new())
     }
 }

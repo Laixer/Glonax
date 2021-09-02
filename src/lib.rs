@@ -77,14 +77,7 @@ impl<'a, K: Operand + 'static> RuntimeService<'a, K> {
             // measure_compose.insert(Box::new(imu2));
             measure_compose.probe();
 
-            // rt.spawn_program_queue(
-            //     measure_compose,
-            //     glonax::kernel::arm_balance::ArmBalanceProgram::new(),
-            // );
-            self.runtime.spawn_program_queue(
-                measure_compose,
-                kernel::excavator::drive::DriveProgram::new(),
-            );
+            self.runtime.spawn_program_queue(measure_compose);
         }
 
         if self.config.enable_command {

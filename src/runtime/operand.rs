@@ -7,6 +7,13 @@ use super::{Motion, Scancode};
 pub trait Operand: Default + Clone + Send + Sync {
     /// Try convert input scancode to motion.
     fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()>;
+
+    /// Order program from identifier.
+    ///
+    /// The method returns a pointer to the program which
+    /// will be execured by the runtime. The program order
+    /// identifier is a per kernel unique program identifier.
+    fn order_program(&self, order: i32) -> Box<dyn Program + Send + Sync>;
 }
 
 pub struct Context {
@@ -14,6 +21,7 @@ pub struct Context {
 }
 
 impl Context {
+    /// Construct new program context.
     pub fn new() -> Self {
         Self {
             start: std::time::Instant::now(),
