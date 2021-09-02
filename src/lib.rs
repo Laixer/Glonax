@@ -10,6 +10,7 @@ mod runtime;
 extern crate log;
 
 pub use config::Config;
+use runtime::Operand;
 pub use runtime::{Runtime, RuntimeSettings};
 
 use crate::device::{Composer, Device, Gamepad, Hydraulic};
@@ -19,7 +20,7 @@ pub struct RuntimeService<'a, K> {
     runtime: Runtime<Hydraulic, K>,
 }
 
-impl<'a, K: kernel::excavator::Operand + 'static> RuntimeService<'a, K> {
+impl<'a, K: Operand + 'static> RuntimeService<'a, K> {
     /// Construct runtime service from configuration.
     pub fn from_config(config: &'a Config) -> Self {
         Self {
@@ -80,8 +81,10 @@ impl<'a, K: kernel::excavator::Operand + 'static> RuntimeService<'a, K> {
             //     measure_compose,
             //     glonax::kernel::arm_balance::ArmBalanceProgram::new(),
             // );
-            self.runtime
-                .spawn_program_queue(measure_compose, kernel::drive::DriveProgram::new());
+            self.runtime.spawn_program_queue(
+                measure_compose,
+                kernel::excavator::drive::DriveProgram::new(),
+            );
         }
 
         if self.config.enable_command {

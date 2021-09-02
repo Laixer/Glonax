@@ -1,7 +1,10 @@
-use crate::runtime::{Motion, NormalControl, Scancode};
+use crate::runtime::{Motion, NormalControl, Operand, Scancode};
+
+pub mod arm_balance;
+pub mod drive;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Actuator {
+enum Actuator {
     Boom = 2,
     Arm = 1,
     Bucket = 0,
@@ -16,16 +19,10 @@ impl From<Actuator> for u32 {
     }
 }
 
-pub trait Operand: Default + Clone + Send + Sync {
-    fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()>;
-}
-
 #[derive(Clone, Copy)]
 pub struct Excavator {
     //
 }
-
-impl Excavator {}
 
 impl Default for Excavator {
     fn default() -> Self {

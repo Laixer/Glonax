@@ -1,8 +1,10 @@
 mod input;
 mod motion;
+mod operand;
 
 pub use input::Scancode;
 pub use motion::{Motion, NormalControl};
+pub use operand::{Operand, Program};
 
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -124,7 +126,7 @@ impl<A: MotionDevice, K> Runtime<A, K> {
 
 impl<A, K> Runtime<A, K>
 where
-    K: crate::kernel::excavator::Operand + 'static,
+    K: Operand + 'static,
 {
     pub fn spawn_command_device<C: CommandDevice + Send + 'static>(
         &mut self,
@@ -163,7 +165,7 @@ impl<A: MotionDevice, K> Runtime<A, K> {
     ) -> &mut Self
     where
         D: crate::device::MetricDevice + Send + Sync + 'static + ?Sized,
-        P: crate::kernel::Program + Send + Sync + 'static,
+        P: Program + Send + Sync + 'static,
     {
         let dispatcher = self.dispatch();
 

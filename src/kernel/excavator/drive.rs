@@ -1,16 +1,9 @@
-use crate::{device::MetricValue, runtime::Motion};
+use crate::{
+    device::MetricValue,
+    runtime::{Motion, Program},
+};
 
-use super::Program;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Actuator {
-    Boom = 2,
-    Arm = 1,
-    Bucket = 0,
-    Slew = 3,
-    LimpLeft = 4,
-    LimpRight = 5,
-}
+use super::Actuator;
 
 pub struct DriveProgram {
     start: std::time::Instant,
@@ -44,8 +37,8 @@ impl Program for DriveProgram {
 
     fn step(&mut self) -> Option<Motion> {
         Some(Motion::Change(vec![
-            (Actuator::LimpLeft as u32, 200),
-            (Actuator::LimpRight as u32, 200),
+            (Actuator::LimpLeft.into(), 200),
+            (Actuator::LimpRight.into(), 200),
         ]))
     }
 
@@ -57,8 +50,8 @@ impl Program for DriveProgram {
 
     fn term_action(&self) -> Option<Motion> {
         Some(Motion::Stop(vec![
-            Actuator::LimpLeft as u32,
-            Actuator::LimpRight as u32,
+            Actuator::LimpLeft.into(),
+            Actuator::LimpRight.into(),
         ]))
     }
 }

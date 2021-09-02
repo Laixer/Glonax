@@ -1,26 +1,15 @@
 use crate::{
     common::position::Position,
     device::MetricValue,
-    runtime::{Motion, NormalControl},
+    runtime::{Motion, NormalControl, Program},
 };
 
-use super::Program;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Actuator {
-    Boom = 2,
-    Arm = 1,
-    Bucket = 0,
-    Slew = 3,
-    LimpLeft = 4,
-    LimpRight = 5,
-}
+use super::Actuator;
 
 // TODO: Find range.
 // Arm range: -0.45 <> -2.47 (25 <> 140)
 // Boom range:
 // Bucket range:
-const ACTUATOR: Actuator = Actuator::Arm;
 
 const SET_POINT: f32 = -std::f32::consts::PI / 2.;
 const KP: f32 = 2.7;
@@ -56,7 +45,7 @@ impl Program for ArmBalanceProgram {
     }
 
     fn term_action(&self) -> Option<Motion> {
-        Some(Motion::Stop(vec![ACTUATOR as u32])) // TODO: auto conv.
+        Some(Motion::Stop(vec![Actuator::Arm.into()])) // TODO: auto conv.
     }
 
     fn push(&mut self, id: u32, value: MetricValue) {
@@ -97,7 +86,7 @@ impl Program for ArmBalanceProgram {
 
         Some(
             NormalControl {
-                actuator: ACTUATOR as u32,
+                actuator: Actuator::Arm.into(),
                 value: output.output,
                 ..Default::default()
             }
