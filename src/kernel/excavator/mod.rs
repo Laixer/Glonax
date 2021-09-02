@@ -3,7 +3,6 @@ use crate::runtime::{Motion, NormalControl, Operand, Scancode};
 pub mod arm_balance;
 pub mod drive;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
 enum Actuator {
     Boom = 2,
     Arm = 1,
@@ -20,9 +19,7 @@ impl From<Actuator> for u32 {
 }
 
 #[derive(Clone, Copy)]
-pub struct Excavator {
-    //
-}
+pub struct Excavator;
 
 impl Default for Excavator {
     fn default() -> Self {

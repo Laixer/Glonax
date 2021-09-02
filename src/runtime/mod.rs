@@ -4,7 +4,7 @@ mod operand;
 
 pub use input::Scancode;
 pub use motion::{Motion, NormalControl};
-pub use operand::{Operand, Program};
+pub use operand::{Context, Operand, Program};
 
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -170,19 +170,20 @@ impl<A: MotionDevice, K> Runtime<A, K> {
         let dispatcher = self.dispatch();
 
         let task_handle = tokio::task::spawn(async move {
-            program.boot();
+            let mut ctx = Context::new();
+            program.boot(&mut ctx);
 
-            while !program.can_terminate() {
+            while !program.can_terminate(&mut ctx) {
                 for (idx, device) in &mut metric_devices.iter_mut() {
                     match device.next() {
                         Some(value) => {
-                            program.push(idx.clone(), value);
+                            program.push(idx.clone(), value, &mut ctx);
                         }
                         None => {}
                     }
                 }
 
-                if let Some(motion) = program.step() {
+                if let Some(motion) = program.step(&mut ctx) {
                     if let Err(_) = dispatcher.motion(motion).await {
                         warn!("Program terminated without completion");
                         return;
@@ -190,7 +191,7 @@ impl<A: MotionDevice, K> Runtime<A, K> {
                 }
             }
 
-            if let Some(motion) = program.term_action() {
+            if let Some(motion) = program.term_action(&mut ctx) {
                 if let Err(_) = dispatcher.motion(motion).await {
                     warn!("Program terminated without completion");
                     return;

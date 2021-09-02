@@ -1,7 +1,7 @@
 use crate::{
     common::position::Position,
     device::MetricValue,
-    runtime::{Motion, NormalControl, Program},
+    runtime::{Context, Motion, NormalControl, Program},
 };
 
 use super::Actuator;
@@ -35,7 +35,7 @@ impl ArmBalanceProgram {
 }
 
 impl Program for ArmBalanceProgram {
-    fn can_terminate(&self) -> bool {
+    fn can_terminate(&self, _: &mut Context) -> bool {
         if let Some(pos) = self.pos {
             let e = SET_POINT - pos.pitch;
             e.abs() < 0.1
@@ -44,11 +44,11 @@ impl Program for ArmBalanceProgram {
         }
     }
 
-    fn term_action(&self) -> Option<Motion> {
+    fn term_action(&self, _: &mut Context) -> Option<Motion> {
         Some(Motion::Stop(vec![Actuator::Arm.into()])) // TODO: auto conv.
     }
 
-    fn push(&mut self, id: u32, value: MetricValue) {
+    fn push(&mut self, id: u32, value: MetricValue, _: &mut Context) {
         match value {
             MetricValue::Temperature(_) => {}
             MetricValue::Position(pos) => match id {
@@ -63,7 +63,7 @@ impl Program for ArmBalanceProgram {
         }
     }
 
-    fn step(&mut self) -> Option<Motion> {
+    fn step(&mut self, _: &mut Context) -> Option<Motion> {
         self.iteration += 1;
 
         if self.pos.is_none() {

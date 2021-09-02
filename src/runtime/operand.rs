@@ -1,9 +1,24 @@
+use std::time::Instant;
+
 use crate::device::MetricValue;
 
 use super::{Motion, Scancode};
 
 pub trait Operand: Default + Clone + Send + Sync {
+    /// Try convert input scancode to motion.
     fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()>;
+}
+
+pub struct Context {
+    pub start: Instant,
+}
+
+impl Context {
+    pub fn new() -> Self {
+        Self {
+            start: std::time::Instant::now(),
+        }
+    }
 }
 
 /// Program trait.
@@ -17,7 +32,7 @@ pub trait Program {
     ///
     /// This method is called when the runtime accepted
     /// this progam and started its routine.
-    fn boot(&mut self) {}
+    fn boot(&mut self, _: &mut Context) {}
 
     /// Push incoming value to program.
     ///
@@ -25,24 +40,24 @@ pub trait Program {
     /// must determine if and how the value is used.
     /// The id represents the device from which this
     /// value originates.
-    fn push(&mut self, id: u32, value: MetricValue);
+    fn push(&mut self, id: u32, value: MetricValue, context: &mut Context);
 
     /// Propagate the program forwards.
     ///
     /// This method returns an optional motion instruction.
-    fn step(&mut self) -> Option<Motion>;
+    fn step(&mut self, context: &mut Context) -> Option<Motion>;
 
     /// Program termination condition.
     ///
     /// Check if program is finished.
-    fn can_terminate(&self) -> bool;
+    fn can_terminate(&self, context: &mut Context) -> bool;
 
     /// Program termination action.
     ///
     /// This is an optional method to send a last motion
     /// instruction. This method is called after `can_terminate`
     /// returns true and before the program is terminated.
-    fn term_action(&self) -> Option<Motion> {
+    fn term_action(&self, _: &mut Context) -> Option<Motion> {
         None
     }
 }
