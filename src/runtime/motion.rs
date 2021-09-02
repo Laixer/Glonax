@@ -13,12 +13,10 @@ use std::{ops::Range, u32};
 pub enum Motion {
     /// Stop all motion.
     StopAll,
-    /// Stop motion on a single actuator.
-    Stop(u32),
-    /// Set maximum motion on a single actuator.
-    Maximum(u32),
-    /// Change motion with value on actuator.
-    Change(u32, i16),
+    /// Stop motion on actuators.
+    Stop(Vec<u32>),
+    /// Change motion on actuators.
+    Change(Vec<(u32, i16)>),
 }
 
 unsafe impl Sync for Motion {}
@@ -57,7 +55,7 @@ impl NormalControl {
         const DEAD_VALUE: f32 = 0.02;
 
         if self.value.abs() < DEAD_VALUE {
-            Motion::Stop(self.actuator)
+            Motion::Stop(vec![self.actuator])
         } else {
             let unbound_range = (self.value * (self.range.end - self.range.start) as f32) as i16;
             let value = if self.value.is_sign_positive() {
@@ -72,7 +70,7 @@ impl NormalControl {
                 }
             };
 
-            Motion::Change(self.actuator, value)
+            Motion::Change(vec![(self.actuator, value)])
         }
     }
 }

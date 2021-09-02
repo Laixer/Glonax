@@ -43,7 +43,10 @@ impl Program for DriveProgram {
     }
 
     fn step(&mut self) -> Option<Motion> {
-        Some(Motion::Change(Actuator::LimpLeft as u32, 200))
+        Some(Motion::Change(vec![
+            (Actuator::LimpLeft as u32, 200),
+            (Actuator::LimpRight as u32, 200),
+        ]))
     }
 
     fn can_terminate(&self) -> bool {
@@ -53,6 +56,9 @@ impl Program for DriveProgram {
     }
 
     fn term_action(&self) -> Option<Motion> {
-        Some(Motion::StopAll)
+        Some(Motion::Stop(vec![
+            Actuator::LimpLeft as u32,
+            Actuator::LimpRight as u32,
+        ]))
     }
 }

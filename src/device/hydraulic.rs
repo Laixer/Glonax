@@ -49,31 +49,24 @@ impl MotionDevice for Hydraulic {
     fn actuate(&mut self, motion: Motion) {
         match motion {
             crate::runtime::Motion::StopAll => self.halt(),
-            crate::runtime::Motion::Stop(actuator) => {
-                debug!("Stop actuator {} ", actuator);
+            crate::runtime::Motion::Stop(actuators) => {
+                for actuator in actuators {
+                    debug!("Stop actuator {} ", actuator);
 
-                // FUTURE: Handle error, translate to device error?
-                if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
-                    error!("Session error: {:?}", err);
+                    // FUTURE: Handle error, translate to device error?
+                    if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                        error!("Session error: {:?}", err);
+                    }
                 }
             }
-            crate::runtime::Motion::Maximum(actuator) => {
-                debug!("Maximize actuator {} ", actuator);
+            crate::runtime::Motion::Change(actuators) => {
+                for (actuator, value) in actuators {
+                    debug!("Change actuator {} to value {}", actuator, value);
 
-                // FUTURE: Handle error, translate to device error?
-                if let Err(err) = self
-                    .session
-                    .dispatch_valve_control(actuator as u8, i16::MAX)
-                {
-                    error!("Session error: {:?}", err);
-                }
-            }
-            crate::runtime::Motion::Change(actuator, value) => {
-                debug!("Change actuator {} to value {}", actuator, value);
-
-                // FUTURE: Handle error, translate to device error?
-                if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
-                    error!("Session error: {:?}", err);
+                    // FUTURE: Handle error, translate to device error?
+                    if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
+                        error!("Session error: {:?}", err);
+                    }
                 }
             }
         }

@@ -56,7 +56,7 @@ impl Program for ArmBalanceProgram {
     }
 
     fn term_action(&self) -> Option<Motion> {
-        Some(Motion::Stop(ACTUATOR as u32)) // TODO: auto conv.
+        Some(Motion::Stop(vec![ACTUATOR as u32])) // TODO: auto conv.
     }
 
     fn push(&mut self, id: u32, value: MetricValue) {
@@ -101,7 +101,7 @@ impl Program for ArmBalanceProgram {
                 value: output.output,
                 ..Default::default()
             }
-            .to_motion(),
+            .into(),
         )
     }
 }
