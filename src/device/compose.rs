@@ -8,9 +8,7 @@ use std::{
 
 use crate::common::index::{TryIndex, TryIndexMut};
 
-use super::{Device, MetricDevice}; //, MotionDevice};
-
-// const ACTUATORS_PER_CONTROLLER: u32 = 3;
+use super::Device;
 
 /// Compose a virtual device.
 ///
@@ -125,56 +123,5 @@ impl<D> Default for Composer<D> {
 impl<D> Device for Composer<D> {
     fn name(&self) -> String {
         "compose device".to_owned()
-    }
-
-    // TODO: Impl probe.
-}
-
-// TODO: Maybe remove ?
-// impl<D: MotionDevice> MotionDevice for Composer<D> {
-//     fn actuate(&mut self, actuator: u32, value: i16) {
-//         match self.list.get_mut(&(actuator / ACTUATORS_PER_CONTROLLER)) {
-//             Some(device) => device.actuate(actuator % ACTUATORS_PER_CONTROLLER, value),
-//             None => warn!("Requested actuator not found"), // TODO: return Err(..)
-//         }
-//     }
-
-//     fn halt(&mut self) {
-//         for device in self.list.values_mut() {
-//             device.halt()
-//         }
-//     }
-// }
-
-impl<D: MetricDevice> MetricDevice for Composer<D> {
-    // TODO: Filter outliers, return some aggregate.
-    fn next(&mut self) -> Option<super::MetricValue> {
-        for device in self.list.values_mut() {
-            let value = device.next();
-            if value.is_some() {
-                return value;
-            }
-        }
-        None
-    }
-}
-
-impl<'a, D> IntoIterator for &'a Composer<D> {
-    type Item = (&'a u32, &'a D);
-
-    type IntoIter = Iter<'a, u32, D>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-impl<'a, D> IntoIterator for &'a mut Composer<D> {
-    type Item = (&'a u32, &'a mut D);
-
-    type IntoIter = IterMut<'a, u32, D>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter_mut()
     }
 }

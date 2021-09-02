@@ -36,7 +36,6 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
     let mut rt = Runtime {
         operand: glonax::kernel::excavator::Excavator {},
         motion_device: hydraulic_motion,
-        actuator_map: None,
         event_bus: tokio::sync::mpsc::channel(128),
         settings: RuntimeSettings::from(&config),
         task_pool: vec![],

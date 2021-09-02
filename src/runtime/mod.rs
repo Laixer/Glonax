@@ -1,4 +1,3 @@
-mod actuator;
 mod input;
 mod motion;
 
@@ -14,8 +13,6 @@ use crate::{
     device::{CommandDevice, MotionDevice},
     Config,
 };
-
-use self::actuator::ActuatorMap;
 
 #[derive(Debug)]
 pub enum RuntimeEvent {
@@ -62,23 +59,17 @@ impl Dispatch {
 }
 
 // TODO: None of the fields should be pub.
-pub struct RuntimeSettings {
-    pub allow_program_motion: bool,
-}
+pub struct RuntimeSettings {}
 
 impl From<&Config> for RuntimeSettings {
-    fn from(config: &Config) -> Self {
-        Self {
-            allow_program_motion: config.enable_autopilot,
-        }
+    fn from(_config: &Config) -> Self {
+        Self {}
     }
 }
 
 impl Default for RuntimeSettings {
     fn default() -> Self {
-        Self {
-            allow_program_motion: true,
-        }
+        Self {}
     }
 }
 
@@ -88,8 +79,6 @@ pub struct Runtime<A, K> {
     pub operand: K,
     /// Motion device.
     pub motion_device: A,
-    /// Optional actuator mapping.
-    pub actuator_map: Option<ActuatorMap>,
     /// Runtime event bus.
     pub event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Runtime settings.
@@ -110,20 +99,6 @@ impl<A, K> Runtime<A, K> {
 }
 
 impl<A: MotionDevice, K> Runtime<A, K> {
-    /// Drive motion on one or multiple actuators.
-    pub fn drive_motion(&mut self, motion: impl ToMotion) {
-        // If the actuator is mapped to another value then
-        // replace the incoming code with the mapped value.
-        // In all other situations return the incoming code
-        // the as default value.
-        // let actuator = match &self.actuator_map {
-        //     Some(map) => map.get_or_default(motion_control.actuator),
-        //     None => motion_control.actuator,
-        // };
-
-        self.motion_device.actuate(motion);
-    }
-
     /// Start the runtime.
     ///
     /// The runtime will process the events from the
@@ -133,7 +108,9 @@ impl<A: MotionDevice, K> Runtime<A, K> {
         loop {
             if let Some(event) = self.event_bus.1.recv().await {
                 match event {
-                    RuntimeEvent::DriveMotion(motion_event) => self.drive_motion(motion_event),
+                    RuntimeEvent::DriveMotion(motion_event) => {
+                        self.motion_device.actuate(motion_event)
+                    }
                     RuntimeEvent::Shutdown => break,
                 }
             };
@@ -193,7 +170,6 @@ impl<A: MotionDevice, K> Runtime<A, K> {
         P::Motion: ToMotion + Send + Sync,
     {
         let dispatcher = self.dispatch();
-        let allow_program_motion = self.settings.allow_program_motion;
 
         let task_handle = tokio::task::spawn(async move {
             program.boot();
@@ -209,21 +185,17 @@ impl<A: MotionDevice, K> Runtime<A, K> {
                 }
 
                 if let Some(motion) = program.step() {
-                    if allow_program_motion {
-                        if let Err(_) = dispatcher.motion(motion).await {
-                            warn!("Program terminated without completion");
-                            return;
-                        }
+                    if let Err(_) = dispatcher.motion(motion).await {
+                        warn!("Program terminated without completion");
+                        return;
                     }
                 }
             }
 
             if let Some(motion) = program.term_action() {
-                if allow_program_motion {
-                    if let Err(_) = dispatcher.motion(motion).await {
-                        warn!("Program terminated without completion");
-                        return;
-                    }
+                if let Err(_) = dispatcher.motion(motion).await {
+                    warn!("Program terminated without completion");
+                    return;
                 }
             }
 
