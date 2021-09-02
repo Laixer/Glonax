@@ -1,5 +1,6 @@
+pub mod arm_balance;
+pub mod drive;
 pub mod excavator;
-pub mod machine;
 
 use crate::device::MetricValue;
 
@@ -12,7 +13,13 @@ use crate::device::MetricValue;
 pub trait Program {
     type Motion;
 
-    /// Push incoming value into program.
+    /// Boot the program.
+    ///
+    /// This method is called when the runtime accepted
+    /// this progam and started its routine.
+    fn boot(&mut self) {}
+
+    /// Push incoming value to program.
     ///
     /// This value can be any metric. The program
     /// must determine if and how the value is used.
@@ -33,7 +40,8 @@ pub trait Program {
     /// Program termination action.
     ///
     /// This is an optional method to send a last motion
-    /// instruction.
+    /// instruction. This method is called after `can_terminate`
+    /// returns true and before the program is terminated.
     fn term_action(&self) -> Option<Self::Motion> {
         None
     }

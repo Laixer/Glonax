@@ -1,51 +1,27 @@
+mod actuator;
+mod input;
+mod motion;
+
+pub use input::Scancode;
+pub use motion::{Motion, NormalControl, ToMotion};
+
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
 
 use crate::{
-    device::{CommandDevice, CommandEvent, MotionDevice},
-    orchestrator::{MotionControl, NormalControl, ToMotionControl},
+    device::{CommandDevice, MotionDevice},
     Config,
 };
 
-pub struct ActuatorMap(std::collections::HashMap<u32, u32>);
-
-impl ActuatorMap {
-    /// Create new and empty ActuatorMap.
-    pub fn new() -> Self {
-        ActuatorMap(std::collections::HashMap::default())
-    }
-
-    /// Get the map value or return the input as default.
-    pub fn get_or_default(&self, value: u32) -> u32 {
-        self.0.get(&value).unwrap_or(&value).clone()
-    }
-
-    /// Insert mapping value.
-    ///
-    /// If the value was already in the map then its updated
-    /// and the old value is returned. In all other cases
-    /// `None` is returned.
-    pub fn insert(&mut self, k: u32, v: u32) -> Option<u32> {
-        self.0.insert(k, v)
-    }
-
-    /// Flip two actuators.
-    ///
-    /// After insert the key becomes the value and vice versa.
-    /// This is the recommended way to map actuators because it
-    /// is a non-reducing operation. All actuators will remain
-    /// addressable.
-    pub fn insert_bilateral(&mut self, k: u32, v: u32) {
-        self.0.insert(k, v);
-        self.0.insert(v, k);
-    }
-}
+use self::actuator::ActuatorMap;
 
 #[derive(Debug)]
 pub enum RuntimeEvent {
-    Motion(MotionControl),
+    /// Request to drive motion.
+    DriveMotion(Motion),
+    /// Request to shutdown runtime core.
     Shutdown,
 }
 
@@ -63,10 +39,10 @@ impl Dispatch {
     #[inline]
     async fn motion(
         &self,
-        motion: impl ToMotionControl,
+        motion: impl ToMotion,
     ) -> Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
         self.0
-            .send(RuntimeEvent::Motion(motion.to_motion_control()))
+            .send(RuntimeEvent::DriveMotion(motion.to_motion()))
             .await
     }
 
@@ -107,8 +83,10 @@ impl Default for RuntimeSettings {
 }
 
 // TODO: None of the fields should be pub.
-pub struct Runtime<A> {
-    /// Actuator device.
+pub struct Runtime<A, K> {
+    /// Runtime operand.
+    pub operand: K,
+    /// Motion device.
     pub motion_device: A,
     /// Optional actuator mapping.
     pub actuator_map: Option<ActuatorMap>,
@@ -120,7 +98,7 @@ pub struct Runtime<A> {
     pub task_pool: Vec<JoinHandle<()>>,
 }
 
-impl<A> Runtime<A> {
+impl<A, K> Runtime<A, K> {
     /// Create a runtime dispatcher.
     ///
     /// The dispatcher is the input channel to the
@@ -131,64 +109,19 @@ impl<A> Runtime<A> {
     }
 }
 
-impl<A: MotionDevice> Runtime<A> {
-    /// Drive motion on an actuator.
-    pub fn drive_motion(&mut self, motion: impl ToMotionControl) {
-        let motion_control = motion.to_motion_control();
-
+impl<A: MotionDevice, K> Runtime<A, K> {
+    /// Drive motion on one or multiple actuators.
+    pub fn drive_motion(&mut self, motion: impl ToMotion) {
         // If the actuator is mapped to another value then
         // replace the incoming code with the mapped value.
         // In all other situations return the incoming code
         // the as default value.
-        let actuator = match &self.actuator_map {
-            Some(map) => map.get_or_default(motion_control.actuator),
-            None => motion_control.actuator,
-        };
+        // let actuator = match &self.actuator_map {
+        //     Some(map) => map.get_or_default(motion_control.actuator),
+        //     None => motion_control.actuator,
+        // };
 
-        debug!("Move actuator {} with {}", actuator, motion_control.value);
-
-        self.motion_device.actuate(actuator, motion_control.value);
-    }
-
-    pub fn spawn_command_device<C: CommandDevice + Send + 'static>(
-        &mut self,
-        mut command_device: C,
-    ) -> &mut Self {
-        let dispatcher = self.dispatch();
-
-        let task_handle = tokio::task::spawn(async move {
-            use crate::orchestrator::Actuator;
-
-            // Map the gamepad scancodes to the actuators.
-            const COMMAND_MAP: [(i16, Actuator); 6] = [
-                (0, Actuator::Arm),
-                (1, Actuator::Slew),
-                (2, Actuator::Boom),
-                (3, Actuator::Bucket),
-                (5, Actuator::LimpLeft),
-                (6, Actuator::LimpRight),
-            ];
-            loop {
-                match command_device.next() {
-                    Some(CommandEvent::DirectMotion { code, value }) => {
-                        if let Some((_, actuator)) = COMMAND_MAP.iter().find(|(x, _)| x == &code) {
-                            dispatcher
-                                .motion(NormalControl {
-                                    actuator: actuator.clone(),
-                                    value,
-                                    ..Default::default()
-                                })
-                                .await
-                                .unwrap();
-                        }
-                    }
-                    None => tokio::time::sleep(tokio::time::Duration::from_millis(5)).await,
-                }
-            }
-        });
-
-        self.task_pool.push(task_handle);
-        self
+        self.motion_device.actuate(motion);
     }
 
     /// Start the runtime.
@@ -200,7 +133,7 @@ impl<A: MotionDevice> Runtime<A> {
         loop {
             if let Some(event) = self.event_bus.1.recv().await {
                 match event {
-                    RuntimeEvent::Motion(motion_event) => self.drive_motion(motion_event),
+                    RuntimeEvent::DriveMotion(motion_event) => self.drive_motion(motion_event),
                     RuntimeEvent::Shutdown => break,
                 }
             };
@@ -214,7 +147,41 @@ impl<A: MotionDevice> Runtime<A> {
     }
 }
 
-impl<A: MotionDevice> Runtime<A> {
+impl<A, K> Runtime<A, K>
+where
+    K: crate::kernel::excavator::Operand + Clone + Send + Sync + 'static,
+    K::Motion: ToMotion + Send + Sync,
+{
+    pub fn spawn_command_device<C: CommandDevice + Send + 'static>(
+        &mut self,
+        mut command_device: C,
+    ) -> &mut Self {
+        let dispatcher = self.dispatch();
+        let operand = self.operand.clone();
+
+        let task_handle = tokio::task::spawn(async move {
+            loop {
+                // FUTURE: We should be awaiting this.
+                match command_device.next() {
+                    Some(input) => {
+                        if let Ok(motion) = operand.try_from_input_device(input) {
+                            if let Err(_) = dispatcher.motion(motion).await {
+                                warn!("Command event terminated without completion");
+                                return;
+                            }
+                        }
+                    }
+                    None => tokio::time::sleep(tokio::time::Duration::from_millis(5)).await,
+                }
+            }
+        });
+
+        self.task_pool.push(task_handle);
+        self
+    }
+}
+
+impl<A: MotionDevice, K> Runtime<A, K> {
     pub fn spawn_program_queue<D, P>(
         &mut self,
         mut metric_devices: crate::device::Composer<Box<D>>,
@@ -223,12 +190,14 @@ impl<A: MotionDevice> Runtime<A> {
     where
         D: crate::device::MetricDevice + Send + Sync + 'static + ?Sized,
         P: crate::kernel::Program + Send + Sync + 'static,
-        P::Motion: ToMotionControl + Send + Sync,
+        P::Motion: ToMotion + Send + Sync,
     {
         let dispatcher = self.dispatch();
         let allow_program_motion = self.settings.allow_program_motion;
 
         let task_handle = tokio::task::spawn(async move {
+            program.boot();
+
             while !program.can_terminate() {
                 for (idx, device) in &mut metric_devices.iter_mut() {
                     match device.next() {

@@ -5,7 +5,7 @@
 // of the included license.  See the LICENSE file for details.
 
 use clap::{App, Arg};
-use glonax::runtime::{Runtime, RuntimeSettings};
+use glonax::{Runtime, RuntimeSettings};
 
 #[allow(dead_code)]
 const SERIAL_HYDRAU1: &str = "/dev/ttyUSB0";
@@ -27,9 +27,14 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
     log::info!("Name: {}", hydraulic_motion.name());
     hydraulic_motion.probe();
 
+    // Runtime builder.
+
+    // let rb = RuntimeBuilder::from_config(&config);
+
     // TODO: Runtime builder.
 
     let mut rt = Runtime {
+        operand: glonax::kernel::excavator::Excavator {},
         motion_device: hydraulic_motion,
         actuator_map: None,
         event_bus: tokio::sync::mpsc::channel(128),
@@ -41,7 +46,9 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
 
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();
+
         log::info!("Termination requested");
+
         dispatcher.gracefull_shutdown().await.unwrap();
     });
 
@@ -61,9 +68,13 @@ async fn run(config: glonax::Config) -> glonax::device::Result<()> {
         // measure_compose.insert(Box::new(imu2));
         measure_compose.probe();
 
+        // rt.spawn_program_queue(
+        //     measure_compose,
+        //     glonax::kernel::arm_balance::ArmBalanceProgram::new(),
+        // );
         rt.spawn_program_queue(
             measure_compose,
-            glonax::kernel::machine::ArmBalanceProgram::new(),
+            glonax::kernel::drive::DriveProgram::new(),
         );
     }
 
@@ -115,9 +126,9 @@ async fn main() {
                 .help("Disable autopilot program"),
         )
         .arg(
-            Arg::with_name("no-gamepad")
-                .long("no-gamepad")
-                .help("Disable gamepad controls"),
+            Arg::with_name("no-input")
+                .long("no-input")
+                .help("Disable input controls"),
         )
         .arg(
             Arg::with_name("v")
@@ -132,7 +143,7 @@ async fn main() {
     if matches.is_present("no-auto") {
         config.enable_autopilot = false;
     }
-    if matches.is_present("no-gamepad") {
+    if matches.is_present("no-input") {
         config.enable_command = false;
     }
 

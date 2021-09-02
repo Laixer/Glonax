@@ -1,4 +1,4 @@
-use crate::ice::Session;
+use crate::{ice::Session, runtime::ToMotion};
 
 use super::{Device, MotionDevice};
 
@@ -46,14 +46,42 @@ impl Device for Hydraulic {
 }
 
 impl MotionDevice for Hydraulic {
-    fn actuate(&mut self, actuator: u32, value: i16) {
-        // FUTURE: Handle error, translate to device error?
-        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
-            error!("Session error: {:?}", err);
+    fn actuate(&mut self, motion: impl ToMotion) {
+        match motion.to_motion() {
+            crate::runtime::Motion::StopAll => self.halt(),
+            crate::runtime::Motion::Stop(actuator) => {
+                debug!("Stop actuator {} ", actuator);
+
+                // FUTURE: Handle error, translate to device error?
+                if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                    error!("Session error: {:?}", err);
+                }
+            }
+            crate::runtime::Motion::Maximum(actuator) => {
+                debug!("Maximize actuator {} ", actuator);
+
+                // FUTURE: Handle error, translate to device error?
+                if let Err(err) = self
+                    .session
+                    .dispatch_valve_control(actuator as u8, i16::MAX)
+                {
+                    error!("Session error: {:?}", err);
+                }
+            }
+            crate::runtime::Motion::Change(actuator, value) => {
+                debug!("Change actuator {} to value {}", actuator, value);
+
+                // FUTURE: Handle error, translate to device error?
+                if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
+                    error!("Session error: {:?}", err);
+                }
+            }
         }
     }
 
     fn halt(&mut self) {
+        debug!("Stop all actuators");
+
         // FUTURE: Handle error, translate to device error?
         if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
             error!("Session error: {:?}", err);

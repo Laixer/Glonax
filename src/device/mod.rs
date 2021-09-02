@@ -4,7 +4,10 @@ mod gamepad;
 mod hydraulic;
 mod inertial;
 
-use crate::common::position::Position;
+use crate::{
+    common::position::Position,
+    runtime::{Scancode, ToMotion},
+};
 
 pub use compose::Composer;
 pub use gamepad::Gamepad;
@@ -22,13 +25,13 @@ pub trait Device {
     ///
     /// Can be used to signal that the device is ready.
     /// Implementation is optional.
-    fn probe(&mut self) {}  // TODO: Return result.
+    fn probe(&mut self) {} // TODO: Return result.
 }
 
 /// Device which can exercise motion.
 pub trait MotionDevice: Device {
     /// Issue actuate command.
-    fn actuate(&mut self, actuator: u32, value: i16); // TODO: Return result.
+    fn actuate(&mut self, motion: impl ToMotion); // TODO: Return result.
 
     /// Halt all operation.
     ///
@@ -38,15 +41,9 @@ pub trait MotionDevice: Device {
     fn halt(&mut self) {} // TODO: Return result.
 }
 
-// Change to scancode.
-#[derive(Debug, Clone, Copy)]
-pub enum CommandEvent {
-    DirectMotion { code: i16, value: f32 },
-}
-
 /// Device which can read commands.
 pub trait CommandDevice: Device {
-    fn next(&mut self) -> Option<CommandEvent>;
+    fn next(&mut self) -> Option<Scancode>;
 }
 
 #[derive(Debug, Clone, Copy)]

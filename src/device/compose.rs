@@ -8,9 +8,9 @@ use std::{
 
 use crate::common::index::{TryIndex, TryIndexMut};
 
-use super::{Device, MetricDevice, MotionDevice};
+use super::{Device, MetricDevice}; //, MotionDevice};
 
-const ACTUATORS_PER_CONTROLLER: u32 = 3;
+// const ACTUATORS_PER_CONTROLLER: u32 = 3;
 
 /// Compose a virtual device.
 ///
@@ -131,20 +131,20 @@ impl<D> Device for Composer<D> {
 }
 
 // TODO: Maybe remove ?
-impl<D: MotionDevice> MotionDevice for Composer<D> {
-    fn actuate(&mut self, actuator: u32, value: i16) {
-        match self.list.get_mut(&(actuator / ACTUATORS_PER_CONTROLLER)) {
-            Some(device) => device.actuate(actuator % ACTUATORS_PER_CONTROLLER, value),
-            None => warn!("Requested actuator not found"), // TODO: return Err(..)
-        }
-    }
+// impl<D: MotionDevice> MotionDevice for Composer<D> {
+//     fn actuate(&mut self, actuator: u32, value: i16) {
+//         match self.list.get_mut(&(actuator / ACTUATORS_PER_CONTROLLER)) {
+//             Some(device) => device.actuate(actuator % ACTUATORS_PER_CONTROLLER, value),
+//             None => warn!("Requested actuator not found"), // TODO: return Err(..)
+//         }
+//     }
 
-    fn halt(&mut self) {
-        for device in self.list.values_mut() {
-            device.halt()
-        }
-    }
-}
+//     fn halt(&mut self) {
+//         for device in self.list.values_mut() {
+//             device.halt()
+//         }
+//     }
+// }
 
 impl<D: MetricDevice> MetricDevice for Composer<D> {
     // TODO: Filter outliers, return some aggregate.

@@ -1,6 +1,8 @@
 use gilrs::{Axis, Button, Event, EventType, Gilrs};
 
-use super::{CommandDevice, CommandEvent, Device};
+use crate::runtime::Scancode;
+
+use super::{CommandDevice, Device};
 
 pub struct Gamepad {
     inner: Gilrs,
@@ -27,29 +29,29 @@ impl Device for Gamepad {
 }
 
 impl CommandDevice for Gamepad {
-    fn next(&mut self) -> Option<CommandEvent> {
+    fn next(&mut self) -> Option<Scancode> {
         if let Some(event) = self.inner.next_event() {
             match event {
                 Event {
                     id: _,
                     event: EventType::AxisChanged(Axis::LeftStickY, value, ..),
                     ..
-                } => Some(CommandEvent::DirectMotion { code: 0, value }),
+                } => Some(Scancode::LeftStickY(value)),
                 Event {
                     id: _,
                     event: EventType::AxisChanged(Axis::LeftStickX, value, ..),
                     ..
-                } => Some(CommandEvent::DirectMotion { code: 1, value }),
+                } => Some(Scancode::LeftStickX(value)),
                 Event {
                     id: _,
                     event: EventType::AxisChanged(Axis::RightStickY, value, ..),
                     ..
-                } => Some(CommandEvent::DirectMotion { code: 2, value }),
+                } => Some(Scancode::RightStickY(value)),
                 Event {
                     id: _,
                     event: EventType::AxisChanged(Axis::RightStickX, value, ..),
                     ..
-                } => Some(CommandEvent::DirectMotion { code: 3, value }),
+                } => Some(Scancode::RightStickX(value)),
                 Event {
                     id: _,
                     event: EventType::ButtonChanged(Button::LeftTrigger, value, ..),
@@ -70,18 +72,30 @@ impl CommandDevice for Gamepad {
                     id: _,
                     event: EventType::ButtonChanged(Button::LeftTrigger2, value, ..),
                     ..
-                } => Some(CommandEvent::DirectMotion {
-                    code: 5,
-                    value: if self.reverse_left { -value } else { value },
-                }),
+                } => Some(Scancode::LeftTrigger(if self.reverse_left {
+                    -value
+                } else {
+                    value
+                })),
                 Event {
                     id: _,
                     event: EventType::ButtonChanged(Button::RightTrigger2, value, ..),
                     ..
-                } => Some(CommandEvent::DirectMotion {
-                    code: 6,
-                    value: if self.reverse_right { -value } else { value },
-                }),
+                } => Some(Scancode::RightTrigger(if self.reverse_right {
+                    -value
+                } else {
+                    value
+                })),
+                Event {
+                    id: _,
+                    event: EventType::ButtonPressed(Button::East, ..),
+                    ..
+                } => Some(Scancode::Cancel),
+                Event {
+                    id: _,
+                    event: EventType::ButtonPressed(Button::South, ..),
+                    ..
+                } => Some(Scancode::Activate),
                 _ => None,
             }
         } else {
