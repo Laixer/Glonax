@@ -124,7 +124,7 @@ impl<A: MotionDevice, K> Runtime<A, K> {
 
 impl<A, K> Runtime<A, K>
 where
-    K: crate::kernel::excavator::Operand + Clone + Send + Sync + 'static,
+    K: crate::kernel::excavator::Operand + 'static,
 {
     pub fn spawn_command_device<C: CommandDevice + Send + 'static>(
         &mut self,

@@ -16,7 +16,7 @@ impl From<Actuator> for u32 {
     }
 }
 
-pub trait Operand {
+pub trait Operand: Default + Clone + Send + Sync {
     fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()>;
 }
 
@@ -26,6 +26,12 @@ pub struct Excavator {
 }
 
 impl Excavator {}
+
+impl Default for Excavator {
+    fn default() -> Self {
+        Self {}
+    }
+}
 
 impl Operand for Excavator {
     /// Try to convert input scancode to motion.

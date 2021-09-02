@@ -5,88 +5,14 @@
 // of the included license.  See the LICENSE file for details.
 
 use clap::{App, Arg};
-use glonax::{Runtime, RuntimeSettings};
 
-#[allow(dead_code)]
 const SERIAL_HYDRAU1: &str = "/dev/ttyUSB0";
 
-#[allow(dead_code)]
-const SERIAL_INTERTIAL1: &str = "/dev/ttyUSB0";
-
-// #[allow(dead_code)]
-// const SERIAL_INTERTIAL2: &str = "/dev/ttyUSB1";
-
-// TODO: Should not return serial error.
-async fn run(config: glonax::Config) -> glonax::device::Result<()> {
-    use glonax::device::Device;
-    use glonax::device::{Composer, Gamepad, Hydraulic, Inertial};
-
-    // Motion.
-
-    let mut hydraulic_motion = Hydraulic::new(SERIAL_HYDRAU1)?;
-    log::info!("Name: {}", hydraulic_motion.name());
-    hydraulic_motion.probe();
-
-    // Runtime builder.
-
-    // let rb = RuntimeBuilder::from_config(&config);
-
-    // TODO: Runtime builder.
-
-    let mut rt = Runtime {
-        operand: glonax::kernel::excavator::Excavator {},
-        motion_device: hydraulic_motion,
-        event_bus: tokio::sync::mpsc::channel(128),
-        settings: RuntimeSettings::from(&config),
-        task_pool: vec![],
-    };
-
-    let dispatcher = rt.dispatch();
-
-    tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.unwrap();
-
-        log::info!("Termination requested");
-
-        dispatcher.gracefull_shutdown().await.unwrap();
-    });
-
-    if config.enable_autopilot {
-        let mut imu = Inertial::new(SERIAL_INTERTIAL1)?;
-        log::info!("Name: {}", imu.name());
-        imu.probe();
-
-        // let mut imu2 = Inertial::new(SERIAL_INTERTIAL2)?;
-        // log::info!("Name: {}", imu2.name());
-        // imu2.probe();
-
-        let mut measure_compose =
-            Composer::<Box<dyn glonax::device::MetricDevice + Send + Sync>>::new();
-        log::info!("Name: {}", measure_compose.name());
-        measure_compose.insert(Box::new(imu));
-        // measure_compose.insert(Box::new(imu2));
-        measure_compose.probe();
-
-        // rt.spawn_program_queue(
-        //     measure_compose,
-        //     glonax::kernel::arm_balance::ArmBalanceProgram::new(),
-        // );
-        rt.spawn_program_queue(
-            measure_compose,
-            glonax::kernel::drive::DriveProgram::new(),
-        );
-    }
-
-    if config.enable_command {
-        let mut gamepad = Gamepad::new();
-        log::info!("Name: {}", gamepad.name());
-        gamepad.probe();
-
-        rt.spawn_command_device(gamepad);
-    }
-
-    // Start the runtime.
-    rt.run().await;
+async fn run(config: glonax::Config) -> std::result::Result<(), ()> {
+    // Start the runtime service.
+    glonax::RuntimeService::<glonax::kernel::excavator::Excavator>::from_config(&config)
+        .rt_service()
+        .await;
 
     // TODO: This should really be an error because we dont expect to return.
     Ok(())
@@ -137,7 +63,10 @@ async fn main() {
         )
         .get_matches();
 
-    let mut config = glonax::Config::default();
+    let mut config = glonax::Config {
+        motion_device: SERIAL_HYDRAU1.to_owned(),
+        ..Default::default()
+    };
 
     if matches.is_present("no-auto") {
         config.enable_autopilot = false;
@@ -174,7 +103,8 @@ async fn main() {
     .unwrap();
 
     // NOTE: We'll never reach beyond this point on success.
-    if let Err(e) = run(config).await {
-        log::error!("{}", e);
+    if let Err(_e) = run(config).await {
+        // log::error!("{}", e);
+        log::error!("Error in runtime");
     }
 }
