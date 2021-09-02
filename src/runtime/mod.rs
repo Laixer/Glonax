@@ -105,13 +105,21 @@ impl<A: MotionDevice, K> Runtime<A, K> {
     /// out of the loop if shutdown was requested.
     pub async fn run(&mut self) {
         loop {
-            if let Some(event) = self.event_bus.1.recv().await {
-                match event {
-                    RuntimeEvent::DriveMotion(motion_event) => {
-                        self.motion_device.actuate(motion_event)
+            let wait = tokio::time::sleep(tokio::time::Duration::from_secs(5));
+
+            tokio::select! {
+                biased;
+
+                event = self.event_bus.1.recv() => {
+                    match event.unwrap() {
+                        RuntimeEvent::DriveMotion(motion_event) => {
+                            self.motion_device.actuate(motion_event)
+                        }
+                        RuntimeEvent::Shutdown => break,
                     }
-                    RuntimeEvent::Shutdown => break,
                 }
+
+                _ = wait => self.motion_device.idle_time(),
             };
         }
 

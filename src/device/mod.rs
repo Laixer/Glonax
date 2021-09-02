@@ -26,9 +26,17 @@ pub trait Device {
     /// Can be used to signal that the device is ready.
     /// Implementation is optional.
     fn probe(&mut self) {} // TODO: Return result.
+
+    /// Run operation in idle time.
+    ///
+    /// The device can implement this method when it wants to
+    /// run sporadic unscheduled events. There is no guarantee
+    /// this method is ever called.
+    fn idle_time(&mut self) {}
 }
 
 pub trait IoDevice: Device + Sized {
+    /// Construct device from path resource.
     fn from_path(path: &String) -> std::result::Result<Self, DeviceError>;
 }
 
