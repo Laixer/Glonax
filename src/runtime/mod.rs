@@ -58,18 +58,48 @@ impl Dispatch {
     }
 }
 
-// TODO: None of the fields should be pub.
-pub struct RuntimeSettings {}
+pub struct RuntimeSettings {
+    timer_interval: u64,
+}
 
 impl From<&Config> for RuntimeSettings {
     fn from(_config: &Config) -> Self {
-        Self {}
+        Self {
+            ..Default::default()
+        }
     }
 }
 
 impl Default for RuntimeSettings {
     fn default() -> Self {
-        Self {}
+        Self { timer_interval: 5 }
+    }
+}
+
+pub(super) struct DeviceManager {
+    device_list: Vec<std::sync::Arc<std::sync::Mutex<dyn crate::device::Device>>>,
+}
+
+impl DeviceManager {
+    pub(super) fn new() -> Self {
+        Self {
+            device_list: Vec::new(),
+        }
+    }
+
+    /// Register a device with the device manager.
+    #[inline]
+    pub(super) fn register_device(
+        &mut self,
+        device: std::sync::Arc<std::sync::Mutex<dyn crate::device::Device>>,
+    ) {
+        self.device_list.push(device)
+    }
+
+    fn idle_time(&self) {
+        if let Ok(mut device) = self.device_list.get(0).unwrap().lock() {
+            device.idle_time();
+        }
     }
 }
 
@@ -77,13 +107,15 @@ pub struct Runtime<A, K> {
     /// Runtime operand.
     pub(super) operand: K,
     /// Motion device.
-    pub(super) motion_device: A,
+    pub(super) motion_device: std::sync::Arc<std::sync::Mutex<A>>,
     /// Runtime event bus.
     pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Runtime settings.
     pub(super) settings: RuntimeSettings,
     /// Task pool.
     pub(super) task_pool: Vec<JoinHandle<()>>,
+    /// Device manager.
+    pub(super) device_manager: DeviceManager,
 }
 
 impl<A, K> Runtime<A, K> {
@@ -104,8 +136,10 @@ impl<A: MotionDevice, K> Runtime<A, K> {
     /// event bus. The runtime should only every break
     /// out of the loop if shutdown was requested.
     pub async fn run(&mut self) {
+        use tokio::time::{sleep, Duration};
+
         loop {
-            let wait = tokio::time::sleep(tokio::time::Duration::from_secs(5));
+            let wait = sleep(Duration::from_secs(self.settings.timer_interval));
 
             tokio::select! {
                 biased;
@@ -113,13 +147,15 @@ impl<A: MotionDevice, K> Runtime<A, K> {
                 event = self.event_bus.1.recv() => {
                     match event.unwrap() {
                         RuntimeEvent::DriveMotion(motion_event) => {
-                            self.motion_device.actuate(motion_event)
+                            if let Ok(mut motion_device) = self.motion_device.lock() {
+                                motion_device.actuate(motion_event)
+                            }
                         }
                         RuntimeEvent::Shutdown => break,
                     }
                 }
 
-                _ = wait => self.motion_device.idle_time(),
+                _ = wait => self.device_manager.idle_time(),
             };
         }
 

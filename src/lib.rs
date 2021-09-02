@@ -34,7 +34,7 @@ pub struct RuntimeService<'a, M, K> {
     runtime: Runtime<M, K>,
 }
 
-impl<'a, M, K> RuntimeService<'a, M, K>
+impl<'a, M: 'static, K> RuntimeService<'a, M, K>
 where
     M: IoDevice + MotionDevice,
     K: Operand + 'static,
@@ -48,22 +48,28 @@ where
     }
 
     /// Create and probe the IO device.
-    fn probe_io_device<D: IoDevice>(path: &String) -> D {
+    fn probe_io_device<D: IoDevice>(path: &String) -> std::sync::Arc<std::sync::Mutex<D>> {
         let mut io_device = D::from_path(path).unwrap();
         debug!("Probe '{}' device", io_device.name());
         io_device.probe();
-        io_device
+
+        std::sync::Arc::new(std::sync::Mutex::new(io_device))
     }
 
     /// Create the runtime core.
     fn bootstrap(config: &'a Config) -> Runtime<M, K> {
-        Runtime {
+        let motion_device = Self::probe_io_device::<M>(&config.motion_device);
+
+        let mut rt = Runtime {
             operand: K::default(),
-            motion_device: Self::probe_io_device::<M>(&config.motion_device),
+            motion_device: motion_device.clone(),
             event_bus: tokio::sync::mpsc::channel(128),
             settings: RuntimeSettings::from(config),
             task_pool: vec![],
-        }
+            device_manager: runtime::DeviceManager::new(),
+        };
+        rt.device_manager.register_device(motion_device);
+        rt
     }
 
     /// Start the runtime service.
