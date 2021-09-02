@@ -1,10 +1,16 @@
-use crate::{
-    common::position::Position,
-    device::MetricValue,
-    orchestrator::{Actuator, NormalControl},
-};
+use crate::{common::position::Position, device::MetricValue, runtime::NormalControl};
 
 use super::Program;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Actuator {
+    Boom = 2,
+    Arm = 1,
+    Bucket = 0,
+    Slew = 3,
+    LimpLeft = 4,
+    LimpRight = 5,
+}
 
 // TODO: Find range.
 // Arm range: -0.45 <> -2.47 (25 <> 140)
@@ -49,7 +55,7 @@ impl Program for ArmBalanceProgram {
 
     fn term_action(&self) -> Option<Self::Motion> {
         Some(NormalControl {
-            actuator: ACTUATOR,
+            actuator: ACTUATOR as u32, // TODO: auto conv.
             ..Default::default()
         })
     }
@@ -91,7 +97,7 @@ impl Program for ArmBalanceProgram {
         debug!("Output: {}", output.output);
 
         Some(NormalControl {
-            actuator: ACTUATOR,
+            actuator: ACTUATOR as u32,
             value: output.output,
             ..Default::default()
         })
