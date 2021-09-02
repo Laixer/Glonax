@@ -1,6 +1,6 @@
 use crate::{ice::Session, runtime::Motion};
 
-use super::{Device, MotionDevice};
+use super::{Device, DeviceError, IoDevice, MotionDevice};
 
 use serial::{SerialPort, SystemPort};
 
@@ -9,6 +9,12 @@ const DEVICE_ADDR: u16 = 0x7;
 
 pub struct Hydraulic {
     session: Session<SystemPort>,
+}
+
+impl IoDevice for Hydraulic {
+    fn from_path(path: &String) -> std::result::Result<Self, DeviceError> {
+        Hydraulic::new(path)
+    }
 }
 
 impl Hydraulic {

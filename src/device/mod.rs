@@ -28,6 +28,10 @@ pub trait Device {
     fn probe(&mut self) {} // TODO: Return result.
 }
 
+pub trait IoDevice: Device + Sized {
+    fn from_path(path: &String) -> std::result::Result<Self, DeviceError>;
+}
+
 /// Device which can exercise motion.
 pub trait MotionDevice: Device {
     /// Issue actuate command.

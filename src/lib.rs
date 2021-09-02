@@ -10,13 +10,16 @@ mod runtime;
 extern crate log;
 
 pub use config::Config;
+use device::{IoDevice, MotionDevice};
 use runtime::Operand;
 pub use runtime::{Runtime, RuntimeSettings};
 
 use crate::device::{Composer, Device, Gamepad, Hydraulic};
 
 /// Opaque runtime service for excavator kernel.
-pub type ExcavatorService<'a> = RuntimeService<'a, kernel::excavator::Excavator>;
+///
+/// The excavator service uses the hydraulic device to control motion.
+pub type ExcavatorService<'a> = RuntimeService<'a, Hydraulic, kernel::excavator::Excavator>;
 
 /// Runtime service.
 ///
@@ -24,14 +27,18 @@ pub type ExcavatorService<'a> = RuntimeService<'a, kernel::excavator::Excavator>
 /// runtime core code. It creates then configures the core
 /// based on the global config and presents the caller with
 /// a simple method to start the runtime loop.
-pub struct RuntimeService<'a, K> {
+pub struct RuntimeService<'a, M, K> {
     /// Current application configuration.
     config: &'a Config,
     /// Runtime core.
-    runtime: Runtime<Hydraulic, K>,
+    runtime: Runtime<M, K>,
 }
 
-impl<'a, K: Operand + 'static> RuntimeService<'a, K> {
+impl<'a, M, K> RuntimeService<'a, M, K>
+where
+    M: IoDevice + MotionDevice,
+    K: Operand + 'static,
+{
     /// Construct runtime service from configuration.
     pub fn from_config(config: &'a Config) -> Self {
         Self {
@@ -40,15 +47,19 @@ impl<'a, K: Operand + 'static> RuntimeService<'a, K> {
         }
     }
 
-    /// Create the runtime core.
-    fn bootstrap(config: &'a Config) -> Runtime<Hydraulic, K> {
-        let mut hydraulic_motion = Hydraulic::new(&config.motion_device).unwrap();
-        debug!("Probe '{}' device", hydraulic_motion.name());
-        hydraulic_motion.probe();
+    /// Create and probe the IO device.
+    fn probe_io_device<D: IoDevice>(path: &String) -> D {
+        let mut io_device = D::from_path(path).unwrap();
+        debug!("Probe '{}' device", io_device.name());
+        io_device.probe();
+        io_device
+    }
 
+    /// Create the runtime core.
+    fn bootstrap(config: &'a Config) -> Runtime<M, K> {
         Runtime {
             operand: K::default(),
-            motion_device: hydraulic_motion,
+            motion_device: Self::probe_io_device::<M>(&config.motion_device),
             event_bus: tokio::sync::mpsc::channel(128),
             settings: RuntimeSettings::from(config),
             task_pool: vec![],

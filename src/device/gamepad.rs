@@ -4,6 +4,8 @@ use crate::runtime::Scancode;
 
 use super::{CommandDevice, Device};
 
+const DEVICE_NAME: &str = "gamepad";
+
 pub struct Gamepad {
     inner: Gilrs,
     reverse_left: bool,
@@ -24,7 +26,7 @@ unsafe impl Send for Gamepad {}
 
 impl Device for Gamepad {
     fn name(&self) -> String {
-        "gamepad".to_owned()
+        DEVICE_NAME.to_owned()
     }
 }
 
