@@ -37,19 +37,15 @@ impl NormalControl {
     pub const MAX: f32 = 1.0;
     pub const NIL: f32 = 0.0;
     pub const MIN: f32 = -1.0;
-}
 
-impl Default for NormalControl {
-    fn default() -> Self {
-        NormalControl {
-            actuator: 0,
-            value: NormalControl::NIL,
-            range: 150..256,
+    pub fn new(actuator: u32, value: f32) -> Self {
+        Self {
+            actuator,
+            value,
+            ..Default::default()
         }
     }
-}
 
-impl NormalControl {
     /// Convert normal to effective range.
     ///
     /// If the unbound range is outside the absolute
@@ -77,6 +73,22 @@ impl NormalControl {
             };
 
             Motion::Change(self.actuator, value)
+        }
+    }
+}
+
+impl From<NormalControl> for Motion {
+    fn from(value: NormalControl) -> Self {
+        value.to_motion()
+    }
+}
+
+impl Default for NormalControl {
+    fn default() -> Self {
+        NormalControl {
+            actuator: 0,
+            value: NormalControl::NIL,
+            range: 150..256,
         }
     }
 }

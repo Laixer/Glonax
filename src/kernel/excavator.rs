@@ -35,42 +35,24 @@ impl Operand for Excavator {
     /// less sensitive based on the actuator (and input control).
     fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()> {
         match input {
-            Scancode::LeftStickX(value) => Ok(NormalControl {
-                actuator: Actuator::Slew.into(),
-                value,
-                ..Default::default()
+            Scancode::LeftStickX(value) => {
+                Ok(NormalControl::new(Actuator::Slew.into(), value).into())
             }
-            .to_motion()),
-            Scancode::LeftStickY(value) => Ok(NormalControl {
-                actuator: Actuator::Arm.into(),
-                value,
-                ..Default::default()
+            Scancode::LeftStickY(value) => {
+                Ok(NormalControl::new(Actuator::Arm.into(), value).into())
             }
-            .to_motion()),
-            Scancode::RightStickX(value) => Ok(NormalControl {
-                actuator: Actuator::Bucket.into(),
-                value,
-                ..Default::default()
+            Scancode::RightStickX(value) => {
+                Ok(NormalControl::new(Actuator::Bucket.into(), value).into())
             }
-            .to_motion()),
-            Scancode::RightStickY(value) => Ok(NormalControl {
-                actuator: Actuator::Boom.into(),
-                value,
-                ..Default::default()
+            Scancode::RightStickY(value) => {
+                Ok(NormalControl::new(Actuator::Boom.into(), value).into())
             }
-            .to_motion()),
-            Scancode::LeftTrigger(value) => Ok(NormalControl {
-                actuator: Actuator::LimpLeft.into(),
-                value,
-                ..Default::default()
+            Scancode::LeftTrigger(value) => {
+                Ok(NormalControl::new(Actuator::LimpLeft.into(), value).into())
             }
-            .to_motion()),
-            Scancode::RightTrigger(value) => Ok(NormalControl {
-                actuator: Actuator::LimpRight.into(),
-                value,
-                ..Default::default()
+            Scancode::RightTrigger(value) => {
+                Ok(NormalControl::new(Actuator::LimpRight.into(), value).into())
             }
-            .to_motion()),
             Scancode::Cancel => Ok(Motion::StopAll),
             _ => {
                 warn!("Scancode not mapped to action");
