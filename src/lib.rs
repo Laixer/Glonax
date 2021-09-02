@@ -15,8 +15,19 @@ pub use runtime::{Runtime, RuntimeSettings};
 
 use crate::device::{Composer, Device, Gamepad, Hydraulic};
 
+/// Opaque runtime service for excavator kernel.
+pub type ExcavatorService<'a> = RuntimeService<'a, kernel::excavator::Excavator>;
+
+/// Runtime service.
+///
+/// The runtime service is a convenient wrapper around the
+/// runtime core code. It creates then configures the core
+/// based on the global config and presents the caller with
+/// a simple method to start the runtime loop.
 pub struct RuntimeService<'a, K> {
-    config: &'a self::Config,
+    /// Current application configuration.
+    config: &'a Config,
+    /// Runtime core.
     runtime: Runtime<Hydraulic, K>,
 }
 
@@ -29,6 +40,7 @@ impl<'a, K: Operand + 'static> RuntimeService<'a, K> {
         }
     }
 
+    /// Create the runtime core.
     fn bootstrap(config: &'a Config) -> Runtime<Hydraulic, K> {
         let mut hydraulic_motion = Hydraulic::new(&config.motion_device).unwrap();
         debug!("Probe '{}' device", hydraulic_motion.name());
@@ -44,7 +56,9 @@ impl<'a, K: Operand + 'static> RuntimeService<'a, K> {
     }
 
     /// Start the runtime service.
-    pub async fn rt_service(&mut self) {
+    ///
+    /// This method consumes the runtime service.
+    pub async fn rt_service(mut self) {
         if self.config.enable_term_shutdown {
             info!("Enable signals shutdown");
 

@@ -6,11 +6,11 @@
 
 use clap::{App, Arg};
 
-const SERIAL_HYDRAU1: &str = "/dev/ttyUSB0";
+const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB0";
 
 async fn run(config: glonax::Config) -> std::result::Result<(), ()> {
     // Start the runtime service.
-    glonax::RuntimeService::<glonax::kernel::excavator::Excavator>::from_config(&config)
+    glonax::ExcavatorService::from_config(&config)
         .rt_service()
         .await;
 
@@ -64,7 +64,7 @@ async fn main() {
         .get_matches();
 
     let mut config = glonax::Config {
-        motion_device: SERIAL_HYDRAU1.to_owned(),
+        motion_device: SERIAL_HYDRAULIC.to_owned(),
         ..Default::default()
     };
 
