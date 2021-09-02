@@ -2,7 +2,7 @@ pub mod arm_balance;
 pub mod drive;
 pub mod excavator;
 
-use crate::device::MetricValue;
+use crate::{device::MetricValue, runtime::Motion};
 
 /// Program trait.
 ///
@@ -11,8 +11,6 @@ use crate::device::MetricValue;
 /// is run to completion. The completion condition is polled on
 /// every cycle.
 pub trait Program {
-    type Motion;
-
     /// Boot the program.
     ///
     /// This method is called when the runtime accepted
@@ -30,7 +28,7 @@ pub trait Program {
     /// Propagate the program forwards.
     ///
     /// This method returns an optional motion instruction.
-    fn step(&mut self) -> Option<Self::Motion>;
+    fn step(&mut self) -> Option<Motion>;
 
     /// Program termination condition.
     ///
@@ -42,7 +40,7 @@ pub trait Program {
     /// This is an optional method to send a last motion
     /// instruction. This method is called after `can_terminate`
     /// returns true and before the program is terminated.
-    fn term_action(&self) -> Option<Self::Motion> {
+    fn term_action(&self) -> Option<Motion> {
         None
     }
 }

@@ -25,8 +25,6 @@ impl DriveProgram {
 }
 
 impl Program for DriveProgram {
-    type Motion = Motion;
-
     fn boot(&mut self) {
         info!("Drive program called");
         self.start = std::time::Instant::now();
@@ -44,7 +42,7 @@ impl Program for DriveProgram {
         }
     }
 
-    fn step(&mut self) -> Option<Self::Motion> {
+    fn step(&mut self) -> Option<Motion> {
         Some(Motion::Change(Actuator::LimpLeft as u32, 200))
     }
 
@@ -54,7 +52,7 @@ impl Program for DriveProgram {
         sec_since_boot >= 5
     }
 
-    fn term_action(&self) -> Option<Self::Motion> {
+    fn term_action(&self) -> Option<Motion> {
         Some(Motion::StopAll)
     }
 }

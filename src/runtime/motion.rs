@@ -9,7 +9,7 @@ use std::{ops::Range, u32};
 /// The motion value can communicate the full range of an i16.
 /// The signness of the value is often used as a forward/backward
 /// motion indicator. However this is left to the motion device.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug)]
 pub enum Motion {
     /// Stop all motion.
     StopAll,
@@ -23,17 +23,6 @@ pub enum Motion {
 
 unsafe impl Sync for Motion {}
 unsafe impl Send for Motion {}
-
-pub trait ToMotion {
-    /// Returns `Motion` from implementing type.
-    fn to_motion(&self) -> Motion;
-}
-
-impl ToMotion for Motion {
-    fn to_motion(&self) -> Motion {
-        *self
-    }
-}
 
 pub struct NormalControl {
     /// Actuator.
@@ -60,7 +49,7 @@ impl Default for NormalControl {
     }
 }
 
-impl ToMotion for NormalControl {
+impl NormalControl {
     /// Convert normal to effective range.
     ///
     /// If the unbound range is outside the absolute
@@ -68,7 +57,7 @@ impl ToMotion for NormalControl {
     ///
     /// The `DEAD_VALUE` constitudes a measurement error.
     /// Any value below this constant is interpreted as 0.
-    fn to_motion(&self) -> Motion {
+    pub fn to_motion(&self) -> Motion {
         const DEAD_VALUE: f32 = 0.02;
 
         if self.value.abs() < DEAD_VALUE {

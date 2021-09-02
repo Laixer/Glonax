@@ -1,4 +1,4 @@
-use crate::{ice::Session, runtime::ToMotion};
+use crate::{ice::Session, runtime::Motion};
 
 use super::{Device, MotionDevice};
 
@@ -46,8 +46,8 @@ impl Device for Hydraulic {
 }
 
 impl MotionDevice for Hydraulic {
-    fn actuate(&mut self, motion: impl ToMotion) {
-        match motion.to_motion() {
+    fn actuate(&mut self, motion: Motion) {
+        match motion {
             crate::runtime::Motion::StopAll => self.halt(),
             crate::runtime::Motion::Stop(actuator) => {
                 debug!("Stop actuator {} ", actuator);

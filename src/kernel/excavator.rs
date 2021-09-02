@@ -1,4 +1,4 @@
-use crate::runtime::{Motion, NormalControl, Scancode, ToMotion};
+use crate::runtime::{Motion, NormalControl, Scancode};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Actuator {
@@ -17,9 +17,7 @@ impl From<Actuator> for u32 {
 }
 
 pub trait Operand {
-    type Motion;
-
-    fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Self::Motion, ()>;
+    fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()>;
 }
 
 #[derive(Clone, Copy)]
@@ -30,14 +28,12 @@ pub struct Excavator {
 impl Excavator {}
 
 impl Operand for Excavator {
-    type Motion = Motion;
-
     /// Try to convert input scancode to motion.
     ///
     /// Each individual scancode is mapped to its own motion
     /// structure. This way an input scancode can be more or
     /// less sensitive based on the actuator (and input control).
-    fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Self::Motion, ()> {
+    fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()> {
         match input {
             Scancode::LeftStickX(value) => Ok(NormalControl {
                 actuator: Actuator::Slew.into(),

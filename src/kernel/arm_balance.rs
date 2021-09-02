@@ -1,4 +1,8 @@
-use crate::{common::position::Position, device::MetricValue, runtime::NormalControl};
+use crate::{
+    common::position::Position,
+    device::MetricValue,
+    runtime::{Motion, NormalControl},
+};
 
 use super::Program;
 
@@ -42,8 +46,6 @@ impl ArmBalanceProgram {
 }
 
 impl Program for ArmBalanceProgram {
-    type Motion = NormalControl;
-
     fn can_terminate(&self) -> bool {
         if let Some(pos) = self.pos {
             let e = SET_POINT - pos.pitch;
@@ -53,11 +55,8 @@ impl Program for ArmBalanceProgram {
         }
     }
 
-    fn term_action(&self) -> Option<Self::Motion> {
-        Some(NormalControl {
-            actuator: ACTUATOR as u32, // TODO: auto conv.
-            ..Default::default()
-        })
+    fn term_action(&self) -> Option<Motion> {
+        Some(Motion::Stop(ACTUATOR as u32)) // TODO: auto conv.
     }
 
     fn push(&mut self, id: u32, value: MetricValue) {
@@ -75,7 +74,7 @@ impl Program for ArmBalanceProgram {
         }
     }
 
-    fn step(&mut self) -> Option<Self::Motion> {
+    fn step(&mut self) -> Option<Motion> {
         self.iteration += 1;
 
         if self.pos.is_none() {
@@ -96,10 +95,13 @@ impl Program for ArmBalanceProgram {
         let output = self.pid.next_control_output(self.pos.unwrap().pitch);
         debug!("Output: {}", output.output);
 
-        Some(NormalControl {
-            actuator: ACTUATOR as u32,
-            value: output.output,
-            ..Default::default()
-        })
+        Some(
+            NormalControl {
+                actuator: ACTUATOR as u32,
+                value: output.output,
+                ..Default::default()
+            }
+            .to_motion(),
+        )
     }
 }

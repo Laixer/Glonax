@@ -6,7 +6,7 @@ mod inertial;
 
 use crate::{
     common::position::Position,
-    runtime::{Scancode, ToMotion},
+    runtime::{Motion, Scancode},
 };
 
 pub use compose::Composer;
@@ -31,7 +31,7 @@ pub trait Device {
 /// Device which can exercise motion.
 pub trait MotionDevice: Device {
     /// Issue actuate command.
-    fn actuate(&mut self, motion: impl ToMotion); // TODO: Return result.
+    fn actuate(&mut self, motion: Motion); // TODO: Return result.
 
     /// Halt all operation.
     ///

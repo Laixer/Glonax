@@ -2,7 +2,7 @@ mod input;
 mod motion;
 
 pub use input::Scancode;
-pub use motion::{Motion, NormalControl, ToMotion};
+pub use motion::{Motion, NormalControl};
 
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -36,11 +36,9 @@ impl Dispatch {
     #[inline]
     async fn motion(
         &self,
-        motion: impl ToMotion,
+        motion: Motion,
     ) -> Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
-        self.0
-            .send(RuntimeEvent::DriveMotion(motion.to_motion()))
-            .await
+        self.0.send(RuntimeEvent::DriveMotion(motion)).await
     }
 
     /// Request runtime shutdown.
@@ -127,7 +125,6 @@ impl<A: MotionDevice, K> Runtime<A, K> {
 impl<A, K> Runtime<A, K>
 where
     K: crate::kernel::excavator::Operand + Clone + Send + Sync + 'static,
-    K::Motion: ToMotion + Send + Sync,
 {
     pub fn spawn_command_device<C: CommandDevice + Send + 'static>(
         &mut self,
@@ -167,7 +164,6 @@ impl<A: MotionDevice, K> Runtime<A, K> {
     where
         D: crate::device::MetricDevice + Send + Sync + 'static + ?Sized,
         P: crate::kernel::Program + Send + Sync + 'static,
-        P::Motion: ToMotion + Send + Sync,
     {
         let dispatcher = self.dispatch();
 
