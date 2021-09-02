@@ -48,7 +48,6 @@ impl Device for Inertial {
 }
 
 impl MetricDevice for Inertial {
-    // TODO: Code can be improved.
     fn next(&mut self) -> Option<MetricValue> {
         let frame = self.session.accept();
         match frame.packet().payload_type.try_into().unwrap() {
@@ -66,21 +65,13 @@ impl MetricDevice for Inertial {
             _ => None,
         }
 
-        // if let Some(packet) = self.session.accept() {
-        //     match packet {
-        //         Sugar::Temperature(temp) => Some(MetricValue::Temperature(temp)),
-        //         Sugar::Acceleration(x, y, z) => {
-        //             Some(MetricValue::Position(Position::from_raw(x, y, z)))
-        //         }
-        //         Sugar::Orientation(_x, _y, _z) => {
-        //             // debug!("Arm Raw Orientation: X {} Y {} Z {}", x, y, z);
-        //             None
-        //         }
-        //         Sugar::Direction(_, _, _) => None,
-        //         _ => None,
-        //     }
-        // } else {
-        //     None
+        // Sugar::Acceleration(x, y, z) => {
+        //  Some(MetricValue::Position(Position::from_raw(x, y, z)))
         // }
+        // Sugar::Orientation(_x, _y, _z) => {
+        //  // debug!("Arm Raw Orientation: X {} Y {} Z {}", x, y, z);
+        //  None
+        // }
+        // Sugar::Direction(_, _, _) => None,
     }
 }
