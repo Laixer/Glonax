@@ -63,6 +63,10 @@ impl MotionDevice for Hydraulic {
                     if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
                         error!("Session error: {:?}", err);
                     }
+                    // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
+                    if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                        error!("Session error: {:?}", err);
+                    }
                 }
             }
             crate::runtime::Motion::Change(actuators) => {
@@ -82,6 +86,10 @@ impl MotionDevice for Hydraulic {
         debug!("Stop all actuators");
 
         // FUTURE: Handle error, translate to device error?
+        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
+            error!("Session error: {:?}", err);
+        }
+        // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
         if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
             error!("Session error: {:?}", err);
         }
