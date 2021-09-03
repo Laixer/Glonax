@@ -60,10 +60,13 @@ where
     fn bootstrap(config: &'a Config) -> Runtime<M, K> {
         let motion_device = Self::probe_io_device::<M>(&config.motion_device);
 
+        let program_queue = tokio::sync::mpsc::channel(1024);
+
         let mut rt = Runtime {
             operand: K::default(),
             motion_device: motion_device.clone(),
-            event_bus: tokio::sync::mpsc::channel(128),
+            event_bus: tokio::sync::mpsc::channel(64),
+            program_queue: (program_queue.0, Some(program_queue.1)),
             settings: RuntimeSettings::from(config),
             task_pool: vec![],
             device_manager: runtime::DeviceManager::new(),
@@ -121,6 +124,7 @@ where
             self.runtime.spawn_command_device(gamepad);
         }
 
+        self.runtime.program_queue.0.send(42).await.unwrap();
         self.runtime.run().await
     }
 }

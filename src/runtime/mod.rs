@@ -97,6 +97,7 @@ impl DeviceManager {
     }
 
     fn idle_time(&self) {
+        // TODO: cycle the index.
         if let Ok(mut device) = self.device_list.get(0).unwrap().lock() {
             device.idle_time();
         }
@@ -110,6 +111,8 @@ pub struct Runtime<A, K> {
     pub(super) motion_device: std::sync::Arc<std::sync::Mutex<A>>,
     /// Runtime event bus.
     pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
+    /// Program queue.
+    pub(super) program_queue: (Sender<i32>, Option<Receiver<i32>>),
     /// Runtime settings.
     pub(super) settings: RuntimeSettings,
     /// Task pool.
@@ -153,6 +156,7 @@ impl<A: MotionDevice, K> Runtime<A, K> {
                         }
                         RuntimeEvent::Shutdown => break,
                     }
+                    // TODO: handle err.
                 }
 
                 _ = wait => self.device_manager.idle_time(),
@@ -211,8 +215,12 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
         let dispatcher = self.dispatch();
         let operand = self.operand.clone();
 
+        // Move ownership of receiver to program queue thread.
+        let mut receiver = self.program_queue.1.take().unwrap();
+
         let task_handle = tokio::task::spawn(async move {
-            let mut program = operand.fetch_program(42);
+            let id = receiver.recv().await.unwrap(); // TODO
+            let mut program = operand.fetch_program(id);
 
             let mut ctx = Context::new();
             program.boot(&mut ctx);
