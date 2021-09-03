@@ -22,6 +22,7 @@ where
         }
     }
 
+    /// Check if value was found in cache.
     fn hit(&mut self, key: K, value: V) -> bool {
         match self.map.insert(key, value) {
             Some(prev_value) => prev_value == value,
@@ -82,20 +83,26 @@ impl MotionDevice for Hydraulic {
             crate::runtime::Motion::StopAll => self.halt(),
             crate::runtime::Motion::Stop(actuators) => {
                 for actuator in actuators {
-                    debug!("Stop actuator {} ", actuator);
+                    // Test the motion event against the cache. There is
+                    // no point in sending the exact same motion value over and over again.
+                    if !self.cache.hit(actuator, 0) {
+                        debug!("Stop actuator {} ", actuator);
 
-                    // FUTURE: Handle error, translate to device error?
-                    if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
-                        error!("Session error: {:?}", err);
-                    }
-                    // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
-                    if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
-                        error!("Session error: {:?}", err);
+                        // FUTURE: Handle error, translate to device error?
+                        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                            error!("Session error: {:?}", err);
+                        }
+                        // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
+                        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                            error!("Session error: {:?}", err);
+                        }
                     }
                 }
             }
             crate::runtime::Motion::Change(actuators) => {
                 for (actuator, value) in actuators {
+                    // Test the motion event against the cache. There is
+                    // no point in sending the exact same motion value over and over again.
                     if !self.cache.hit(actuator, value) {
                         debug!("Change actuator {} to value {}", actuator, value);
 
