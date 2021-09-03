@@ -7,8 +7,32 @@ use serial::{SerialPort, SystemPort};
 const DEVICE_NAME: &str = "hydraulic";
 const DEVICE_ADDR: u16 = 0x7;
 
+struct Cache<K, V> {
+    map: std::collections::HashMap<K, V>,
+}
+
+impl<K, V> Cache<K, V>
+where
+    K: Eq + std::hash::Hash,
+    V: std::cmp::PartialEq + Copy,
+{
+    fn new() -> Self {
+        Self {
+            map: std::collections::HashMap::new(),
+        }
+    }
+
+    fn hit(&mut self, key: K, value: V) -> bool {
+        match self.map.insert(key, value) {
+            Some(prev_value) => prev_value == value,
+            None => false,
+        }
+    }
+}
+
 pub struct Hydraulic {
     session: Session<SystemPort>,
+    cache: Cache<u32, i16>,
 }
 
 impl IoDevice for Hydraulic {
@@ -37,6 +61,7 @@ impl Hydraulic {
 
         Ok(Self {
             session: Session::new(channel, DEVICE_ADDR),
+            cache: Cache::new(),
         })
     }
 }
@@ -71,11 +96,14 @@ impl MotionDevice for Hydraulic {
             }
             crate::runtime::Motion::Change(actuators) => {
                 for (actuator, value) in actuators {
-                    debug!("Change actuator {} to value {}", actuator, value);
+                    if !self.cache.hit(actuator, value) {
+                        debug!("Change actuator {} to value {}", actuator, value);
 
-                    // FUTURE: Handle error, translate to device error?
-                    if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value) {
-                        error!("Session error: {:?}", err);
+                        // FUTURE: Handle error, translate to device error?
+                        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value)
+                        {
+                            error!("Session error: {:?}", err);
+                        }
                     }
                 }
             }
