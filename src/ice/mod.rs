@@ -89,13 +89,6 @@ struct SolenoidControl {
     value: i16,
 }
 
-// impl SolenoidControl {
-//     #[inline]
-//     fn is_halt(&self) -> bool {
-//         self.id == u8::MAX && self.value == 0
-//     }
-// }
-
 #[derive(Debug, Clone, Copy)]
 pub enum FrameError {
     InvalidMagic(usize),
@@ -362,6 +355,11 @@ impl<T: std::io::Write> Session<T> {
             SessionError::IoError(err)
         })?;
         self.stats.tx_count += 1;
+
+        // TODO: HACK: README: XXX: We deliberately delay the write
+        // operation so that the MCU gets enough time to process the
+        // imcoming packet.
+        std::thread::sleep(std::time::Duration::from_millis(5));
         Ok(())
     }
 
