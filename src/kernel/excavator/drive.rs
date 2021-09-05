@@ -9,6 +9,10 @@ use super::Actuator;
 /// then stops.
 pub struct DriveProgram;
 
+const DRIVE_SPEED_LEFT: i16 = 200;
+const DRIVE_SPEED_RIGHT: i16 = 200;
+const DRIVE_TIME: u64 = 5;
+
 impl DriveProgram {
     pub fn new() -> Self {
         Self {}
@@ -18,15 +22,15 @@ impl DriveProgram {
 impl Program for DriveProgram {
     fn step(&mut self, _: &mut Context) -> Option<Motion> {
         Some(Motion::Change(vec![
-            (Actuator::LimpLeft.into(), 200),
-            (Actuator::LimpRight.into(), 200),
+            (Actuator::LimpLeft.into(), DRIVE_SPEED_LEFT),
+            (Actuator::LimpRight.into(), DRIVE_SPEED_RIGHT),
         ]))
     }
 
     fn can_terminate(&self, context: &mut Context) -> bool {
         let sec_since_boot = context.start.elapsed().as_secs();
         info!("Programm running for {} seconds", sec_since_boot);
-        sec_since_boot >= 5
+        sec_since_boot >= DRIVE_TIME
     }
 
     fn term_action(&self, _: &mut Context) -> Option<Motion> {

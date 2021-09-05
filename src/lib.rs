@@ -1,3 +1,9 @@
+// Copyright (C) 2021 Laixer Equipment B.V.
+// All rights reserved.
+//
+// This software may be modified and distributed under the terms
+// of the included license.  See the LICENSE file for details.
+
 pub mod common;
 mod config;
 // mod daemon;
@@ -75,10 +81,7 @@ where
         rt
     }
 
-    /// Start the runtime service.
-    ///
-    /// This method consumes the runtime service.
-    pub async fn rt_service(mut self) {
+    async fn config_services(&mut self) {
         if self.config.enable_term_shutdown {
             info!("Enable signals shutdown");
 
@@ -123,8 +126,17 @@ where
 
             self.runtime.spawn_command_device(gamepad);
         }
+    }
 
-        self.runtime.program_queue.0.send(42).await.unwrap();
-        self.runtime.run().await
+    /// Start the runtime service.
+    ///
+    /// This method consumes the runtime service.
+    pub async fn rt_service(mut self) {
+        self.config_services().await;
+
+        self.runtime.program_queue.0.send(701).await.unwrap();
+
+        self.runtime.run().await;
+        // tokio::join!(netservice.launch(), self.runtime.run());
     }
 }
