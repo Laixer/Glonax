@@ -1,3 +1,4 @@
+mod error;
 mod input;
 mod motion;
 mod operand;
@@ -15,6 +16,8 @@ use crate::{
     device::{CommandDevice, MotionDevice},
     Config,
 };
+
+pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 #[derive(Debug)]
 pub enum RuntimeEvent {
@@ -39,7 +42,7 @@ impl Dispatch {
     async fn motion(
         &self,
         motion: Motion,
-    ) -> Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
+    ) -> std::result::Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
         self.0.send(RuntimeEvent::DriveMotion(motion)).await
     }
 
@@ -53,7 +56,7 @@ impl Dispatch {
     #[inline]
     pub async fn gracefull_shutdown(
         &self,
-    ) -> Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
+    ) -> std::result::Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
         self.0.send(RuntimeEvent::Shutdown).await
     }
 }
@@ -154,7 +157,10 @@ impl<A, K> Runtime<A, K> {
 
     /// Spawn background task.
     ///
-    /// Run a future in the background.
+    /// Run a future in the background. The background task is supposed to run
+    /// for a substantial amount of time, or as long as the runtime itself. The
+    /// task handle is stored and called with an abort instruction when the
+    /// runtime exits its loop.
     fn spawn<T>(&mut self, future: T)
     where
         T: std::future::Future<Output = ()> + std::marker::Send,

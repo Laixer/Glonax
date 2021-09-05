@@ -131,12 +131,13 @@ where
     /// Start the runtime service.
     ///
     /// This method consumes the runtime service.
-    pub async fn rt_service(mut self) {
+    pub async fn rt_service(mut self) -> self::runtime::Result {
         self.config_services().await;
 
         self.runtime.program_queue.0.send(701).await.unwrap();
 
         self.runtime.run().await;
-        // tokio::join!(netservice.launch(), self.runtime.run());
+
+        Ok(())
     }
 }

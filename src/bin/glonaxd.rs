@@ -92,7 +92,11 @@ async fn main() {
     ])
     .unwrap();
 
-    glonax::ExcavatorService::from_config(&config)
+    let result = glonax::ExcavatorService::from_config(&config)
         .rt_service()
         .await;
+
+    if let Err(e) = result {
+        log::error!("Error: {}", e)
+    }
 }
