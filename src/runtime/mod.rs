@@ -219,40 +219,43 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
         let mut receiver = self.program_queue.1.take().unwrap();
 
         let task_handle = tokio::task::spawn(async move {
-            let id = receiver.recv().await.unwrap(); // TODO
-            let mut program = operand.fetch_program(id);
+            while let Some(id) = receiver.recv().await {
+                let mut program = operand.fetch_program(id);
 
-            let mut ctx = Context::new();
-            program.boot(&mut ctx);
+                info!("Starting new program");
 
-            // Loop until this program reaches its termination condition. If
-            // the program does not terminate we'll run forever.
-            while !program.can_terminate(&mut ctx) {
-                for (idx, device) in &mut metric_devices.iter_mut() {
-                    match device.next() {
-                        Some(value) => {
-                            program.push(idx.clone(), value, &mut ctx);
+                let mut ctx = Context::new();
+                program.boot(&mut ctx);
+
+                // Loop until this program reaches its termination condition. If
+                // the program does not terminate we'll run forever.
+                while !program.can_terminate(&mut ctx) {
+                    for (idx, device) in &mut metric_devices.iter_mut() {
+                        match device.next() {
+                            Some(value) => {
+                                program.push(idx.clone(), value, &mut ctx);
+                            }
+                            None => {}
                         }
-                        None => {}
+                    }
+
+                    if let Some(motion) = program.step(&mut ctx) {
+                        if let Err(_) = dispatcher.motion(motion).await {
+                            warn!("Program terminated without completion");
+                            return;
+                        }
                     }
                 }
 
-                if let Some(motion) = program.step(&mut ctx) {
+                if let Some(motion) = program.term_action(&mut ctx) {
                     if let Err(_) = dispatcher.motion(motion).await {
                         warn!("Program terminated without completion");
                         return;
                     }
                 }
-            }
 
-            if let Some(motion) = program.term_action(&mut ctx) {
-                if let Err(_) = dispatcher.motion(motion).await {
-                    warn!("Program terminated without completion");
-                    return;
-                }
+                info!("Program terminated");
             }
-
-            info!("Program terminated");
         });
 
         self.task_pool.push(task_handle);
