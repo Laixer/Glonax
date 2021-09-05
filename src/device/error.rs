@@ -29,10 +29,10 @@ impl std::fmt::Display for DeviceError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         match &self.kind {
             ErrorKind::NoSuchDevice(path) => {
-                write!(fmt, "{}: No such device: {}", self.device, path)
+                write!(fmt, "{}: no such device: {}", self.device, path)
             }
-            ErrorKind::InvalidInput => fmt.write_str("Invalid device parameters"),
-            ErrorKind::Io(_) => fmt.write_str("I/O Error"),
+            ErrorKind::InvalidInput => fmt.write_str("invalid device parameters"),
+            ErrorKind::Io(_) => fmt.write_str("io error"),
         }
     }
 }
