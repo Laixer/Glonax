@@ -1,9 +1,10 @@
 use crate::runtime::{Motion, NormalControl, Operand, Program, Scancode};
 
-use self::drive::DriveProgram;
+use self::{arm_balance::ArmBalanceProgram, drive::DriveProgram, turn::TurnProgram};
 
 mod arm_balance;
 mod drive;
+mod turn;
 
 enum Actuator {
     Boom = 2,
@@ -66,7 +67,12 @@ impl Operand for Excavator {
     /// Fetch program from identifier.
     ///
     /// The method returns a pointer to the excavator program.
-    fn fetch_program(&self, _order: i32) -> Box<dyn Program + Send + Sync> {
-        Box::new(DriveProgram::new())
+    fn fetch_program(&self, order: i32) -> Box<dyn Program + Send + Sync> {
+        match order {
+            600 => Box::new(ArmBalanceProgram::new()),
+            700 => Box::new(DriveProgram::new()),
+            701 => Box::new(TurnProgram::new()),
+            _ => Box::new(DriveProgram::new()),
+        }
     }
 }
