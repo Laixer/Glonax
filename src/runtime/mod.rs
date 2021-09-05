@@ -76,14 +76,25 @@ impl Default for RuntimeSettings {
     }
 }
 
+/// Device manager.
+///
+/// The device manager keeps track of registered devices. Methods on the devices
+/// are available on the device manager. On ever device method call we'll select
+/// a new device from the manager. This allows the caller to automatically cycle
+/// through all devices when the same method is called repeatedly.
+///
+/// By default devices selection is based on a simple round robin distribution.
 pub(super) struct DeviceManager {
     device_list: Vec<std::sync::Arc<std::sync::Mutex<dyn crate::device::Device>>>,
+    index: usize,
 }
 
 impl DeviceManager {
+    /// Construct new device manager.
     pub(super) fn new() -> Self {
         Self {
             device_list: Vec::new(),
+            index: 0,
         }
     }
 
@@ -96,9 +107,19 @@ impl DeviceManager {
         self.device_list.push(device)
     }
 
-    fn idle_time(&self) {
-        // TODO: cycle the index.
-        if let Ok(mut device) = self.device_list.get(0).unwrap().lock() {
+    /// Select the next device from the device list.
+    ///
+    /// Re-entering this method is likely to yield a different result.
+    fn next(&mut self) -> &std::sync::Arc<std::sync::Mutex<dyn crate::device::Device>> {
+        self.index += 1;
+        self.device_list
+            .get(self.index % self.device_list.len())
+            .unwrap()
+    }
+
+    /// Call `idle_time` method on the next device.
+    fn idle_time(&mut self) {
+        if let Ok(mut device) = self.next().lock() {
             device.idle_time();
         }
     }
@@ -222,7 +243,7 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
             while let Some(id) = receiver.recv().await {
                 let mut program = operand.fetch_program(id);
 
-                info!("Starting new program");
+                info!("Start new program");
 
                 let mut ctx = Context::new();
                 program.boot(&mut ctx);
