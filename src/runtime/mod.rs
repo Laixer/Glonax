@@ -145,21 +145,31 @@ pub struct Runtime<A, K> {
 impl<A, K> Runtime<A, K> {
     /// Create a runtime dispatcher.
     ///
-    /// The dispatcher is the input channel to the
-    /// runtime event queue.
+    /// The dispatcher is the input channel to the runtime event queue. This
+    /// is the recommended method to post to the event queue.
     #[inline]
     pub fn dispatch(&self) -> Dispatch {
         Dispatch(self.event_bus.0.clone())
+    }
+
+    /// Spawn background task.
+    ///
+    /// Run a future in the background.
+    fn spawn<T>(&mut self, future: T)
+    where
+        T: std::future::Future<Output = ()> + std::marker::Send,
+        T: 'static,
+    {
+        self.task_pool.push(tokio::task::spawn(future));
     }
 }
 
 impl<A: MotionDevice, K> Runtime<A, K> {
     /// Start the runtime.
     ///
-    /// The runtime will process the events from the
-    /// event bus. The runtime should only every break
-    /// out of the loop if shutdown was requested.
-    pub async fn run(&mut self) {
+    /// The runtime will process the events from the event bus. The runtime
+    /// should only every break out of the loop if shutdown was requested.
+    pub(super) async fn run(&mut self) {
         use tokio::time::{sleep, Duration};
 
         loop {
@@ -196,14 +206,14 @@ impl<A, K> Runtime<A, K>
 where
     K: Operand + 'static,
 {
-    pub fn spawn_command_device<C: CommandDevice + Send + 'static>(
+    pub(super) fn spawn_command_device<C: CommandDevice + Send + 'static>(
         &mut self,
         mut command_device: C,
-    ) -> &mut Self {
+    ) {
         let dispatcher = self.dispatch();
         let operand = self.operand.clone();
 
-        let task_handle = tokio::task::spawn(async move {
+        self.spawn(async move {
             loop {
                 // FUTURE: We should be awaiting this.
                 match command_device.next() {
@@ -219,18 +229,14 @@ where
                 }
             }
         });
-
-        self.task_pool.push(task_handle);
-        self
     }
 }
 
 impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
-    pub fn spawn_program_queue<D>(
+    pub(super) fn spawn_program_queue<D>(
         &mut self,
         mut metric_devices: crate::device::Composer<Box<D>>,
-    ) -> &mut Self
-    where
+    ) where
         D: crate::device::MetricDevice + Send + Sync + 'static + ?Sized,
     {
         let dispatcher = self.dispatch();
@@ -239,7 +245,7 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
         // Move ownership of receiver to program queue thread.
         let mut receiver = self.program_queue.1.take().unwrap();
 
-        let task_handle = tokio::task::spawn(async move {
+        self.spawn(async move {
             while let Some(id) = receiver.recv().await {
                 let mut program = operand.fetch_program(id);
 
@@ -278,8 +284,5 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
                 info!("Program terminated");
             }
         });
-
-        self.task_pool.push(task_handle);
-        self
     }
 }
