@@ -240,7 +240,7 @@ pub struct Session<T> {
     /// Local address.
     pub address: u16,
     /// Reading buffer.
-    buffer: DoubleCursor<[u8; 64]>,
+    buffer: DoubleCursor<[u8; 4096]>,
 }
 
 impl<T> Session<T> {
@@ -264,7 +264,7 @@ impl<T: std::io::Read> Session<T> {
             inner,
             stats: Stats::new(),
             address,
-            buffer: DoubleCursor::new([0u8; 64]),
+            buffer: DoubleCursor::new([0u8; 4096]),
         }
     }
 
@@ -275,7 +275,7 @@ impl<T: std::io::Read> Session<T> {
     pub fn next(&mut self) -> std::result::Result<Frame, SessionError> {
         let taken = self
             .inner
-            .read(self.buffer.get_mut_avail())
+            .read(self.buffer.allocate())
             .map_err(|err| SessionError::IoError(err))?;
         self.buffer.fill(taken);
 
@@ -319,28 +319,15 @@ impl<T: std::io::Read> Session<T> {
     /// blocks on read calls.
     pub fn accept(&mut self) -> Frame {
         loop {
-            let fr = self.next();
-
-            match fr {
-                Ok(frz) => break frz,
-                Err(e) => debug!("ERR {:?}", e),
+            match self.next() {
+                Ok(frame) => {
+                    if frame.is_broadcast() || frame.address() == self.address {
+                        break frame;
+                    }
+                }
+                Err(SessionError::Incomplete) => continue,
+                Err(e) => warn!("{:?}", e),
             }
-
-            // if fr.is_ok() {
-            //     println!("OK");
-            // } else {
-            //     let qq = fr.expect("msg");
-            //     debug!("ERR {:?}", qq);
-            // }
-            // if let Ok(frame) = self.next() {
-            //     if frame.is_broadcast() || frame.address() == self.address {
-            //         break frame;
-            //     } else {
-            //         println!("Stray packet");
-            //     }
-            // } else {
-            //     frame.un
-            // }
         }
     }
 }
