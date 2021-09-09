@@ -1,0 +1,15 @@
+[package]
+name = "glonax-ice"
+version = "1.0.6"
+authors = ["Laixer Equipment B.V. <info@laixer.com>"]
+edition = "2018"
+repository = "https://github.com/Laixer/Glonax"
+description = """
+The ICE protocol encoder and decoder.
+"""
+categories = ["protocol", "decoder", "encoder", "network"]
+keywords = ["protocol", "hardware", "glonax"]
+
+[dependencies]
+log = "0.4"
+crc = "2.0.0"
