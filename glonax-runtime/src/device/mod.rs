@@ -32,6 +32,10 @@ pub trait Device {
     fn idle_time(&mut self) {}
 }
 
+/// I/O device.
+///
+/// An I/O device takes a local resource such as a file or socket
+/// as its communication medium.
 pub trait IoDevice: Device + Sized {
     /// Construct device from path resource.
     fn from_path(path: &String) -> std::result::Result<Self, DeviceError>;

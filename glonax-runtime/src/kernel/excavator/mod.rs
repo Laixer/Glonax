@@ -29,6 +29,11 @@ pub struct Excavator;
 
 impl Default for Excavator {
     fn default() -> Self {
+        // The welcome message makes it easier to spot the current
+        // running configuration. This could be anything as long as
+        // it has the operand name in the message.
+        info!("Hello, I am an excavator. Gets go diggin'!");
+
         Self {}
     }
 }

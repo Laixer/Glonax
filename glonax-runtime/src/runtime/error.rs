@@ -1,11 +1,17 @@
 use std::{error, fmt};
 
+use crate::device::DeviceError;
+
 #[derive(Debug)]
-pub struct Error {}
+pub enum Error {
+    Device(DeviceError),
+}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "my error")
+        match self {
+            Error::Device(e) => write!(f, "{}", e),
+        }
     }
 }
 

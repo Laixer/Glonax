@@ -1,3 +1,5 @@
+use std::error;
+
 pub type Result<T> = std::result::Result<T, DeviceError>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,6 +36,12 @@ impl std::fmt::Display for DeviceError {
             ErrorKind::InvalidInput => fmt.write_str("invalid device parameters"),
             ErrorKind::Io(_) => fmt.write_str("io error"),
         }
+    }
+}
+
+impl error::Error for DeviceError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        None
     }
 }
 

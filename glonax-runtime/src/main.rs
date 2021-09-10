@@ -70,6 +70,7 @@ async fn main() {
         .set_time_format("%X %6f".to_owned())
         .set_target_level(log::LevelFilter::Trace)
         .add_filter_ignore_str("sled")
+        .add_filter_ignore_str("gilrs")
         .build();
 
     let log_level = match matches.occurrences_of("v") {
