@@ -69,7 +69,7 @@ async fn main() {
         .set_time_to_local(true)
         .set_time_format("%X %6f".to_owned())
         .set_target_level(log::LevelFilter::Trace)
-        .add_filter_allow("glonax".to_owned())
+        .add_filter_ignore_str("sled")
         .build();
 
     let log_level = match matches.occurrences_of("v") {
@@ -78,19 +78,12 @@ async fn main() {
         2 | _ => log::LevelFilter::Debug,
     };
 
-    simplelog::CombinedLogger::init(vec![
-        simplelog::TermLogger::new(
-            log_level,
-            log_config.clone(),
-            simplelog::TerminalMode::Mixed,
-            simplelog::ColorChoice::Auto,
-        ),
-        simplelog::WriteLogger::new(
-            log_level,
-            log_config.clone(),
-            std::fs::File::create(format!("log/manual_{}.log", std::process::id())).unwrap(),
-        ),
-    ])
+    simplelog::TermLogger::init(
+        log_level,
+        log_config,
+        simplelog::TerminalMode::Mixed,
+        simplelog::ColorChoice::Auto,
+    )
     .unwrap();
 
     let result = glonax::ExcavatorService::from_config(&config)

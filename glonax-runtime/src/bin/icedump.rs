@@ -140,7 +140,7 @@ fn main() {
         )
         .get_matches();
 
-    let config = simplelog::ConfigBuilder::new()
+    let log_config = simplelog::ConfigBuilder::new()
         .set_time_level(log::LevelFilter::Off)
         .set_target_level(log::LevelFilter::Off)
         .set_thread_level(log::LevelFilter::Off)
@@ -148,7 +148,7 @@ fn main() {
 
     simplelog::TermLogger::init(
         log::LevelFilter::Debug,
-        config,
+        log_config,
         simplelog::TerminalMode::Mixed,
         simplelog::ColorChoice::Auto,
     )
