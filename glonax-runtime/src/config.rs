@@ -13,6 +13,10 @@ pub struct Config {
     pub workspace: PathBuf,
     /// Motion device resource.
     pub motion_device: String,
+    /// Metric device resources.
+    pub metric_devices: Vec<String>,
+    /// Number of programs to queue.
+    pub program_queue: usize,
 }
 
 impl Default for Config {
@@ -21,8 +25,10 @@ impl Default for Config {
             enable_autopilot: true,
             enable_command: true,
             enable_term_shutdown: true,
-            workspace: current_dir().unwrap(),
+            workspace: current_dir().unwrap().join("data"),
             motion_device: String::new(),
+            metric_devices: vec![],
+            program_queue: 1024,
         }
     }
 }
