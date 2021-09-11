@@ -5,9 +5,6 @@ use self::{double_cursor::DoubleCursor, stats::Stats};
 mod double_cursor;
 pub mod stats;
 
-#[macro_use]
-extern crate log;
-
 const MAGIC: [u8; 2] = [0xc5, 0x34];
 const ICE_PROTOCOL_VERSION: u8 = 5;
 
