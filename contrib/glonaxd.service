@@ -1,0 +1,14 @@
+[Unit]
+Description=Heavy machinery controller daemon
+StartLimitIntervalSec=5
+StartLimitBurst=5
+
+[Service]
+WorkingDirectory=/var/lib/glonax
+Restart=always
+RestartSec=2
+ExecStart=/usr/local/bin/glonaxd --no-auto -v
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
