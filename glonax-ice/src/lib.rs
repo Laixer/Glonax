@@ -221,18 +221,29 @@ impl FrameBuilder {
     }
 }
 
-#[derive(Debug)]
 pub enum SessionError {
     /// Packet was not send to this address.
     SpuriousAddress,
     /// Frame was not complete.
     Incomplete,
-    /// Frame was invalid.
-    Invalid,
+    /// Frame was not found in buffer.
+    InvalidData,
     /// Frame parse errror.
     FrameParseError(FrameError),
     /// I/O error in the underlaying device.
     IoError(std::io::Error),
+}
+
+impl std::fmt::Debug for SessionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::SpuriousAddress => write!(f, "packet was not send to this address"),
+            Self::Incomplete => write!(f, "frame was not complete"),
+            Self::InvalidData => write!(f, "frame was not found in buffer"),
+            Self::FrameParseError(arg0) => f.debug_tuple("FrameParseError").field(arg0).finish(),
+            Self::IoError(arg0) => f.debug_tuple("IoError").field(arg0).finish(),
+        }
+    }
 }
 
 pub struct Session<T> {
