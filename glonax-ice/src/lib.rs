@@ -1,3 +1,9 @@
+// TODO:
+// - Device classes
+// - Status via broadcast (once per s)
+// - Multiple actuators
+// - Recipient address
+
 use std::convert::TryFrom;
 
 use self::{double_cursor::DoubleCursor, stats::Stats};
@@ -8,11 +14,30 @@ pub mod stats;
 const MAGIC: [u8; 2] = [0xc5, 0x34];
 const ICE_PROTOCOL_VERSION: u8 = 5;
 
+const SESSION_BUFFER_SIZE: usize = 4096;
+
+/// Address families.
+///
+/// Some addresses are reserved while others indicate a special device.
 enum AddressFamily {
+    /// Broadcast address.
+    ///
+    /// The broadcast address is used to send messages to all devices
+    /// on the network. Likewise, any device should listen for broadcast
+    /// messages.
     Broadcast,
+
+    /// Unicast address.
+    ///
+    /// Any device directly addressed by its address.
     Unicast(u16),
 }
 
+/// Packet payload type.
+///
+/// Every packet must have a payload type. A payload can have an optional
+/// body field embedded within the message.
+#[derive(PartialEq)]
 pub enum PayloadType {
     /// Device information.
     DeviceInfo = 0x10,
@@ -89,10 +114,13 @@ struct SolenoidControl {
     value: i16,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum FrameError {
+    /// Found invalid magic at offset.
     InvalidMagic(usize),
+    /// Frame checksum mismatch.
     InvalidChecksum,
+    /// Protocol version is incompatile.
     IncompatibleVersion,
 }
 
@@ -156,6 +184,7 @@ impl Frame {
         self.get(4).unwrap()
     }
 
+    /// Test if the internal buffer adheres to the protocol specification.
     fn is_valid(&self) -> std::result::Result<(), FrameError> {
         if self.buffer[0] != MAGIC[0] {
             return Err(FrameError::InvalidMagic(0));
@@ -218,6 +247,7 @@ impl FrameBuilder {
     }
 }
 
+/// Session error.
 pub enum SessionError {
     /// Packet was not send to this address.
     SpuriousAddress,
