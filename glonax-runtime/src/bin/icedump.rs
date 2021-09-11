@@ -98,8 +98,11 @@ fn read_buffer<T: Read>(device: &mut T) {
 ///
 /// Try some basic tests to see whats going on with the device.
 fn diagnose<T: Read + Write>(mut device: T) {
-    let mut buf = [0; 128];
+    info!("Running diagnostics on device");
 
+    info!("Waiting to receive data...");
+
+    let mut buf = [0; 128];
     match device.read(&mut buf) {
         Ok(read_sz) => {
             if read_sz > 0 {
@@ -109,10 +112,23 @@ fn diagnose<T: Read + Write>(mut device: T) {
                     info!("Likely a high speed device");
                 }
 
-                info!("Feeding device to session");
                 info!("Assuming local device address {}", DEVICE_ADDR);
 
                 let mut session = Session::new(device, DEVICE_ADDR);
+
+                info!("Wait for a device announcement ...");
+
+                session.add_payload_mask(PayloadType::DeviceInfo);
+
+                match session.accept() {
+                    Ok(frame) => {
+                        let dev_info: DeviceInfo = frame.get(6).unwrap();
+                        info!("{:?}", dev_info);
+                    }
+                    Err(e) => error!("Session fault: {:?}", e),
+                };
+
+                session.clear_payload_masks();
 
                 info!("Testing 5 incoming packets ...");
 

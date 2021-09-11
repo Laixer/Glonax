@@ -276,15 +276,44 @@ impl std::fmt::Debug for SessionError {
 pub struct Session<T> {
     /// Inner device.
     inner: T,
+    /// Filter packets based on payload type.
+    pub incoming_payload_mask: Vec<PayloadType>,
     /// Session statistics.
     pub stats: Stats,
     /// Local address.
     pub address: u16,
     /// Reading buffer.
-    buffer: DoubleCursor<[u8; 4096]>,
+    buffer: DoubleCursor<[u8; SESSION_BUFFER_SIZE]>,
 }
 
 impl<T> Session<T> {
+    /// Construct new session.
+    pub fn new(inner: T, address: u16) -> Self {
+        Self {
+            inner,
+            incoming_payload_mask: vec![],
+            stats: Stats::new(),
+            address,
+            buffer: DoubleCursor::new([0u8; 4096]),
+        }
+    }
+
+    /// Add new payload mask.
+    ///
+    /// The payload mask will be used to filter incoming packets based on their
+    /// payload type. This method appends a new filter to the already existing
+    /// payload masks.
+    #[inline]
+    pub fn add_payload_mask(&mut self, payload: PayloadType) {
+        self.incoming_payload_mask.push(payload);
+    }
+
+    /// Clear all payload masks.
+    #[inline]
+    pub fn clear_payload_masks(&mut self) {
+        self.incoming_payload_mask.clear()
+    }
+
     /// Gets a reference to the inner device.
     #[inline]
     pub fn get_ref(&self) -> &T {
@@ -299,21 +328,11 @@ impl<T> Session<T> {
 }
 
 impl<T: std::io::Read> Session<T> {
-    /// Construct new session.
-    pub fn new(inner: T, address: u16) -> Self {
-        Self {
-            inner,
-            stats: Stats::new(),
-            address,
-            buffer: DoubleCursor::new([0u8; 4096]),
-        }
-    }
-
     /// Return next `Frame`.
     ///
     /// This method can block if the underlaying reader device
     /// blocks on read calls.
-    pub fn next(&mut self) -> std::result::Result<Frame, SessionError> {
+    pub fn next(&mut self) -> Result<Frame, SessionError> {
         let taken = self
             .inner
             .read(self.buffer.allocate())
@@ -358,10 +377,21 @@ impl<T: std::io::Read> Session<T> {
     ///
     /// This method can block if the underlaying reader device
     /// blocks on read calls.
-    pub fn accept(&mut self) -> std::result::Result<Frame, SessionError> {
+    pub fn accept(&mut self) -> Result<Frame, SessionError> {
+        use std::convert::TryInto;
+
         loop {
             match self.next() {
-                Ok(frame) => break Ok(frame),
+                Ok(frame) => {
+                    if self.incoming_payload_mask.is_empty() {
+                        break Ok(frame);
+                    } else if self
+                        .incoming_payload_mask
+                        .contains(&frame.packet().payload_type.try_into().unwrap())
+                    {
+                        break Ok(frame);
+                    }
+                }
                 Err(SessionError::SpuriousAddress) => continue,
                 Err(SessionError::Incomplete) => continue,
                 Err(e) => break Err(e),
