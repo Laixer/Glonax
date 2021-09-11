@@ -164,7 +164,7 @@ fn serial(port: &str, baud: usize) -> serial::Result<SystemPort> {
 
 fn main() {
     let matches = App::new("Glonax icedump")
-        .version("0.1-alpha")
+        .version("1.2.0")
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
         .about("Comminication diagnostics tool")
         .arg(

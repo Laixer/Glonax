@@ -334,11 +334,8 @@ impl<T: std::io::Read> Session<T> {
     pub fn accept(&mut self) -> std::result::Result<Frame, SessionError> {
         loop {
             match self.next() {
-                Ok(frame) => {
-                    if frame.is_broadcast() || frame.address() == self.address {
-                        break Ok(frame);
-                    }
-                }
+                Ok(frame) => break Ok(frame),
+                Err(SessionError::SpuriousAddress) => continue,
                 Err(SessionError::Incomplete) => continue,
                 Err(e) => break Err(e),
             }
