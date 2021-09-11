@@ -54,14 +54,14 @@ fn read_packet<T: Read + Write>(device: T) {
             Ok(frame) => match frame.packet().payload_type.try_into().unwrap() {
                 PayloadType::DeviceInfo => {
                     let dev_info: DeviceInfo = frame.get(6).unwrap();
-                    debug!("{:?}", dev_info);
+                    info!("{:?}", dev_info);
                 }
                 PayloadType::MeasurementAcceleration => {
                     let acc: Vector3x16 = frame.get(6).unwrap();
                     let acc_x = acc.x;
                     let acc_y = acc.y;
                     let acc_z = acc.z;
-                    debug!(
+                    info!(
                         "Acceleration: X: {:>+5} Y: {:>+5} Z: {:>+5}",
                         acc_x, acc_y, acc_z
                     );
@@ -91,6 +91,52 @@ fn read_buffer<T: Read>(device: &mut T) {
                 print!(" ");
             }
         }
+    }
+}
+
+/// Diagnose the device.
+///
+/// Try some basic tests to see whats going on with the device.
+fn diagnose<T: Read + Write>(mut device: T) {
+    let mut buf = [0; 128];
+
+    match device.read(&mut buf) {
+        Ok(read_sz) => {
+            if read_sz > 0 {
+                info!("Found data on device channel");
+
+                if read_sz == buf.len() {
+                    info!("Likely a high speed device");
+                }
+
+                info!("Feeding device to session");
+                info!("Assuming local device address {}", DEVICE_ADDR);
+
+                let mut session = Session::new(device, DEVICE_ADDR);
+
+                info!("Testing 5 incoming packets ...");
+
+                for i in 0..5 {
+                    match session.next() {
+                        Ok(_) => info!("Found valid packet {}", i + 1),
+                        Err(e) => error!("Session fault: {:?}", e),
+                    }
+                }
+
+                info!("Testing 5 outgoing packets ...");
+
+                for i in 0..5 {
+                    match session.announce_device() {
+                        Ok(_) => info!("Wrote packet {} to device", i + 1),
+                        Err(e) => error!("Session fault: {:?}", e),
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                }
+            } else {
+                warn!("Device possibly closed");
+            }
+        }
+        Err(e) => error!("{:?}", e),
     }
 }
 
@@ -138,7 +184,13 @@ fn main() {
             Arg::with_name("hex")
                 .short("x")
                 .long("hex")
-                .help("Print contents as hexadecimal"),
+                .help("Show the raw data buffer"),
+        )
+        .arg(
+            Arg::with_name("diagnose")
+                .short("d")
+                .long("diag")
+                .help("Diagnose the device"),
         )
         .arg(
             Arg::with_name("v")
@@ -174,6 +226,8 @@ fn main() {
             Ok(mut port) => {
                 if matches.is_present("hex") {
                     read_buffer(&mut port);
+                } else if matches.is_present("diagnose") {
+                    diagnose(&mut port);
                 } else {
                     read_packet(port);
                 }
