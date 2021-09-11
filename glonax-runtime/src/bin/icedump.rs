@@ -50,23 +50,25 @@ fn read_packet<T: Read + Write>(device: T) {
             }
         }
 
-        let frame = session.accept();
-        match frame.packet().payload_type.try_into().unwrap() {
-            PayloadType::DeviceInfo => {
-                let dev_info: DeviceInfo = frame.get(6).unwrap();
-                debug!("{:?}", dev_info);
-            }
-            PayloadType::MeasurementAcceleration => {
-                let acc: Vector3x16 = frame.get(6).unwrap();
-                let acc_x = acc.x;
-                let acc_y = acc.y;
-                let acc_z = acc.z;
-                debug!(
-                    "Acceleration: X: {:>+5} Y: {:>+5} Z: {:>+5}",
-                    acc_x, acc_y, acc_z
-                );
-            }
-            _ => {}
+        match session.accept() {
+            Ok(frame) => match frame.packet().payload_type.try_into().unwrap() {
+                PayloadType::DeviceInfo => {
+                    let dev_info: DeviceInfo = frame.get(6).unwrap();
+                    debug!("{:?}", dev_info);
+                }
+                PayloadType::MeasurementAcceleration => {
+                    let acc: Vector3x16 = frame.get(6).unwrap();
+                    let acc_x = acc.x;
+                    let acc_y = acc.y;
+                    let acc_z = acc.z;
+                    debug!(
+                        "Acceleration: X: {:>+5} Y: {:>+5} Z: {:>+5}",
+                        acc_x, acc_y, acc_z
+                    );
+                }
+                _ => {}
+            },
+            Err(e) => warn!("Session fault: {:?}", e),
         }
     }
 }

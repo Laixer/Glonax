@@ -319,7 +319,7 @@ impl<T: std::io::Read> Session<T> {
                 Err(SessionError::Incomplete)
             }
         } else {
-            Err(SessionError::Invalid)
+            Err(SessionError::InvalidData)
         }
     }
 
@@ -331,16 +331,16 @@ impl<T: std::io::Read> Session<T> {
     ///
     /// This method can block if the underlaying reader device
     /// blocks on read calls.
-    pub fn accept(&mut self) -> Frame {
+    pub fn accept(&mut self) -> std::result::Result<Frame, SessionError> {
         loop {
             match self.next() {
                 Ok(frame) => {
                     if frame.is_broadcast() || frame.address() == self.address {
-                        break frame;
+                        break Ok(frame);
                     }
                 }
                 Err(SessionError::Incomplete) => continue,
-                Err(e) => warn!("{:?}", e),
+                Err(e) => break Err(e),
             }
         }
     }
@@ -438,7 +438,7 @@ mod tests {
 
         let mut session = Session::new(device, ADDR);
         session.announce_device().unwrap();
-        let frame = session.accept();
+        let frame = session.accept().unwrap();
 
         assert!(frame.is_broadcast());
         assert_eq!(frame.address(), u16::MAX);
