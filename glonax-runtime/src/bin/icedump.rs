@@ -140,6 +140,12 @@ fn main() {
                 .long("hex")
                 .help("Print contents as hexadecimal"),
         )
+        .arg(
+            Arg::with_name("v")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        )
         .get_matches();
 
     let log_config = simplelog::ConfigBuilder::new()
@@ -148,8 +154,14 @@ fn main() {
         .set_thread_level(log::LevelFilter::Off)
         .build();
 
+    let log_level = match matches.occurrences_of("v") {
+        0 => log::LevelFilter::Info,
+        1 => log::LevelFilter::Debug,
+        2 | _ => log::LevelFilter::Trace,
+    };
+
     simplelog::TermLogger::init(
-        log::LevelFilter::Debug,
+        log_level,
         log_config,
         simplelog::TerminalMode::Mixed,
         simplelog::ColorChoice::Auto,

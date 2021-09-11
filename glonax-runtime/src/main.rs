@@ -76,7 +76,8 @@ async fn main() {
     let log_level = match matches.occurrences_of("v") {
         0 => log::LevelFilter::Error,
         1 => log::LevelFilter::Info,
-        2 | _ => log::LevelFilter::Debug,
+        2 => log::LevelFilter::Debug,
+        3 | _ => log::LevelFilter::Trace,
     };
 
     simplelog::TermLogger::init(
