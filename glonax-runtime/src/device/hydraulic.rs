@@ -73,7 +73,12 @@ impl Device for Hydraulic {
     }
 
     fn probe(&mut self) {
-        self.halt();
+        // TODO: We shoud read the actuat packet.
+        // TODO: Remove the logline and report via Result
+        if self.session.accept().is_ok() {
+            info!("{} in online", self.name());
+            self.halt();
+        }
     }
 }
 

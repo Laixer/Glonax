@@ -42,7 +42,11 @@ impl Device for Inertial {
     }
 
     fn probe(&mut self) {
-        // self.session.wait_for_init();
+        // TODO: We shoud read the actuat packet.
+        // TODO: Remove the logline and report via Result
+        if self.session.accept().is_ok() {
+            info!("{} in online", self.name());
+        }
     }
 }
 
