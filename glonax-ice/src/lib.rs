@@ -33,6 +33,15 @@ enum AddressFamily {
     Unicast(u16),
 }
 
+impl From<AddressFamily> for u16 {
+    fn from(value: AddressFamily) -> Self {
+        match value {
+            AddressFamily::Broadcast => u16::MAX,
+            AddressFamily::Unicast(address) => address,
+        }
+    }
+}
+
 /// Packet payload type.
 ///
 /// Every packet must have a payload type. A payload can have an optional
@@ -148,7 +157,7 @@ impl Frame {
         frame
     }
 
-    fn set<T>(&self, offset: usize, value: T) -> std::result::Result<(), ()> {
+    fn set<T>(&self, offset: usize, value: T) -> Result<(), ()> {
         if offset >= self.buffer.len() {
             Err(())
         } else {
@@ -157,7 +166,7 @@ impl Frame {
         }
     }
 
-    pub fn get<T>(&self, offset: usize) -> std::result::Result<T, ()> {
+    pub fn get<T>(&self, offset: usize) -> Result<T, ()> {
         if offset >= self.buffer.len() {
             Err(())
         } else {
@@ -165,10 +174,12 @@ impl Frame {
         }
     }
 
+    #[inline]
     pub fn is_broadcast(&self) -> bool {
         self.address() == u16::MAX
     }
 
+    #[inline]
     pub fn address(&self) -> u16 {
         self.get(2).unwrap()
     }
@@ -185,7 +196,7 @@ impl Frame {
     }
 
     /// Test if the internal buffer adheres to the protocol specification.
-    fn is_valid(&self) -> std::result::Result<(), FrameError> {
+    fn is_valid(&self) -> Result<(), FrameError> {
         if self.buffer[0] != MAGIC[0] {
             return Err(FrameError::InvalidMagic(0));
         } else if self.buffer[1] != MAGIC[1] {
@@ -217,10 +228,7 @@ impl FrameBuilder {
     }
 
     fn set_address(&mut self, address: AddressFamily) {
-        let address = match address {
-            AddressFamily::Broadcast => u16::MAX,
-            AddressFamily::Unicast(address) => address,
-        };
+        let address: u16 = address.into();
         self.frame.set(2, address).unwrap();
     }
 
@@ -404,7 +412,7 @@ impl<T: std::io::Write> Session<T> {
     /// Write raw frame to the inner device.
     ///
     /// Any IO errors will propagate upwards.
-    fn write_frame(&mut self, frame: Frame) -> std::result::Result<(), SessionError> {
+    fn write_frame(&mut self, frame: Frame) -> Result<(), SessionError> {
         self.inner.write(frame.buffer()).map_err(|err| {
             self.stats.tx_failure += 1;
             SessionError::IoError(err)
@@ -419,7 +427,7 @@ impl<T: std::io::Write> Session<T> {
     }
 
     /// Announce this device on the network.
-    pub fn announce_device(&mut self) -> std::result::Result<(), SessionError> {
+    pub fn announce_device(&mut self) -> Result<(), SessionError> {
         let mut builder = FrameBuilder::new();
 
         builder.set_address(AddressFamily::Broadcast);
@@ -436,11 +444,7 @@ impl<T: std::io::Write> Session<T> {
     }
 
     /// Dispatch valve control message.
-    pub fn dispatch_valve_control(
-        &mut self,
-        id: u8,
-        value: i16,
-    ) -> std::result::Result<(), SessionError> {
+    pub fn dispatch_valve_control(&mut self, id: u8, value: i16) -> Result<(), SessionError> {
         let mut builder = FrameBuilder::new();
 
         builder.set_address(AddressFamily::Unicast(0x7));
