@@ -63,7 +63,7 @@ where
     ) -> self::device::Result<std::sync::Arc<std::sync::Mutex<D>>> {
         let mut io_device = D::from_path(path)?;
 
-        debug!("Probe '{}' device", io_device.name());
+        debug!("Probe io device '{}' from path {}", io_device.name(), path);
 
         io_device.probe()?;
 

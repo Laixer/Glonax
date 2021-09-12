@@ -64,15 +64,26 @@ impl Device for Inertial {
     }
 }
 
+// TODO: retrieve addr from session.
+const REMOTE_DEVICE_ADDR: u16 = 9;
+
 impl MetricDevice for Inertial {
-    fn next(&mut self) -> Option<MetricValue> {
-        let frame = self.session.accept().unwrap(); // TODO: handle err
-        match frame.packet().payload_type.try_into().unwrap() {
-            PayloadType::MeasurementAcceleration => {
-                let acc: Vector3x16 = frame.get(6).unwrap();
-                Some(MetricValue::Acceleration((acc.x, acc.y, acc.z).into()))
+    fn next(&mut self) -> Option<(u16, MetricValue)> {
+        match self.session.accept() {
+            Ok(frame) => match frame.packet().payload_type.try_into().unwrap() {
+                PayloadType::MeasurementAcceleration => {
+                    let acc: Vector3x16 = frame.get(6).unwrap();
+                    Some((
+                        REMOTE_DEVICE_ADDR,
+                        MetricValue::Acceleration((acc.x, acc.y, acc.z).into()),
+                    ))
+                }
+                _ => None,
+            },
+            Err(e) => {
+                warn!("Session fault: {:?}", e);
+                None
             }
-            _ => None,
         }
     }
 }

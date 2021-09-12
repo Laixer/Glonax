@@ -267,8 +267,8 @@ where
                     for metric_device in metric_devices.iter_mut() {
                         if let Ok(mut metric_device) = metric_device.lock() {
                             match metric_device.next() {
-                                Some(value) => {
-                                    program.push(0, value, &mut ctx);
+                                Some((id, value)) => {
+                                    program.push(id as u32, value, &mut ctx);
                                 }
                                 None => {}
                             }

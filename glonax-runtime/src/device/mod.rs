@@ -60,5 +60,8 @@ pub trait CommandDevice: Device {
 
 /// Device which can read field metrics.
 pub trait MetricDevice: Device {
-    fn next(&mut self) -> Option<MetricValue>;
+    /// Return the next metric value and the device address from which the
+    /// measurement originated. The device address may be used by the operand
+    /// to map to a known machine component.
+    fn next(&mut self) -> Option<(u16, MetricValue)>;
 }
