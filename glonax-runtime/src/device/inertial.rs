@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use super::{Device, MetricDevice, MetricValue};
+use super::{Device, DeviceError, IoDevice, MetricDevice, MetricValue};
 
 use glonax_ice::{PayloadType, Session, Vector3x16};
 use serial::{SerialPort, SystemPort};
@@ -12,6 +12,12 @@ pub struct Inertial {
     session: Session<SystemPort>,
 }
 
+impl IoDevice for Inertial {
+    fn from_path(path: &String) -> std::result::Result<Self, DeviceError> {
+        Inertial::new(path)
+    }
+}
+
 impl Inertial {
     pub fn new(path: impl ToString) -> std::result::Result<Self, super::DeviceError> {
         let mut channel = serial::open(&path.to_string()).map_err(|e: serial::Error| {
@@ -20,7 +26,7 @@ impl Inertial {
 
         channel
             .reconfigure(&|settings| {
-                settings.set_baud_rate(serial::Baud9600)?;
+                settings.set_baud_rate(serial::Baud115200)?;
                 settings.set_parity(serial::Parity::ParityNone);
                 settings.set_stop_bits(serial::StopBits::Stop1);
                 settings.set_flow_control(serial::FlowControl::FlowNone);
@@ -52,29 +58,13 @@ impl Device for Inertial {
 
 impl MetricDevice for Inertial {
     fn next(&mut self) -> Option<MetricValue> {
-        let frame = self.session.accept();
+        let frame = self.session.accept().unwrap(); // TODO: handle err
         match frame.packet().payload_type.try_into().unwrap() {
             PayloadType::MeasurementAcceleration => {
                 let acc: Vector3x16 = frame.get(6).unwrap();
-                let acc_x = acc.x;
-                let acc_y = acc.y;
-                let acc_z = acc.z;
-                debug!(
-                    "Acceleration: X: {:>+5} Y: {:>+5} Z: {:>+5}",
-                    acc_x, acc_y, acc_z
-                );
-                None
+                Some(MetricValue::Acceleration((acc.x, acc.y, acc.z).into()))
             }
             _ => None,
         }
-
-        // Sugar::Acceleration(x, y, z) => {
-        //  Some(MetricValue::Position(Position::from_raw(x, y, z)))
-        // }
-        // Sugar::Orientation(_x, _y, _z) => {
-        //  // debug!("Arm Raw Orientation: X {} Y {} Z {}", x, y, z);
-        //  None
-        // }
-        // Sugar::Direction(_, _, _) => None,
     }
 }

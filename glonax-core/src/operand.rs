@@ -21,6 +21,12 @@ pub struct Context {
 impl Context {
     /// Construct new program context.
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for Context {
+    fn default() -> Self {
         Self {
             start: std::time::Instant::now(),
         }

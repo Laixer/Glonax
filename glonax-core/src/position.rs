@@ -1,15 +1,19 @@
+/// 3 axis vector in euler space.
 #[derive(Debug)]
-/// 3 axis vector.
 pub struct Vector3<T> {
-    x: T,
-    y: T,
-    z: T,
+    pub x: T,
+    pub y: T,
+    pub z: T,
 }
 
+/// Free axes of machine rotation.
 #[derive(Debug, Clone, Copy)]
 pub struct Position {
+    /// Longitudinal axis.
     pub roll: f32,
+    /// Transverse axis.
     pub pitch: f32,
+    /// Normal axis.
     pub yaw: f32,
 }
 

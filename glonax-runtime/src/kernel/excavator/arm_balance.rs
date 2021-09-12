@@ -49,18 +49,18 @@ impl Program for ArmBalanceProgram {
         Some(Motion::Stop(vec![Actuator::Arm.into()])) // TODO: auto conv.
     }
 
-    fn push(&mut self, id: u32, value: MetricValue, _: &mut Context) {
+    fn push(&mut self, _: u32, value: MetricValue, _: &mut Context) {
         match value {
-            MetricValue::Temperature(_) => {}
-            MetricValue::Position(pos) => match id {
-                0 => {
-                    if let Some(lpos) = self.pos {
-                        self.diff = lpos.pitch - pos.pitch;
-                    }
-                    self.pos = Some(pos);
-                }
-                _ => {}
-            },
+            // MetricValue::Position(pos) => match id {
+            //     0 => {
+            //         if let Some(lpos) = self.pos {
+            //             self.diff = lpos.pitch - pos.pitch;
+            //         }
+            //         self.pos = Some(pos);
+            //     }
+            //     _ => {}
+            // },
+            _ => {}
         }
     }
 

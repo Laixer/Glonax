@@ -25,3 +25,4 @@ simplelog = "0.10.0"
 gilrs = "^0.8"
 tokio = { version = "1.7.0", features = ["full"] }
 pid = "3.0.0"
+sled = "0.34.6"
