@@ -6,7 +6,7 @@
 
 use clap::{App, Arg};
 
-const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB0";
+const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB1";
 
 #[tokio::main]
 async fn main() {
@@ -55,6 +55,7 @@ async fn main() {
 
     let mut config = glonax::Config {
         motion_device: SERIAL_HYDRAULIC.to_owned(),
+        metric_devices: vec!["/dev/ttyUSB0".to_owned()],
         ..Default::default()
     };
 
@@ -88,11 +89,13 @@ async fn main() {
     )
     .unwrap();
 
-    let result = glonax::ExcavatorService::from_config(&config)
-        .launch()
-        .await;
+    let result = async {
+        glonax::ExcavatorService::from_config(&config)?
+            .launch()
+            .await
+    };
 
-    if let Err(e) = result {
-        log::error!("Error: {}", e)
+    if let Err(e) = result.await {
+        log::error!("{}", e)
     }
 }

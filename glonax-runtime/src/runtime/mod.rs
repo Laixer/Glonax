@@ -15,6 +15,8 @@ use crate::{
     Config,
 };
 
+pub use self::error::Error;
+
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 #[derive(Debug)]
@@ -126,8 +128,10 @@ impl DeviceManager {
 pub struct Runtime<A, K> {
     /// Runtime operand.
     pub(super) operand: K,
-    /// Motion device.
+    /// The standard motion device.
     pub(super) motion_device: std::sync::Arc<std::sync::Mutex<A>>,
+    /// The standard motion device.
+    pub(super) metric_devices: Vec<std::sync::Arc<std::sync::Mutex<dyn MetricDevice + Send>>>,
     /// Runtime event bus.
     pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Program queue.
@@ -233,13 +237,17 @@ where
     }
 }
 
-impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
-    pub(super) fn spawn_program_queue<D>(&mut self, mut metric_devices: Composer<Box<D>>)
-    where
-        D: MetricDevice + Send + Sync + 'static + ?Sized,
-    {
+impl<A, K> Runtime<A, K>
+where
+    A: MotionDevice,
+    K: Operand + 'static,
+{
+    pub(super) fn spawn_program_queue(&mut self) {
         let dispatcher = self.dispatch();
         let operand = self.operand.clone();
+
+        // TODO:
+        let mut metric_devices = self.metric_devices.clone();
 
         // Move ownership of receiver to program queue thread.
         let mut receiver = self.program_queue.1.take().unwrap();
@@ -250,18 +258,20 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
 
                 info!("Start new program");
 
-                let mut ctx = Context::new();
+                let mut ctx = Context::default();
                 program.boot(&mut ctx);
 
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
-                    for (idx, device) in &mut metric_devices.iter_mut() {
-                        match device.next() {
-                            Some(value) => {
-                                program.push(idx.clone(), value, &mut ctx);
+                    for metric_device in metric_devices.iter_mut() {
+                        if let Ok(mut metric_device) = metric_device.lock() {
+                            match metric_device.next() {
+                                Some(value) => {
+                                    program.push(0, value, &mut ctx);
+                                }
+                                None => {}
                             }
-                            None => {}
                         }
                     }
 

@@ -20,7 +20,7 @@ use glonax_core::operand::Operand;
 pub use runtime::{Runtime, RuntimeSettings};
 use workspace::Workspace;
 
-use crate::device::{Composer, Device, Gamepad, MetricDevice};
+use crate::device::{Device, Gamepad, Inertial};
 
 /// Opaque runtime service for excavator kernel.
 ///
@@ -49,31 +49,39 @@ where
     K: Operand + 'static,
 {
     /// Construct runtime service from configuration.
-    pub fn from_config(config: &'a Config) -> Self {
-        Self {
+    pub fn from_config(config: &'a Config) -> self::runtime::Result<Self> {
+        Ok(Self {
             config,
-            runtime: Self::bootstrap(config),
-        }
+            workspace: Workspace::new(&config.workspace),
+            runtime: Self::bootstrap(config)?,
+        })
     }
 
     /// Create and probe the IO device.
-    fn probe_io_device<D: IoDevice>(path: &String) -> std::sync::Arc<std::sync::Mutex<D>> {
-        let mut io_device = D::from_path(path).unwrap();
+    fn probe_io_device<D: IoDevice>(
+        path: &String,
+    ) -> self::device::Result<std::sync::Arc<std::sync::Mutex<D>>> {
+        let mut io_device = D::from_path(path)?;
         debug!("Probe '{}' device", io_device.name());
         io_device.probe();
 
-        std::sync::Arc::new(std::sync::Mutex::new(io_device))
+        Ok(std::sync::Arc::new(std::sync::Mutex::new(io_device)))
     }
 
-    /// Create the runtime core.
-    fn bootstrap(config: &'a Config) -> Runtime<M, K> {
-        let motion_device = Self::probe_io_device::<M>(&config.motion_device);
+    /// Construct the runtime core.
+    ///
+    /// The runtime core is created and initialized by the configuration.
+    /// Any errors are fatal errors at this point.
+    fn bootstrap(config: &'a Config) -> self::runtime::Result<Runtime<M, K>> {
+        let motion_device = Self::probe_io_device::<M>(&config.motion_device)
+            .map_err(|e| self::runtime::Error::Device(e))?;
 
-        let program_queue = tokio::sync::mpsc::channel(1024);
+        let program_queue = tokio::sync::mpsc::channel(config.program_queue);
 
         let mut rt = Runtime {
             operand: K::default(),
             motion_device: motion_device.clone(),
+            metric_devices: vec![],
             event_bus: tokio::sync::mpsc::channel(64),
             program_queue: (program_queue.0, Some(program_queue.1)),
             settings: RuntimeSettings::from(config),
@@ -81,10 +89,23 @@ where
             device_manager: runtime::DeviceManager::new(),
         };
         rt.device_manager.register_device(motion_device);
-        rt
+
+        for device in &config.metric_devices {
+            match Self::probe_io_device::<Inertial>(device) {
+                Ok(imu_device) => {
+                    rt.metric_devices.push(imu_device.clone());
+                    rt.device_manager.register_device(imu_device);
+                }
+                Err(e) => {
+                    return Err(self::runtime::Error::Device(e));
+                }
+            }
+        }
+
+        Ok(rt)
     }
 
-    async fn config_services(&mut self) {
+    async fn config_services(&mut self) -> self::runtime::Result {
         if self.config.enable_term_shutdown {
             info!("Enable signals shutdown");
 
@@ -102,21 +123,7 @@ where
         if self.config.enable_autopilot {
             info!("Enable autopilot");
 
-            // let mut imu = Inertial::new(SERIAL_INTERTIAL1)?;
-            // log::info!("Name: {}", imu.name());
-            // imu.probe();
-
-            // let mut imu2 = Inertial::new(SERIAL_INTERTIAL2)?;
-            // log::info!("Name: {}", imu2.name());
-            // imu2.probe();
-
-            let mut measure_compose = Composer::<Box<dyn MetricDevice + Send + Sync>>::new();
-            debug!("Probe '{}' device", measure_compose.name());
-            // measure_compose.insert(Box::new(imu));
-            // measure_compose.insert(Box::new(imu2));
-            measure_compose.probe();
-
-            self.runtime.spawn_program_queue(measure_compose);
+            self.runtime.spawn_program_queue();
         }
 
         if self.config.enable_command {
@@ -128,14 +135,17 @@ where
 
             self.runtime.spawn_command_device(gamepad);
         }
+
+        Ok(())
     }
 
     /// Start the runtime service.
     ///
     /// This method consumes the runtime service.
     pub async fn launch(mut self) -> self::runtime::Result {
-        self.config_services().await;
+        self.config_services().await?;
 
+        // TODO: This is only for testing.
         self.runtime.program_queue.0.send(701).await.unwrap();
 
         self.runtime.run().await;
