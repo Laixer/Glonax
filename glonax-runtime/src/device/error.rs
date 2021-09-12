@@ -58,10 +58,7 @@ impl DeviceError {
         }
     }
 
-    pub(super) fn from_session(
-        device: String,
-        error: glonax_ice::SessionError,
-    ) -> DeviceError {
+    pub(super) fn from_session(device: String, error: glonax_ice::SessionError) -> DeviceError {
         DeviceError {
             device,
             kind: match error {

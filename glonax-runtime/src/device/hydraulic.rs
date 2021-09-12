@@ -60,6 +60,12 @@ impl Hydraulic {
                 super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
             })?;
 
+        channel
+            .set_timeout(std::time::Duration::from_millis(500))
+            .map_err(|e: serial::Error| {
+                super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
+            })?;
+
         Ok(Self {
             session: Session::new(channel, DEVICE_ADDR),
             cache: Cache::new(),
