@@ -1,3 +1,5 @@
+use std::f32::consts;
+
 /// 3 axis vector in euler space.
 #[derive(Debug)]
 pub struct Vector3<T> {
@@ -7,7 +9,7 @@ pub struct Vector3<T> {
 }
 
 /// Free axes of machine rotation.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct Position {
     /// Longitudinal axis.
     pub roll: f32,
@@ -18,21 +20,47 @@ pub struct Position {
 }
 
 impl Position {
-    pub fn from_raw(x: i32, y: i32, z: i32) -> Position {
-        let x = x as f32;
-        let y = y as f32;
-        let z = z as f32;
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
+        Self {
+            roll: y.atan2(z),
+            pitch: x.atan2(z),
+            yaw: x.atan2(y),
+        }
+    }
 
-        Vector3 { x, y, z }.into()
+    /// Get the roll in degrees.
+    pub fn roll_degree(&self) -> f32 {
+        (180.0 / consts::PI) * self.roll
+    }
+
+    /// Get the pitch in degrees.
+    pub fn pitch_degree(&self) -> f32 {
+        (180.0 / consts::PI) * self.pitch
+    }
+
+    /// Get the yaw in degrees.
+    pub fn yaw_degree(&self) -> f32 {
+        (180.0 / consts::PI) * self.yaw
     }
 }
 
-impl From<Vector3<f32>> for Position {
-    fn from(value: Vector3<f32>) -> Self {
-        Position {
-            roll: value.y.atan2(value.z),
-            pitch: value.x.atan2(value.z),
-            yaw: value.x.atan2(value.y),
-        }
+impl From<&Vector3<i16>> for Position {
+    fn from(value: &Vector3<i16>) -> Self {
+        Self::new(value.x as f32, value.y as f32, value.z as f32)
+    }
+}
+
+impl std::fmt::Debug for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Position: Roll: {:+.3}rad ({:+.1}°) Pitch: {:+.3}rad ({:+.1}°) Yaw: {:+.3}rad ({:+.1}°)",
+            self.roll,
+            self.roll_degree(),
+            self.pitch,
+            self.pitch_degree(),
+            self.yaw,
+            self.yaw_degree()
+        )
     }
 }

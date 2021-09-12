@@ -6,6 +6,10 @@ impl Acceleration {
     pub fn new(x: i16, y: i16, z: i16) -> Self {
         Self(Vector3 { x, y, z })
     }
+
+    pub fn get_ref(&self) -> &Vector3<i16> {
+        &self.0
+    }
 }
 
 impl From<(i16, i16, i16)> for Acceleration {

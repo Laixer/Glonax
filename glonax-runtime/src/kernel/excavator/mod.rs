@@ -1,10 +1,14 @@
-use self::{arm_balance::ArmBalanceProgram, drive::DriveProgram, turn::TurnProgram};
-use crate::Operand;
-use glonax_core::input::Scancode;
-use glonax_core::motion::Motion;
-use glonax_core::motion::NormalControl;
-use glonax_core::operand::Program;
+use glonax_core::{
+    input::Scancode,
+    motion::{Motion, NormalControl},
+    operand::{Operand, Program},
+};
 
+use self::{
+    arm::ArmProgram, arm_balance::ArmBalanceProgram, drive::DriveProgram, turn::TurnProgram,
+};
+
+mod arm;
 mod arm_balance;
 mod drive;
 mod turn;
@@ -78,6 +82,7 @@ impl Operand for Excavator {
     fn fetch_program(&self, order: i32) -> Box<dyn Program + Send + Sync> {
         match order {
             600 => Box::new(ArmBalanceProgram::new()),
+            601 => Box::new(ArmProgram::new()),
             700 => Box::new(DriveProgram::new()),
             701 => Box::new(TurnProgram::new()),
             _ => Box::new(DriveProgram::new()),
