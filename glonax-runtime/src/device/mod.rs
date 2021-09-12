@@ -19,7 +19,9 @@ pub trait Device {
     ///
     /// Can be used to signal that the device is ready.
     /// Implementation is optional.
-    fn probe(&mut self) {} // TODO: Return result.
+    fn probe(&mut self) -> Result<()> {
+        Ok(())
+    }
 
     /// Run operation in idle time.
     ///
@@ -35,7 +37,7 @@ pub trait Device {
 /// as its communication medium.
 pub trait IoDevice: Device + Sized {
     /// Construct device from path resource.
-    fn from_path(path: &String) -> std::result::Result<Self, DeviceError>;
+    fn from_path(path: &String) -> Result<Self>;
 }
 
 /// Device which can exercise motion.

@@ -62,8 +62,12 @@ where
         path: &String,
     ) -> self::device::Result<std::sync::Arc<std::sync::Mutex<D>>> {
         let mut io_device = D::from_path(path)?;
+
         debug!("Probe '{}' device", io_device.name());
-        io_device.probe();
+
+        io_device.probe()?;
+
+        info!("Device '{}' is online", io_device.name());
 
         Ok(std::sync::Arc::new(std::sync::Mutex::new(io_device)))
     }
@@ -130,8 +134,12 @@ where
             info!("Enable input device(s)");
 
             let mut gamepad = Gamepad::new();
+
             debug!("Probe '{}' device", gamepad.name());
-            gamepad.probe();
+
+            gamepad.probe().unwrap(); // TODO
+
+            info!("Device '{}' is online", gamepad.name());
 
             self.runtime.spawn_command_device(gamepad);
         }

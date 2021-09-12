@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use super::{Device, DeviceError, IoDevice, MetricDevice, MetricValue};
+use super::{Device, IoDevice, MetricDevice, MetricValue};
 
 use glonax_ice::{PayloadType, Session, Vector3x16};
 use serial::{SerialPort, SystemPort};
@@ -13,13 +13,13 @@ pub struct Inertial {
 }
 
 impl IoDevice for Inertial {
-    fn from_path(path: &String) -> std::result::Result<Self, DeviceError> {
+    fn from_path(path: &String) -> super::Result<Self> {
         Inertial::new(path)
     }
 }
 
 impl Inertial {
-    pub fn new(path: impl ToString) -> std::result::Result<Self, super::DeviceError> {
+    pub fn new(path: impl ToString) -> super::Result<Self> {
         let mut channel = serial::open(&path.to_string()).map_err(|e: serial::Error| {
             super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
         })?;
@@ -47,12 +47,14 @@ impl Device for Inertial {
         DEVICE_NAME.to_owned()
     }
 
-    fn probe(&mut self) {
+    fn probe(&mut self) -> super::Result<()> {
         // TODO: We shoud read the actuat packet.
-        // TODO: Remove the logline and report via Result
-        if self.session.accept().is_ok() {
-            info!("{} in online", self.name());
-        }
+
+        self.session
+            .accept()
+            .map_err(|e| super::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
+
+        Ok(())
     }
 }
 

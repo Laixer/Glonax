@@ -2,7 +2,7 @@ use std::error;
 
 pub type Result<T> = std::result::Result<T, DeviceError>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ErrorKind {
     /// The device is not available.
     ///
@@ -54,6 +54,22 @@ impl DeviceError {
                 serial::ErrorKind::NoDevice => ErrorKind::NoSuchDevice(path),
                 serial::ErrorKind::InvalidInput => ErrorKind::InvalidInput,
                 serial::ErrorKind::Io(ioe) => ErrorKind::Io(ioe),
+            },
+        }
+    }
+
+    pub(super) fn from_session(
+        device: String,
+        error: glonax_ice::SessionError,
+    ) -> DeviceError {
+        DeviceError {
+            device,
+            kind: match error {
+                glonax_ice::SessionError::SpuriousAddress => ErrorKind::InvalidInput,
+                glonax_ice::SessionError::Incomplete => ErrorKind::InvalidInput,
+                glonax_ice::SessionError::InvalidData => ErrorKind::InvalidInput,
+                glonax_ice::SessionError::FrameParseError(_) => ErrorKind::InvalidInput,
+                glonax_ice::SessionError::IoError(ioe) => ErrorKind::Io(ioe.kind()),
             },
         }
     }

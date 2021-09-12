@@ -1,4 +1,4 @@
-use super::{Device, DeviceError, IoDevice, MotionDevice};
+use super::{Device, IoDevice, MotionDevice};
 
 use glonax_core::motion::Motion;
 use glonax_ice::Session;
@@ -37,13 +37,13 @@ pub struct Hydraulic {
 }
 
 impl IoDevice for Hydraulic {
-    fn from_path(path: &String) -> std::result::Result<Self, DeviceError> {
+    fn from_path(path: &String) -> super::Result<Self> {
         Hydraulic::new(path)
     }
 }
 
 impl Hydraulic {
-    pub fn new(path: impl ToString) -> std::result::Result<Self, super::DeviceError> {
+    pub fn new(path: impl ToString) -> super::Result<Self> {
         let mut channel = serial::open(&path.to_string()).map_err(|e: serial::Error| {
             super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
         })?;
@@ -72,13 +72,15 @@ impl Device for Hydraulic {
         DEVICE_NAME.to_owned()
     }
 
-    fn probe(&mut self) {
+    fn probe(&mut self) -> super::Result<()> {
         // TODO: We shoud read the actuat packet.
-        // TODO: Remove the logline and report via Result
-        if self.session.accept().is_ok() {
-            info!("{} in online", self.name());
-            self.halt();
-        }
+        self.session
+            .accept()
+            .map_err(|e| super::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
+
+        self.halt();
+
+        Ok(())
     }
 }
 
