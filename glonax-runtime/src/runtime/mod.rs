@@ -11,7 +11,7 @@ use tokio::{
 };
 
 use crate::{
-    device::{CommandDevice, Composer, Device, MetricDevice, MotionDevice},
+    device::{CommandDevice, Device, MetricDevice, MotionDevice},
     Config,
 };
 

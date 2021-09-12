@@ -1,11 +1,8 @@
-mod compose;
 mod error;
 mod gamepad;
 mod hydraulic;
-mod index;
 mod inertial;
 
-pub use compose::Composer;
 pub use gamepad::Gamepad;
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
 pub use hydraulic::Hydraulic;
@@ -34,7 +31,7 @@ pub trait Device {
 
 /// I/O device.
 ///
-/// An I/O device takes a local resource such as a file or socket
+/// An I/O device takes a local resource such as a node or socket
 /// as its communication medium.
 pub trait IoDevice: Device + Sized {
     /// Construct device from path resource.
