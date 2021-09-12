@@ -8,6 +8,7 @@ mod config;
 mod device;
 pub mod kernel;
 mod runtime;
+mod workspace;
 
 #[macro_use]
 extern crate log;
@@ -17,6 +18,7 @@ use device::{Hydraulic, IoDevice, MotionDevice};
 use glonax_core::operand::Operand;
 
 pub use runtime::{Runtime, RuntimeSettings};
+use workspace::Workspace;
 
 use crate::device::{Composer, Device, Gamepad, MetricDevice};
 
@@ -34,6 +36,9 @@ pub type ExcavatorService<'a> = RuntimeService<'a, Hydraulic, kernel::excavator:
 pub struct RuntimeService<'a, M, K> {
     /// Current application configuration.
     config: &'a Config,
+    /// Current application workspace.
+    #[allow(dead_code)]
+    workspace: Workspace,
     /// Runtime core.
     runtime: Runtime<M, K>,
 }
