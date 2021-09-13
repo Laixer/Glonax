@@ -6,10 +6,9 @@
 
 use clap::{App, Arg};
 
-const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB1";
+const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB0";
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let matches = App::new("Glonax daemon")
         .version("0.3.1")
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
@@ -55,7 +54,7 @@ async fn main() {
 
     let mut config = glonax::Config {
         motion_device: SERIAL_HYDRAULIC.to_owned(),
-        metric_devices: vec!["/dev/ttyUSB0".to_owned()],
+        metric_devices: vec!["/dev/ttyUSB1".to_owned()],
         ..Default::default()
     };
 
@@ -89,13 +88,21 @@ async fn main() {
     )
     .unwrap();
 
-    let result = async {
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(8)
+        .enable_all()
+        .thread_name("glonax-runtime-worker")
+        .thread_stack_size(8 * 1024 * 1024)
+        .build()
+        .unwrap();
+
+    let result = runtime.block_on(async {
         glonax::ExcavatorService::from_config(&config)?
             .launch()
             .await
-    };
+    });
 
-    if let Err(e) = result.await {
+    if let Err(e) = result {
         log::error!("{}", e)
     }
 }
