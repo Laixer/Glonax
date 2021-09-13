@@ -1,5 +1,7 @@
+mod driver;
 mod error;
 mod gamepad;
+mod gamepad2;
 mod hydraulic;
 mod inertial;
 
@@ -36,6 +38,7 @@ pub trait Device {
 /// An I/O device takes a local resource such as a node or socket
 /// as its communication medium.
 pub trait IoDevice: Device + Sized {
+    // TODO: type should be &std::path::Path
     /// Construct device from path resource.
     fn from_path(path: &String) -> Result<Self>;
 }
