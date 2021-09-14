@@ -4,4 +4,5 @@ members = [
   "glonax-ice",
   "glonax-net",
   "glonax-runtime",
+  "glonax-serial",
 ]

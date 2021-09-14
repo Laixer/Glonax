@@ -1,0 +1,16 @@
+[package]
+name = "glonax-serial"
+version = "1.0.0"
+authors = ["Laixer Equipment B.V. <info@laixer.com>"]
+edition = "2018"
+repository = "https://github.com/Laixer/Glonax"
+description = """
+The Glonax serial driver for TTY devices.
+"""
+categories = ["hardware-support", "os"]
+keywords = ["serial", "hardware", "rs232", "tty", "glonax"]
+
+[dependencies]
+log = "0.4"
+libc = "0.2"
+termios = "0.2"
