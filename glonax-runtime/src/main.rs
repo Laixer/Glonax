@@ -6,8 +6,6 @@
 
 use clap::{App, Arg};
 
-const SERIAL_HYDRAULIC: &str = "/dev/ttyUSB0";
-
 fn main() {
     let matches = App::new("Glonax daemon")
         .version("0.3.1")
@@ -53,8 +51,8 @@ fn main() {
         .get_matches();
 
     let mut config = glonax::Config {
-        motion_device: SERIAL_HYDRAULIC.to_owned(),
-        metric_devices: vec!["/dev/ttyUSB1".to_owned()],
+        motion_device: "/dev/ttyUSB1".to_owned(),
+        metric_devices: vec!["/dev/ttyUSB0".to_owned()],
         ..Default::default()
     };
 

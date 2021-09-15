@@ -17,6 +17,8 @@ pub struct Config {
     pub metric_devices: Vec<String>,
     /// Number of programs to queue.
     pub program_queue: usize,
+    /// Runtime workers.
+    pub runtime_workers: usize,
 }
 
 impl Default for Config {
@@ -29,6 +31,7 @@ impl Default for Config {
             motion_device: String::new(),
             metric_devices: vec![],
             program_queue: 1024,
+            runtime_workers: 8,
         }
     }
 }
