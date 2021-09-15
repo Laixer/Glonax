@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 pub struct Workspace {
     #[allow(dead_code)]
     db: sled::Db,
@@ -5,7 +7,10 @@ pub struct Workspace {
 
 impl Workspace {
     /// Construct new workspace.
-    pub fn new(path: &std::path::PathBuf) -> Self {
+    ///
+    /// The workspace is both a directory and a key value store.
+    /// If the provided directory does not exist it will be created.
+    pub fn new(path: &PathBuf) -> Self {
         Self::setup_if_not_exists(&path);
 
         debug!("Using workspace directory {}", path.to_str().unwrap());
@@ -20,8 +25,10 @@ impl Workspace {
         Self { db }
     }
 
-    fn setup_if_not_exists(path: &std::path::PathBuf) {
+    fn setup_if_not_exists(path: &PathBuf) {
         if !path.exists() {
+            trace!("Workspace does not exit, creating one..");
+
             std::fs::create_dir_all(path).unwrap();
         }
     }

@@ -99,7 +99,7 @@ impl MotionDevice for Hydraulic {
                     // Test the motion event against the cache. There is
                     // no point in sending the exact same motion value over and over again.
                     if !self.cache.hit(actuator, 0) {
-                        debug!("Stop actuator {} ", actuator);
+                        trace!("Stop actuator {} ", actuator);
 
                         // FUTURE: Handle error, translate to device error?
                         if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
@@ -117,7 +117,7 @@ impl MotionDevice for Hydraulic {
                     // Test the motion event against the cache. There is
                     // no point in sending the exact same motion value over and over again.
                     if !self.cache.hit(actuator, value) {
-                        debug!("Change actuator {} to value {}", actuator, value);
+                        trace!("Change actuator {} to value {}", actuator, value);
 
                         // FUTURE: Handle error, translate to device error?
                         if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value)
@@ -131,7 +131,7 @@ impl MotionDevice for Hydraulic {
     }
 
     fn halt(&mut self) {
-        debug!("Stop all actuators");
+        trace!("Stop all actuators");
 
         // FUTURE: Handle error, translate to device error?
         if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {

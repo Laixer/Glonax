@@ -1,5 +1,5 @@
 [Unit]
-Description=Heavy machinery controller daemon
+Description=Heavy machinery controller
 StartLimitIntervalSec=5
 StartLimitBurst=5
 

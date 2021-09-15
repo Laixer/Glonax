@@ -6,11 +6,15 @@
 
 use clap::{App, Arg};
 
+const BIN_NAME: &str = env!("CARGO_BIN_NAME");
+const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+const PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+
 fn main() {
-    let matches = App::new("Glonax daemon")
-        .version("0.3.1")
+    let matches = App::new(BIN_NAME)
+        .version(PKG_VERSION)
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
-        .about("Heavy machinery controller daemon")
+        .about(PKG_DESCRIPTION)
         .arg(
             Arg::with_name("listen")
                 .short("l")
@@ -132,7 +136,7 @@ fn main() {
         .unwrap();
 
     let result = runtime.block_on(async {
-        glonax::ExcavatorService::from_config(&config)?
+        glonax::ExcavatorBuilder::from_config(&config)?
             .launch()
             .await
     });

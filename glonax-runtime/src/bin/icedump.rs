@@ -14,6 +14,9 @@ use serial::{SerialPort, SystemPort};
 /// This is our local device address.
 const DEVICE_ADDR: u16 = 0x21;
 
+const BIN_NAME: &str = env!("CARGO_BIN_NAME");
+const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 /// Read the incoming packets.
 ///
 /// Data is read from the underlaying device. Incoming packets are
@@ -179,8 +182,8 @@ fn serial(port: &str, baud: usize) -> serial::Result<SystemPort> {
 }
 
 fn main() {
-    let matches = App::new("Glonax icedump")
-        .version("1.2.0")
+    let matches = App::new(BIN_NAME)
+        .version(PKG_VERSION)
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
         .about("Comminication diagnostics tool")
         .arg(
