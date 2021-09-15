@@ -18,7 +18,7 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn new(path: &Path) -> super::Result<Self> {
+    pub(crate) fn new(path: &Path) -> super::Result<Self> {
         use libc::{O_NONBLOCK, O_RDWR};
 
         let cstr = match CString::new(path.as_os_str().as_bytes()) {
@@ -221,6 +221,6 @@ impl Builder {
             return Err(err.into());
         }
 
-        Ok(crate::Uart { fd: self.fd })
+        crate::Uart::from_impl(crate::imp::Uart(self.fd))
     }
 }

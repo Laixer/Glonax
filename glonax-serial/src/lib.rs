@@ -1,13 +1,11 @@
-pub use builder::*;
-pub use future::*;
-pub use uart::*;
-
 mod builder;
 mod error;
 mod future;
-mod uart;
+mod imp;
 
+pub use builder::*;
 pub use error::{Error, ErrorKind, Result};
+pub use future::Uart;
 
 /// Serial port baud rates.
 ///
@@ -160,4 +158,8 @@ pub enum FlowControl {
     FlowSoftware,
     /// Flow control using RTS/CTS signals.
     FlowHardware,
+}
+
+pub fn builder(path: &std::path::Path) -> Result<builder::Builder> {
+    builder::Builder::new(path)
 }
