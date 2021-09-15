@@ -12,14 +12,6 @@ fn main() {
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
         .about("Heavy machinery controller daemon")
         .arg(
-            Arg::with_name("config")
-                .short("c")
-                .long("config")
-                .value_name("FILE")
-                .help("Configuration file")
-                .takes_value(true),
-        )
-        .arg(
             Arg::with_name("listen")
                 .short("l")
                 .value_name("address:port")
@@ -48,6 +40,13 @@ fn main() {
                 .help("Run as systemd service unit"),
         )
         .arg(
+            Arg::with_name("workers")
+                .long("workers")
+                .value_name("N")
+                .help("Number of runtime workers")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("v")
                 .short("v")
                 .multiple(true)
@@ -66,6 +65,9 @@ fn main() {
     }
     if matches.is_present("no-input") {
         config.enable_command = false;
+    }
+    if matches.is_present("workers") {
+        config.runtime_workers = matches.value_of("workers").unwrap().parse().unwrap();
     }
 
     let mut log_config = simplelog::ConfigBuilder::new();
