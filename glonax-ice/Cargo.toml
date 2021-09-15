@@ -13,3 +13,4 @@ keywords = ["protocol", "hardware", "glonax"]
 [dependencies]
 log = "0.4"
 crc = "2.0.0"
+tokio = { version = "1.7", features = ["full"] }
