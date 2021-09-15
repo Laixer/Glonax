@@ -1,5 +1,3 @@
-mod error;
-
 use glonax_core::{
     motion::Motion,
     operand::{Context, Operand},
@@ -15,9 +13,13 @@ use crate::{
     Config,
 };
 
+mod error;
 pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
+
+mod builder;
+pub use self::builder::Builder;
 
 #[derive(Debug)]
 pub enum RuntimeEvent {
@@ -61,7 +63,7 @@ impl Dispatch {
     }
 }
 
-pub struct RuntimeSettings {
+pub(super) struct RuntimeSettings {
     timer_interval: u64,
 }
 
@@ -291,6 +293,8 @@ where
                 }
 
                 info!("Program terminated");
+
+                tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
             }
         });
     }
