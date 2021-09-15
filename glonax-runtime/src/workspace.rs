@@ -21,10 +21,12 @@ impl Workspace {
             .open()
             .unwrap();
 
-        db.insert("last_boot", &12u32.to_be_bytes()).unwrap();
         Self { db }
     }
 
+    /// Setup workspace directories if not exist.
+    ///
+    /// Thid method will create the absolte path.
     fn setup_if_not_exists(path: &PathBuf) {
         if !path.exists() {
             trace!("Workspace does not exit, creating one..");
