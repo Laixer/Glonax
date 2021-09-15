@@ -37,6 +37,7 @@ impl Uart {
 
 impl Drop for Uart {
     fn drop(&mut self) {
+        // TODO: Remove exclusive lock
         // #![allow(unused_must_use)]
         // ioctl::tiocnxcl(self.fd);
 
@@ -54,9 +55,6 @@ impl AsRawFd for Uart {
 
 impl io::Read for Uart {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        // todo!()
-        // try!(super::poll::wait_read_fd(self.fd, self.timeout));
-
         let len = unsafe {
             libc::read(
                 self.fd,
@@ -75,8 +73,6 @@ impl io::Read for Uart {
 
 impl io::Write for Uart {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        // try!(super::poll::wait_write_fd(self.fd, self.timeout));
-
         let len = unsafe {
             libc::write(
                 self.fd,

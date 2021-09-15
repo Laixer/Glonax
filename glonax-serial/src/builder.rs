@@ -19,14 +19,14 @@ pub struct Builder {
 
 impl Builder {
     pub fn new(path: &Path) -> super::Result<Self> {
-        use libc::O_RDWR;
+        use libc::{O_NONBLOCK, O_RDWR};
 
         let cstr = match CString::new(path.as_os_str().as_bytes()) {
             Ok(s) => s,
             Err(_) => return Err(super::error::from_raw_os_error(EINVAL)),
         };
 
-        let fd = unsafe { libc::open(cstr.as_ptr(), O_RDWR, 0) }; // O_NONBLOCK
+        let fd = unsafe { libc::open(cstr.as_ptr(), O_RDWR | O_NONBLOCK, 0) };
         if fd < 0 {
             return Err(super::error::last_os_error());
         }
@@ -51,7 +51,7 @@ impl Builder {
         termios.c_cflag |= CREAD | CLOCAL;
         termios.c_lflag &= !(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ISIG | IEXTEN);
 
-        termios.c_cc[VMIN] = 0;
+        termios.c_cc[VMIN] = 1;
         termios.c_cc[VTIME] = 0;
 
         Ok(Self {
@@ -203,7 +203,7 @@ impl Builder {
     pub fn build(self) -> super::Result<crate::Uart> {
         use libc::{ioctl, TCIOFLUSH, TCSANOW, TIOCEXCL};
 
-        // get exclusive access to device
+        // Claim exclusive access to serial device.
         if self.exclusive {
             let ret = unsafe { ioctl(self.fd, TIOCEXCL) };
             if ret < 0 {
@@ -211,11 +211,12 @@ impl Builder {
             }
         }
 
-        // write settings to TTY
+        // Write the terminal settings.
         if let Err(err) = tcsetattr(self.fd, TCSANOW, &self.termios) {
             return Err(err.into());
         }
 
+        // Flush buffers.
         if let Err(err) = tcflush(self.fd, TCIOFLUSH) {
             return Err(err.into());
         }

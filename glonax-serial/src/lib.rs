@@ -1,8 +1,10 @@
 pub use builder::*;
+pub use future::*;
 pub use uart::*;
 
 mod builder;
 mod error;
+mod future;
 mod uart;
 
 pub use error::{Error, ErrorKind, Result};
