@@ -8,6 +8,8 @@ impl Workspace {
     pub fn new(path: &std::path::PathBuf) -> Self {
         Self::setup_if_not_exists(&path);
 
+        debug!("Using workspace directory {}", path.to_str().unwrap());
+
         let db = sled::Config::default()
             .path(path)
             .flush_every_ms(Some(200))

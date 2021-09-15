@@ -14,8 +14,17 @@ fn main() {
         .arg(
             Arg::with_name("listen")
                 .short("l")
+                .long("listen")
                 .value_name("address:port")
                 .help("Network address to bind")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("workspace")
+                .short("D")
+                .long("workspace")
+                .value_name("DIR")
+                .help("Workspace directory")
                 .takes_value(true),
         )
         .arg(
@@ -69,6 +78,9 @@ fn main() {
     if matches.is_present("workers") {
         config.runtime_workers = matches.value_of("workers").unwrap().parse().unwrap();
     }
+    if matches.is_present("workspace") {
+        config.workspace = matches.value_of("workspace").unwrap().parse().unwrap();
+    }
 
     let mut log_config = simplelog::ConfigBuilder::new();
     if matches.is_present("systemd") {
@@ -84,6 +96,7 @@ fn main() {
     log_config.set_location_level(log::LevelFilter::Off);
     log_config.add_filter_ignore_str("sled");
     log_config.add_filter_ignore_str("gilrs");
+    log_config.add_filter_ignore_str("mio");
 
     let log_level = if matches.is_present("systemd") {
         log::LevelFilter::Info
