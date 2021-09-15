@@ -43,6 +43,11 @@ fn main() {
                 .help("Disable input controls"),
         )
         .arg(
+            Arg::with_name("systemd")
+                .long("systemd")
+                .help("Run as systemd service unit"),
+        )
+        .arg(
             Arg::with_name("v")
                 .short("v")
                 .multiple(true)
@@ -63,26 +68,43 @@ fn main() {
         config.enable_command = false;
     }
 
-    let log_config = simplelog::ConfigBuilder::new()
-        .set_time_to_local(true)
-        .set_time_format("%X %6f".to_owned())
-        .set_target_level(log::LevelFilter::Trace)
-        .add_filter_ignore_str("sled")
-        .add_filter_ignore_str("gilrs")
-        .build();
+    let mut log_config = simplelog::ConfigBuilder::new();
+    if matches.is_present("systemd") {
+        log_config.set_time_level(log::LevelFilter::Off);
+        log_config.set_thread_level(log::LevelFilter::Off);
+        log_config.set_target_level(log::LevelFilter::Off);
+    } else {
+        log_config.set_time_to_local(true);
+        log_config.set_time_format("%X %6f".to_owned());
+    }
 
-    let log_level = match matches.occurrences_of("v") {
-        0 => log::LevelFilter::Error,
-        1 => log::LevelFilter::Info,
-        2 => log::LevelFilter::Debug,
-        3 | _ => log::LevelFilter::Trace,
+    log_config.set_target_level(log::LevelFilter::Trace);
+    log_config.set_location_level(log::LevelFilter::Off);
+    log_config.add_filter_ignore_str("sled");
+    log_config.add_filter_ignore_str("gilrs");
+
+    let log_level = if matches.is_present("systemd") {
+        log::LevelFilter::Info
+    } else {
+        match matches.occurrences_of("v") {
+            0 => log::LevelFilter::Error,
+            1 => log::LevelFilter::Info,
+            2 => log::LevelFilter::Debug,
+            3 | _ => log::LevelFilter::Trace,
+        }
+    };
+
+    let color_choice = if matches.is_present("systemd") {
+        simplelog::ColorChoice::Never
+    } else {
+        simplelog::ColorChoice::Auto
     };
 
     simplelog::TermLogger::init(
         log_level,
-        log_config,
+        log_config.build(),
         simplelog::TerminalMode::Mixed,
-        simplelog::ColorChoice::Auto,
+        color_choice,
     )
     .unwrap();
 
