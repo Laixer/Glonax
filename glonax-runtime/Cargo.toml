@@ -17,6 +17,7 @@ path = "src/main.rs"
 [dependencies]
 glonax-core = { version = "1.0.0", path = "../glonax-core" }
 glonax-ice = { version = "1.0.6", path = "../glonax-ice" }
+glonax-serial = { version = "1.0", path = "../glonax-serial" }
 
 serial = "0.4"
 clap = "2.33.3"
@@ -26,3 +27,4 @@ gilrs = "^0.8"
 tokio = { version = "1.7", features = ["full"] }
 pid = "3.0.0"
 sled = "0.34.6"
+anyhow = "1.0"

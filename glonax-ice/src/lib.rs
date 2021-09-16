@@ -9,9 +9,13 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[macro_use]
+extern crate log;
+
 use self::{double_cursor::DoubleCursor, stats::Stats};
 
 mod double_cursor;
+pub mod eval;
 pub mod stats;
 
 const MAGIC: [u8; 2] = [0xc5, 0x34];
@@ -287,15 +291,15 @@ impl std::fmt::Debug for SessionError {
 pub struct Session<T> {
     /// Inner device.
     inner: T,
-    /// Filter packets based on payload type.
-    pub incoming_payload_mask: Vec<PayloadType>,
+    /// Filter incoming packets based on payload type.
+    rx_payload_mask: Vec<PayloadType>,
     /// Session statistics.
     pub stats: Stats,
     /// Local address.
     pub address: u16,
     /// Reading buffer.
     buffer: DoubleCursor<[u8; SESSION_BUFFER_SIZE]>,
-    /// Last incoming device announcement
+    /// Incoming device announcements.
     tx_announcement: IntervalEvent,
 }
 
@@ -304,7 +308,7 @@ impl<T> Session<T> {
     pub fn new(inner: T, address: u16) -> Self {
         Self {
             inner,
-            incoming_payload_mask: vec![],
+            rx_payload_mask: vec![],
             stats: Stats::new(),
             address,
             buffer: DoubleCursor::new([0u8; 4096]),
@@ -319,13 +323,13 @@ impl<T> Session<T> {
     /// payload masks.
     #[inline]
     pub fn add_payload_mask(&mut self, payload: PayloadType) {
-        self.incoming_payload_mask.push(payload);
+        self.rx_payload_mask.push(payload);
     }
 
     /// Clear all payload masks.
     #[inline]
     pub fn clear_payload_masks(&mut self) {
-        self.incoming_payload_mask.clear()
+        self.rx_payload_mask.clear()
     }
 
     /// Gets a reference to the inner device.
@@ -400,10 +404,10 @@ impl<T: tokio::io::AsyncRead + Unpin> Session<T> {
         loop {
             match self.next().await {
                 Ok(frame) => {
-                    if self.incoming_payload_mask.is_empty() {
+                    if self.rx_payload_mask.is_empty() {
                         break Ok(frame);
                     } else if self
-                        .incoming_payload_mask
+                        .rx_payload_mask
                         .contains(&frame.packet().payload_type.try_into().unwrap())
                     {
                         break Ok(frame);

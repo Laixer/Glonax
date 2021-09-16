@@ -15,7 +15,7 @@ impl Uart {
     /// Open an UART device.
     ///
     /// The UART device is openend with the most common settings found on UART
-    /// configurations. For more fine grained controler use the serial builder.
+    /// configurations. For more fine grained control use the serial builder.
     ///
     /// ## Errors
     ///
