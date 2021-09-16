@@ -4,11 +4,11 @@ use std::{convert::TryInto, path::Path};
 extern crate log;
 
 use clap::{App, Arg};
-use glonax_ice::{DeviceInfo, PayloadType, Session, Vector3x16};
+use glonax_ice::{eval::ContainerSession, DeviceInfo, PayloadType, Session, Vector3x16};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 
 /// This is our local device address.
-const DEVICE_ADDR: u16 = 0x21;
+const DEVICE_ADDR: u16 = 0x60;
 
 const BIN_NAME: &str = env!("CARGO_BIN_NAME");
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -98,10 +98,7 @@ async fn read_buffer<T: AsyncRead + Unpin>(device: &mut T) {
 async fn diagnose<T: AsyncRead + AsyncWrite + Unpin>(device: T) {
     info!("⚠ Wait until the test is finished");
 
-    if let Err(e) = glonax_ice::eval::ContainerSession::new(device)
-        .diagnose()
-        .await
-    {
+    if let Err(e) = ContainerSession::new(device).diagnose().await {
         error!("Result ➤ session fault: {:?}", e);
     } else {
         info!("Result ➤ Device is healthy");

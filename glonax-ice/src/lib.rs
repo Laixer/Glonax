@@ -26,8 +26,10 @@ const SESSION_BUFFER_SIZE: usize = 4096;
 /// Address families.
 ///
 /// Some addresses are reserved while others indicate a special device.
-enum AddressFamily {
+pub enum AddressFamily {
     /// Broadcast address.
+    ///
+    /// Address: 0xff
     ///
     /// The broadcast address is used to send messages to all devices
     /// on the network. Likewise, any device should listen for broadcast
@@ -36,8 +38,18 @@ enum AddressFamily {
 
     /// Unicast address.
     ///
-    /// Any device directly addressed by its address.
+    /// Any device directly called by its address.
     Unicast(u16),
+
+    /// Evaluation address.
+    ///
+    /// Address: 0x60
+    ///
+    /// This address is used in evaluation correspondence. It should only ever
+    /// be used when evaluating a connection, and not be taken as a permanent
+    /// device address. Network devices observing an evaluation adddress may
+    /// want to take note, but must not alter their behavior.
+    Evaluation,
 }
 
 impl From<AddressFamily> for u16 {
@@ -45,6 +57,7 @@ impl From<AddressFamily> for u16 {
         match value {
             AddressFamily::Broadcast => u16::MAX,
             AddressFamily::Unicast(address) => address,
+            AddressFamily::Evaluation => 0x60,
         }
     }
 }
@@ -304,6 +317,7 @@ pub struct Session<T> {
 }
 
 impl<T> Session<T> {
+    // TODO: Address should be AddressFamily
     /// Construct new session.
     pub fn new(inner: T, address: u16) -> Self {
         Self {
@@ -468,6 +482,7 @@ impl<T: tokio::io::AsyncWrite + Unpin> Session<T> {
     pub async fn dispatch_valve_control(&mut self, id: u8, value: i16) -> Result<(), SessionError> {
         let mut builder = FrameBuilder::new();
 
+        // TODO: Change the hardcoded destination address.
         builder.set_address(AddressFamily::Unicast(0x7));
         builder.set_payload(SolenoidControl { id, value }, PayloadType::SolenoidControl);
 
