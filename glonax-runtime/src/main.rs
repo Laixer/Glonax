@@ -127,21 +127,7 @@ fn main() {
     )
     .unwrap();
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(8)
-        .enable_all()
-        .thread_name("glonax-runtime-worker")
-        .thread_stack_size(8 * 1024 * 1024)
-        .build()
-        .unwrap();
-
-    let result = runtime.block_on(async {
-        glonax::ExcavatorBuilder::from_config(&config)?
-            .launch()
-            .await
-    });
-
-    if let Err(e) = result {
+    if let Err(e) = glonax::ExcavatorService::launch(&config) {
         log::error!("{}", e)
     }
 }

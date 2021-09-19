@@ -10,9 +10,11 @@ use crate::{
 /// Runtime builder.
 ///
 /// The runtime builder is a convenient wrapper around the runtime core. It
-/// creates, then configures the core based on the global config and current
+/// creates and configures the core based on the global config and current
 /// environment. It then presents the caller with a simple method to launch
 /// the runtime loop.
+///
+/// The runtime builder *must* be used to construct a runtime.
 pub struct Builder<'a, M, K> {
     /// Current application configuration.
     config: &'a Config,
@@ -29,26 +31,14 @@ where
     K: Operand + 'static,
 {
     /// Construct runtime service from configuration.
+    ///
+    /// Note that this method is certain to block.
     pub fn from_config(config: &'a Config) -> super::Result<Self> {
         Ok(Self {
             config,
             workspace: Workspace::new(&config.workspace),
             runtime: Self::bootstrap(config)?,
         })
-    }
-
-    /// Create the runtime reactor.
-    ///
-    /// The runtime reactor should be setup as early as possible.
-    #[allow(dead_code)]
-    fn runtime_reactor(config: &'a Config) -> tokio::runtime::Runtime {
-        tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(config.runtime_workers)
-            .enable_all()
-            .thread_name("glonax-runtime-worker")
-            .thread_stack_size(8 * 1024 * 1024)
-            .build()
-            .unwrap()
     }
 
     /// Create and probe the IO device.
@@ -141,10 +131,10 @@ where
         Ok(())
     }
 
-    /// Start the runtime service.
+    /// Spawn the runtime service.
     ///
     /// This method consumes the runtime service.
-    pub async fn launch(mut self) -> self::runtime::Result {
+    pub async fn spawn(mut self) -> self::runtime::Result {
         self.config_services().await?;
 
         // TODO: This is only for testing.
