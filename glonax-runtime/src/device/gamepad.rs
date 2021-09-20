@@ -1,20 +1,29 @@
-use gilrs::{Axis, Button, Event, EventType, Gilrs};
-use glonax_core::input::Scancode;
+use std::path::Path;
 
-use super::{CommandDevice, Device};
+use glonax_core::input::Scancode;
+use glonax_gamepad::{Axis, Button, Event, EventType};
+
+use super::{CommandDevice, Device, IoDevice};
 
 const DEVICE_NAME: &str = "gamepad";
 
 pub struct Gamepad {
-    inner: Gilrs,
+    driver: glonax_gamepad::Gamepad,
     reverse_left: bool,
     reverse_right: bool,
 }
 
+#[async_trait::async_trait]
+impl IoDevice for Gamepad {
+    async fn from_path(path: &std::path::Path) -> super::Result<Self> {
+        Ok(Gamepad::new(path).await)
+    }
+}
+
 impl Gamepad {
-    pub fn new() -> Self {
+    pub async fn new(path: &Path) -> Self {
         Self {
-            inner: Gilrs::new().unwrap(),
+            driver: glonax_gamepad::Gamepad::new(path).await.unwrap(),
             reverse_left: false,
             reverse_right: false,
         }
@@ -29,74 +38,70 @@ impl Device for Gamepad {
     }
 }
 
+#[async_trait::async_trait]
 impl CommandDevice for Gamepad {
-    fn next(&mut self) -> Option<Scancode> {
-        if let Some(event) = self.inner.next_event() {
+    async fn next(&mut self) -> Option<Scancode> {
+        if let Ok(event) = self.driver.next_event().await {
             match event {
                 Event {
-                    id: _,
-                    event: EventType::AxisChanged(Axis::LeftStickY, value, ..),
+                    ty: EventType::Axis(Axis::LeftStickY),
                     ..
-                } => Some(Scancode::LeftStickY(value)),
+                } => Some(Scancode::LeftStickY(event.value_normal())),
                 Event {
-                    id: _,
-                    event: EventType::AxisChanged(Axis::LeftStickX, value, ..),
+                    ty: EventType::Axis(Axis::LeftStickX),
                     ..
-                } => Some(Scancode::LeftStickX(value)),
+                } => Some(Scancode::LeftStickX(event.value_normal())),
+
                 Event {
-                    id: _,
-                    event: EventType::AxisChanged(Axis::RightStickY, value, ..),
+                    ty: EventType::Axis(Axis::RightStickY),
                     ..
-                } => Some(Scancode::RightStickY(value)),
+                } => Some(Scancode::RightStickY(event.value_normal())),
                 Event {
-                    id: _,
-                    event: EventType::AxisChanged(Axis::RightStickX, value, ..),
+                    ty: EventType::Axis(Axis::RightStickX),
                     ..
-                } => Some(Scancode::RightStickX(value)),
+                } => Some(Scancode::RightStickX(event.value_normal())),
+
                 Event {
-                    id: _,
-                    event: EventType::ButtonChanged(Button::LeftTrigger, value, ..),
+                    ty: EventType::Button(Button::LeftBumper),
                     ..
                 } => {
-                    self.reverse_left = if value == 1.0 { true } else { false };
+                    self.reverse_left = if event.value == 1 { true } else { false };
                     None
                 }
                 Event {
-                    id: _,
-                    event: EventType::ButtonChanged(Button::RightTrigger, value, ..),
+                    ty: EventType::Button(Button::RightBumper),
                     ..
                 } => {
-                    self.reverse_right = if value == 1.0 { true } else { false };
+                    self.reverse_right = if event.value == 1 { true } else { false };
                     None
                 }
+
                 Event {
-                    id: _,
-                    event: EventType::ButtonChanged(Button::LeftTrigger2, value, ..),
+                    ty: EventType::Axis(Axis::LeftTrigger),
                     ..
                 } => Some(Scancode::LeftTrigger(if self.reverse_left {
-                    -value
+                    -event.value_flatten_normal()
                 } else {
-                    value
+                    event.value_flatten_normal()
                 })),
                 Event {
-                    id: _,
-                    event: EventType::ButtonChanged(Button::RightTrigger2, value, ..),
+                    ty: EventType::Axis(Axis::RightTrigger),
                     ..
                 } => Some(Scancode::RightTrigger(if self.reverse_right {
-                    -value
+                    -event.value_flatten_normal()
                 } else {
-                    value
+                    event.value_flatten_normal()
                 })),
+
                 Event {
-                    id: _,
-                    event: EventType::ButtonPressed(Button::East, ..),
+                    ty: EventType::Button(Button::East),
                     ..
                 } => Some(Scancode::Cancel),
                 Event {
-                    id: _,
-                    event: EventType::ButtonPressed(Button::South, ..),
+                    ty: EventType::Button(Button::South),
                     ..
                 } => Some(Scancode::Activate),
+
                 _ => None,
             }
         } else {
