@@ -10,6 +10,8 @@ pub use inertial::Inertial;
 
 pub use error::{DeviceError, ErrorKind, Result};
 
+pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
+
 /// Device trait.
 #[async_trait::async_trait]
 pub trait Device: Send {
@@ -69,4 +71,38 @@ pub trait MetricDevice: Device {
     /// measurement originated. The device address may be used by the operand
     /// to map to a known machine component.
     async fn next(&mut self) -> Option<(u16, MetricValue)>;
+}
+
+/// Create and initialize an IO device.
+///
+/// This function will return a shared handle to the device.
+/// This is the recommended way to instantiate IO devices.
+pub(crate) async fn probe_io_device<D: IoDevice + Send>(
+    path: &std::path::Path,
+) -> Result<DeviceDescriptor<D>> {
+    // FUTURE: path.try_exists()
+    // Every IO device must have an IO resource on disk. If that node does
+    // not exist then exit right here. Doing this early on will ensure that
+    // every IO device returns the same error if the IO resource was not found.
+    // NOTE: We only check that the IO resource exist, but not if it is accessible.
+    if !path.exists() {
+        return Err(DeviceError::no_such_device(
+            "probe".to_owned(), // TODO: Remove 'probe' placeholder name.
+            path,
+        ));
+    }
+
+    let mut io_device = D::from_path(path).await?;
+
+    debug!(
+        "Probe io device '{}' from path {}",
+        io_device.name(),
+        path.to_str().unwrap()
+    );
+
+    io_device.probe().await?;
+
+    info!("Device '{}' is online", io_device.name());
+
+    Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
 }

@@ -28,8 +28,7 @@ pub struct DeviceError {
 }
 
 impl DeviceError {
-    // TODO: limit to crate
-    pub fn no_such_device(device: String, path: &std::path::Path) -> Self {
+    pub(super) fn no_such_device(device: String, path: &std::path::Path) -> Self {
         Self {
             device,
             kind: ErrorKind::NoSuchDevice(path.to_path_buf()),
