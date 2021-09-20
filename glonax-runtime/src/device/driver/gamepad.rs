@@ -87,6 +87,11 @@ impl Event {
     pub(crate) fn value_normal(&self) -> f32 {
         self.value as f32 * (1.0 / i16::MAX as f32)
     }
+
+    pub(crate) fn value_flatten_normal(&self) -> f32 {
+        let flat = (self.value as i32 - i16::MAX as i32).abs();
+        flat as f32 * (1.0 / u16::MAX as f32)
+    }
 }
 
 pub(crate) struct Gamepad {
