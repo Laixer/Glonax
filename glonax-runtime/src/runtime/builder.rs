@@ -45,6 +45,18 @@ where
     async fn probe_io_device<D: IoDevice+Send>(
         path: &String,
     ) -> device::Result<std::sync::Arc<tokio::sync::Mutex<D>>> {
+        // FUTURE: path.try_exists()
+        // Every IO device must have an IO resource on disk. If that node does
+        // not exist then exit right here. Doing this early on will ensure that
+        // every IO device returns the same error if the IO resource was not found.
+        // NOTE: We only check that the IO resource exist, but not if it is accessible.
+        if !path.exists() {
+            return Err(device::DeviceError::no_such_device(
+                "probe".to_owned(), // TODO: Remove 'probe' placeholder name.
+                path,
+            ));
+        }
+
         let mut io_device = D::from_path(path)?;
 
         debug!("Probe io device '{}' from path {}", io_device.name(), path);

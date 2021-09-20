@@ -6,9 +6,9 @@ pub type Result<T> = std::result::Result<T, DeviceError>;
 pub enum ErrorKind {
     /// The device is not available.
     ///
-    /// This could indicate that the device is in use by another process or was disconnected while
-    /// performing I/O.
-    NoSuchDevice(String),
+    /// This could indicate that the device is in use by another process or is
+    /// not connected to the host.
+    NoSuchDevice(std::path::PathBuf),
 
     /// One or multiple parameters were incorrect.
     InvalidInput,
@@ -27,11 +27,26 @@ pub struct DeviceError {
     kind: ErrorKind,
 }
 
+impl DeviceError {
+    // TODO: limit to crate
+    pub fn no_such_device(device: String, path: &std::path::Path) -> Self {
+        Self {
+            device,
+            kind: ErrorKind::NoSuchDevice(path.to_path_buf()),
+        }
+    }
+}
+
 impl std::fmt::Display for DeviceError {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         match &self.kind {
             ErrorKind::NoSuchDevice(path) => {
-                write!(fmt, "{}: no such device: {}", self.device, path)
+                write!(
+                    fmt,
+                    "{}: no such device: {}",
+                    self.device,
+                    path.to_str().unwrap()
+                )
             }
             ErrorKind::InvalidInput => fmt.write_str("invalid device parameters"),
             ErrorKind::Io(_) => fmt.write_str("io error"),
@@ -49,21 +64,21 @@ impl DeviceError {
     /// Map error from `serial::Error` onto device error.
     pub(super) fn from_serial(
         device: String,
-        path: String,
+        path: &std::path::Path,
         error: glonax_serial::Error,
-    ) -> DeviceError {
-        DeviceError {
+    ) -> Self {
+        Self {
             device,
             kind: match error.kind() {
-                glonax_serial::ErrorKind::NoDevice => ErrorKind::NoSuchDevice(path),
+                glonax_serial::ErrorKind::NoDevice => ErrorKind::NoSuchDevice(path.to_path_buf()),
                 glonax_serial::ErrorKind::InvalidInput => ErrorKind::InvalidInput,
                 glonax_serial::ErrorKind::Io(ioe) => ErrorKind::Io(ioe),
             },
         }
     }
 
-    pub(super) fn from_session(device: String, error: glonax_ice::SessionError) -> DeviceError {
-        DeviceError {
+    pub(super) fn from_session(device: String, error: glonax_ice::SessionError) -> Self {
+        Self {
             device,
             kind: match error {
                 glonax_ice::SessionError::SpuriousAddress => ErrorKind::InvalidInput,
