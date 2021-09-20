@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use glonax_core::operand::Operand;
 
 use crate::{
@@ -46,17 +48,19 @@ where
     /// The runtime core is created and initialized by the configuration.
     /// Any errors are fatal errors at this point.
     async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
-        let motion_device = probe_io_device::<M>(&std::path::Path::new(&config.motion_device))
+        use tokio::sync::mpsc;
+
+        let motion_device = probe_io_device::<M>(&Path::new(&config.motion_device))
             .await
             .map_err(|e| super::Error::Device(e))?;
 
-        let program_queue = tokio::sync::mpsc::channel(config.program_queue);
+        let program_queue = mpsc::channel(config.program_queue);
 
         let mut rt = Runtime {
             operand: K::default(),
             motion_device: motion_device.clone(),
             metric_devices: vec![],
-            event_bus: tokio::sync::mpsc::channel(64),
+            event_bus: mpsc::channel(64),
             program_queue: (program_queue.0, Some(program_queue.1)),
             settings: RuntimeSettings::from(config),
             task_pool: vec![],
@@ -65,7 +69,7 @@ where
         rt.device_manager.register_device(motion_device);
 
         for device in &config.metric_devices {
-            match probe_io_device::<Inertial>(&std::path::Path::new(device)).await {
+            match probe_io_device::<Inertial>(&Path::new(device)).await {
                 Ok(imu_device) => {
                     rt.metric_devices.push(imu_device.clone());
                     rt.device_manager.register_device(imu_device);
@@ -103,9 +107,7 @@ where
         if self.config.enable_input {
             info!("Enable input device(s)");
 
-            let device = std::path::Path::new("/dev/input/js0");
-
-            match probe_io_device::<Gamepad>(&device).await {
+            match probe_io_device::<Gamepad>(&Path::new("/dev/input/js0")).await {
                 Ok(input_device) => {
                     self.runtime
                         .device_manager

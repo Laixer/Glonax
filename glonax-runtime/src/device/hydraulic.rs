@@ -44,7 +44,7 @@ impl IoDevice for Hydraulic {
 }
 
 impl Hydraulic {
-    pub fn new(path: &std::path::Path) -> super::Result<Self> {
+    fn new(path: &std::path::Path) -> super::Result<Self> {
         let port = glonax_serial::builder(path)
             .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_baud_rate(BaudRate::Baud115200)

@@ -77,7 +77,7 @@ impl From<&Config> for RuntimeSettings {
 
 impl Default for RuntimeSettings {
     fn default() -> Self {
-        Self { timer_interval: 5 }
+        Self { timer_interval: 15 }
     }
 }
 
@@ -121,8 +121,12 @@ impl DeviceManager {
 
     /// Call `idle_time` method on the next device.
     async fn idle_time(&mut self) {
-        let mut device = self.next().lock().await;
-        device.idle_time();
+        // Ignore any held device locks.
+        if let Ok(mut device) = self.next().try_lock() {
+            trace!("Appoint idle time slice to device: {}", device.name());
+
+            device.idle_time();
+        }
     }
 }
 
@@ -200,10 +204,9 @@ impl<A: MotionDevice, K> Runtime<A, K> {
             };
         }
 
-        // TODO: Cancel all async tasks.
-
+        // Cancel all async tasks.
         for handle in &self.task_pool {
-            handle.abort()
+            handle.abort();
         }
     }
 }

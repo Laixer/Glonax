@@ -3,7 +3,7 @@ use std::path::Path;
 use glonax_core::input::Scancode;
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
-use super::{InputDevice, Device, IoDevice};
+use super::{Device, InputDevice, IoDevice};
 
 const DEVICE_NAME: &str = "gamepad";
 
@@ -21,7 +21,7 @@ impl IoDevice for Gamepad {
 }
 
 impl Gamepad {
-    pub async fn new(path: &Path) -> Self {
+    async fn new(path: &Path) -> Self {
         Self {
             driver: glonax_gamepad::Gamepad::new(path).await.unwrap(),
             reverse_left: false,
