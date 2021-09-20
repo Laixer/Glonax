@@ -9,7 +9,7 @@ use tokio::{
 };
 
 use crate::{
-    device::{CommandDevice, Device, MetricDevice, MotionDevice},
+    device::{Device, DeviceDescriptor, InputDevice, MetricDevice, MotionDevice},
     Config,
 };
 
@@ -90,7 +90,7 @@ impl Default for RuntimeSettings {
 ///
 /// By default devices selection is based on a simple round robin distribution.
 pub(super) struct DeviceManager {
-    device_list: Vec<std::sync::Arc<tokio::sync::Mutex<dyn Device>>>,
+    device_list: Vec<DeviceDescriptor<dyn Device>>,
     index: usize,
 }
 
@@ -105,17 +105,14 @@ impl DeviceManager {
 
     /// Register a device with the device manager.
     #[inline]
-    pub(super) fn register_device(
-        &mut self,
-        device: std::sync::Arc<tokio::sync::Mutex<dyn Device>>,
-    ) {
+    pub(super) fn register_device(&mut self, device: DeviceDescriptor<dyn Device>) {
         self.device_list.push(device)
     }
 
     /// Select the next device from the device list.
     ///
     /// Re-entering this method is likely to yield a different result.
-    fn next(&mut self) -> &std::sync::Arc<tokio::sync::Mutex<dyn Device>> {
+    fn next(&mut self) -> &DeviceDescriptor<dyn Device> {
         self.index += 1;
         self.device_list
             .get(self.index % self.device_list.len())
@@ -133,9 +130,9 @@ pub struct Runtime<A, K> {
     /// Runtime operand.
     pub(super) operand: K,
     /// The standard motion device.
-    pub(super) motion_device: std::sync::Arc<tokio::sync::Mutex<A>>,
+    pub(super) motion_device: DeviceDescriptor<A>,
     /// The standard motion device.
-    pub(super) metric_devices: Vec<std::sync::Arc<tokio::sync::Mutex<dyn MetricDevice + Send>>>,
+    pub(super) metric_devices: Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
     /// Runtime event bus.
     pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Program queue.
@@ -166,7 +163,7 @@ impl<A, K> Runtime<A, K> {
     /// runtime exits its loop.
     fn spawn<T>(&mut self, future: T)
     where
-        T: std::future::Future<Output = ()> + std::marker::Send,
+        T: std::future::Future<Output = ()> + Send,
         T: 'static,
     {
         self.task_pool.push(tokio::task::spawn(future));
@@ -215,19 +212,19 @@ impl<A, K> Runtime<A, K>
 where
     K: Operand + 'static,
 {
-    pub(super) fn spawn_command_device<C: CommandDevice + 'static>(
+    pub(super) fn spawn_input_device<C: InputDevice + 'static>(
         &mut self,
-        command_device: std::sync::Arc<tokio::sync::Mutex<C>>,
+        input_device: DeviceDescriptor<C>,
     ) {
         let dispatcher = self.dispatch();
         let operand = self.operand.clone();
 
         self.spawn(async move {
             loop {
-                if let Some(input) = command_device.lock().await.next().await {
+                if let Some(input) = input_device.lock().await.next().await {
                     if let Ok(motion) = operand.try_from_input_device(input) {
                         if let Err(_) = dispatcher.motion(motion).await {
-                            warn!("Command event terminated without completion");
+                            warn!("Input event terminated without completion");
                             return;
                         }
                     }

@@ -3,7 +3,7 @@ use std::path::Path;
 use glonax_core::input::Scancode;
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
-use super::{CommandDevice, Device, IoDevice};
+use super::{InputDevice, Device, IoDevice};
 
 const DEVICE_NAME: &str = "gamepad";
 
@@ -39,7 +39,7 @@ impl Device for Gamepad {
 }
 
 #[async_trait::async_trait]
-impl CommandDevice for Gamepad {
+impl InputDevice for Gamepad {
     async fn next(&mut self) -> Option<Scancode> {
         if let Ok(event) = self.driver.next_event().await {
             match event {

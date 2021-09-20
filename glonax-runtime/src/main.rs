@@ -77,7 +77,7 @@ fn main() {
         config.enable_autopilot = false;
     }
     if matches.is_present("no-input") {
-        config.enable_command = false;
+        config.enable_input = false;
     }
     if matches.is_present("workers") {
         config.runtime_workers = matches.value_of("workers").unwrap().parse().unwrap();

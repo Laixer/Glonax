@@ -58,9 +58,9 @@ pub trait MotionDevice: Device {
     async fn halt(&mut self) {} // TODO: Return result.
 }
 
-/// Device which can read commands.
+/// Device which can read input events.
 #[async_trait::async_trait]
-pub trait CommandDevice: Device {
+pub trait InputDevice: Device {
     async fn next(&mut self) -> Option<Scancode>;
 }
 

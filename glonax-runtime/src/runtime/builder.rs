@@ -100,7 +100,7 @@ where
             self.runtime.spawn_program_queue();
         }
 
-        if self.config.enable_command {
+        if self.config.enable_input {
             info!("Enable input device(s)");
 
             let device = std::path::Path::new("/dev/input/js0");
@@ -110,7 +110,7 @@ where
                     self.runtime
                         .device_manager
                         .register_device(input_device.clone());
-                    self.runtime.spawn_command_device(input_device);
+                    self.runtime.spawn_input_device(input_device);
                 }
                 Err(_) => {} // TODO: Only ignore NoSuchDevice.
             }
