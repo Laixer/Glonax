@@ -170,6 +170,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
+ "fs2",
  "glonax-core",
  "glonax-gamepad",
  "glonax-ice",

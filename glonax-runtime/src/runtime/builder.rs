@@ -38,7 +38,7 @@ where
     pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, M, K>> {
         Ok(Self {
             config,
-            workspace: Workspace::new(&config.workspace),
+            workspace: Workspace::new(&config.workspace)?,
             runtime: Self::bootstrap(config).await?,
         })
     }
