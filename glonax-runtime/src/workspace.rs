@@ -1,10 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 pub struct Workspace {
     #[allow(dead_code)]
     db: sled::Db,
     #[allow(dead_code)]
-    lock: std::fs::File,
+    lock: File,
 }
 
 impl Workspace {
@@ -28,10 +31,10 @@ impl Workspace {
         Ok(Self { db, lock })
     }
 
-    fn lock(path: &Path) -> super::runtime::Result<std::fs::File> {
+    fn lock(path: &Path) -> super::runtime::Result<File> {
         use fs2::FileExt;
 
-        let file = std::fs::File::create(path.join("lock")).unwrap();
+        let file = File::create(path.join("lock")).unwrap();
 
         // FUTURE: Check that err is indeed a lock.
         match file.try_lock_exclusive() {

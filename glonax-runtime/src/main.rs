@@ -99,7 +99,6 @@ fn main() {
     log_config.set_target_level(log::LevelFilter::Trace);
     log_config.set_location_level(log::LevelFilter::Off);
     log_config.add_filter_ignore_str("sled");
-    log_config.add_filter_ignore_str("gilrs");
     log_config.add_filter_ignore_str("mio");
 
     let log_level = if matches.is_present("systemd") {
