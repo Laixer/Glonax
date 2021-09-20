@@ -1,7 +1,7 @@
 use glonax_core::operand::Operand;
 
 use crate::{
-    device::{self, Device, Gamepad, Inertial, IoDevice, MotionDevice},
+    device::{self, Gamepad, Inertial, IoDevice, MotionDevice},
     runtime::{self, RuntimeSettings},
     workspace::Workspace,
     Config, Runtime,
@@ -25,7 +25,7 @@ pub struct Builder<'a, M, K> {
     runtime: Runtime<M, K>,
 }
 
-impl<'a, M: 'static+Send, K> Builder<'a, M, K>
+impl<'a, M: 'static + Send, K> Builder<'a, M, K>
 where
     M: IoDevice + MotionDevice,
     K: Operand + 'static,
@@ -41,9 +41,10 @@ where
         })
     }
 
+    // TODO: Move to device
     /// Create and probe the IO device.
-    async fn probe_io_device<D: IoDevice+Send>(
-        path: &String,
+    async fn probe_io_device<D: IoDevice + Send>(
+        path: &std::path::Path,
     ) -> device::Result<std::sync::Arc<tokio::sync::Mutex<D>>> {
         // FUTURE: path.try_exists()
         // Every IO device must have an IO resource on disk. If that node does
@@ -57,9 +58,13 @@ where
             ));
         }
 
-        let mut io_device = D::from_path(path)?;
+        let mut io_device = D::from_path(path).await?;
 
-        debug!("Probe io device '{}' from path {}", io_device.name(), path);
+        debug!(
+            "Probe io device '{}' from path {}",
+            io_device.name(),
+            path.to_str().unwrap()
+        );
 
         io_device.probe().await?;
 
@@ -73,9 +78,10 @@ where
     /// The runtime core is created and initialized by the configuration.
     /// Any errors are fatal errors at this point.
     async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
-        let motion_device = Self::probe_io_device::<M>(&config.motion_device)
-            .await
-            .map_err(|e| super::Error::Device(e))?;
+        let motion_device =
+            Self::probe_io_device::<M>(&std::path::Path::new(&config.motion_device))
+                .await
+                .map_err(|e| super::Error::Device(e))?;
 
         let program_queue = tokio::sync::mpsc::channel(config.program_queue);
 
@@ -92,7 +98,7 @@ where
         rt.device_manager.register_device(motion_device);
 
         for device in &config.metric_devices {
-            match Self::probe_io_device::<Inertial>(device).await {
+            match Self::probe_io_device::<Inertial>(&std::path::Path::new(device)).await {
                 Ok(imu_device) => {
                     rt.metric_devices.push(imu_device.clone());
                     rt.device_manager.register_device(imu_device);
@@ -130,15 +136,17 @@ where
         if self.config.enable_command {
             info!("Enable input device(s)");
 
-            let mut gamepad = Gamepad::new();
+            let device = std::path::Path::new("/dev/input/js0");
 
-            debug!("Probe '{}' device", gamepad.name());
-
-            gamepad.probe().await.unwrap(); // TODO
-
-            info!("Device '{}' is online", gamepad.name());
-
-            self.runtime.spawn_command_device(gamepad);
+            match Self::probe_io_device::<Gamepad>(&device).await {
+                Ok(input_device) => {
+                    self.runtime
+                        .device_manager
+                        .register_device(input_device.clone());
+                    self.runtime.spawn_command_device(input_device);
+                }
+                Err(_) => {} // TODO: Only ignore NoSuchDevice.
+            }
         }
 
         Ok(())

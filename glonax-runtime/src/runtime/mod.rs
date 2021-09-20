@@ -215,26 +215,22 @@ impl<A, K> Runtime<A, K>
 where
     K: Operand + 'static,
 {
-    pub(super) fn spawn_command_device<C: CommandDevice + Send + 'static>(
+    pub(super) fn spawn_command_device<C: CommandDevice + 'static>(
         &mut self,
-        mut command_device: C,
+        command_device: std::sync::Arc<tokio::sync::Mutex<C>>,
     ) {
         let dispatcher = self.dispatch();
         let operand = self.operand.clone();
 
         self.spawn(async move {
             loop {
-                // FUTURE: We should be awaiting this.
-                match command_device.next() {
-                    Some(input) => {
-                        if let Ok(motion) = operand.try_from_input_device(input) {
-                            if let Err(_) = dispatcher.motion(motion).await {
-                                warn!("Command event terminated without completion");
-                                return;
-                            }
+                if let Some(input) = command_device.lock().await.next().await {
+                    if let Ok(motion) = operand.try_from_input_device(input) {
+                        if let Err(_) = dispatcher.motion(motion).await {
+                            warn!("Command event terminated without completion");
+                            return;
                         }
                     }
-                    None => tokio::time::sleep(tokio::time::Duration::from_millis(5)).await,
                 }
             }
         });
@@ -269,8 +265,7 @@ where
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
                     for metric_device in metric_devices.iter_mut() {
-                        let mut metric_device = metric_device.lock().await;
-                        match metric_device.next().await {
+                        match metric_device.lock().await.next().await {
                             Some((id, value)) => {
                                 program.push(id as u32, value, &mut ctx);
                             }

@@ -1,7 +1,5 @@
-mod driver;
 mod error;
 mod gamepad;
-mod gamepad2;
 mod hydraulic;
 mod inertial;
 
@@ -38,10 +36,10 @@ pub trait Device: Send {
 ///
 /// An I/O device takes a local resource such as a node or socket
 /// as its communication medium.
+#[async_trait::async_trait]
 pub trait IoDevice: Device + Sized {
-    // TODO: type should be &std::path::Path
     /// Construct device from path resource.
-    fn from_path(path: &String) -> Result<Self>;
+    async fn from_path(path: &std::path::Path) -> Result<Self>;
 }
 
 /// Device which can exercise motion.
@@ -59,8 +57,9 @@ pub trait MotionDevice: Device {
 }
 
 /// Device which can read commands.
+#[async_trait::async_trait]
 pub trait CommandDevice: Device {
-    fn next(&mut self) -> Option<Scancode>;
+    async fn next(&mut self) -> Option<Scancode>;
 }
 
 /// Device which can read field metrics.

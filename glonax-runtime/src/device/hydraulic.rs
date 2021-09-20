@@ -36,29 +36,24 @@ pub struct Hydraulic {
     cache: Cache<u32, i16>,
 }
 
+#[async_trait::async_trait]
 impl IoDevice for Hydraulic {
-    fn from_path(path: &String) -> super::Result<Self> {
+    async fn from_path(path: &std::path::Path) -> super::Result<Self> {
         Hydraulic::new(path)
     }
 }
 
 impl Hydraulic {
-    pub fn new(path: impl ToString) -> super::Result<Self> {
-        let port = glonax_serial::builder(&std::path::Path::new(&path.to_string()))
-            .map_err(|e| {
-                super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
-            })?
+    pub fn new(path: &std::path::Path) -> super::Result<Self> {
+        let port = glonax_serial::builder(path)
+            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_baud_rate(BaudRate::Baud115200)
-            .map_err(|e| {
-                super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
-            })?
+            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_parity(Parity::ParityNone)
             .set_stop_bits(StopBits::Stop1)
             .set_flow_control(FlowControl::FlowNone)
             .build()
-            .map_err(|e| {
-                super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
-            })?;
+            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?;
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
