@@ -13,7 +13,8 @@ pub use inertial::Inertial;
 pub use error::{DeviceError, ErrorKind, Result};
 
 /// Device trait.
-pub trait Device {
+#[async_trait::async_trait]
+pub trait Device: Send {
     /// Return the device name.
     fn name(&self) -> String;
 
@@ -21,7 +22,7 @@ pub trait Device {
     ///
     /// Can be used to signal that the device is ready.
     /// Implementation is optional.
-    fn probe(&mut self) -> Result<()> {
+    async fn probe(&mut self) -> Result<()> {
         Ok(())
     }
 
@@ -44,16 +45,17 @@ pub trait IoDevice: Device + Sized {
 }
 
 /// Device which can exercise motion.
+#[async_trait::async_trait]
 pub trait MotionDevice: Device {
     /// Issue actuate command.
-    fn actuate(&mut self, motion: Motion); // TODO: Return result.
+    async fn actuate(&mut self, motion: Motion); // TODO: Return result.
 
     /// Halt all operation.
     ///
     /// Instruct all motion to stop. A device does not have to
     /// implement the halt method. This method should be called
     /// in rare occasions, for example in an emergency.
-    fn halt(&mut self) {} // TODO: Return result.
+    async fn halt(&mut self) {} // TODO: Return result.
 }
 
 /// Device which can read commands.
@@ -62,9 +64,10 @@ pub trait CommandDevice: Device {
 }
 
 /// Device which can read field metrics.
+#[async_trait::async_trait]
 pub trait MetricDevice: Device {
     /// Return the next metric value and the device address from which the
     /// measurement originated. The device address may be used by the operand
     /// to map to a known machine component.
-    fn next(&mut self) -> Option<(u16, MetricValue)>;
+    async fn next(&mut self) -> Option<(u16, MetricValue)>;
 }

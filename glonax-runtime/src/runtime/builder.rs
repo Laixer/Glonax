@@ -25,7 +25,7 @@ pub struct Builder<'a, M, K> {
     runtime: Runtime<M, K>,
 }
 
-impl<'a, M: 'static, K> Builder<'a, M, K>
+impl<'a, M: 'static+Send, K> Builder<'a, M, K>
 where
     M: IoDevice + MotionDevice,
     K: Operand + 'static,
@@ -33,35 +33,36 @@ where
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub fn from_config(config: &'a Config) -> super::Result<Self> {
+    pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, M, K>> {
         Ok(Self {
             config,
             workspace: Workspace::new(&config.workspace),
-            runtime: Self::bootstrap(config)?,
+            runtime: Self::bootstrap(config).await?,
         })
     }
 
     /// Create and probe the IO device.
-    fn probe_io_device<D: IoDevice>(
+    async fn probe_io_device<D: IoDevice+Send>(
         path: &String,
-    ) -> device::Result<std::sync::Arc<std::sync::Mutex<D>>> {
+    ) -> device::Result<std::sync::Arc<tokio::sync::Mutex<D>>> {
         let mut io_device = D::from_path(path)?;
 
         debug!("Probe io device '{}' from path {}", io_device.name(), path);
 
-        io_device.probe()?;
+        io_device.probe().await?;
 
         info!("Device '{}' is online", io_device.name());
 
-        Ok(std::sync::Arc::new(std::sync::Mutex::new(io_device)))
+        Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
     }
 
     /// Construct the runtime core.
     ///
     /// The runtime core is created and initialized by the configuration.
     /// Any errors are fatal errors at this point.
-    fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
+    async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
         let motion_device = Self::probe_io_device::<M>(&config.motion_device)
+            .await
             .map_err(|e| super::Error::Device(e))?;
 
         let program_queue = tokio::sync::mpsc::channel(config.program_queue);
@@ -79,7 +80,7 @@ where
         rt.device_manager.register_device(motion_device);
 
         for device in &config.metric_devices {
-            match Self::probe_io_device::<Inertial>(device) {
+            match Self::probe_io_device::<Inertial>(device).await {
                 Ok(imu_device) => {
                     rt.metric_devices.push(imu_device.clone());
                     rt.device_manager.register_device(imu_device);
@@ -121,7 +122,7 @@ where
 
             debug!("Probe '{}' device", gamepad.name());
 
-            gamepad.probe().unwrap(); // TODO
+            gamepad.probe().await.unwrap(); // TODO
 
             info!("Device '{}' is online", gamepad.name());
 

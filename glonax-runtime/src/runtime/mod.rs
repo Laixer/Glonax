@@ -90,7 +90,7 @@ impl Default for RuntimeSettings {
 ///
 /// By default devices selection is based on a simple round robin distribution.
 pub(super) struct DeviceManager {
-    device_list: Vec<std::sync::Arc<std::sync::Mutex<dyn Device>>>,
+    device_list: Vec<std::sync::Arc<tokio::sync::Mutex<dyn Device>>>,
     index: usize,
 }
 
@@ -105,14 +105,17 @@ impl DeviceManager {
 
     /// Register a device with the device manager.
     #[inline]
-    pub(super) fn register_device(&mut self, device: std::sync::Arc<std::sync::Mutex<dyn Device>>) {
+    pub(super) fn register_device(
+        &mut self,
+        device: std::sync::Arc<tokio::sync::Mutex<dyn Device>>,
+    ) {
         self.device_list.push(device)
     }
 
     /// Select the next device from the device list.
     ///
     /// Re-entering this method is likely to yield a different result.
-    fn next(&mut self) -> &std::sync::Arc<std::sync::Mutex<dyn Device>> {
+    fn next(&mut self) -> &std::sync::Arc<tokio::sync::Mutex<dyn Device>> {
         self.index += 1;
         self.device_list
             .get(self.index % self.device_list.len())
@@ -120,10 +123,9 @@ impl DeviceManager {
     }
 
     /// Call `idle_time` method on the next device.
-    fn idle_time(&mut self) {
-        if let Ok(mut device) = self.next().lock() {
-            device.idle_time();
-        }
+    async fn idle_time(&mut self) {
+        let mut device = self.next().lock().await;
+        device.idle_time();
     }
 }
 
@@ -131,9 +133,9 @@ pub struct Runtime<A, K> {
     /// Runtime operand.
     pub(super) operand: K,
     /// The standard motion device.
-    pub(super) motion_device: std::sync::Arc<std::sync::Mutex<A>>,
+    pub(super) motion_device: std::sync::Arc<tokio::sync::Mutex<A>>,
     /// The standard motion device.
-    pub(super) metric_devices: Vec<std::sync::Arc<std::sync::Mutex<dyn MetricDevice + Send>>>,
+    pub(super) metric_devices: Vec<std::sync::Arc<tokio::sync::Mutex<dyn MetricDevice + Send>>>,
     /// Runtime event bus.
     pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Program queue.
@@ -188,16 +190,16 @@ impl<A: MotionDevice, K> Runtime<A, K> {
                 event = self.event_bus.1.recv() => {
                     match event.unwrap() {
                         RuntimeEvent::DriveMotion(motion_event) => {
-                            if let Ok(mut motion_device) = self.motion_device.lock() {
-                                motion_device.actuate(motion_event)
-                            }
+                            let mut motion_device = self.motion_device.lock().await;
+                            motion_device.actuate(motion_event).await;
+
                         }
                         RuntimeEvent::Shutdown => break,
                     }
                     // TODO: handle err.
                 }
 
-                _ = wait => self.device_manager.idle_time(),
+                _ = wait => self.device_manager.idle_time().await,
             };
         }
 
@@ -267,16 +269,16 @@ where
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
                     for metric_device in metric_devices.iter_mut() {
-                        if let Ok(mut metric_device) = metric_device.lock() {
-                            match metric_device.next() {
-                                Some((id, value)) => {
-                                    program.push(id as u32, value, &mut ctx);
-                                }
-                                None => {}
+                        let mut metric_device = metric_device.lock().await;
+                        match metric_device.next().await {
+                            Some((id, value)) => {
+                                program.push(id as u32, value, &mut ctx);
                             }
+                            None => {}
                         }
                     }
 
+                    // Query the operand program for the next motion step.
                     if let Some(motion) = program.step(&mut ctx) {
                         if let Err(_) = dispatcher.motion(motion).await {
                             warn!("Program terminated without completion");
@@ -285,6 +287,7 @@ where
                     }
                 }
 
+                // Execute an optional last action before program termination.
                 if let Some(motion) = program.term_action(&mut ctx) {
                     if let Err(_) = dispatcher.motion(motion).await {
                         warn!("Program terminated without completion");
@@ -293,8 +296,6 @@ where
                 }
 
                 info!("Program terminated");
-
-                tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
             }
         });
     }

@@ -47,13 +47,17 @@ impl error::Error for DeviceError {
 
 impl DeviceError {
     /// Map error from `serial::Error` onto device error.
-    pub(super) fn from_serial(device: String, path: String, error: serial::Error) -> DeviceError {
+    pub(super) fn from_serial(
+        device: String,
+        path: String,
+        error: glonax_serial::Error,
+    ) -> DeviceError {
         DeviceError {
             device,
             kind: match error.kind() {
-                serial::ErrorKind::NoDevice => ErrorKind::NoSuchDevice(path),
-                serial::ErrorKind::InvalidInput => ErrorKind::InvalidInput,
-                serial::ErrorKind::Io(ioe) => ErrorKind::Io(ioe),
+                glonax_serial::ErrorKind::NoDevice => ErrorKind::NoSuchDevice(path),
+                glonax_serial::ErrorKind::InvalidInput => ErrorKind::InvalidInput,
+                glonax_serial::ErrorKind::Io(ioe) => ErrorKind::Io(ioe),
             },
         }
     }

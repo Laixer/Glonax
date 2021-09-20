@@ -1,8 +1,8 @@
 use super::{Device, IoDevice, MotionDevice};
 
 use glonax_core::motion::Motion;
-use glonax_ice::Session;
-use serial::{SerialPort, SystemPort};
+use glonax_ice::{eval::Evaluation, Session};
+use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
 const DEVICE_NAME: &str = "hydraulic";
 const DEVICE_ADDR: u16 = 0x7;
@@ -32,7 +32,7 @@ where
 }
 
 pub struct Hydraulic {
-    session: Session<SystemPort>,
+    session: Session<Uart>,
     cache: Cache<u32, i16>,
 }
 
@@ -44,56 +44,53 @@ impl IoDevice for Hydraulic {
 
 impl Hydraulic {
     pub fn new(path: impl ToString) -> super::Result<Self> {
-        let mut channel = serial::open(&path.to_string()).map_err(|e: serial::Error| {
-            super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
-        })?;
-
-        channel
-            .reconfigure(&|settings| {
-                settings.set_baud_rate(serial::Baud115200)?;
-                settings.set_parity(serial::Parity::ParityNone);
-                settings.set_stop_bits(serial::StopBits::Stop1);
-                settings.set_flow_control(serial::FlowControl::FlowNone);
-                Ok(())
-            })
-            .map_err(|e: serial::Error| {
+        let port = glonax_serial::builder(&std::path::Path::new(&path.to_string()))
+            .map_err(|e| {
                 super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
-            })?;
-
-        channel
-            .set_timeout(std::time::Duration::from_millis(500))
-            .map_err(|e: serial::Error| {
+            })?
+            .set_baud_rate(BaudRate::Baud115200)
+            .map_err(|e| {
+                super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
+            })?
+            .set_parity(Parity::ParityNone)
+            .set_stop_bits(StopBits::Stop1)
+            .set_flow_control(FlowControl::FlowNone)
+            .build()
+            .map_err(|e| {
                 super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path.to_string(), e)
             })?;
 
         Ok(Self {
-            session: Session::new(channel, DEVICE_ADDR),
+            session: Session::new(port, DEVICE_ADDR),
             cache: Cache::new(),
         })
     }
 }
 
+#[async_trait::async_trait]
 impl Device for Hydraulic {
     fn name(&self) -> String {
         DEVICE_NAME.to_owned()
     }
 
-    fn probe(&mut self) -> super::Result<()> {
-        // TODO: We shoud read the actuat packet.
-        self.session
-            .accept()
+    async fn probe(&mut self) -> super::Result<()> {
+        let mut eval = Evaluation::new(&mut self.session);
+
+        eval.probe_test()
+            .await
             .map_err(|e| super::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
 
-        self.halt();
+        self.halt().await;
 
         Ok(())
     }
 }
 
+#[async_trait::async_trait]
 impl MotionDevice for Hydraulic {
-    fn actuate(&mut self, motion: Motion) {
+    async fn actuate(&mut self, motion: Motion) {
         match motion {
-            Motion::StopAll => self.halt(),
+            Motion::StopAll => self.halt().await,
             Motion::Stop(actuators) => {
                 for actuator in actuators {
                     // Test the motion event against the cache. There is
@@ -102,11 +99,15 @@ impl MotionDevice for Hydraulic {
                         trace!("Stop actuator {} ", actuator);
 
                         // FUTURE: Handle error, translate to device error?
-                        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                        if let Err(err) =
+                            self.session.dispatch_valve_control(actuator as u8, 0).await
+                        {
                             error!("Session error: {:?}", err);
                         }
                         // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
-                        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, 0) {
+                        if let Err(err) =
+                            self.session.dispatch_valve_control(actuator as u8, 0).await
+                        {
                             error!("Session error: {:?}", err);
                         }
                     }
@@ -120,7 +121,10 @@ impl MotionDevice for Hydraulic {
                         trace!("Change actuator {} to value {}", actuator, value);
 
                         // FUTURE: Handle error, translate to device error?
-                        if let Err(err) = self.session.dispatch_valve_control(actuator as u8, value)
+                        if let Err(err) = self
+                            .session
+                            .dispatch_valve_control(actuator as u8, value)
+                            .await
                         {
                             error!("Session error: {:?}", err);
                         }
@@ -130,26 +134,16 @@ impl MotionDevice for Hydraulic {
         }
     }
 
-    fn halt(&mut self) {
+    async fn halt(&mut self) {
         trace!("Stop all actuators");
 
         // FUTURE: Handle error, translate to device error?
-        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
+        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
             error!("Session error: {:?}", err);
         }
         // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
-        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0) {
+        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
             error!("Session error: {:?}", err);
         }
-    }
-}
-
-impl Drop for Hydraulic {
-    /// On drop try to stop any enduring motion.
-    ///
-    /// This is a best effort and there are no guarantees
-    /// this has any effect.
-    fn drop(&mut self) {
-        self.halt();
     }
 }

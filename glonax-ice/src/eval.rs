@@ -33,7 +33,7 @@ impl<'a, T> Evaluation<'a, T> {
 }
 
 impl<T: AsyncRead + AsyncWrite + Unpin> Evaluation<'_, T> {
-    ///
+    /// Quick probe test to determine if device is alive.
     pub async fn probe_test(&mut self) -> Result<(), SessionError> {
         self.session.add_payload_mask(PayloadType::DeviceInfo);
 
