@@ -1,0 +1,15 @@
+[package]
+name = "glonax-gamepad"
+version = "1.0.0"
+authors = ["Laixer Equipment B.V. <info@laixer.com>"]
+edition = "2018"
+repository = "https://github.com/Laixer/Glonax"
+description = """
+Linux gamepad driver.
+"""
+categories = ["gamepad", "input", "network"]
+keywords = ["gamepad", "joystick", "hardware", "glonax"]
+
+[dependencies]
+log = "0.4"
+tokio = { version = "1.7", features = ["full"] }

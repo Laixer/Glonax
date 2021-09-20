@@ -250,6 +250,7 @@ dependencies = [
  "clap",
  "gilrs",
  "glonax-core",
+ "glonax-gamepad",
  "glonax-ice",
  "glonax-serial",
  "log",
@@ -262,6 +263,14 @@ dependencies = [
 [[package]]
 name = "glonax-core"
 version = "1.0.0"
+
+[[package]]
+name = "glonax-gamepad"
+version = "1.0.0"
+dependencies = [
+ "log",
+ "tokio",
+]
 
 [[package]]
 name = "glonax-ice"

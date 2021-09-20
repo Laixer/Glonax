@@ -3,7 +3,7 @@ use std::path::Path;
 use tokio::{fs::File, io::AsyncReadExt};
 
 #[derive(Debug)]
-pub(crate) enum Button {
+pub enum Button {
     North,
     East,
     South,
@@ -38,7 +38,7 @@ impl From<u8> for Button {
 }
 
 #[derive(Debug)]
-pub(crate) enum Axis {
+pub enum Axis {
     LeftStickX,
     LeftStickY,
     RightStickX,
@@ -67,7 +67,7 @@ impl From<u8> for Axis {
 }
 
 #[derive(Debug)]
-pub(crate) enum EventType {
+pub enum EventType {
     /// Button pressed/released.
     Button(Button),
     /// Axis moved.
@@ -75,32 +75,32 @@ pub(crate) enum EventType {
 }
 
 #[derive(Debug)]
-pub(crate) struct Event {
+pub struct Event {
     /// Event type.
-    pub(crate) ty: EventType,
+    pub ty: EventType,
     /// Corresponding value.
-    pub(crate) value: i16,
+    pub value: i16,
 }
 
 impl Event {
     /// Return the value as normal.
-    pub(crate) fn value_normal(&self) -> f32 {
+    pub fn value_normal(&self) -> f32 {
         self.value as f32 * (1.0 / i16::MAX as f32)
     }
 
-    pub(crate) fn value_flatten_normal(&self) -> f32 {
+    pub fn value_flatten_normal(&self) -> f32 {
         let flat = (self.value as i32 - i16::MAX as i32).abs();
         flat as f32 * (1.0 / u16::MAX as f32)
     }
 }
 
-pub(crate) struct Gamepad {
+pub struct Gamepad {
     file: File,
 }
 
 impl Gamepad {
     /// Construct new gamepad driver.
-    pub(crate) async fn new(path: &Path) -> Result<Self, std::io::Error> {
+    pub async fn new(path: &Path) -> Result<Self, std::io::Error> {
         Ok(Self {
             file: File::open(path).await?,
         })
@@ -108,7 +108,7 @@ impl Gamepad {
 
     // TODO: Retrieve multiple events in one read.
     /// Return the next event from the gamepad.
-    pub(crate) async fn next_event(&mut self) -> Result<Event, ()> {
+    pub async fn next_event(&mut self) -> Result<Event, ()> {
         const JS_EVENT_TYPE_BUTTON: u8 = 0x1;
         const JS_EVENT_TYPE_AXIS: u8 = 0x2;
 
