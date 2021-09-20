@@ -34,9 +34,60 @@ impl Gamepad {
                     ..
                 } => Some(Scancode::LeftStickY(event.value_normal())),
                 Event {
+                    ty: EventType::Axis(Axis::LeftStickX),
+                    ..
+                } => Some(Scancode::LeftStickX(event.value_normal())),
+
+                Event {
+                    ty: EventType::Axis(Axis::RightStickY),
+                    ..
+                } => Some(Scancode::RightStickY(event.value_normal())),
+                Event {
+                    ty: EventType::Axis(Axis::RightStickX),
+                    ..
+                } => Some(Scancode::RightStickX(event.value_normal())),
+
+                Event {
+                    ty: EventType::Button(Button::LeftBumper),
+                    ..
+                } => {
+                    self.reverse_left = if event.value == 1 { true } else { false };
+                    None
+                }
+                Event {
+                    ty: EventType::Button(Button::RightBumper),
+                    ..
+                } => {
+                    self.reverse_right = if event.value == 1 { true } else { false };
+                    None
+                }
+
+                Event {
+                    ty: EventType::Axis(Axis::LeftTrigger),
+                    ..
+                } => Some(Scancode::LeftTrigger(if self.reverse_left {
+                    -event.value_flatten_normal()
+                } else {
+                    event.value_flatten_normal()
+                })),
+                Event {
+                    ty: EventType::Axis(Axis::RightTrigger),
+                    ..
+                } => Some(Scancode::RightTrigger(if self.reverse_right {
+                    -event.value_flatten_normal()
+                } else {
+                    event.value_flatten_normal()
+                })),
+
+                Event {
                     ty: EventType::Button(Button::East),
                     ..
                 } => Some(Scancode::Cancel),
+                Event {
+                    ty: EventType::Button(Button::South),
+                    ..
+                } => Some(Scancode::Activate),
+
                 _ => None,
             }
         } else {
