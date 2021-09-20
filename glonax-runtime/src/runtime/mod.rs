@@ -125,7 +125,7 @@ impl DeviceManager {
         if let Ok(mut device) = self.next().try_lock() {
             trace!("Appoint idle time slice to device: {}", device.name());
 
-            device.idle_time();
+            device.idle_time().await;
         }
     }
 }

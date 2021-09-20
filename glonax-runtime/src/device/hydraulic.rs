@@ -79,13 +79,29 @@ impl Device for Hydraulic {
 
         Ok(())
     }
+
+    async fn idle_time(&mut self) {
+        // Any unexpected movements will be halted.
+        self.halt().await;
+    }
 }
 
 #[async_trait::async_trait]
 impl MotionDevice for Hydraulic {
     async fn actuate(&mut self, motion: Motion) {
         match motion {
-            Motion::StopAll => self.halt().await,
+            Motion::StopAll => {
+                trace!("Stop all actuators");
+
+                // FUTURE: Handle error, translate to device error?
+                if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
+                    error!("Session error: {:?}", err);
+                }
+                // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
+                if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
+                    error!("Session error: {:?}", err);
+                }
+            }
             Motion::Stop(actuators) => {
                 for actuator in actuators {
                     // Test the motion event against the cache. There is
@@ -127,18 +143,13 @@ impl MotionDevice for Hydraulic {
                 }
             }
         }
+
+        if let Err(err) = self.session.trigger_scheduler().await {
+            error!("Session error: {:?}", err);
+        };
     }
 
     async fn halt(&mut self) {
-        trace!("Stop all actuators");
-
-        // FUTURE: Handle error, translate to device error?
-        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
-            error!("Session error: {:?}", err);
-        }
-        // TODO: HACK: XXX: Send exact same packet twice. This minimizes the chance one is never received.
-        if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
-            error!("Session error: {:?}", err);
-        }
+        self.actuate(Motion::StopAll).await;
     }
 }

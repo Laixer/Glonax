@@ -31,7 +31,7 @@ pub trait Device: Send {
     /// The device can implement this method when it wants to
     /// run sporadic unscheduled events. There is no guarantee
     /// this method is ever called.
-    fn idle_time(&mut self) {}
+    async fn idle_time(&mut self) {}
 }
 
 /// I/O device.
