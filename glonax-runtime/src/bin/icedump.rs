@@ -129,7 +129,7 @@ async fn main() -> anyhow::Result<()> {
     let matches = App::new(BIN_NAME)
         .version(PKG_VERSION)
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
-        .about("Comminication diagnostics tool")
+        .about("Hardware communication diagnostics")
         .arg(
             Arg::with_name("serial")
                 .short("p")
