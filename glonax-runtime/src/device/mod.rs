@@ -1,9 +1,9 @@
-mod error;
-mod gamepad;
-mod hydraulic;
-mod inertial;
-
 use std::path::Path;
+
+mod claim;
+
+mod manager;
+pub use manager::DeviceManager;
 
 pub use gamepad::Gamepad;
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
