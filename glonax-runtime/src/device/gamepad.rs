@@ -15,6 +15,8 @@ pub struct Gamepad {
 
 #[async_trait::async_trait]
 impl IoDevice for Gamepad {
+    const NAME: &'static str = DEVICE_NAME;
+
     async fn from_path(path: &std::path::Path) -> super::Result<Self> {
         Ok(Gamepad::new(path).await)
     }

@@ -14,6 +14,8 @@ pub struct Inertial {
 
 #[async_trait::async_trait]
 impl IoDevice for Inertial {
+    const NAME: &'static str = DEVICE_NAME;
+
     async fn from_path(path: &std::path::Path) -> super::Result<Self> {
         Inertial::new(path)
     }

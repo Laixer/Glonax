@@ -3,6 +3,8 @@ mod gamepad;
 mod hydraulic;
 mod inertial;
 
+use std::path::Path;
+
 pub use gamepad::Gamepad;
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
 pub use hydraulic::Hydraulic;
@@ -15,6 +17,7 @@ pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
 /// Device trait.
 #[async_trait::async_trait]
 pub trait Device: Send {
+    // TODO: Maybe remove in future.
     /// Return the device name.
     fn name(&self) -> String;
 
@@ -40,8 +43,11 @@ pub trait Device: Send {
 /// as its communication medium.
 #[async_trait::async_trait]
 pub trait IoDevice: Device + Sized {
+    /// Device name.
+    const NAME: &'static str;
+
     /// Construct device from path resource.
-    async fn from_path(path: &std::path::Path) -> Result<Self>;
+    async fn from_path(path: &Path) -> Result<Self>;
 }
 
 /// Device which can exercise motion.
@@ -78,7 +84,7 @@ pub trait MetricDevice: Device {
 /// This function will return a shared handle to the device.
 /// This is the recommended way to instantiate IO devices.
 pub(crate) async fn probe_io_device<D: IoDevice + Send>(
-    path: &std::path::Path,
+    path: &Path,
 ) -> Result<DeviceDescriptor<D>> {
     // FUTURE: path.try_exists()
     // Every IO device must have an IO resource on disk. If that node does
@@ -86,23 +92,20 @@ pub(crate) async fn probe_io_device<D: IoDevice + Send>(
     // every IO device returns the same error if the IO resource was not found.
     // NOTE: We only check that the IO resource exist, but not if it is accessible.
     if !path.exists() {
-        return Err(DeviceError::no_such_device(
-            "probe".to_owned(), // TODO: Remove 'probe' placeholder name.
-            path,
-        ));
+        return Err(DeviceError::no_such_device(D::NAME.to_owned(), path));
     }
 
     let mut io_device = D::from_path(path).await?;
 
     debug!(
-        "Probe io device '{}' from path {}",
-        io_device.name(),
+        "Probe I/O device '{}' from node {}",
+        D::NAME.to_owned(),
         path.to_str().unwrap()
     );
 
     io_device.probe().await?;
 
-    info!("Device '{}' is online", io_device.name());
+    info!("Device '{}' is online", D::NAME.to_owned());
 
     Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
 }

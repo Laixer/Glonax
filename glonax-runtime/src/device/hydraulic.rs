@@ -38,6 +38,8 @@ pub struct Hydraulic {
 
 #[async_trait::async_trait]
 impl IoDevice for Hydraulic {
+    const NAME: &'static str = DEVICE_NAME;
+
     async fn from_path(path: &std::path::Path) -> super::Result<Self> {
         Hydraulic::new(path)
     }
