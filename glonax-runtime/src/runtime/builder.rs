@@ -84,53 +84,65 @@ where
         Ok(rt)
     }
 
+    async fn enable_term_shutdown(&self) {
+        info!("Enable signals shutdown");
+
+        let dispatcher = self.runtime.dispatch();
+
+        tokio::spawn(async move {
+            tokio::signal::ctrl_c().await.unwrap();
+
+            info!("Termination requested");
+
+            dispatcher.gracefull_shutdown().await.unwrap();
+        });
+    }
+
+    async fn enable_autopilot(&mut self) {
+        info!("Enable autopilot");
+
+        self.runtime.spawn_program_queue();
+    }
+
+    async fn enable_input(&mut self) {
+        info!("Enable input device(s)");
+
+        let mut host_iface = crate::host::HostInterface::new();
+        for mut device_claim in host_iface.elect::<<Gamepad as IoDevice>::DeviceProfile>() {
+            trace!(
+                "Elected claim: {}",
+                device_claim.as_path().to_str().unwrap()
+            );
+
+            match probe_claim_io_device::<Gamepad>(&mut device_claim).await {
+                Ok(input_device) => {
+                    if device_claim.is_claimed() {
+                        self.runtime
+                            .device_manager
+                            .register_device(input_device.clone());
+                        self.runtime.spawn_input_device(input_device);
+                        break;
+                    }
+                }
+                Err(_) => {} // TODO: Only ignore NoSuchDevice.
+            }
+        }
+    }
+
     /// Configure any optional runtime services.
     ///
     /// These runtime services depend on the application configuration.
     async fn config_services(&mut self) -> self::runtime::Result {
         if self.config.enable_term_shutdown {
-            info!("Enable signals shutdown");
-
-            let dispatcher = self.runtime.dispatch();
-
-            tokio::spawn(async move {
-                tokio::signal::ctrl_c().await.unwrap();
-
-                info!("Termination requested");
-
-                dispatcher.gracefull_shutdown().await.unwrap();
-            });
+            self.enable_term_shutdown().await;
         }
 
         if self.config.enable_autopilot {
-            info!("Enable autopilot");
-
-            self.runtime.spawn_program_queue();
+            self.enable_autopilot().await;
         }
 
         if self.config.enable_input {
-            info!("Enable input device(s)");
-
-            let mut host_iface = crate::host::HostInterface::new();
-            for mut device_claim in host_iface.elect::<<Gamepad as IoDevice>::DeviceProfile>() {
-                trace!(
-                    "Elected claim: {}",
-                    device_claim.as_path().to_str().unwrap()
-                );
-
-                match probe_claim_io_device::<Gamepad>(&mut device_claim).await {
-                    Ok(input_device) => {
-                        if device_claim.is_claimed() {
-                            self.runtime
-                                .device_manager
-                                .register_device(input_device.clone());
-                            self.runtime.spawn_input_device(input_device);
-                            break;
-                        }
-                    }
-                    Err(_) => {} // TODO: Only ignore NoSuchDevice.
-                }
-            }
+            self.enable_input().await;
         }
 
         Ok(())
