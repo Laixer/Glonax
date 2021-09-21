@@ -133,14 +133,17 @@ where
     ///
     /// These runtime services depend on the application configuration.
     async fn config_services(&mut self) -> self::runtime::Result {
+        // Enable shutdown service if configured.
         if self.config.enable_term_shutdown {
             self.enable_term_shutdown().await;
         }
 
+        // Enable autopilot service if configured.
         if self.config.enable_autopilot {
             self.enable_autopilot().await;
         }
 
+        // Enable input service if configured.
         if self.config.enable_input {
             self.enable_input().await;
         }

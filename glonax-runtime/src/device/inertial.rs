@@ -16,6 +16,8 @@ pub struct Inertial {
 impl IoDevice for Inertial {
     const NAME: &'static str = DEVICE_NAME;
 
+    type DeviceProfile = super::serial_profile::SerialDeviceProfile;
+
     async fn from_path(path: &std::path::Path) -> super::Result<Self> {
         Inertial::new(path)
     }

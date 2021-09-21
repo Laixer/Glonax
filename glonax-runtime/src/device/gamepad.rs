@@ -7,6 +7,22 @@ use super::{Device, InputDevice, IoDevice};
 
 const DEVICE_NAME: &str = "gamepad";
 
+pub struct JoystickDeviceProfile {}
+
+impl super::IoDeviceProfile for JoystickDeviceProfile {
+    const CLASS: super::Subsystem = super::Subsystem::Input;
+
+    fn properties() -> std::collections::HashMap<&'static str, &'static str> {
+        let mut props = std::collections::HashMap::<&str, &str>::new();
+        props.insert("ID_INPUT_JOYSTICK", "1");
+        props
+    }
+
+    fn filter(device: &udev::Device) -> bool {
+        device.sysname().to_str().unwrap().starts_with("js")
+    }
+}
+
 pub struct Gamepad {
     driver: glonax_gamepad::Gamepad,
     reverse_left: bool,
@@ -16,6 +32,8 @@ pub struct Gamepad {
 #[async_trait::async_trait]
 impl IoDevice for Gamepad {
     const NAME: &'static str = DEVICE_NAME;
+
+    type DeviceProfile = JoystickDeviceProfile;
 
     async fn from_path(path: &std::path::Path) -> super::Result<Self> {
         Ok(Gamepad::new(path).await)

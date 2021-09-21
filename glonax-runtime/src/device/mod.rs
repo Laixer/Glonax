@@ -1,6 +1,7 @@
 use std::path::Path;
 
 mod claim;
+mod serial_profile;
 
 mod manager;
 pub use manager::DeviceManager;
