@@ -31,7 +31,8 @@ pub struct LaunchStub<M, K> {
 
 impl<M, K> LaunchStub<M, K>
 where
-    M: 'static + device::IoDevice + device::MotionDevice+Send,
+    M: 'static + device::IoDevice + device::MotionDevice + Send,
+    M::DeviceProfile: device::IoDeviceProfile,
     K: 'static + glonax_core::operand::Operand,
 {
     /// Create the runtime reactor.

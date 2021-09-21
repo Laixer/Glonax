@@ -3,10 +3,10 @@ use std::path::Path;
 use glonax_core::operand::Operand;
 
 use crate::{
-    device::{probe_io_device, Gamepad, Inertial, IoDevice, MotionDevice},
+    device::{probe_claim_io_device, probe_io_device, Gamepad, Inertial, IoDevice, MotionDevice},
     runtime::{self, RuntimeSettings},
     workspace::Workspace,
-    Config, Runtime,
+    Config, IoDeviceProfile, Runtime,
 };
 
 /// Runtime builder.
@@ -30,6 +30,7 @@ pub struct Builder<'a, M, K> {
 impl<'a, M: 'static + Send, K> Builder<'a, M, K>
 where
     M: IoDevice + MotionDevice,
+    M::DeviceProfile: IoDeviceProfile,
     K: Operand + 'static,
 {
     /// Construct runtime service from configuration.
@@ -83,6 +84,9 @@ where
         Ok(rt)
     }
 
+    /// Configure any optional runtime services.
+    ///
+    /// These runtime services depend on the application configuration.
     async fn config_services(&mut self) -> self::runtime::Result {
         if self.config.enable_term_shutdown {
             info!("Enable signals shutdown");
@@ -107,14 +111,25 @@ where
         if self.config.enable_input {
             info!("Enable input device(s)");
 
-            match probe_io_device::<Gamepad>(&Path::new("/dev/input/js0")).await {
-                Ok(input_device) => {
-                    self.runtime
-                        .device_manager
-                        .register_device(input_device.clone());
-                    self.runtime.spawn_input_device(input_device);
+            let mut host_iface = crate::host::HostInterface::new();
+            for mut device_claim in host_iface.elect::<<Gamepad as IoDevice>::DeviceProfile>() {
+                trace!(
+                    "Elected claim: {}",
+                    device_claim.as_path().to_str().unwrap()
+                );
+
+                match probe_claim_io_device::<Gamepad>(&mut device_claim).await {
+                    Ok(input_device) => {
+                        if device_claim.is_claimed() {
+                            self.runtime
+                                .device_manager
+                                .register_device(input_device.clone());
+                            self.runtime.spawn_input_device(input_device);
+                            break;
+                        }
+                    }
+                    Err(_) => {} // TODO: Only ignore NoSuchDevice.
                 }
-                Err(_) => {} // TODO: Only ignore NoSuchDevice.
             }
         }
 
