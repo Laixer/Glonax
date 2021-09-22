@@ -50,9 +50,19 @@ impl Device for Inertial {
     async fn probe(&mut self) -> super::Result<()> {
         let mut eval = Evaluation::new(&mut self.session);
 
-        eval.probe_test()
+        let scan = eval
+            .network_scan()
             .await
             .map_err(|e| super::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
+
+        trace!("Network scan result: {:?}", scan);
+
+        if scan.address != 0x9 {
+            return Err(crate::device::DeviceError {
+                device: DEVICE_NAME.to_owned(),
+                kind: crate::device::ErrorKind::InvalidDeviceFunction,
+            });
+        }
 
         Ok(())
     }
