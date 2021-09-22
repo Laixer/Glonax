@@ -3,10 +3,13 @@ use std::path::Path;
 use glonax_core::operand::Operand;
 
 use crate::{
-    device::{probe_claim_io_device, probe_io_device, Gamepad, Inertial, IoDevice, MotionDevice},
+    device::{
+        probe_claim_io_device, probe_io_device, Gamepad, Inertial, IoDevice, IoDeviceProfile,
+        MotionDevice,
+    },
     runtime::{self, RuntimeSettings},
     workspace::Workspace,
-    Config, IoDeviceProfile, Runtime,
+    Config, Runtime,
 };
 
 /// Runtime builder.
@@ -107,7 +110,7 @@ where
     async fn enable_input(&mut self) {
         info!("Enable input device(s)");
 
-        let mut host_iface = crate::host::HostInterface::new();
+        let mut host_iface = crate::device::host::HostInterface::new();
         for mut device_claim in host_iface.elect::<<Gamepad as IoDevice>::DeviceProfile>() {
             trace!(
                 "Elected claim: {}",

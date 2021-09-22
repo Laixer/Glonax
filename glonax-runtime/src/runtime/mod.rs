@@ -116,6 +116,7 @@ impl<A, K> Runtime<A, K> {
     /// for a substantial amount of time, or as long as the runtime itself. The
     /// task handle is stored and called with an abort instruction when the
     /// runtime exits its loop.
+    #[inline]
     fn spawn<T>(&mut self, future: T)
     where
         T: std::future::Future<Output = ()> + Send,

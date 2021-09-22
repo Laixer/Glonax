@@ -18,6 +18,7 @@ impl super::IoDeviceProfile for JoystickDeviceProfile {
         props
     }
 
+    #[inline]
     fn filter(device: &udev::Device) -> bool {
         device.sysname().to_str().unwrap().starts_with("js")
     }
