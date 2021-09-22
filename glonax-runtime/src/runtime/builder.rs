@@ -1,10 +1,8 @@
-use std::path::Path;
-
 use glonax_core::operand::Operand;
 
 use crate::{
     device::{
-        probe_claim_io_device, probe_io_device, Gamepad, Inertial, IoDevice, IoDeviceProfile,
+        discover_devices, probe_claim_io_device, Gamepad, Inertial, IoDevice, IoDeviceProfile,
         MotionDevice,
     },
     runtime::{self, RuntimeSettings},
@@ -54,9 +52,14 @@ where
     async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
         use tokio::sync::mpsc;
 
-        let motion_device = probe_io_device::<M>(&Path::new(&config.motion_device))
-            .await
-            .map_err(|e| super::Error::Device(e))?;
+        let mut device_manager = runtime::DeviceManager::new();
+
+        let motion_device_unclaimed = discover_devices::<M>(&mut device_manager).await;
+
+        let motion_device = match motion_device_unclaimed.iter().nth(0) {
+            Some(motion_device) => motion_device,
+            None => return Err(super::Error::MotionDeviceNotFound),
+        };
 
         let program_queue = mpsc::channel(config.program_queue);
 
@@ -68,20 +71,11 @@ where
             program_queue: (program_queue.0, Some(program_queue.1)),
             settings: RuntimeSettings::from(config),
             task_pool: vec![],
-            device_manager: runtime::DeviceManager::new(),
+            device_manager,
         };
-        rt.device_manager.register_device(motion_device);
 
-        for device in &config.metric_devices {
-            match probe_io_device::<Inertial>(&Path::new(device)).await {
-                Ok(imu_device) => {
-                    rt.metric_devices.push(imu_device.clone());
-                    rt.device_manager.register_device(imu_device);
-                }
-                Err(e) => {
-                    return Err(self::runtime::Error::Device(e));
-                }
-            }
+        for metric_device in discover_devices::<Inertial>(&mut rt.device_manager).await {
+            rt.metric_devices.push(metric_device);
         }
 
         Ok(rt)

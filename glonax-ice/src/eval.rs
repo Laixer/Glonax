@@ -2,7 +2,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::{DeviceInfo, PayloadType, Session, SessionError};
 
-/// This is our local device address.
+/// This is the local device address for the container session.
 const DEVICE_ADDR: u16 = 0x60;
 
 pub struct ContainerSession<T> {
@@ -22,6 +22,26 @@ impl<T: AsyncRead + AsyncWrite + Unpin> ContainerSession<T> {
     }
 }
 
+pub struct ScanResult {
+    pub address: u16,
+    pub version: u8,
+    pub status: u8,
+}
+
+impl std::fmt::Debug for ScanResult {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let address = self.address;
+        write!(
+            fmt,
+            "Address: {}; Version: {}.{}; Status: {}",
+            address,
+            (self.version >> 4),
+            (self.version & !0xf0),
+            self.status
+        )
+    }
+}
+
 pub struct Evaluation<'a, T> {
     session: &'a mut Session<T>,
 }
@@ -33,14 +53,16 @@ impl<'a, T> Evaluation<'a, T> {
 }
 
 impl<T: AsyncRead + AsyncWrite + Unpin> Evaluation<'_, T> {
-    /// Quick probe test to determine if device is alive.
-    pub async fn probe_test(&mut self) -> Result<(), SessionError> {
+    /// Scan the network for devices.
+    ///
+    /// Return all devices found on the network.
+    pub async fn network_scan(&mut self) -> Result<ScanResult, SessionError> {
         self.session.add_payload_mask(PayloadType::DeviceInfo);
 
         debug!("Wait for a device announcement ...");
 
         let frame = self.session.accept().await?;
-        let _: DeviceInfo = frame.get(6).unwrap();
+        let device_info: DeviceInfo = frame.get(6).unwrap();
 
         self.session.clear_payload_masks();
 
@@ -48,7 +70,11 @@ impl<T: AsyncRead + AsyncWrite + Unpin> Evaluation<'_, T> {
 
         self.session.announce_device().await?;
 
-        Ok(())
+        Ok(ScanResult {
+            address: device_info.address,
+            version: device_info.version,
+            status: device_info.status,
+        })
     }
 
     /// Running session diagnostics.
@@ -58,7 +84,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> Evaluation<'_, T> {
         info!("Running diagnostics on device");
         info!("Waiting to receive data...");
 
-        self.probe_test().await?;
+        self.network_scan().await?;
 
         debug!("Testing 5 incoming packets ...");
 

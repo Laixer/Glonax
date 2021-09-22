@@ -11,10 +11,6 @@ pub struct Config {
     pub enable_term_shutdown: bool,
     /// Library worksapce.
     pub workspace: PathBuf,
-    /// Motion device resource.
-    pub motion_device: String,
-    /// Metric device resources.
-    pub metric_devices: Vec<String>,
     /// Number of programs to queue.
     pub program_queue: usize,
     /// Runtime workers.
@@ -28,8 +24,6 @@ impl Default for Config {
             enable_input: true,
             enable_term_shutdown: true,
             workspace: current_dir().unwrap().join("data"),
-            motion_device: String::new(),
-            metric_devices: vec![],
             program_queue: 1024,
             runtime_workers: 8,
         }

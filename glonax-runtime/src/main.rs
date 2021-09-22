@@ -67,11 +67,7 @@ fn main() {
         )
         .get_matches();
 
-    let mut config = glonax::Config {
-        motion_device: "/dev/ttyUSB1".to_owned(),
-        metric_devices: vec!["/dev/ttyUSB0".to_owned()],
-        ..Default::default()
-    };
+    let mut config = glonax::Config::default();
 
     if matches.is_present("no-auto") {
         config.enable_autopilot = false;

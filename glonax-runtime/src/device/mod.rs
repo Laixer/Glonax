@@ -22,6 +22,8 @@ pub mod host;
 
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
 
+use self::host::HostInterface;
+
 pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
 
 /// Device subsystems.
@@ -51,7 +53,10 @@ pub trait Device: Send {
 
     /// Probe the device.
     ///
-    /// Can be used to signal that the device is ready.
+    /// Can be used to signal that the device is ready. If the probe returns
+    /// with success then we can assume the device is connected. Any pre-use
+    /// checks should be done now.
+    ///
     /// Implementation is optional.
     async fn probe(&mut self) -> Result<()> {
         Ok(())
@@ -129,9 +134,7 @@ pub trait MetricDevice: Device {
 ///
 /// This function will return a shared handle to the device.
 /// This is the recommended way to instantiate IO devices.
-pub(crate) async fn probe_io_device<D: IoDevice + Send>(
-    path: &Path,
-) -> Result<DeviceDescriptor<D>> {
+pub(crate) async fn probe_io_device<D: IoDevice>(path: &Path) -> Result<DeviceDescriptor<D>> {
     // FUTURE: path.try_exists()
     // Every IO device must have an IO resource on disk. If that node does
     // not exist then exit right here. Doing this early on will ensure that
@@ -159,7 +162,7 @@ pub(crate) async fn probe_io_device<D: IoDevice + Send>(
 ///
 /// This function will return a shared handle to the device.
 /// This is the recommended way to instantiate and claim IO devices.
-pub(crate) async fn probe_claim_io_device<D: IoDevice + Send>(
+pub(crate) async fn probe_claim_io_device<D: IoDevice>(
     claim: &mut claim::ResourceClaim,
 ) -> Result<DeviceDescriptor<D>> {
     let device = self::probe_io_device(claim.as_path()).await?;
@@ -169,4 +172,49 @@ pub(crate) async fn probe_claim_io_device<D: IoDevice + Send>(
     info!("Device '{}' is claimed", D::NAME.to_owned());
 
     Ok(device)
+}
+
+/// Discover devices of the device type.
+///
+/// Returns a list of all claimed devices.
+pub(crate) async fn discover_devices<D>(manager: &mut DeviceManager) -> Vec<DeviceDescriptor<D>>
+where
+    D: IoDevice + 'static,
+    D::DeviceProfile: IoDeviceProfile,
+{
+    let mut host_iface = HostInterface::new();
+    let mut device_candidate = host_iface.elect::<D::DeviceProfile>();
+
+    let mut claimed = Vec::new();
+
+    loop {
+        let mut device_claim = match device_candidate.next() {
+            Some(device_claim) => device_claim,
+            None => break,
+        };
+
+        trace!(
+            "Elected claim: {}",
+            device_claim.as_path().to_str().unwrap()
+        );
+
+        match probe_claim_io_device::<D>(&mut device_claim).await {
+            Ok(device) => {
+                if device_claim.is_claimed() {
+                    claimed.push(device.clone());
+                    manager.register_device(device.clone());
+                }
+            }
+            Err(DeviceError {
+                kind: ErrorKind::InvalidDeviceFunction,
+                ..
+            }) => continue,
+            Err(e) => {
+                warn!("{:?}", e);
+                continue;
+            }
+        }
+    }
+
+    claimed
 }
