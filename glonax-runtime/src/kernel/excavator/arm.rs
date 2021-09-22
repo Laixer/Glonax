@@ -20,7 +20,7 @@ impl ArmProgram {
 }
 
 impl Program for ArmProgram {
-    fn push(&mut self, id: u32, value: MetricValue, _: &mut Context) {
+    fn push(&mut self, id: u32, value: MetricValue, _context: &mut Context) {
         match value {
             MetricValue::Acceleration(acc) => {
                 let pos = Position::from(acc.get_ref());
@@ -31,7 +31,7 @@ impl Program for ArmProgram {
         }
     }
 
-    fn step(&mut self, _: &mut Context) -> Option<Motion> {
+    fn step(&mut self, _context: &mut Context) -> Option<Motion> {
         None
     }
 

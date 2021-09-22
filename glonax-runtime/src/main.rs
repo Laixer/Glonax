@@ -10,7 +10,7 @@ const BIN_NAME: &str = env!("CARGO_BIN_NAME");
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let matches = App::new(BIN_NAME)
         .version(PKG_VERSION)
         .author("Copyright (C) 2021 Laixer Equipment B.V.")
@@ -122,7 +122,7 @@ fn main() {
     )
     .unwrap();
 
-    if let Err(e) = glonax::ExcavatorService::launch(&config) {
-        log::error!("{}", e)
-    }
+    glonax::ExcavatorService::launch(&config)?;
+
+    Ok(())
 }
