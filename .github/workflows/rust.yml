@@ -24,5 +24,8 @@ jobs:
     - name: Build
       run: cargo build --release
 
+    - name: Build deb
+      run: ./scripts/package.sh
+
 #    - name: Run tests
 #      run: cargo test --release
