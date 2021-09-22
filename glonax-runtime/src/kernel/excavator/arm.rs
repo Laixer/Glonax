@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use glonax_core::{
     metric::MetricValue,
     motion::Motion,
@@ -5,9 +7,11 @@ use glonax_core::{
     position::Position,
 };
 
+use crate::kernel::excavator::Metric;
+
 pub struct ArmProgram;
 
-const DRIVE_TIME: u64 = 60;
+const DRIVE_TIME: u64 = 600;
 
 impl ArmProgram {
     pub fn new() -> Self {
@@ -20,7 +24,8 @@ impl Program for ArmProgram {
         match value {
             MetricValue::Acceleration(acc) => {
                 let pos = Position::from(acc.get_ref());
-                trace!("ID: {} {:?}", id, pos);
+                let id: Metric = id.try_into().unwrap();
+                trace!("ID: {:?} {:?}", id, pos);
             }
             _ => {}
         }

@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use glonax_core::{
     input::Scancode,
     motion::{Motion, NormalControl},
@@ -13,6 +15,7 @@ mod arm_balance;
 mod drive;
 mod turn;
 
+#[derive(Debug)]
 enum Actuator {
     Boom = 2,
     Arm = 1,
@@ -25,6 +28,28 @@ enum Actuator {
 impl From<Actuator> for u32 {
     fn from(value: Actuator) -> Self {
         value as u32
+    }
+}
+
+#[derive(Debug)]
+enum Metric {
+    Bucket = 0,
+    Arm = 9,
+    Boom = 2,
+    Frame = 3,
+}
+
+impl TryFrom<u32> for Metric {
+    type Error = (); // TODO
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        match value {
+            v if Metric::Bucket as u32 == v => Ok(Metric::Bucket),
+            v if Metric::Arm as u32 == v => Ok(Metric::Arm),
+            v if Metric::Boom as u32 == v => Ok(Metric::Boom),
+            v if Metric::Frame as u32 == v => Ok(Metric::Frame),
+            _ => Err(()),
+        }
     }
 }
 
