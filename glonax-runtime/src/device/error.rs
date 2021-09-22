@@ -13,6 +13,9 @@ pub enum ErrorKind {
     /// One or multiple parameters were incorrect.
     InvalidInput,
 
+    /// Expected a device with another function.
+    InvalidDeviceFunction,
+
     /// An I/O error occured.
     ///
     /// The type of I/O error is determined by the inner `io::ErrorKind`.
@@ -22,9 +25,9 @@ pub enum ErrorKind {
 #[derive(Debug)]
 pub struct DeviceError {
     /// Device name.
-    device: String,
+    pub device: String,
     /// Error kind.
-    kind: ErrorKind,
+    pub kind: ErrorKind,
 }
 
 impl DeviceError {
@@ -37,18 +40,21 @@ impl DeviceError {
 }
 
 impl std::fmt::Display for DeviceError {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
         match &self.kind {
             ErrorKind::NoSuchDevice(path) => {
                 write!(
-                    fmt,
+                    f,
                     "{}: no such device: {}",
                     self.device,
                     path.to_str().unwrap()
                 )
             }
-            ErrorKind::InvalidInput => fmt.write_str("invalid device parameters"),
-            ErrorKind::Io(_) => fmt.write_str("io error"),
+            ErrorKind::InvalidInput => write!(f, "invalid device parameters"),
+            ErrorKind::InvalidDeviceFunction => {
+                write!(f, "expected a device with another function")
+            }
+            ErrorKind::Io(e) => write!(f, "io error: {:?}", e),
         }
     }
 }

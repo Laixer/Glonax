@@ -152,8 +152,6 @@ pub(crate) async fn probe_io_device<D: IoDevice + Send>(
 
     io_device.probe().await?;
 
-    info!("Device '{}' is connected", D::NAME.to_owned());
-
     Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
 }
 
@@ -167,6 +165,8 @@ pub(crate) async fn probe_claim_io_device<D: IoDevice + Send>(
     let device = self::probe_io_device(claim.as_path()).await?;
 
     claim.claim();
+
+    info!("Device '{}' is claimed", D::NAME.to_owned());
 
     Ok(device)
 }
