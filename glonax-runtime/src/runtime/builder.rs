@@ -2,7 +2,7 @@ use glonax_core::operand::Operand;
 
 use crate::{
     device::{
-        discover_devices, probe_claim_io_device, Gamepad, Inertial, IoDevice, IoDeviceProfile,
+        discover_instances, probe_claim_io_device, Gamepad, Inertial, IoDevice, IoDeviceProfile,
         MotionDevice,
     },
     runtime::{self, RuntimeSettings},
@@ -54,7 +54,7 @@ where
 
         let mut device_manager = runtime::DeviceManager::new();
 
-        let motion_device_unclaimed = discover_devices::<M>(&mut device_manager).await;
+        let motion_device_unclaimed = discover_instances::<M>(&mut device_manager).await;
 
         let motion_device = match motion_device_unclaimed.iter().nth(0) {
             Some(motion_device) => motion_device,
@@ -74,7 +74,7 @@ where
             device_manager,
         };
 
-        for metric_device in discover_devices::<Inertial>(&mut rt.device_manager).await {
+        for metric_device in discover_instances::<Inertial>(&mut rt.device_manager).await {
             rt.metric_devices.push(metric_device);
         }
 

@@ -7,6 +7,8 @@ use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
 const DEVICE_NAME: &str = "imu";
 const DEVICE_ADDR: u16 = 0x7;
+// TODO: retrieve addr from session.
+const REMOTE_DEVICE_ADDR: u16 = 0x9;
 
 pub struct Inertial {
     session: Session<Uart>,
@@ -57,7 +59,7 @@ impl Device for Inertial {
 
         trace!("Network scan result: {:?}", scan);
 
-        if scan.address != 0x9 {
+        if scan.address != REMOTE_DEVICE_ADDR {
             return Err(crate::device::DeviceError {
                 device: DEVICE_NAME.to_owned(),
                 kind: crate::device::ErrorKind::InvalidDeviceFunction,
@@ -67,9 +69,6 @@ impl Device for Inertial {
         Ok(())
     }
 }
-
-// TODO: retrieve addr from session.
-const REMOTE_DEVICE_ADDR: u16 = 9;
 
 #[async_trait::async_trait]
 impl MetricDevice for Inertial {

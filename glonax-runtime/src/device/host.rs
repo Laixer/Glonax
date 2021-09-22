@@ -61,6 +61,9 @@ impl HostInterface {
             .unwrap()
             .filter(Self::global_device_filter)
             .filter(T::filter)
-            .map(|d| crate::device::claim::ResourceClaim::new(d.syspath(), d.devnode().unwrap()))
+            .map(|d| crate::device::claim::ResourceClaim {
+                node_path: d.devnode().unwrap().to_path_buf(),
+                is_claimed: false,
+            })
     }
 }

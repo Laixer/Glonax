@@ -130,34 +130,6 @@ pub trait MetricDevice: Device {
     async fn next(&mut self) -> Option<(u16, MetricValue)>;
 }
 
-/// Create and initialize an IO device.
-///
-/// This function will return a shared handle to the device.
-/// This is the recommended way to instantiate IO devices.
-pub(crate) async fn probe_io_device<D: IoDevice>(path: &Path) -> Result<DeviceDescriptor<D>> {
-    // FUTURE: path.try_exists()
-    // Every IO device must have an IO resource on disk. If that node does
-    // not exist then exit right here. Doing this early on will ensure that
-    // every IO device returns the same error if the IO resource was not found.
-    //
-    // NOTE: We only check that the IO resource exist, but not if it is accessible.
-    if !path.exists() {
-        return Err(DeviceError::no_such_device(D::NAME.to_owned(), path));
-    }
-
-    let mut io_device = D::from_path(path).await?;
-
-    debug!(
-        "Probe I/O device '{}' from node {}",
-        D::NAME.to_owned(),
-        path.to_str().unwrap()
-    );
-
-    io_device.probe().await?;
-
-    Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
-}
-
 /// Create, initialize and claim an IO device.
 ///
 /// This function will return a shared handle to the device.
@@ -165,19 +137,41 @@ pub(crate) async fn probe_io_device<D: IoDevice>(path: &Path) -> Result<DeviceDe
 pub(crate) async fn probe_claim_io_device<D: IoDevice>(
     claim: &mut claim::ResourceClaim,
 ) -> Result<DeviceDescriptor<D>> {
-    let device = self::probe_io_device(claim.as_path()).await?;
+    // FUTURE: path.try_exists()
+    // Every IO device must have an IO resource on disk. If that node does
+    // not exist then exit right here. Doing this early on will ensure that
+    // every IO device returns the same error if the IO resource was not found.
+    //
+    // NOTE: We only check that the IO resource exist, but not if it is accessible.
+    if !claim.as_path().exists() {
+        return Err(DeviceError::no_such_device(
+            D::NAME.to_owned(),
+            claim.as_path(),
+        ));
+    }
+
+    let mut io_device = D::from_path(claim.as_path()).await?;
+
+    debug!(
+        "Probe I/O device '{}' from node {}",
+        D::NAME.to_owned(),
+        claim.as_path().to_str().unwrap()
+    );
+
+    io_device.probe().await?;
 
     claim.claim();
 
     info!("Device '{}' is claimed", D::NAME.to_owned());
 
-    Ok(device)
+    Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
 }
 
-/// Discover devices of the device type.
+// TODO: Exclude claimed devices.
+/// Discover device instances of the device type.
 ///
-/// Returns a list of all claimed devices.
-pub(crate) async fn discover_devices<D>(manager: &mut DeviceManager) -> Vec<DeviceDescriptor<D>>
+/// Returns a list of claimed device instances.
+pub(crate) async fn discover_instances<D>(manager: &mut DeviceManager) -> Vec<DeviceDescriptor<D>>
 where
     D: IoDevice + 'static,
     D::DeviceProfile: IoDeviceProfile,
@@ -200,7 +194,7 @@ where
 
         match probe_claim_io_device::<D>(&mut device_claim).await {
             Ok(device) => {
-                if device_claim.is_claimed() {
+                if device_claim.is_claimed {
                     claimed.push(device.clone());
                     manager.register_device(device.clone());
                 }

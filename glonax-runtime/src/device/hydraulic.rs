@@ -6,6 +6,8 @@ use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
 const DEVICE_NAME: &str = "hydraulic";
 const DEVICE_ADDR: u16 = 0x7;
+// TODO: retrieve addr from session.
+const REMOTE_DEVICE_ADDR: u16 = 0x7;
 
 struct Cache<K, V> {
     map: std::collections::HashMap<K, V>,
@@ -82,7 +84,7 @@ impl Device for Hydraulic {
 
         trace!("Network scan result: {:?}", scan);
 
-        if scan.address != 0x7 {
+        if scan.address != REMOTE_DEVICE_ADDR {
             return Err(crate::device::DeviceError {
                 device: DEVICE_NAME.to_owned(),
                 kind: crate::device::ErrorKind::InvalidDeviceFunction,
