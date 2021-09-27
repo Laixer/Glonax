@@ -113,7 +113,7 @@ where
     /// Configure any optional runtime services.
     ///
     /// These runtime services depend on the application configuration.
-    async fn config_services(&mut self) -> self::runtime::Result {
+    async fn config_services(&mut self) -> runtime::Result {
         // Enable shutdown service if configured.
         if self.config.enable_term_shutdown {
             self.enable_term_shutdown().await;
@@ -132,10 +132,19 @@ where
         Ok(())
     }
 
+    /// Validate the runtime setup and exit.
+    ///
+    /// This method consumes the runtime service.
+    pub async fn validate(mut self) -> runtime::Result {
+        self.config_services().await?;
+
+        Ok(())
+    }
+
     /// Spawn the runtime service.
     ///
     /// This method consumes the runtime service.
-    pub async fn spawn(mut self) -> self::runtime::Result {
+    pub async fn spawn(mut self) -> runtime::Result {
         self.config_services().await?;
 
         // TODO: This is only for testing.

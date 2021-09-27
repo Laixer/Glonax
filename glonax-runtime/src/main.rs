@@ -32,6 +32,12 @@ fn main() -> anyhow::Result<()> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("test")
+                .short("t")
+                .long("test")
+                .help("Test configuration and exist"),
+        )
+        .arg(
             Arg::with_name("record")
                 .short("R")
                 .long("record")
@@ -122,7 +128,11 @@ fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    glonax::ExcavatorService::launch(&config)?;
+    if matches.is_present("test") {
+        glonax::ExcavatorService::test(&config)?;
+    } else {
+        glonax::ExcavatorService::launch(&config)?;
+    }
 
     Ok(())
 }

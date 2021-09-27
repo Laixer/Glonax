@@ -53,6 +53,16 @@ where
     }
 
     /// Start the runtime service.
+    pub fn test<'a>(config: &'a Config) -> runtime::Result {
+        Self::runtime_reactor(config).block_on(async {
+            self::runtime::Builder::<M, K>::from_config(&config)
+                .await?
+                .validate()
+                .await
+        })
+    }
+
+    /// Start the runtime service.
     pub fn launch<'a>(config: &'a Config) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             self::runtime::Builder::<M, K>::from_config(&config)
