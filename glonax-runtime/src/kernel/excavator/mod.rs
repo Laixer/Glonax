@@ -61,7 +61,7 @@ impl Default for Excavator {
         // The welcome message makes it easier to spot the current
         // running configuration. This could be anything as long as
         // it has the operand name in the message.
-        info!("Hello, I am an excavator 🏗. Gets go diggin'!");
+        info!("Hello, I am an excavator 🏗. Lets go diggin'!");
 
         Self {}
     }

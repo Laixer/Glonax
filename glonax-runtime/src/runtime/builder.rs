@@ -56,7 +56,7 @@ where
 
         let motion_device_unclaimed = discover_instances::<M>(&mut device_manager).await;
 
-        let motion_device = match motion_device_unclaimed.iter().nth(0) {
+        let motion_device = match motion_device_unclaimed.into_iter().nth(0) {
             Some(motion_device) => motion_device,
             None => return Err(super::Error::MotionDeviceNotFound),
         };
@@ -65,9 +65,9 @@ where
 
         let mut rt = Runtime {
             operand: K::default(),
-            motion_device: motion_device.clone(),
+            motion_device,
             metric_devices: vec![],
-            event_bus: mpsc::channel(64),
+            event_bus: mpsc::channel(config.event_queue),
             program_queue: (program_queue.0, Some(program_queue.1)),
             settings: RuntimeSettings::from(config),
             task_pool: vec![],

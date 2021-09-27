@@ -30,7 +30,7 @@ jobs:
     - name: Publish artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: gloanx.deb
+        name: glonax.deb
         path: ./target/**.deb
 
 #    - name: Run tests
