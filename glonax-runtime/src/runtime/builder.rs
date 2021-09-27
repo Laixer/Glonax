@@ -1,10 +1,7 @@
 use glonax_core::operand::Operand;
 
 use crate::{
-    device::{
-        discover_instances, probe_claim_io_device, Gamepad, Inertial, IoDevice, IoDeviceProfile,
-        MotionDevice,
-    },
+    device::{discover_instances, Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
     runtime::{self, RuntimeSettings},
     workspace::Workspace,
     Config, Runtime,
@@ -104,26 +101,13 @@ where
     async fn enable_input(&mut self) {
         info!("Enable input device(s)");
 
-        let mut host_iface = crate::device::host::HostInterface::new();
-        for mut device_claim in host_iface.elect::<<Gamepad as IoDevice>::DeviceProfile>() {
-            trace!(
-                "Elected claim: {}",
-                device_claim.as_path().to_str().unwrap()
-            );
+        let input_device_unclaimed =
+            discover_instances::<Gamepad>(&mut self.runtime.device_manager).await;
 
-            match probe_claim_io_device::<Gamepad>(&mut device_claim).await {
-                Ok(input_device) => {
-                    if device_claim.is_claimed() {
-                        self.runtime
-                            .device_manager
-                            .register_device(input_device.clone());
-                        self.runtime.spawn_input_device(input_device);
-                        break;
-                    }
-                }
-                Err(_) => {} // TODO: Only ignore NoSuchDevice.
-            }
-        }
+        match input_device_unclaimed.into_iter().nth(0) {
+            Some(input_device) => self.runtime.spawn_input_device(input_device),
+            None => warn!("Input device not found"),
+        };
     }
 
     /// Configure any optional runtime services.
