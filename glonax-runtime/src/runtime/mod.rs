@@ -124,6 +124,15 @@ impl<A, K> Runtime<A, K> {
     {
         self.task_pool.push(tokio::task::spawn(future));
     }
+
+    /// Run idle time operations.
+    ///
+    /// This method is called when the runtime is idle. Operations run here may
+    /// *never* block, halt or otherwise obstruct the runtime. Doing so will
+    /// sarve the runtime and can increase the event latency.
+    async fn idle_tlime(&mut self) {
+        self.device_manager.idle_time().await;
+    }
 }
 
 impl<A: MotionDevice, K> Runtime<A, K> {
@@ -152,7 +161,7 @@ impl<A: MotionDevice, K> Runtime<A, K> {
                     // TODO: handle err.
                 }
 
-                _ = wait => self.device_manager.idle_time().await,
+                _ = wait => self.idle_tlime().await,
             };
         }
 
@@ -216,6 +225,7 @@ where
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
+                    // FUTURE: The program progression is locked as long as we're waiting here.
                     for metric_device in metric_devices.iter_mut() {
                         match metric_device.lock().await.next().await {
                             Some((id, value)) => {
