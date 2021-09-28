@@ -17,8 +17,10 @@ pub struct Config {
     pub program_queue: usize,
     /// Runtime workers.
     pub runtime_workers: usize,
+    /// Runtime stack size.
+    pub runtime_stack_size: usize,
     /// Runtime idle interval in seconds.
-    pub runtime_idle_interal: usize,
+    pub runtime_idle_interval: usize,
 }
 
 impl Default for Config {
@@ -31,7 +33,8 @@ impl Default for Config {
             event_queue: 32,
             program_queue: 1024,
             runtime_workers: 8,
-            runtime_idle_interal: 15,
+            runtime_stack_size: 8 * 1024 * 1024,
+            runtime_idle_interval: 15,
         }
     }
 }

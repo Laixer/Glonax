@@ -49,7 +49,7 @@ where
             .worker_threads(config.runtime_workers)
             .enable_all()
             .thread_name("glonax-runtime-worker")
-            .thread_stack_size(8 * 1024 * 1024)
+            .thread_stack_size(config.runtime_stack_size)
             .build()
             .unwrap()
     }
