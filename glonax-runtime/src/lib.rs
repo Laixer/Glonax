@@ -43,6 +43,8 @@ where
     /// The runtime reactor should be setup as early as possible so that all
     /// subsequent methods can run on the asynchronous reactor.
     fn runtime_reactor(config: &Config) -> tokio::runtime::Runtime {
+        debug!("Reactor runtime workers: {}", config.runtime_workers);
+
         tokio::runtime::Builder::new_multi_thread()
             .worker_threads(config.runtime_workers)
             .enable_all()
