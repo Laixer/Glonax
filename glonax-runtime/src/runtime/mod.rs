@@ -68,16 +68,10 @@ pub(super) struct RuntimeSettings {
 }
 
 impl From<&Config> for RuntimeSettings {
-    fn from(_config: &Config) -> Self {
+    fn from(config: &Config) -> Self {
         Self {
-            ..Default::default()
+            timer_interval: config.runtime_idle_interal as u64,
         }
-    }
-}
-
-impl Default for RuntimeSettings {
-    fn default() -> Self {
-        Self { timer_interval: 15 }
     }
 }
 
