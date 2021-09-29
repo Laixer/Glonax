@@ -70,7 +70,7 @@ pub(super) struct RuntimeSettings {
 impl From<&Config> for RuntimeSettings {
     fn from(config: &Config) -> Self {
         Self {
-            timer_interval: config.runtime_idle_interal as u64,
+            timer_interval: config.runtime_idle_interval as u64,
         }
     }
 }
