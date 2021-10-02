@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use glonax_core::input::{ButtonState, Scancode};
 use glonax_gamepad::{Axis, Button, Event, EventType};
@@ -26,6 +26,7 @@ impl super::IoDeviceProfile for JoystickDeviceProfile {
 
 pub struct Gamepad {
     driver: glonax_gamepad::Gamepad,
+    node_path: PathBuf,
     reverse_left: bool,
     reverse_right: bool,
 }
@@ -36,7 +37,13 @@ impl IoDevice for Gamepad {
 
     type DeviceProfile = JoystickDeviceProfile;
 
-    async fn from_path(path: &std::path::Path) -> super::Result<Self> {
+    #[inline]
+    fn node_path(&self) -> &Path {
+        self.node_path.as_path()
+    }
+
+    #[inline]
+    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
         Ok(Gamepad::new(path).await)
     }
 }
@@ -45,6 +52,7 @@ impl Gamepad {
     async fn new(path: &Path) -> Self {
         Self {
             driver: glonax_gamepad::Gamepad::new(path).await.unwrap(),
+            node_path: path.to_path_buf(),
             reverse_left: false,
             reverse_right: false,
         }

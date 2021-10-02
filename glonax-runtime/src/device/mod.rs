@@ -1,6 +1,7 @@
 use std::path::Path;
 
-mod claim;
+mod node;
+mod observer;
 mod serial_profile;
 
 mod manager;
@@ -21,8 +22,6 @@ pub use error::{DeviceError, ErrorKind, Result};
 pub mod host;
 
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
-
-use self::{claim::ResourceClaim, host::HostInterface};
 
 pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
 
@@ -79,13 +78,16 @@ pub trait IoDevice: Device + Sized {
     /// Device name.
     const NAME: &'static str;
 
+    /// Get the node path from I/O device.
+    fn node_path(&self) -> &Path;
+
     /// Hardware device profile.
     ///
     /// This profile will be used to match host device nodes.
     type DeviceProfile;
 
-    /// Construct device from path resource.
-    async fn from_path(path: &Path) -> Result<Self>;
+    /// Construct device from node path.
+    async fn from_node_path(path: &Path) -> Result<Self>;
 }
 
 /// I/O device profile.
@@ -128,99 +130,4 @@ pub trait MetricDevice: Device {
     /// measurement originated. The device address may be used by the operand
     /// to map to a known machine component.
     async fn next(&mut self) -> Option<(u16, MetricValue)>;
-}
-
-/// Create, initialize and claim an IO node.
-///
-/// This function will return a shared handle to the device.
-/// This is the recommended way to instantiate and claim IO devices.
-pub(crate) async fn probe_claim_io_node<D: IoDevice>(
-    claim: &mut claim::ResourceClaim,
-) -> Result<DeviceDescriptor<D>> {
-    // FUTURE: path.try_exists()
-    // Every IO device must have an IO resource on disk. If that node does
-    // not exist then exit right here. Doing this early on will ensure that
-    // every IO device returns the same error if the IO resource was not found.
-    //
-    // NOTE: We only check that the IO resource exist, but not if it is accessible.
-    if !claim.as_path().exists() {
-        return Err(DeviceError::no_such_device(
-            D::NAME.to_owned(),
-            claim.as_path(),
-        ));
-    }
-
-    let mut io_device = D::from_path(claim.as_path()).await?;
-
-    debug!(
-        "Probe I/O device '{}' from node {}",
-        D::NAME.to_owned(),
-        claim.as_path().to_str().unwrap()
-    );
-
-    io_device.probe().await?;
-
-    claim.claim();
-
-    info!("Device '{}' is claimed", D::NAME.to_owned());
-
-    Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
-}
-
-fn is_free(manager: &DeviceManager, claim: &ResourceClaim) -> bool {
-    let device_claims = manager.claimed();
-
-    for c in device_claims {
-        if claim.as_path() == c.as_path() {
-            return false;
-        }
-    }
-
-    true
-}
-
-/// Discover device instances of the device type.
-///
-/// Returns a list of claimed device instances.
-pub(crate) async fn discover_instances<D>(manager: &mut DeviceManager) -> Vec<DeviceDescriptor<D>>
-where
-    D: IoDevice + 'static,
-    D::DeviceProfile: IoDeviceProfile,
-{
-    let mut host_iface = HostInterface::new();
-    let mut node_candidates = host_iface.elect::<D::DeviceProfile>();
-
-    let mut claimed = Vec::new();
-
-    loop {
-        let mut io_node = match node_candidates.next() {
-            Some(io_node) => io_node,
-            None => break,
-        };
-
-        if !is_free(manager, &io_node) {
-            continue;
-        }
-
-        trace!("Elected I/O node: {}", io_node.as_path().to_str().unwrap());
-
-        match probe_claim_io_node::<D>(&mut io_node).await {
-            Ok(device) => {
-                if io_node.is_claimed {
-                    claimed.push(device.clone());
-                    manager.register_io_device(device.clone(), io_node);
-                }
-            }
-            Err(DeviceError {
-                kind: ErrorKind::InvalidDeviceFunction,
-                ..
-            }) => continue,
-            Err(e) => {
-                warn!("{:?}", e);
-                continue;
-            }
-        }
-    }
-
-    claimed
 }

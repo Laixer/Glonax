@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use super::{Device, IoDevice, MotionDevice};
 
 use glonax_core::motion::Motion;
@@ -35,6 +37,7 @@ where
 
 pub struct Hydraulic {
     session: Session<Uart>,
+    node_path: PathBuf,
     cache: Cache<u32, i16>,
 }
 
@@ -44,7 +47,13 @@ impl IoDevice for Hydraulic {
 
     type DeviceProfile = super::serial_profile::SerialDeviceProfile;
 
-    async fn from_path(path: &std::path::Path) -> super::Result<Self> {
+    #[inline]
+    fn node_path(&self) -> &Path {
+        self.node_path.as_path()
+    }
+
+    #[inline]
+    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
         Hydraulic::new(path)
     }
 }
@@ -63,6 +72,7 @@ impl Hydraulic {
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
+            node_path: path.to_path_buf(),
             cache: Cache::new(),
         })
     }

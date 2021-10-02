@@ -1,4 +1,7 @@
-use std::convert::TryInto;
+use std::{
+    convert::TryInto,
+    path::{Path, PathBuf},
+};
 
 use super::{Device, IoDevice, MetricDevice, MetricValue};
 
@@ -12,6 +15,7 @@ const REMOTE_DEVICE_ADDR: u16 = 0x9;
 
 pub struct Inertial {
     session: Session<Uart>,
+    node_path: PathBuf,
 }
 
 #[async_trait::async_trait]
@@ -20,7 +24,12 @@ impl IoDevice for Inertial {
 
     type DeviceProfile = super::serial_profile::SerialDeviceProfile;
 
-    async fn from_path(path: &std::path::Path) -> super::Result<Self> {
+    #[inline]
+    fn node_path(&self) -> &Path {
+        self.node_path.as_path()
+    }
+
+    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
         Inertial::new(path)
     }
 }
@@ -39,6 +48,7 @@ impl Inertial {
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
+            node_path: path.to_path_buf(),
         })
     }
 }
