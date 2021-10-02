@@ -1,3 +1,5 @@
+use crate::device::node::IoNode;
+
 use super::IoDeviceProfile;
 
 pub struct HostInterface {
@@ -42,9 +44,9 @@ impl HostInterface {
     ///
     /// Elected device nodes are matched based on the I/O device profile criteria.
     /// This method returns an iterator with the elected device candidates.
-    pub fn elect<T: IoDeviceProfile + 'static>(
+    pub(crate) fn elect<T: IoDeviceProfile + 'static>(
         &mut self,
-    ) -> impl Iterator<Item = crate::device::claim::ResourceClaim> + '_ {
+    ) -> impl Iterator<Item = IoNode> + '_ {
         let subsystem: &str = T::CLASS.into();
 
         trace!("Selecting subsystem '{}'", subsystem);
@@ -61,9 +63,6 @@ impl HostInterface {
             .unwrap()
             .filter(Self::global_device_filter)
             .filter(T::filter)
-            .map(|d| crate::device::claim::ResourceClaim {
-                node_path: d.devnode().unwrap().to_path_buf(),
-                is_claimed: false,
-            })
+            .map(|d| IoNode::from(d.devnode().unwrap()))
     }
 }
