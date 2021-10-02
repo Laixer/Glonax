@@ -1,7 +1,7 @@
 use glonax_core::operand::Operand;
 
 use crate::{
-    device::{discover_instances, Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
+    device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
     runtime::{self, RuntimeSettings},
     workspace::Workspace,
     Config, Runtime,
@@ -51,16 +51,14 @@ where
 
         let mut device_manager = runtime::DeviceManager::new();
 
-        let motion_device_claimed = discover_instances::<M>(&mut device_manager).await;
-
-        let motion_device = match motion_device_claimed.into_iter().nth(0) {
+        let motion_device = match device_manager.create_observer().scan_once::<M>().await {
             Some(motion_device) => motion_device,
             None => return Err(super::Error::MotionDeviceNotFound),
         };
 
         let program_queue = mpsc::channel(config.program_queue);
 
-        let mut rt = Runtime {
+        let mut runtime = Runtime {
             operand: K::default(),
             motion_device,
             metric_devices: vec![],
@@ -71,11 +69,16 @@ where
             device_manager,
         };
 
-        for metric_device in discover_instances::<Inertial>(&mut rt.device_manager).await {
-            rt.metric_devices.push(metric_device);
+        for metric_device in runtime
+            .device_manager
+            .create_observer()
+            .scan::<Inertial>()
+            .await
+        {
+            runtime.metric_devices.push(metric_device);
         }
 
-        Ok(rt)
+        Ok(runtime)
     }
 
     async fn enable_term_shutdown(&self) {
@@ -101,10 +104,13 @@ where
     async fn enable_input(&mut self) {
         info!("Enable input device(s)");
 
-        let input_device_unclaimed =
-            discover_instances::<Gamepad>(&mut self.runtime.device_manager).await;
-
-        match input_device_unclaimed.into_iter().nth(0) {
+        match self
+            .runtime
+            .device_manager
+            .create_observer()
+            .scan_once::<Gamepad>()
+            .await
+        {
             Some(input_device) => self.runtime.spawn_input_device(input_device),
             None => warn!("Input device not found"),
         };

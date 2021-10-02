@@ -24,8 +24,8 @@ impl DeviceManager {
         }
     }
 
-    pub fn claimed(&self) -> &Vec<ResourceClaim> {
-        &self.io_node_list
+    pub fn create_observer(&mut self) -> super::observer::Observer {
+        super::observer::Observer { manager: self }
     }
 
     /// Returned claimed I/O devices.
