@@ -22,7 +22,7 @@ pub mod host;
 
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
 
-use self::host::HostInterface;
+use self::{claim::ResourceClaim, host::HostInterface};
 
 pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
 
@@ -130,11 +130,11 @@ pub trait MetricDevice: Device {
     async fn next(&mut self) -> Option<(u16, MetricValue)>;
 }
 
-/// Create, initialize and claim an IO device.
+/// Create, initialize and claim an IO node.
 ///
 /// This function will return a shared handle to the device.
 /// This is the recommended way to instantiate and claim IO devices.
-pub(crate) async fn probe_claim_io_device<D: IoDevice>(
+pub(crate) async fn probe_claim_io_node<D: IoDevice>(
     claim: &mut claim::ResourceClaim,
 ) -> Result<DeviceDescriptor<D>> {
     // FUTURE: path.try_exists()
@@ -167,7 +167,18 @@ pub(crate) async fn probe_claim_io_device<D: IoDevice>(
     Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
 }
 
-// TODO: Exclude claimed devices.
+fn is_free(manager: &DeviceManager, claim: &ResourceClaim) -> bool {
+    let device_claims = manager.claimed();
+
+    for c in device_claims {
+        if claim.as_path() == c.as_path() {
+            return false;
+        }
+    }
+
+    true
+}
+
 /// Discover device instances of the device type.
 ///
 /// Returns a list of claimed device instances.
@@ -177,26 +188,27 @@ where
     D::DeviceProfile: IoDeviceProfile,
 {
     let mut host_iface = HostInterface::new();
-    let mut device_candidate = host_iface.elect::<D::DeviceProfile>();
+    let mut node_candidates = host_iface.elect::<D::DeviceProfile>();
 
     let mut claimed = Vec::new();
 
     loop {
-        let mut device_claim = match device_candidate.next() {
-            Some(device_claim) => device_claim,
+        let mut io_node = match node_candidates.next() {
+            Some(io_node) => io_node,
             None => break,
         };
 
-        trace!(
-            "Elected claim: {}",
-            device_claim.as_path().to_str().unwrap()
-        );
+        if !is_free(manager, &io_node) {
+            continue;
+        }
 
-        match probe_claim_io_device::<D>(&mut device_claim).await {
+        trace!("Elected I/O node: {}", io_node.as_path().to_str().unwrap());
+
+        match probe_claim_io_node::<D>(&mut io_node).await {
             Ok(device) => {
-                if device_claim.is_claimed {
+                if io_node.is_claimed {
                     claimed.push(device.clone());
-                    manager.register_device(device.clone());
+                    manager.register_io_device(device.clone(), io_node);
                 }
             }
             Err(DeviceError {

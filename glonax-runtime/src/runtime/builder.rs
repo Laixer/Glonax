@@ -51,9 +51,9 @@ where
 
         let mut device_manager = runtime::DeviceManager::new();
 
-        let motion_device_unclaimed = discover_instances::<M>(&mut device_manager).await;
+        let motion_device_claimed = discover_instances::<M>(&mut device_manager).await;
 
-        let motion_device = match motion_device_unclaimed.into_iter().nth(0) {
+        let motion_device = match motion_device_claimed.into_iter().nth(0) {
             Some(motion_device) => motion_device,
             None => return Err(super::Error::MotionDeviceNotFound),
         };

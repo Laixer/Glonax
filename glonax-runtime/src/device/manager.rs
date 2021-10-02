@@ -1,4 +1,4 @@
-use super::{Device, DeviceDescriptor};
+use super::{claim::ResourceClaim, Device, DeviceDescriptor};
 
 /// Device manager.
 ///
@@ -10,6 +10,7 @@ use super::{Device, DeviceDescriptor};
 /// By default devices selection is based on a simple round robin distribution.
 pub struct DeviceManager {
     device_list: Vec<DeviceDescriptor<dyn Device>>,
+    io_node_list: Vec<ResourceClaim>,
     index: usize,
 }
 
@@ -18,14 +19,31 @@ impl DeviceManager {
     pub fn new() -> Self {
         Self {
             device_list: Vec::new(),
+            io_node_list: Vec::new(),
             index: 0,
         }
     }
 
+    pub fn claimed(&self) -> &Vec<ResourceClaim> {
+        &self.io_node_list
+    }
+
     /// Register a device with the device manager.
+    #[allow(dead_code)]
     #[inline]
     pub fn register_device(&mut self, device: DeviceDescriptor<dyn Device>) {
-        self.device_list.push(device)
+        self.device_list.push(device);
+    }
+
+    /// Register a device with the device manager.
+    #[inline]
+    pub fn register_io_device(
+        &mut self,
+        device: DeviceDescriptor<dyn Device>,
+        io_node: ResourceClaim,
+    ) {
+        self.device_list.push(device);
+        self.io_node_list.push(io_node);
     }
 
     /// Select the next device from the device list.
