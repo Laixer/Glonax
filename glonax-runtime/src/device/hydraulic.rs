@@ -101,8 +101,6 @@ impl Device for Hydraulic {
             });
         }
 
-        self.halt().await;
-
         Ok(())
     }
 

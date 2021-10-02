@@ -147,11 +147,25 @@ where
         Ok(())
     }
 
+    /// Instruct the runtime to execute startup events.
+    ///
+    /// Startup events will run on the runtime core before any other world
+    /// events are executed.
+    async fn startup_events(&self) {
+        let dispatcher = self.runtime.dispatch();
+
+        info!("Running startup events");
+
+        dispatcher.motion(Motion::StopAll).await.unwrap();
+    }
+
     /// Spawn the runtime service.
     ///
     /// This method consumes the runtime service.
     pub async fn spawn(mut self) -> runtime::Result {
         self.config_services().await?;
+
+        self.startup_events().await;
 
         // TODO: This is only for testing.
         self.runtime.program_queue.0.send(601).await.unwrap();
