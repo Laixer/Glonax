@@ -1,3 +1,11 @@
+/// Button state.
+pub enum ButtonState {
+    /// Button pressed.
+    Pressed,
+    /// Button released.
+    Released,
+}
+
 /// Input device scancode.
 ///
 /// Scancodes are indirectly mapped to input pheripherials. Any
@@ -17,7 +25,7 @@ pub enum Scancode {
     /// Right trigger axis.
     RightTrigger(f32),
     /// Activate button.
-    Activate,
+    Activate(ButtonState),
     /// Cancel button.
-    Cancel,
+    Cancel(ButtonState),
 }

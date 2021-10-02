@@ -17,7 +17,7 @@ pub struct DriveProgram {
 // const DRIVE_SPEED_MAX_MSEC: f64 = 5_000.0 / 3600.0;
 const DRIVE_SPEED_MAX_MSEC: f32 = 16.1 / 30.0;
 
-const DRIVE_DISTANCE: u64 = 30;
+const DRIVE_DISTANCE: f32 = 20.0;
 
 struct TrapezoidalProfile {
     ramp_time: std::time::Duration,
@@ -95,7 +95,7 @@ impl TrapezoidalDistanceProfile {
 impl DriveProgram {
     pub fn new() -> Self {
         Self {
-            profile: TrapezoidalDistanceProfile::new(DRIVE_SPEED_MAX_MSEC, 19.0),
+            profile: TrapezoidalDistanceProfile::new(DRIVE_SPEED_MAX_MSEC, DRIVE_DISTANCE),
         }
     }
 }

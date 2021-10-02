@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use glonax_core::{
-    input::Scancode,
+    input::{ButtonState, Scancode},
     motion::{Motion, NormalControl},
     operand::{Operand, Program},
 };
@@ -93,7 +93,8 @@ impl Operand for Excavator {
             Scancode::RightTrigger(value) => {
                 Ok(NormalControl::new(Actuator::LimpRight.into(), value).into())
             }
-            Scancode::Cancel => Ok(Motion::StopAll),
+            Scancode::Cancel(ButtonState::Pressed) => Ok(Motion::StopAll),
+            Scancode::Cancel(ButtonState::Released) => Err(()),
             _ => {
                 warn!("Scancode not mapped to action");
                 Err(()) // TODO:

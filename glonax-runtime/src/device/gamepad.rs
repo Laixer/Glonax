@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use glonax_core::input::Scancode;
+use glonax_core::input::{ButtonState, Scancode};
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
 use super::{Device, InputDevice, IoDevice};
@@ -81,7 +81,6 @@ impl InputDevice for Gamepad {
                     ty: EventType::Axis(Axis::RightStickX),
                     ..
                 } => Some(Scancode::RightStickX(event.value_normal())),
-
                 Event {
                     ty: EventType::Button(Button::LeftBumper),
                     ..
@@ -96,7 +95,6 @@ impl InputDevice for Gamepad {
                     self.reverse_right = if event.value == 1 { true } else { false };
                     None
                 }
-
                 Event {
                     ty: EventType::Axis(Axis::LeftTrigger),
                     ..
@@ -113,16 +111,22 @@ impl InputDevice for Gamepad {
                 } else {
                     event.value_flatten_normal()
                 })),
-
                 Event {
                     ty: EventType::Button(Button::East),
-                    ..
-                } => Some(Scancode::Cancel),
+                    value,
+                } => Some(Scancode::Cancel(if value == 1 {
+                    ButtonState::Pressed
+                } else {
+                    ButtonState::Released
+                })),
                 Event {
                     ty: EventType::Button(Button::South),
-                    ..
-                } => Some(Scancode::Activate),
-
+                    value,
+                } => Some(Scancode::Activate(if value == 1 {
+                    ButtonState::Pressed
+                } else {
+                    ButtonState::Released
+                })),
                 _ => None,
             }
         } else {
