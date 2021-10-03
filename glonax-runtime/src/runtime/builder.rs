@@ -118,10 +118,8 @@ where
     ///
     /// These runtime services depend on the application configuration.
     async fn config_services(&mut self) -> runtime::Result {
-        // Enable shutdown service if configured.
-        if self.config.enable_term_shutdown {
-            self.enable_term_shutdown().await;
-        }
+        // Enable shutdown service.
+        self.enable_term_shutdown().await;
 
         // Enable autopilot service if configured.
         if self.config.enable_autopilot {
@@ -166,6 +164,7 @@ where
         self.startup_events().await;
 
         // TODO: This is only for testing.
+        // self.runtime.program_queue.0.send(700).await.unwrap();
         self.runtime.program_queue.0.send(601).await.unwrap();
 
         self.runtime.run().await;
