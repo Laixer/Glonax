@@ -61,12 +61,12 @@ pub trait Device: Send {
         Ok(())
     }
 
-    /// Run operation in idle time.
+    /// Returns the current status of the device, or any complications.
     ///
-    /// The device can implement this method when it wants to
-    /// run sporadic unscheduled events. There is no guarantee
-    /// this method is ever called.
-    async fn idle_time(&mut self) {}
+    /// Implementation is optional but recommended.
+    async fn status(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 /// I/O device.

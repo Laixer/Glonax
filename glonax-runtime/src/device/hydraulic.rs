@@ -103,11 +103,6 @@ impl Device for Hydraulic {
 
         Ok(())
     }
-
-    async fn idle_time(&mut self) {
-        // Any unexpected movements will be halted.
-        self.halt().await;
-    }
 }
 
 #[async_trait::async_trait]
