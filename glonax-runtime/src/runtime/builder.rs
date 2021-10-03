@@ -1,4 +1,4 @@
-use glonax_core::{motion::Motion, operand::Operand};
+use glonax_core::{motion::Motion, operand::Operand, Identity};
 
 use crate::{
     device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
@@ -29,7 +29,7 @@ impl<'a, M: 'static + Send, K> Builder<'a, M, K>
 where
     M: IoDevice + MotionDevice,
     M::DeviceProfile: IoDeviceProfile,
-    K: Operand + 'static,
+    K: Operand + Identity + 'static,
 {
     /// Construct runtime service from configuration.
     ///
@@ -48,6 +48,8 @@ where
     /// Any errors are fatal errors at this point.
     async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
         use tokio::sync::mpsc;
+
+        info!("{}", K::intro());
 
         let mut device_manager = crate::device::DeviceManager::new();
 

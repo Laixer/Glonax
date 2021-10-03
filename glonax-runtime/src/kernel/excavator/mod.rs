@@ -4,6 +4,7 @@ use glonax_core::{
     input::{ButtonState, Scancode},
     motion::{Motion, NormalControl},
     operand::{Operand, Program},
+    Identity,
 };
 
 use self::{
@@ -58,12 +59,15 @@ pub struct Excavator;
 
 impl Default for Excavator {
     fn default() -> Self {
-        // The welcome message makes it easier to spot the current
-        // running configuration. This could be anything as long as
-        // it has the operand name in the message.
-        info!("Hello, I am an excavator 🏗. Lets go diggin'!");
-
         Self {}
+    }
+}
+
+impl Identity for Excavator {
+    /// The introduction message makes it easier to spot the current running
+    /// configuration.
+    fn intro() -> String {
+        "Hello, I'm an excavator 🏗. Lets go diggin'!".to_owned()
     }
 }
 
