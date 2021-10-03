@@ -98,7 +98,7 @@ fn main() -> anyhow::Result<()> {
         log_config.set_time_format("%X %6f".to_owned());
     }
 
-    log_config.set_target_level(log::LevelFilter::Trace);
+    log_config.set_target_level(log::LevelFilter::Off);
     log_config.set_location_level(log::LevelFilter::Off);
     log_config.add_filter_ignore_str("sled");
     log_config.add_filter_ignore_str("mio");

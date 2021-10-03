@@ -44,7 +44,7 @@ impl<'a> Observer<'a> {
 
         let io_node = io_node_list.remove(0);
 
-        trace!("Elected I/O node: {}", io_node.as_path().to_str().unwrap());
+        trace!("Elected I/O node: {}", io_node);
 
         match io_node.try_construe_device::<T>().await {
             Ok(device) => {
@@ -75,7 +75,7 @@ impl<'a> Observer<'a> {
         let mut construed_devices = Vec::new();
 
         for io_node in self.host_elect_io_nodes::<T>() {
-            trace!("Elected I/O node: {}", io_node.as_path().to_str().unwrap());
+            trace!("Elected I/O node: {}", io_node);
 
             match io_node.try_construe_device::<T>().await {
                 Ok(device) => {
