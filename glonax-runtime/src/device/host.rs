@@ -66,3 +66,32 @@ impl HostInterface {
             .map(|d| IoNode::from(d.devnode().unwrap()))
     }
 }
+
+#[allow(dead_code)]
+mod todo {
+    pub struct HostMonitor {
+        inner: tokio::io::unix::AsyncFd<udev::MonitorSocket>,
+    }
+
+    impl HostMonitor {
+        pub fn new(monitor: udev::MonitorSocket) -> std::io::Result<Self> {
+            Ok(Self {
+                inner: tokio::io::unix::AsyncFd::new(monitor)?,
+            })
+        }
+
+        pub async fn listen(&mut self) -> std::io::Result<udev::Event> {
+            loop {
+                let mut guard = self.inner.readable_mut().await?;
+
+                let event = guard.get_inner_mut().next();
+
+                guard.clear_ready();
+
+                if let Some(event) = event {
+                    break Ok(event);
+                }
+            }
+        }
+    }
+}
