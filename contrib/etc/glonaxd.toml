@@ -1,0 +1,22 @@
+# Copyright (C) 2021 Laixer Equipment B.V.
+# All rights reserved.
+#
+# This software may be modified and distributed under the terms
+# of the included license.  See the LICENSE file for details.
+
+# Enable or disable autopilot. The autopilot will start as soon as the 
+# daemon is live.
+#
+# Default: false
+enable_autopilot = true
+
+# Enable or disable manual input from pheripherials like gamepads
+# and keyboards.
+#
+# Default: false
+enable_input = true
+
+# Daemon workspace directory.
+#
+# Default: <current directory/data>
+workspace = '/tmp/glonax/data'
