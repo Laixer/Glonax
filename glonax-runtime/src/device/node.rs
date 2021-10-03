@@ -22,6 +22,15 @@ impl IoNode {
         &self.node_path
     }
 
+    /// Checks to see if the node path exists in the operating system.
+    ///
+    /// This methdd only checks that the IO resource exist, but not if it is
+    /// accessible.
+    #[inline]
+    pub(crate) fn exists(&self) -> bool {
+        self.node_path.exists()
+    }
+
     /// Try to construe a device from an I/O node.
     ///
     /// This function will return a shared handle to the device.
@@ -33,9 +42,7 @@ impl IoNode {
         // Every IO device must have an IO resource on disk. If that node does
         // not exist then exit right here. Doing this early on will ensure that
         // every IO device returns the same error if the IO resource was not found.
-        //
-        // NOTE: We only check that the IO resource exist, but not if it is accessible.
-        if !self.node_path.exists() {
+        if !self.exists() {
             return Err(DeviceError::no_such_device(
                 T::NAME.to_owned(),
                 &self.node_path,
