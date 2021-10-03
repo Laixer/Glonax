@@ -73,7 +73,12 @@ fn main() -> anyhow::Result<()> {
         )
         .get_matches();
 
-    let mut config = glonax::Config::default();
+    let local_config = std::env::current_dir().unwrap().join("glonaxd.toml");
+
+    let mut config = glonax::Config::try_from_file(vec![
+        "/etc/glonax/glonaxd.toml",
+        local_config.to_str().unwrap(),
+    ])?;
 
     if matches.is_present("no-auto") {
         config.enable_autopilot = false;
