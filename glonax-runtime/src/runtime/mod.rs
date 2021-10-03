@@ -127,16 +127,16 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
     /// *never* block, halt or otherwise obstruct the runtime. Doing so will
     /// sarve the runtime and can increase the event latency.
     async fn idle_tlime(&mut self) {
+        self.device_manager.health_check().await;
+
+        // TODO: Move to builder.
         match self
             .device_manager
             .observer()
             .scan_once::<crate::device::Gamepad>()
             .await
         {
-            Some(input_device) => {
-                info!("Found an input device");
-                self.spawn_input_device(input_device);
-            }
+            Some(input_device) => self.spawn_input_device(input_device),
             None => (),
         };
     }
