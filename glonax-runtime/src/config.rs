@@ -34,7 +34,7 @@ impl Default for Config {
             program_queue: 1024,
             runtime_workers: 8,
             runtime_stack_size: 8 * 1024 * 1024,
-            runtime_idle_interval: 15,
+            runtime_idle_interval: 5,
         }
     }
 }

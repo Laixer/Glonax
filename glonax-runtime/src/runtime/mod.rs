@@ -118,18 +118,29 @@ impl<A, K> Runtime<A, K> {
     {
         self.task_pool.push(tokio::task::spawn(future));
     }
+}
 
+impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
     /// Run idle time operations.
     ///
     /// This method is called when the runtime is idle. Operations run here may
     /// *never* block, halt or otherwise obstruct the runtime. Doing so will
     /// sarve the runtime and can increase the event latency.
     async fn idle_tlime(&mut self) {
-        self.device_manager.idle_time().await;
+        match self
+            .device_manager
+            .observer()
+            .scan_once::<crate::device::Gamepad>()
+            .await
+        {
+            Some(input_device) => {
+                info!("Found an input device");
+                self.spawn_input_device(input_device);
+            }
+            None => (),
+        };
     }
-}
 
-impl<A: MotionDevice, K> Runtime<A, K> {
     /// Start the runtime.
     ///
     /// The runtime will process the events from the event bus. The runtime

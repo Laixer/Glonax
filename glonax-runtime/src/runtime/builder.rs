@@ -1,4 +1,4 @@
-use glonax_core::operand::Operand;
+use glonax_core::{motion::Motion, operand::Operand};
 
 use crate::{
     device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
@@ -49,9 +49,10 @@ where
     async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
         use tokio::sync::mpsc;
 
-        let mut device_manager = runtime::DeviceManager::new();
+        let mut device_manager = crate::device::DeviceManager::new();
 
-        let motion_device = match device_manager.create_observer().scan_once::<M>().await {
+        // Locate one and only one motion device.
+        let motion_device = match device_manager.observer().scan_once::<M>().await {
             Some(motion_device) => motion_device,
             None => return Err(super::Error::MotionDeviceNotFound),
         };
@@ -69,12 +70,7 @@ where
             device_manager,
         };
 
-        for metric_device in runtime
-            .device_manager
-            .create_observer()
-            .scan::<Inertial>()
-            .await
-        {
+        for metric_device in runtime.device_manager.observer().scan::<Inertial>().await {
             runtime.metric_devices.push(metric_device);
         }
 
@@ -107,7 +103,7 @@ where
         match self
             .runtime
             .device_manager
-            .create_observer()
+            .observer()
             .scan_once::<Gamepad>()
             .await
         {

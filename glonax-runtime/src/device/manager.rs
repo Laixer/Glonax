@@ -1,4 +1,4 @@
-use super::{node::IoNode, Device, DeviceDescriptor};
+use super::{node::IoNode, observer::Observer, Device, DeviceDescriptor};
 
 /// Device manager.
 ///
@@ -24,17 +24,19 @@ impl DeviceManager {
         }
     }
 
-    pub fn create_observer(&mut self) -> super::observer::Observer {
-        super::observer::Observer { manager: self }
+    /// Create a new I/O node observer.
+    #[inline]
+    pub fn observer(&mut self) -> Observer {
+        Observer { manager: self }
     }
 
     /// Returned claimed I/O devices.
+    #[inline]
     pub(crate) fn claimed(&self) -> &Vec<IoNode> {
         &self.io_node_list
     }
 
     /// Register a device with the device manager.
-    #[inline]
     pub(crate) fn register_io_device(
         &mut self,
         device: DeviceDescriptor<dyn Device>,
@@ -52,15 +54,5 @@ impl DeviceManager {
         self.device_list
             .get(self.index % self.device_list.len())
             .unwrap()
-    }
-
-    /// Call `idle_time` method on the next device.
-    pub async fn idle_time(&mut self) {
-        // Ignore any held device locks.
-        if let Ok(mut device) = self.next().try_lock() {
-            trace!("Appoint idle time slice to device: {}", device.name());
-
-            device.idle_time().await;
-        }
     }
 }
