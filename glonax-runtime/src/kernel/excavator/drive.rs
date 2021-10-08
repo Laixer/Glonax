@@ -14,10 +14,9 @@ pub struct DriveProgram {
     profile: TrapezoidalDistanceProfile,
 }
 
-// const DRIVE_SPEED_MAX_MSEC: f64 = 5_000.0 / 3600.0;
-const DRIVE_SPEED_MAX_MSEC: f32 = 16.1 / 30.0;
+const DRIVE_SPEED_MAX_MSEC: f32 = 26.1 / 30.0;
 
-const DRIVE_DISTANCE: f32 = 20.0;
+const DRIVE_DISTANCE: f32 = 25.0;
 
 struct TrapezoidalProfile {
     ramp_time: std::time::Duration,
@@ -77,14 +76,36 @@ impl TrapezoidalDistanceProfile {
     fn phase_frame(&self, duration: &std::time::Duration) -> (i32, f32, f32) {
         let (phase, power) = self.inner.phase_frame(duration);
 
-        // let d = match phase {
-        //     0 => ((self.max_speed / 255.0) * power) * duration.as_secs_f32(),
-        //     1 => self.max_speed * duration.as_secs_f32(),
-        //     2 => 0.0,
-        //     _ => 0.0,
-        // };
+        let distance = match phase {
+            0 => {
+                ((self.max_speed * self.inner.ramp_time.as_secs_f32()).sqrt()
+                    / self.inner.ramp_time.as_secs_f32())
+                    * duration.as_secs_f32()
+            }
+            1 => {
+                (self.max_speed * self.inner.ramp_time.as_secs_f32()).sqrt()
+                    + self.max_speed * (duration.as_secs_f32() - self.inner.ramp_time.as_secs_f32())
+            }
+            2 => {
+                (self.max_speed * self.inner.ramp_time.as_secs_f32()).sqrt()
+                    + self.max_speed
+                        * (self
+                            .inner
+                            .motion_time
+                            .max(self.inner.ramp_time)
+                            .as_secs_f32()
+                            - self.inner.ramp_time.as_secs_f32())
+                    + ((self.max_speed * self.inner.ramp_time.as_secs_f32()).sqrt()
+                        / self.inner.ramp_time.as_secs_f32())
+                        * duration
+                            .checked_sub(self.inner.motion_time.max(self.inner.ramp_time))
+                            .unwrap()
+                            .as_secs_f32()
+            }
+            _ => 0.0,
+        };
 
-        (phase, power, self.max_speed * duration.as_secs_f32())
+        (phase, power, distance)
     }
 
     fn is_finished(&self, duration: &std::time::Duration) -> bool {
@@ -113,8 +134,8 @@ impl Program for DriveProgram {
         );
 
         // Some(Motion::Change(vec![
-        //     (Actuator::LimpLeft.into(), phase.1.round() as i16),
-        //     (Actuator::LimpRight.into(), phase.1.round() as i16),
+        //     (Actuator::LimpLeft.into(), power.round() as i16),
+        //     (Actuator::LimpRight.into(), power.round() as i16),
         // ]))
 
         None
