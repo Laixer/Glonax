@@ -7,13 +7,9 @@ use glonax_core::{
     Identity,
 };
 
-use self::{
-    arm::ArmProgram, arm_balance::ArmBalanceProgram, drive::DriveProgram, turn::TurnProgram,
-};
-
-mod arm;
 mod arm_balance;
 mod drive;
+mod dump;
 mod turn;
 
 #[derive(Debug)]
@@ -106,16 +102,16 @@ impl Operand for Excavator {
         }
     }
 
-    /// Fetch program from identifier.
+    /// Fetch program by identifier.
     ///
-    /// The method returns a pointer to the excavator program.
+    /// The factory method returns a pointer to the excavator program.
     fn fetch_program(&self, order: i32) -> Box<dyn Program + Send + Sync> {
         match order {
-            600 => Box::new(ArmBalanceProgram::new()),
-            601 => Box::new(ArmProgram::new()),
-            700 => Box::new(DriveProgram::new()),
-            701 => Box::new(TurnProgram::new()),
-            _ => Box::new(DriveProgram::new()),
+            600 => Box::new(arm_balance::ArmBalanceProgram::new()),
+            601 => Box::new(dump::DumpProgram::new()),
+            700 => Box::new(drive::DriveProgram::new()),
+            701 => Box::new(turn::TurnProgram::new()),
+            _ => Box::new(drive::DriveProgram::new()),
         }
     }
 }

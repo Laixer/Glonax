@@ -9,18 +9,19 @@ use glonax_core::{
 
 use crate::kernel::excavator::Metric;
 
-pub struct ArmProgram;
+pub struct DumpProgram;
 
-impl ArmProgram {
+impl DumpProgram {
     pub fn new() -> Self {
         Self {}
     }
 }
 
-impl Program for ArmProgram {
+impl Program for DumpProgram {
     fn push(&mut self, id: u32, value: MetricValue, _context: &mut Context) {
         match value {
             MetricValue::Acceleration(acc) => {
+                trace!("{:?}", acc);
                 let pos = Position::from(acc.get_ref());
                 let id: Metric = id.try_into().unwrap();
                 trace!("ID: {:?} {:?}", id, pos);

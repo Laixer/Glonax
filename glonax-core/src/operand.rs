@@ -6,9 +6,9 @@ pub trait Operand: Default + Clone + Send + Sync {
     /// Try convert input scancode to motion.
     fn try_from_input_device(&self, input: Scancode) -> Result<Motion, ()>;
 
-    /// Fetch program from identifier.
+    /// Fetch program by identifier.
     ///
-    /// The method returns a pointer to the program which
+    /// The factory method returns a pointer to the program which
     /// will be execured by the runtime. The program identifier
     /// is a per kernel unique program identifier.
     fn fetch_program(&self, id: i32) -> Box<dyn Program + Send + Sync>;
@@ -20,6 +20,7 @@ pub struct Context {
 
 impl Context {
     /// Construct new program context.
+    #[inline]
     pub fn new() -> Self {
         Self::default()
     }
@@ -28,7 +29,7 @@ impl Context {
 impl Default for Context {
     fn default() -> Self {
         Self {
-            start: std::time::Instant::now(),
+            start: Instant::now(),
         }
     }
 }
