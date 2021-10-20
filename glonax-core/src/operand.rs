@@ -15,7 +15,10 @@ pub trait Operand: Default + Clone + Send + Sync {
 }
 
 pub struct Context {
+    /// Time of start of the program.
     pub start: Instant,
+    /// Time of last step.
+    pub last_step: Instant,
 }
 
 impl Context {
@@ -30,6 +33,7 @@ impl Default for Context {
     fn default() -> Self {
         Self {
             start: Instant::now(),
+            last_step: Instant::now(),
         }
     }
 }

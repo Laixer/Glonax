@@ -236,13 +236,13 @@ where
                     for metric_device in metric_devices.iter_mut() {
                         // Take up to 5ms until this read is cancelled and we move to the next device.
                         if let Err(_) = tokio::time::timeout(Duration::from_millis(5), async {
-                            let t0 = Instant::now();
+                            let start_metric_read = Instant::now();
 
                             if let Some((id, value)) = metric_device.lock().await.next().await {
                                 trace!(
                                     "Device {} locked and metric acquired in: {:?}",
                                     id,
-                                    t0.elapsed()
+                                    start_metric_read.elapsed()
                                 );
                                 program.push(id as u32, value, &mut ctx);
                             }
@@ -252,6 +252,8 @@ where
                             warn!("Timeout occured while reading from metric device");
                         }
                     }
+
+                    let start_step_execute = Instant::now();
 
                     // FUTURE: Ensure the step is called *at least* once ever 50ms.
                     // Query the operand program for the next motion step. The
@@ -263,6 +265,8 @@ where
                             return;
                         }
                     }
+
+                    ctx.last_step = start_step_execute;
                 }
 
                 // Execute an optional last action before program termination.

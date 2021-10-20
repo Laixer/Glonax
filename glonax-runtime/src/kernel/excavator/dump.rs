@@ -30,7 +30,9 @@ impl Program for DumpProgram {
         }
     }
 
-    fn step(&mut self, _context: &mut Context) -> Option<Motion> {
+    fn step(&mut self, context: &mut Context) -> Option<Motion> {
+        trace!("Last step: {:?}", context.last_step.elapsed());
+
         None
     }
 
