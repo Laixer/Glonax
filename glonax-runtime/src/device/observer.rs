@@ -31,7 +31,10 @@ impl<'a> Observer<'a> {
     /// Discover device instances of the device type.
     ///
     /// Return the first matching I/O device instance or none.
-    pub async fn scan_once<T>(&mut self) -> Option<DeviceDescriptor<T>>
+    pub async fn scan_once<T>(
+        &mut self,
+        timeout: std::time::Duration,
+    ) -> Option<DeviceDescriptor<T>>
     where
         T: IoDevice + 'static,
         T::DeviceProfile: IoDeviceProfile,
@@ -46,10 +49,7 @@ impl<'a> Observer<'a> {
 
         trace!("Elected I/O node: {}", io_node);
 
-        match io_node
-            .try_construe_device::<T>(std::time::Duration::from_millis(500))
-            .await
-        {
+        match io_node.try_construe_device::<T>(timeout).await {
             Ok(device) => {
                 let n = IoNode::from(device.lock().await.node_path());
 
@@ -61,7 +61,7 @@ impl<'a> Observer<'a> {
                 ..
             }) => None,
             Err(e) => {
-                warn!("{:?}", e);
+                warn!("Device not construed: {}", e);
                 None
             }
         }
@@ -70,7 +70,7 @@ impl<'a> Observer<'a> {
     /// Discover device instances of the device type.
     ///
     /// Returns a list of construed I/O device instances.
-    pub async fn scan<T>(&mut self) -> Vec<DeviceDescriptor<T>>
+    pub async fn scan<T>(&mut self, timeout: std::time::Duration) -> Vec<DeviceDescriptor<T>>
     where
         T: IoDevice + 'static,
         T::DeviceProfile: IoDeviceProfile,
@@ -80,14 +80,12 @@ impl<'a> Observer<'a> {
         for io_node in self.host_elect_io_nodes::<T>() {
             trace!("Elected I/O node: {}", io_node);
 
-            match io_node
-                .try_construe_device::<T>(std::time::Duration::from_millis(500))
-                .await
-            {
+            match io_node.try_construe_device::<T>(timeout).await {
                 Ok(device) => {
-                    let n = IoNode::from(device.lock().await.node_path());
-
-                    self.manager.register_io_device(device.clone(), n);
+                    self.manager.register_io_device(
+                        device.clone(),
+                        IoNode::from(device.lock().await.node_path()),
+                    );
                     construed_devices.push(device);
                 }
                 Err(DeviceError {
@@ -95,7 +93,7 @@ impl<'a> Observer<'a> {
                     ..
                 }) => continue,
                 Err(e) => {
-                    warn!("{:?}", e);
+                    warn!("Device not construed: {}", e);
                     continue;
                 }
             }

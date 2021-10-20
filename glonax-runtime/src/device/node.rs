@@ -1,6 +1,7 @@
 use std::{
     fmt::Display,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Duration,
 };
 
@@ -62,14 +63,18 @@ impl IoNode {
             self
         );
 
-        // Only probe the device for so long.
-        if let Err(_) = tokio::time::timeout(timeout, io_device.probe()).await {
+        // Only probe the I/O device for so long. If the timeout is reached the device
+        // is not considered a match, even though it could have been given more time.
+        if tokio::time::timeout(timeout, io_device.probe())
+            .await
+            .is_err()
+        {
             return Err(DeviceError::timeout(T::NAME.to_owned()));
         }
 
         info!("I/O Device '{}' is construed", T::NAME.to_owned());
 
-        Ok(std::sync::Arc::new(tokio::sync::Mutex::new(io_device)))
+        Ok(Arc::new(tokio::sync::Mutex::new(io_device)))
     }
 }
 

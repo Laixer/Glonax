@@ -54,7 +54,11 @@ where
         let mut device_manager = crate::device::DeviceManager::new();
 
         // Locate one and only one motion device.
-        let motion_device = match device_manager.observer().scan_once::<M>().await {
+        let motion_device = match device_manager
+            .observer()
+            .scan_once::<M>(std::time::Duration::from_millis(500))
+            .await
+        {
             Some(motion_device) => motion_device,
             None => return Err(super::Error::MotionDeviceNotFound),
         };
@@ -72,7 +76,12 @@ where
             device_manager,
         };
 
-        for metric_device in runtime.device_manager.observer().scan::<Inertial>().await {
+        for metric_device in runtime
+            .device_manager
+            .observer()
+            .scan::<Inertial>(std::time::Duration::from_millis(500))
+            .await
+        {
             runtime.metric_devices.push(metric_device);
         }
 
@@ -106,7 +115,7 @@ where
             .runtime
             .device_manager
             .observer()
-            .scan_once::<Gamepad>()
+            .scan_once::<Gamepad>(std::time::Duration::from_millis(250))
             .await
         {
             Some(input_device) => self.runtime.spawn_input_device(input_device),

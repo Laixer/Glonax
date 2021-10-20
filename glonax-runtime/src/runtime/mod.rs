@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use glonax_core::{
     motion::Motion,
     operand::{Context, Operand},
@@ -133,7 +135,7 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
         match self
             .device_manager
             .observer()
-            .scan_once::<crate::device::Gamepad>()
+            .scan_once::<crate::device::Gamepad>(Duration::from_millis(100))
             .await
         {
             Some(input_device) => self.spawn_input_device(input_device),
@@ -146,7 +148,7 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
     /// The runtime will process the events from the event bus. The runtime
     /// should only every break out of the loop if shutdown was requested.
     pub(super) async fn run(&mut self) {
-        use tokio::time::{sleep, Duration};
+        use tokio::time::sleep;
 
         loop {
             let wait = sleep(Duration::from_secs(self.settings.timer_interval));
