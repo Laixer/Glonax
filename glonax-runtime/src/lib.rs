@@ -61,7 +61,7 @@ where
             .unwrap()
     }
 
-    /// Start the runtime service.
+    /// Test the runtime service, then return.
     pub fn test<'a>(config: &'a Config) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             self::runtime::Builder::<M, K>::from_config(&config)

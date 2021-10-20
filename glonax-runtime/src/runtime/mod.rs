@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use glonax_core::{
     motion::Motion,
@@ -232,17 +232,31 @@ where
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
-                    // FUTURE: The program progression is locked as long as we're waiting here.
+                    // FUTURE: lock all devices at the same time.
                     for metric_device in metric_devices.iter_mut() {
-                        match metric_device.lock().await.next().await {
-                            Some((id, value)) => {
+                        // Take up to 5ms until this read is cancelled and we move to the next device.
+                        if let Err(_) = tokio::time::timeout(Duration::from_millis(5), async {
+                            let t0 = Instant::now();
+
+                            if let Some((id, value)) = metric_device.lock().await.next().await {
+                                trace!(
+                                    "Device {} locked and metric acquired in: {:?}",
+                                    id,
+                                    t0.elapsed()
+                                );
                                 program.push(id as u32, value, &mut ctx);
                             }
-                            None => {}
+                        })
+                        .await
+                        {
+                            warn!("Timeout occured while reading from metric device");
                         }
                     }
 
-                    // Query the operand program for the next motion step.
+                    // FUTURE: Ensure the step is called *at least* once ever 50ms.
+                    // Query the operand program for the next motion step. The
+                    // entire thread is dedicated to the program therefore steps
+                    // can take as long as they require.
                     if let Some(motion) = program.step(&mut ctx) {
                         if let Err(_) = dispatcher.motion(motion).await {
                             warn!("Program terminated without completion");
