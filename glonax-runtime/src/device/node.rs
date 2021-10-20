@@ -1,6 +1,7 @@
 use std::{
     fmt::Display,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
 use crate::device::DeviceError;
@@ -41,6 +42,7 @@ impl IoNode {
     /// This is the recommended way to instantiate and claim IO devices.
     pub(crate) async fn try_construe_device<T: IoDevice>(
         self,
+        timeout: Duration,
     ) -> super::Result<DeviceDescriptor<T>> {
         // Every IO device must have an I/O resource on disk. If that node does
         // not exist then exit right here. Doing this early on will ensure that
@@ -60,7 +62,10 @@ impl IoNode {
             self
         );
 
-        io_device.probe().await?;
+        // Only probe the device for so long.
+        if let Err(_) = tokio::time::timeout(timeout, io_device.probe()).await {
+            return Err(DeviceError::timeout(T::NAME.to_owned()));
+        }
 
         info!("I/O Device '{}' is construed", T::NAME.to_owned());
 

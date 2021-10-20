@@ -10,6 +10,12 @@ pub enum ErrorKind {
     /// not connected to the host.
     NoSuchDevice(std::path::PathBuf),
 
+    /// The device did not communicate within the given time limit.
+    ///
+    /// This does not indicate any error on the device side per se. The timeout
+    /// duration may have been lower than nominal communication.
+    Timeout,
+
     /// One or multiple parameters were incorrect.
     InvalidInput,
 
@@ -37,6 +43,13 @@ impl DeviceError {
             kind: ErrorKind::NoSuchDevice(path.to_path_buf()),
         }
     }
+
+    pub(super) fn timeout(device: String) -> Self {
+        Self {
+            device,
+            kind: ErrorKind::Timeout,
+        }
+    }
 }
 
 impl std::fmt::Display for DeviceError {
@@ -50,6 +63,7 @@ impl std::fmt::Display for DeviceError {
                     path.to_str().unwrap()
                 )
             }
+            ErrorKind::Timeout => write!(f, "communication timeout"),
             ErrorKind::InvalidInput => write!(f, "invalid device parameters"),
             ErrorKind::InvalidDeviceFunction => {
                 write!(f, "expected a device with another function")

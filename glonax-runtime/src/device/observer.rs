@@ -46,7 +46,10 @@ impl<'a> Observer<'a> {
 
         trace!("Elected I/O node: {}", io_node);
 
-        match io_node.try_construe_device::<T>().await {
+        match io_node
+            .try_construe_device::<T>(std::time::Duration::from_millis(500))
+            .await
+        {
             Ok(device) => {
                 let n = IoNode::from(device.lock().await.node_path());
 
@@ -77,7 +80,10 @@ impl<'a> Observer<'a> {
         for io_node in self.host_elect_io_nodes::<T>() {
             trace!("Elected I/O node: {}", io_node);
 
-            match io_node.try_construe_device::<T>().await {
+            match io_node
+                .try_construe_device::<T>(std::time::Duration::from_millis(500))
+                .await
+            {
                 Ok(device) => {
                     let n = IoNode::from(device.lock().await.node_path());
 
