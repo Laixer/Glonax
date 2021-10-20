@@ -11,23 +11,27 @@ const DEVICE_ADDR: u16 = 0x7;
 // TODO: retrieve addr from session.
 const REMOTE_DEVICE_ADDR: u16 = 0x7;
 
-struct Cache<K, V> {
+struct Debounce<K, V> {
     map: std::collections::HashMap<K, V>,
 }
 
-impl<K, V> Cache<K, V>
+impl<K, V> Debounce<K, V>
 where
     K: Eq + std::hash::Hash,
     V: std::cmp::PartialEq + Copy,
 {
+    /// Construct a new debouncer.
     fn new() -> Self {
         Self {
             map: std::collections::HashMap::new(),
         }
     }
 
-    /// Check if value was found in cache.
-    fn hit(&mut self, key: K, value: V) -> bool {
+    /// Push value on the key.
+    ///
+    /// If the current value is equal to the new value return true, otherwise
+    /// return false.
+    fn push(&mut self, key: K, value: V) -> bool {
         match self.map.insert(key, value) {
             Some(prev_value) => prev_value == value,
             None => false,
@@ -38,7 +42,7 @@ where
 pub struct Hydraulic {
     session: Session<Uart>,
     node_path: PathBuf,
-    cache: Cache<u32, i16>,
+    debounce: Debounce<u32, i16>,
 }
 
 #[async_trait::async_trait]
@@ -73,7 +77,7 @@ impl Hydraulic {
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
             node_path: path.to_path_buf(),
-            cache: Cache::new(),
+            debounce: Debounce::new(),
         })
     }
 }
@@ -123,9 +127,9 @@ impl MotionDevice for Hydraulic {
             }
             Motion::Stop(actuators) => {
                 for actuator in actuators {
-                    // Test the motion event against the cache. There is
+                    // Test the motion event against the debouncer. There is
                     // no point in sending the exact same motion value over and over again.
-                    if !self.cache.hit(actuator, 0) {
+                    if !self.debounce.push(actuator, 0) {
                         trace!("Stop actuator {} ", actuator);
 
                         // FUTURE: Handle error, translate to device error?
@@ -145,9 +149,9 @@ impl MotionDevice for Hydraulic {
             }
             Motion::Change(actuators) => {
                 for (actuator, value) in actuators {
-                    // Test the motion event against the cache. There is
+                    // Test the motion event against the debouncer. There is
                     // no point in sending the exact same motion value over and over again.
-                    if !self.cache.hit(actuator, value) {
+                    if !self.debounce.push(actuator, value) {
                         trace!("Change actuator {} to value {}", actuator, value);
 
                         // FUTURE: Handle error, translate to device error?
@@ -163,6 +167,8 @@ impl MotionDevice for Hydraulic {
             }
         }
 
+        // FUTURE: This must never happen after a value was dispatched. This action can take
+        //         an undetermined amount of time.
         if let Err(err) = self.session.trigger_scheduler().await {
             error!("Session error: {:?}", err);
         };

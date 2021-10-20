@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "glonax"
-version = "0.8.9"
+version = "0.8.11"
 dependencies = [
  "anyhow",
  "async-trait",

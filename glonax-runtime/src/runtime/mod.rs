@@ -214,7 +214,6 @@ where
         let dispatcher = self.dispatch();
         let operand = self.operand.clone();
 
-        // TODO:
         let mut metric_devices = self.metric_devices.clone();
 
         // Move ownership of receiver to program queue thread.
