@@ -11,8 +11,6 @@ use crate::kernel::excavator::Metric;
 
 pub struct ArmProgram;
 
-const DRIVE_TIME: u64 = 600;
-
 impl ArmProgram {
     pub fn new() -> Self {
         Self {}
@@ -35,8 +33,7 @@ impl Program for ArmProgram {
         None
     }
 
-    fn can_terminate(&self, context: &mut Context) -> bool {
-        let sec_since_boot = context.start.elapsed().as_secs();
-        sec_since_boot >= DRIVE_TIME
+    fn can_terminate(&self, _context: &mut Context) -> bool {
+        false
     }
 }

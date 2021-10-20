@@ -17,6 +17,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> ContainerSession<T> {
     }
 
     /// Running diagnostics.
+    #[inline]
     pub async fn diagnose(&mut self) -> Result<(), SessionError> {
         Evaluation::new(&mut self.session).diagnose_test().await
     }
