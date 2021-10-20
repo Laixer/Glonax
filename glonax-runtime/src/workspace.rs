@@ -5,8 +5,6 @@ use std::{
 
 pub struct Workspace {
     #[allow(dead_code)]
-    db: sled::Db,
-    #[allow(dead_code)]
     lock: File,
 }
 
@@ -22,13 +20,7 @@ impl Workspace {
 
         let lock = Self::lock(path)?;
 
-        let db = sled::Config::default()
-            .path(path)
-            .flush_every_ms(Some(200))
-            .open()
-            .unwrap();
-
-        Ok(Self { db, lock })
+        Ok(Self { lock })
     }
 
     fn lock(path: &Path) -> super::runtime::Result<File> {
