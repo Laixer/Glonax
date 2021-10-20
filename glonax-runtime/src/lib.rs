@@ -24,6 +24,14 @@ pub use self::runtime::Runtime;
 /// device. The caller should tread this type as opaque.
 pub type ExcavatorService = LaunchStub<device::Hydraulic, kernel::excavator::Excavator>;
 
+/// Opaque runtime service for the frozed excavator kernel. The frozen exacator service
+/// act similair to the exacator service but without any commanded movements. This
+/// effectively renders the kernel immobile.
+///
+/// The excavator builder binds the excavator kernel to the sink device. The caller should
+/// tread this type as opaque.
+pub type FrozenExcavatorService = LaunchStub<device::Sink, kernel::excavator::Excavator>;
+
 pub struct LaunchStub<M, K> {
     _1: std::marker::PhantomData<M>,
     _2: std::marker::PhantomData<K>,
@@ -49,7 +57,6 @@ where
             .worker_threads(config.runtime_workers)
             .enable_all()
             .thread_name("glonax-runtime-worker")
-            .thread_stack_size(config.runtime_stack_size)
             .build()
             .unwrap()
     }

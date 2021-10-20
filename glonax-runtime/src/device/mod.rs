@@ -4,6 +4,9 @@ mod node;
 mod observer;
 mod serial_profile;
 
+mod sink;
+pub use sink::Sink;
+
 mod manager;
 pub use manager::DeviceManager;
 
@@ -31,6 +34,8 @@ pub enum Subsystem {
     Input,
     /// TTY device class.
     TTY,
+    /// Virtual memory class.
+    Memory,
 }
 
 /// Convert device subsystem to string.
@@ -39,6 +44,7 @@ impl From<Subsystem> for &str {
         match value {
             Subsystem::Input => "input",
             Subsystem::TTY => "tty",
+            Subsystem::Memory => "mem",
         }
     }
 }

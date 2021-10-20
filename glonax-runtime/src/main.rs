@@ -54,6 +54,11 @@ fn main() -> anyhow::Result<()> {
                 .help("Disable input controls"),
         )
         .arg(
+            Arg::with_name("no-motion")
+                .long("no-motion")
+                .help("Disable machine motion (frozen mode)"),
+        )
+        .arg(
             Arg::with_name("systemd")
                 .long("systemd")
                 .help("Run as systemd service unit"),
@@ -75,6 +80,7 @@ fn main() -> anyhow::Result<()> {
 
     let local_config = std::env::current_dir().unwrap().join("glonaxd.toml");
 
+    // Try read configuration from global system location first, then from local directory.
     let mut config = glonax::Config::try_from_file(vec![
         "/etc/glonax/glonaxd.toml",
         local_config.to_str().unwrap(),
@@ -84,6 +90,9 @@ fn main() -> anyhow::Result<()> {
         config.enable_autopilot = false;
     }
     if matches.is_present("no-input") {
+        config.enable_input = false;
+    }
+    if matches.is_present("no-motion") {
         config.enable_input = false;
     }
     if matches.is_present("workers") {
@@ -135,10 +144,18 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{}", config);
 
-    if matches.is_present("test") {
-        glonax::ExcavatorService::test(&config)?;
+    if matches.is_present("no-motion") {
+        if matches.is_present("test") {
+            glonax::FrozenExcavatorService::test(&config)?;
+        } else {
+            glonax::FrozenExcavatorService::launch(&config)?;
+        }
     } else {
-        glonax::ExcavatorService::launch(&config)?;
+        if matches.is_present("test") {
+            glonax::ExcavatorService::test(&config)?;
+        } else {
+            glonax::ExcavatorService::launch(&config)?;
+        }
     }
 
     Ok(())
