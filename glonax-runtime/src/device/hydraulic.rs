@@ -45,7 +45,7 @@ pub struct Hydraulic {
 impl IoDevice for Hydraulic {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = super::serial_profile::SerialDeviceProfile;
+    type DeviceProfile = super::profile::SerialDeviceProfile;
 
     #[inline]
     fn node_path(&self) -> &Path {

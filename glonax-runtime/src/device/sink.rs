@@ -6,17 +6,6 @@ use glonax_core::motion::Motion;
 
 const DEVICE_NAME: &str = "sink";
 
-pub struct SinkDeviceProfile {}
-
-impl super::IoDeviceProfile for SinkDeviceProfile {
-    const CLASS: super::Subsystem = super::Subsystem::Memory;
-
-    #[inline]
-    fn filter(device: &udev::Device) -> bool {
-        device.sysname().to_str().unwrap() == "null"
-    }
-}
-
 pub struct Sink {
     node_path: PathBuf,
 }
@@ -25,7 +14,7 @@ pub struct Sink {
 impl IoDevice for Sink {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = SinkDeviceProfile;
+    type DeviceProfile = super::profile::NullDeviceProfile;
 
     #[inline]
     fn node_path(&self) -> &Path {

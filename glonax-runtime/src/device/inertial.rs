@@ -22,7 +22,7 @@ pub struct Inertial {
 impl IoDevice for Inertial {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = super::serial_profile::SerialDeviceProfile;
+    type DeviceProfile = super::profile::SerialDeviceProfile;
 
     #[inline]
     fn node_path(&self) -> &Path {
