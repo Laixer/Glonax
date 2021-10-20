@@ -143,6 +143,18 @@ where
         Ok(())
     }
 
+    /// Instruct the runtime to execute startup events.
+    ///
+    /// Startup events will run on the runtime core before any other events are
+    /// executed.
+    async fn startup_events(&self) {
+        let dispatcher = self.runtime.dispatch();
+
+        info!("Running startup events");
+
+        dispatcher.motion(Motion::StopAll).await.unwrap();
+    }
+
     /// Validate the runtime setup and exit.
     ///
     /// This method consumes the runtime service.
@@ -150,18 +162,6 @@ where
         self.config_services().await?;
 
         Ok(())
-    }
-
-    /// Instruct the runtime to execute startup events.
-    ///
-    /// Startup events will run on the runtime core before any other world
-    /// events are executed.
-    async fn startup_events(&self) {
-        let dispatcher = self.runtime.dispatch();
-
-        info!("Running startup events");
-
-        dispatcher.motion(Motion::StopAll).await.unwrap();
     }
 
     /// Spawn the runtime service.

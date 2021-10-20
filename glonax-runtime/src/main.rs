@@ -35,7 +35,7 @@ fn main() -> anyhow::Result<()> {
             Arg::with_name("test")
                 .short("t")
                 .long("test")
-                .help("Test configuration and exist"),
+                .help("Test configuration and exit"),
         )
         .arg(
             Arg::with_name("record")
@@ -132,6 +132,8 @@ fn main() -> anyhow::Result<()> {
         color_choice,
     )
     .unwrap();
+
+    log::trace!("{}", config);
 
     if matches.is_present("test") {
         glonax::ExcavatorService::test(&config)?;

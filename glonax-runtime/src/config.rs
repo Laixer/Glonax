@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 /// Glonax configuration.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Clone, Deserialize)]
 pub struct Config {
     /// Whether autopilot is enabled.
     #[serde(default)]
@@ -12,6 +12,10 @@ pub struct Config {
     /// Whether input devices are enabled.
     #[serde(default)]
     pub enable_input: bool,
+
+    /// Whether motion is enabled.
+    #[serde(default = "Config::enable_motion")]
+    pub enable_motion: bool,
 
     /// Library worksapce.
     #[serde(default = "Config::workspace")]
@@ -29,13 +33,34 @@ pub struct Config {
     #[serde(default = "Config::runtime_workers")]
     pub runtime_workers: usize,
 
-    /// Runtime stack size.
-    #[serde(default = "Config::runtime_stack_size")]
-    pub runtime_stack_size: usize,
-
     /// Runtime idle interval in seconds.
     #[serde(default = "Config::runtime_idle_interval")]
     pub runtime_idle_interval: usize,
+}
+
+impl std::fmt::Display for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Configuration:
+            \tAutopilot enabled: {}
+            \tInput enabled: {}
+            \tMotion enabled: {}
+            \tWorkspace: {}
+            \tEvent queue size: {}
+            \tProgram queue size: {}
+            \tRuntime workers: {}
+            \tRuntime idle interval: {}",
+            self.enable_autopilot,
+            self.enable_input,
+            self.enable_motion,
+            self.workspace.to_str().unwrap(),
+            self.event_queue,
+            self.program_queue,
+            self.runtime_workers,
+            self.runtime_idle_interval
+        )
+    }
 }
 
 impl Config {
@@ -69,6 +94,11 @@ impl Config {
     }
 
     #[inline]
+    fn enable_motion() -> bool {
+        true
+    }
+
+    #[inline]
     fn workspace() -> PathBuf {
         std::env::current_dir().unwrap().join("data")
     }
@@ -86,11 +116,6 @@ impl Config {
     #[inline]
     fn runtime_workers() -> usize {
         8
-    }
-
-    #[inline]
-    fn runtime_stack_size() -> usize {
-        8 * 1024 * 1024
     }
 
     #[inline]
