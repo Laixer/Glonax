@@ -93,7 +93,7 @@ fn main() -> anyhow::Result<()> {
         config.enable_input = false;
     }
     if matches.is_present("no-motion") {
-        config.enable_input = false;
+        config.enable_motion = false;
     }
     if matches.is_present("workers") {
         config.runtime_workers = matches.value_of("workers").unwrap().parse().unwrap();
@@ -144,7 +144,7 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{}", config);
 
-    if matches.is_present("no-motion") {
+    if !config.enable_motion {
         if matches.is_present("test") {
             glonax::FrozenExcavatorService::test(&config)?;
         } else {

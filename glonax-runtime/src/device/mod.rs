@@ -2,7 +2,7 @@ use std::path::Path;
 
 mod node;
 mod observer;
-mod serial_profile;
+mod profile;
 
 mod sink;
 pub use sink::Sink;
