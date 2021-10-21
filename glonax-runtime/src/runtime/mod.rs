@@ -75,6 +75,12 @@ impl RuntimeSession {
             id: uuid::Uuid::new_v4(),
         }
     }
+
+    pub(super) fn with_storage(self, path: &std::path::Path) -> Self {
+        crate::workspace::create_directory(path, &self.id);
+
+        self
+    }
 }
 
 impl std::fmt::Display for RuntimeSession {

@@ -3,7 +3,6 @@ use glonax_core::{motion::Motion, operand::Operand, Identity};
 use crate::{
     device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
     runtime::{self, RuntimeSettings},
-    workspace::Workspace,
     Config, Runtime,
 };
 
@@ -20,7 +19,7 @@ pub struct Builder<'a, M, K> {
     config: &'a Config,
     /// Current application workspace.
     #[allow(dead_code)]
-    workspace: Workspace,
+    lock: std::fs::File,
     /// Runtime core.
     runtime: Runtime<M, K>,
 }
@@ -35,9 +34,11 @@ where
     ///
     /// Note that this method is certain to block.
     pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, M, K>> {
+        crate::workspace::setup_if_not_exists(&config.workspace);
+
         Ok(Self {
             config,
-            workspace: Workspace::new(&config.workspace)?,
+            lock: crate::workspace::lock(&config.workspace)?,
             runtime: Self::bootstrap(config).await?,
         })
     }
@@ -63,7 +64,7 @@ where
             None => return Err(super::Error::MotionDeviceNotFound),
         };
 
-        let session = runtime::RuntimeSession::new();
+        let session = runtime::RuntimeSession::new().with_storage(&config.workspace);
 
         info!("Runtime session ID: {}", session.id);
 
