@@ -82,10 +82,15 @@ impl RuntimeSession {
     /// The runtime session will create a directory on disk in the name
     /// of the session.
     pub(super) fn new(path: &std::path::Path) -> Self {
+        use std::io::Write;
+
         let id = uuid::Uuid::new_v4();
         let path = crate::workspace::create_directory(path, &id);
 
         debug!("Session directory: {}", &path.to_str().unwrap());
+
+        let mut bootstrap = std::fs::File::create(path.join("bootstrap")).unwrap();
+        writeln!(bootstrap, "BOOT = 1").unwrap();
 
         Self { id, path }
     }
@@ -266,6 +271,8 @@ where
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
+                    //
+
                     // FUTURE: lock all devices at the same time.
                     for metric_device in metric_devices.iter_mut() {
                         // Take up to 5ms until this read is cancelled and we move to the next device.
@@ -286,6 +293,9 @@ where
                             warn!("Timeout occured while reading from metric device");
                         }
                     }
+
+                    // Deliberately slow down the program loop to limit CPU cycles.
+                    tokio::time::sleep(Duration::from_millis(1)).await;
 
                     let start_step_execute = Instant::now();
 
