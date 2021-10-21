@@ -116,19 +116,20 @@ impl Operand for Excavator {
     /// Fetch program by identifier.
     ///
     /// The factory method returns a pointer to the excavator program.
-    fn fetch_program(&self, order: i32) -> Box<dyn Program + Send + Sync> {
+    fn fetch_program(&self, order: i32) -> Result<Box<dyn Program + Send + Sync>, ()> {
         match order {
             // Arm chain programs.
-            600 => Box::new(arm_balance::ArmBalanceProgram::new()),
-            601 => Box::new(arm_fk::ArmFkProgram::new()),
+            600 => Ok(Box::new(arm_balance::ArmBalanceProgram::new())),
+            601 => Ok(Box::new(arm_fk::ArmFkProgram::new())),
 
             // Movement programs.
-            700 => Box::new(drive::DriveProgram::new()),
-            701 => Box::new(turn::TurnProgram::new()),
+            700 => Ok(Box::new(drive::DriveProgram::new())),
+            701 => Ok(Box::new(turn::TurnProgram::new())),
 
             // Miscellaneous programs.
-            900 => Box::new(dump::DumpProgram::new()),
-            _ => Box::new(drive::DriveProgram::new()),
+            900 => Ok(Box::new(dump::DumpProgram::new())),
+
+            _ => Err(()),
         }
     }
 }

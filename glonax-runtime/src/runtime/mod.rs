@@ -261,7 +261,13 @@ where
 
         self.spawn(async move {
             while let Some(id) = receiver.recv().await {
-                let mut program = operand.fetch_program(id);
+                let mut program = match operand.fetch_program(id) {
+                    Ok(program) => program,
+                    Err(_) => {
+                        warn!("Program {} was not registered with the operand", id);
+                        continue;
+                    }
+                };
 
                 info!("Start new program");
 
