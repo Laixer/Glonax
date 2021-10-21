@@ -190,7 +190,6 @@ dependencies = [
  "glonax-ice",
  "glonax-serial",
  "log",
- "pid",
  "serde",
  "simplelog",
  "tokio",
@@ -464,15 +463,6 @@ name = "paste"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf547ad0c65e31259204bd90935776d1c693cec2f4ff7abb7a1bbbd40dfe58"
-
-[[package]]
-name = "pid"
-version = "3.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d81764342f0ec3d969b9898925e5b0dc31c95466cb70a79a3064b33eb3b5480a"
-dependencies = [
- "num-traits",
-]
 
 [[package]]
 name = "pin-project-lite"

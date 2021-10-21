@@ -9,7 +9,6 @@ use tokio::{
 
 use crate::{
     device::{DeviceDescriptor, DeviceManager, InputDevice, MetricDevice, MotionDevice},
-    runtime::operand::Context,
     Config,
 };
 
@@ -75,6 +74,13 @@ pub struct RuntimeSession {
 }
 
 impl RuntimeSession {
+    /// Construct new runtime session.
+    ///
+    /// The session identifier is unique and valid for the duration of the
+    /// session.
+    ///
+    /// The runtime session will create a directory on disk in the name
+    /// of the session.
     pub(super) fn new(path: &std::path::Path) -> Self {
         let id = uuid::Uuid::new_v4();
         let path = crate::workspace::create_directory(path, &id);
@@ -254,7 +260,7 @@ where
 
                 info!("Start new program");
 
-                let mut ctx = Context::new(runtime_session.clone());
+                let mut ctx = operand::Context::new(runtime_session.clone());
                 program.boot(&mut ctx);
 
                 // Loop until this program reaches its termination condition. If
@@ -294,6 +300,7 @@ where
                         }
                     }
 
+                    ctx.step_count += 1;
                     ctx.last_step = start_step_execute;
                 }
 

@@ -21,6 +21,8 @@ pub struct Context {
     pub start: Instant,
     /// Time of last step.
     pub last_step: Instant,
+    /// Total step count.
+    pub step_count: usize,
     /// Runtime session.
     pub session: RuntimeSession,
 }
@@ -31,6 +33,7 @@ impl Context {
         Self {
             start: Instant::now(),
             last_step: Instant::now(),
+            step_count: 0,
             session,
         }
     }
