@@ -13,6 +13,15 @@ mod drive;
 mod dump;
 mod turn;
 
+/// Maximum empirical driving speed in meters per second.
+const DRIVE_SPEED_MAX: f32 = 26.1 / 30.0;
+/// Boom length in meters.
+const BOOM_LENGTH: f32 = 6.0;
+/// Arm length in meters.
+const ARM_LENGTH: f32 = 2.97;
+
+const ARM_RANGE: std::ops::Range<f32> = -0.45..-2.47;
+
 #[derive(Debug)]
 enum Actuator {
     Boom = 2,

@@ -2,7 +2,7 @@ use glonax_core::motion::Motion;
 
 use crate::runtime::operand::*;
 
-use super::Actuator;
+use super::{Actuator, DRIVE_SPEED_MAX};
 
 /// Drive strait forward.
 ///
@@ -12,8 +12,6 @@ use super::Actuator;
 pub struct DriveProgram {
     profile: TrapezoidalDistanceProfile,
 }
-
-const DRIVE_SPEED_MAX_MSEC: f32 = 26.1 / 30.0;
 
 const DRIVE_DISTANCE: f32 = 25.0;
 
@@ -115,7 +113,7 @@ impl TrapezoidalDistanceProfile {
 impl DriveProgram {
     pub fn new() -> Self {
         Self {
-            profile: TrapezoidalDistanceProfile::new(DRIVE_SPEED_MAX_MSEC, DRIVE_DISTANCE),
+            profile: TrapezoidalDistanceProfile::new(DRIVE_SPEED_MAX, DRIVE_DISTANCE),
         }
     }
 }
@@ -132,12 +130,10 @@ impl Program for DriveProgram {
             distance.round()
         );
 
-        // Some(Motion::Change(vec![
-        //     (Actuator::LimpLeft.into(), power.round() as i16),
-        //     (Actuator::LimpRight.into(), power.round() as i16),
-        // ]))
-
-        None
+        Some(Motion::Change(vec![
+            (Actuator::LimpLeft.into(), power.round() as i16),
+            (Actuator::LimpRight.into(), power.round() as i16),
+        ]))
     }
 
     fn can_terminate(&self, context: &mut Context) -> bool {
