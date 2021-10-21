@@ -63,6 +63,10 @@ where
             None => return Err(super::Error::MotionDeviceNotFound),
         };
 
+        let session = runtime::RuntimeSession::new();
+
+        info!("Runtime session ID: {}", session.id);
+
         let program_queue = mpsc::channel(config.program_queue);
 
         let mut runtime = Runtime {
@@ -74,6 +78,7 @@ where
             settings: RuntimeSettings::from(config),
             task_pool: vec![],
             device_manager,
+            session,
         };
 
         for metric_device in runtime
@@ -145,8 +150,8 @@ where
 
     /// Instruct the runtime to execute startup events.
     ///
-    /// Startup events will run on the runtime core before any other events are
-    /// executed.
+    /// Startup events will be queued and run on the runtime core before any
+    /// other events are executed.
     async fn startup_events(&self) {
         let dispatcher = self.runtime.dispatch();
 

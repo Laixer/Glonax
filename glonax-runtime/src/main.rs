@@ -145,6 +145,8 @@ fn main() -> anyhow::Result<()> {
     log::trace!("{}", config);
 
     if !config.enable_motion {
+        log::info!("All motion controls are frozen");
+
         if matches.is_present("test") {
             glonax::FrozenExcavatorService::test(&config)?;
         } else {

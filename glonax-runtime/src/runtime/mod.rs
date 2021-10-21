@@ -65,6 +65,24 @@ impl Dispatch {
     }
 }
 
+pub(super) struct RuntimeSession {
+    id: uuid::Uuid,
+}
+
+impl RuntimeSession {
+    pub(super) fn new() -> Self {
+        Self {
+            id: uuid::Uuid::new_v4(),
+        }
+    }
+}
+
+impl std::fmt::Display for RuntimeSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.id)
+    }
+}
+
 pub(super) struct RuntimeSettings {
     timer_interval: u64,
 }
@@ -94,6 +112,8 @@ pub struct Runtime<A, K> {
     pub(super) task_pool: Vec<JoinHandle<()>>,
     /// Device manager.
     pub(super) device_manager: DeviceManager,
+    /// Runtime session.
+    pub(super) session: RuntimeSession,
 }
 
 impl<A, K> Runtime<A, K> {
