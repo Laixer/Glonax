@@ -11,8 +11,13 @@ impl std::fmt::Display for MetricValue {
             MetricValue::Acceleration(vector) => {
                 write!(
                     f,
-                    "Acceleration: X: {:>+5} Y: {:>+5} Z: {:>+5}",
-                    vector.x, vector.y, vector.z
+                    "Acceleration (mg): X: {:>+5} Y: {:>+5} Z: {:>+5}\t(ms^2) X: {:>+5.2} Y: {:>+5.2} Z: {:>+5.2}",
+                    vector.x,
+                    vector.y,
+                    vector.z,
+                    vector.x * 0.00980665,
+                    vector.y * 0.00980665,
+                    vector.z * 0.00980665
                 )
             }
         }

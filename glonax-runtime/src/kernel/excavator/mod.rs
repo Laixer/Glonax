@@ -9,6 +9,7 @@ use glonax_core::{
 use crate::runtime::operand::{Operand, Program};
 
 mod arm_balance;
+mod arm_fk;
 mod drive;
 mod dump;
 mod turn;
@@ -117,10 +118,16 @@ impl Operand for Excavator {
     /// The factory method returns a pointer to the excavator program.
     fn fetch_program(&self, order: i32) -> Box<dyn Program + Send + Sync> {
         match order {
+            // Arm chain programs.
             600 => Box::new(arm_balance::ArmBalanceProgram::new()),
-            601 => Box::new(dump::DumpProgram::new()),
+            601 => Box::new(arm_fk::ArmFkProgram::new()),
+
+            // Movement programs.
             700 => Box::new(drive::DriveProgram::new()),
             701 => Box::new(turn::TurnProgram::new()),
+
+            // Miscellaneous programs.
+            900 => Box::new(dump::DumpProgram::new()),
             _ => Box::new(drive::DriveProgram::new()),
         }
     }
