@@ -1,9 +1,6 @@
 use std::time::{Duration, Instant};
 
-use glonax_core::{
-    motion::Motion,
-    operand::{Context, Operand},
-};
+use glonax_core::motion::Motion;
 
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -12,8 +9,11 @@ use tokio::{
 
 use crate::{
     device::{DeviceDescriptor, DeviceManager, InputDevice, MetricDevice, MotionDevice},
+    runtime::operand::Context,
     Config,
 };
+
+pub mod operand;
 
 mod error;
 pub use self::error::Error;
@@ -22,6 +22,7 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 mod builder;
 pub use self::builder::Builder;
+use self::operand::Operand;
 
 #[derive(Debug)]
 pub enum RuntimeEvent {
@@ -65,12 +66,12 @@ impl Dispatch {
     }
 }
 
-pub(super) struct RuntimeSession {
+#[derive(Clone)]
+pub struct RuntimeSession {
     /// Session ID.
-    id: uuid::Uuid,
+    pub id: uuid::Uuid,
     /// Session path on disk.
-    #[allow(dead_code)]
-    path: std::path::PathBuf,
+    pub path: std::path::PathBuf,
 }
 
 impl RuntimeSession {
@@ -242,6 +243,7 @@ where
         let operand = self.operand.clone();
 
         let mut metric_devices = self.metric_devices.clone();
+        let runtime_session = self.session.clone();
 
         // Move ownership of receiver to program queue thread.
         let mut receiver = self.program_queue.1.take().unwrap();
@@ -252,7 +254,7 @@ where
 
                 info!("Start new program");
 
-                let mut ctx = Context::default();
+                let mut ctx = Context::new(runtime_session.clone());
                 program.boot(&mut ctx);
 
                 // Loop until this program reaches its termination condition. If

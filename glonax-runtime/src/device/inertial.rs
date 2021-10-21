@@ -89,7 +89,11 @@ impl MetricDevice for Inertial {
                     let acc: Vector3x16 = frame.get(6).unwrap();
                     Some((
                         REMOTE_DEVICE_ADDR,
-                        MetricValue::Acceleration((acc.x, acc.y, acc.z).into()),
+                        MetricValue::Acceleration(glonax_core::nalgebra::Vector3::new(
+                            acc.x as f32,
+                            acc.y as f32,
+                            acc.z as f32,
+                        )),
                     ))
                 }
                 _ => None,

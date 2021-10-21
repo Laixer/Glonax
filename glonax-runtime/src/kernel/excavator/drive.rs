@@ -1,7 +1,6 @@
-use glonax_core::{
-    motion::Motion,
-    operand::{Context, Program},
-};
+use glonax_core::motion::Motion;
+
+use crate::runtime::operand::*;
 
 use super::Actuator;
 

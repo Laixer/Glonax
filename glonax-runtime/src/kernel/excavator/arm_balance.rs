@@ -1,9 +1,10 @@
 use glonax_core::{
     metric::MetricValue,
     motion::{Motion, NormalControl},
-    operand::{Context, Program},
     position::Position,
 };
+
+use crate::runtime::operand::*;
 
 use super::Actuator;
 

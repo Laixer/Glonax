@@ -41,7 +41,7 @@ impl<M, K> LaunchStub<M, K>
 where
     M: 'static + device::IoDevice + device::MotionDevice + Send,
     M::DeviceProfile: device::IoDeviceProfile,
-    K: 'static + glonax_core::operand::Operand + glonax_core::Identity,
+    K: 'static + runtime::operand::Operand + glonax_core::Identity,
 {
     /// Create the runtime reactor.
     ///

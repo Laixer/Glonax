@@ -3,9 +3,10 @@ use std::convert::TryFrom;
 use glonax_core::{
     input::{ButtonState, Scancode},
     motion::{Motion, NormalControl},
-    operand::{Operand, Program},
     Identity,
 };
+
+use crate::runtime::operand::{Operand, Program};
 
 mod arm_balance;
 mod drive;

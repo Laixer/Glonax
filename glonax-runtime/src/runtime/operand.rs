@@ -1,6 +1,8 @@
 use std::time::Instant;
 
-use crate::{input::Scancode, metric::MetricValue, motion::Motion};
+use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
+
+use super::RuntimeSession;
 
 pub trait Operand: Default + Clone + Send + Sync {
     /// Try convert input scancode to motion.
@@ -19,21 +21,17 @@ pub struct Context {
     pub start: Instant,
     /// Time of last step.
     pub last_step: Instant,
+    /// Runtime session.
+    pub session: RuntimeSession,
 }
 
 impl Context {
     /// Construct new program context.
-    #[inline]
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-impl Default for Context {
-    fn default() -> Self {
+    pub fn new(session: RuntimeSession) -> Self {
         Self {
             start: Instant::now(),
             last_step: Instant::now(),
+            session,
         }
     }
 }

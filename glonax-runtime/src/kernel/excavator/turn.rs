@@ -1,8 +1,8 @@
-use super::Actuator;
-
 use glonax_core::motion::Motion;
-use glonax_core::operand::Context;
-use glonax_core::operand::Program;
+
+use crate::runtime::operand::*;
+
+use super::Actuator;
 
 /// Turn strait forward.
 ///

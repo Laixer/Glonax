@@ -5,3 +5,4 @@ authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2018"
 
 [dependencies]
+nalgebra = "0.29.0"

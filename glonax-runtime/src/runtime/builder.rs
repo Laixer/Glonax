@@ -1,10 +1,12 @@
-use glonax_core::{motion::Motion, operand::Operand, Identity};
+use glonax_core::{motion::Motion, Identity};
 
 use crate::{
     device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
     runtime::{self, RuntimeSettings},
     Config, Runtime,
 };
+
+use super::Operand;
 
 /// Runtime builder.
 ///
