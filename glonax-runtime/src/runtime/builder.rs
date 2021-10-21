@@ -64,7 +64,7 @@ where
             None => return Err(super::Error::MotionDeviceNotFound),
         };
 
-        let session = runtime::RuntimeSession::new().with_storage(&config.workspace);
+        let session = runtime::RuntimeSession::new(&config.workspace);
 
         info!("Runtime session ID: {}", session.id);
 

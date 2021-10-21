@@ -18,8 +18,12 @@ pub fn setup_if_not_exists(path: &Path) {
 }
 
 /// Create a new directory in the workspace.
-pub fn create_directory<T: ToString>(path: &Path, name: &T) {
-    create_dir_all(path.join(name.to_string())).unwrap();
+pub fn create_directory<T: ToString>(path: &Path, name: &T) -> std::path::PathBuf {
+    let path = path.join(name.to_string());
+
+    create_dir_all(&path).unwrap();
+
+    path
 }
 
 // TODO: return IO result

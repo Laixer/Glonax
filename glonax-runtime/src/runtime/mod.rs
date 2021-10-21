@@ -66,20 +66,21 @@ impl Dispatch {
 }
 
 pub(super) struct RuntimeSession {
+    /// Session ID.
     id: uuid::Uuid,
+    /// Session path on disk.
+    #[allow(dead_code)]
+    path: std::path::PathBuf,
 }
 
 impl RuntimeSession {
-    pub(super) fn new() -> Self {
-        Self {
-            id: uuid::Uuid::new_v4(),
-        }
-    }
+    pub(super) fn new(path: &std::path::Path) -> Self {
+        let id = uuid::Uuid::new_v4();
+        let path = crate::workspace::create_directory(path, &id);
 
-    pub(super) fn with_storage(self, path: &std::path::Path) -> Self {
-        crate::workspace::create_directory(path, &self.id);
+        debug!("Session directory: {}", &path.to_str().unwrap());
 
-        self
+        Self { id, path }
     }
 }
 
