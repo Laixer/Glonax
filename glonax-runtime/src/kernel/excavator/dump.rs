@@ -1,6 +1,6 @@
 use glonax_core::{metric::MetricValue, motion::Motion};
 
-use crate::runtime::operand::*;
+use crate::runtime::{operand::*, Domain};
 
 pub struct DumpProgram(Option<csv::Writer<std::fs::File>>);
 
@@ -25,17 +25,17 @@ impl Program for DumpProgram {
         self.0 = Some(wtr);
     }
 
-    fn push(&mut self, id: u32, value: MetricValue, _context: &mut Context) {
-        trace!("ID {} ⇨ {}", id, value);
+    fn push(&mut self, domain: Domain) {
+        trace!("Source {} ⇨ {}", domain.source, domain.value);
 
-        match value {
+        match domain.value {
             MetricValue::Temperature(_) => (),
             MetricValue::Acceleration(vector) => {
                 self.0
                     .as_mut()
                     .unwrap()
                     .write_record(&[
-                        id.to_string(),
+                        domain.source.to_string(),
                         vector.x.to_string(),
                         vector.y.to_string(),
                         vector.z.to_string(),

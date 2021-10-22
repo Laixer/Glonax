@@ -1,8 +1,11 @@
 use std::time::Instant;
 
-use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
+use glonax_core::{input::Scancode, motion::Motion};
 
-use super::RuntimeSession;
+use super::{
+    pipeline::{Domain, Sink},
+    RuntimeSession,
+};
 
 pub trait Operand: Default + Clone + Send + Sync {
     /// Try convert input scancode to motion.
@@ -45,7 +48,7 @@ impl Context {
 /// sources and returns an optional motion instruction. A program
 /// is run to completion. The completion condition is polled on
 /// every cycle.
-pub trait Program {
+pub trait Program: Sink {
     /// Boot the program.
     ///
     /// This method is called when the runtime accepted
@@ -58,7 +61,7 @@ pub trait Program {
     /// must determine if and how the value is used.
     /// The id represents the device from which this
     /// value originates.
-    fn push(&mut self, _id: u32, _: MetricValue, _context: &mut Context) {}
+    fn push(&mut self, _domain: Domain) {}
 
     /// Propagate the program forwards.
     ///
@@ -77,5 +80,16 @@ pub trait Program {
     /// returns true and before the program is terminated.
     fn term_action(&self, _context: &mut Context) -> Option<Motion> {
         None
+    }
+}
+
+/// Blanket implementation of the oipeline sink for all programs.
+///
+/// The `Program` trait offers a default implementation for the domain push
+/// so that it remains optional to adopt the domain value.
+impl<T: Program> Sink for T {
+    #[inline]
+    fn distribute(&mut self, domain: Domain) {
+        self.push(domain)
     }
 }

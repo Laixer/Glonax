@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MetricValue {
     Temperature(i16),
     Acceleration(nalgebra::Vector3<f32>),

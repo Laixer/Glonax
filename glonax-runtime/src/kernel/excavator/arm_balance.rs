@@ -1,4 +1,4 @@
-use glonax_core::{metric::MetricValue, motion::Motion};
+use glonax_core::motion::Motion;
 
 use crate::runtime::operand::*;
 
@@ -48,20 +48,20 @@ impl Program for ArmBalanceProgram {
         Some(Motion::Stop(vec![Actuator::Arm.into()])) // TODO: auto conv.
     }
 
-    fn push(&mut self, _: u32, value: MetricValue, _: &mut Context) {
-        match value {
-            // MetricValue::Position(pos) => match id {
-            //     0 => {
-            //         if let Some(lpos) = self.pos {
-            //             self.diff = lpos.pitch - pos.pitch;
-            //         }
-            //         self.pos = Some(pos);
-            //     }
-            //     _ => {}
-            // },
-            _ => {}
-        }
-    }
+    // fn push(&mut self, _: u32, value: MetricValue, _: &mut Context) {
+    // match value {
+    // MetricValue::Position(pos) => match id {
+    //     0 => {
+    //         if let Some(lpos) = self.pos {
+    //             self.diff = lpos.pitch - pos.pitch;
+    //         }
+    //         self.pos = Some(pos);
+    //     }
+    //     _ => {}
+    // },
+    // _ => {}
+    // }
+    // }
 
     fn step(&mut self, _: &mut Context) -> Option<Motion> {
         // self.iteration += 1;

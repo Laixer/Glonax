@@ -1,6 +1,6 @@
 use glonax_core::{metric::MetricValue, motion::Motion};
 
-use crate::runtime::operand::*;
+use crate::runtime::{operand::*, Domain};
 
 pub struct ArmFkProgram(glonax_core::nalgebra::Rotation2<f32>);
 
@@ -11,10 +11,10 @@ impl ArmFkProgram {
 }
 
 impl Program for ArmFkProgram {
-    fn push(&mut self, id: u32, value: MetricValue, _context: &mut Context) {
-        trace!("ID {} ⇨ {}", id, value);
+    fn push(&mut self, domain: Domain) {
+        trace!("Source {} ⇨ {}", domain.source, domain.value);
 
-        match value {
+        match domain.value {
             MetricValue::Temperature(_) => (),
             MetricValue::Acceleration(vec) => {
                 self.0 = glonax_core::nalgebra::Rotation2::new(-vec.x.atan2(vec.y));

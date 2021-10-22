@@ -13,6 +13,8 @@ use crate::{
 };
 
 pub mod operand;
+pub mod pipeline;
+pub use pipeline::Domain;
 
 mod error;
 pub use self::error::Error;
@@ -271,36 +273,21 @@ where
 
                 info!("Start new program");
 
+                let mut pipeline = pipeline::Pipeline::new(&mut metric_devices);
+
                 let mut ctx = operand::Context::new(runtime_session.clone());
                 program.boot(&mut ctx);
 
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
-                    //
-
-                    // FUTURE: lock all devices at the same time.
-                    for metric_device in metric_devices.iter_mut() {
-                        // Take up to 5ms until this read is cancelled and we move to the next device.
-                        if let Err(_) = tokio::time::timeout(Duration::from_millis(5), async {
-                            let start_metric_read = Instant::now();
-
-                            if let Some((id, value)) = metric_device.lock().await.next().await {
-                                trace!(
-                                    "Device {} locked and metric acquired in: {:?}",
-                                    id,
-                                    start_metric_read.elapsed()
-                                );
-                                program.push(id as u32, value, &mut ctx);
-                            }
-                        })
-                        .await
-                        {
-                            warn!("Timeout occured while reading from metric device");
-                        }
-                    }
+                    pipeline
+                        .push_all(program.as_mut(), Duration::from_millis(5))
+                        .await;
 
                     // Deliberately slow down the program loop to limit CPU cycles.
+                    // If the delay is small then this won't effect the program
+                    // procession.
                     tokio::time::sleep(Duration::from_millis(1)).await;
 
                     let start_step_execute = Instant::now();
