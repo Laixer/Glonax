@@ -258,7 +258,6 @@ where
         let mut metric_devices = self.metric_devices.clone();
         let runtime_session = self.session.clone();
 
-        // Move ownership of receiver to program queue thread.
         let mut receiver = self.program_queue.1.take().unwrap();
 
         self.spawn(async move {
@@ -273,7 +272,12 @@ where
 
                 info!("Start new program");
 
-                let mut pipeline = pipeline::Pipeline::new(&mut metric_devices);
+                let mut pipeline = pipeline::PipelineBuilder {
+                    source_list: &mut metric_devices,
+                    trace_path: Some(runtime_session.path.join("metric_raw.csv")),
+                    timeout: Duration::from_millis(5),
+                }
+                .build();
 
                 let mut ctx = operand::Context::new(runtime_session.clone());
                 program.boot(&mut ctx);
@@ -281,9 +285,7 @@ where
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
-                    pipeline
-                        .push_all(program.as_mut(), Duration::from_millis(5))
-                        .await;
+                    pipeline.push_all(program.as_mut()).await;
 
                     // Deliberately slow down the program loop to limit CPU cycles.
                     // If the delay is small then this won't effect the program

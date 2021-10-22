@@ -12,8 +12,6 @@ impl ArmFkProgram {
 
 impl Program for ArmFkProgram {
     fn push(&mut self, domain: Domain) {
-        trace!("Source {} ⇨ {}", domain.source, domain.value);
-
         match domain.value {
             MetricValue::Temperature(_) => (),
             MetricValue::Acceleration(vec) => {
