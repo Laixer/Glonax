@@ -11,7 +11,7 @@ use crate::runtime::operand::{Operand, Program};
 mod arm_balance;
 mod arm_fk;
 mod drive;
-mod dump;
+mod noop;
 mod turn;
 
 /// Maximum empirical driving speed in meters per second.
@@ -127,7 +127,7 @@ impl Operand for Excavator {
             701 => Ok(Box::new(turn::TurnProgram::new())),
 
             // Miscellaneous programs.
-            900 => Ok(Box::new(dump::DumpProgram::new())),
+            900 => Ok(Box::new(noop::NoopProgram::new())),
 
             _ => Err(()),
         }
