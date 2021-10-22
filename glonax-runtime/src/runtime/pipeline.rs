@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime};
 
 use glonax_core::metric::MetricValue;
 
@@ -7,7 +7,7 @@ use crate::device::{DeviceDescriptor, MetricDevice};
 #[derive(Debug, Clone)]
 pub struct Domain {
     pub source: u32,
-    pub timestamp: std::time::Instant,
+    pub timestamp: SystemTime,
     pub value: MetricValue,
     pub last: Option<std::rc::Rc<Domain>>,
 }
@@ -30,13 +30,8 @@ impl<'a> PipelineBuilder<'a> {
         let trace_writer = self.trace_path.map(|path| {
             let mut wtr = csv::Writer::from_path(path).unwrap();
 
-            wtr.write_record(&[
-                "Source",
-                "Acceleration X",
-                "Acceleration Y",
-                "Acceleration Z",
-            ])
-            .unwrap();
+            wtr.write_record(&["timestamp", "source", "value_0", "value_1", "value_2"])
+                .unwrap();
 
             wtr
         });
@@ -69,7 +64,7 @@ impl<'a> Pipeline<'a> {
                 Ok(Some((id, value))) => {
                     let mut domain = Domain {
                         source: id as u32,
-                        timestamp: Instant::now(),
+                        timestamp: SystemTime::now(),
                         value,
                         last: None,
                     };
@@ -77,21 +72,34 @@ impl<'a> Pipeline<'a> {
                     trace!("Source {} ⇨ {}", domain.source, domain.value);
 
                     if let Some(writer) = self.trace_writer.as_mut() {
+                        let domain_systime = domain
+                            .timestamp
+                            .duration_since(SystemTime::UNIX_EPOCH)
+                            .unwrap();
+
                         match domain.value {
-                            MetricValue::Temperature(_) => (),
-                            MetricValue::Acceleration(vector) => {
-                                writer
-                                    .write_record(&[
-                                        domain.source.to_string(),
-                                        vector.x.to_string(),
-                                        vector.y.to_string(),
-                                        vector.z.to_string(),
-                                    ])
-                                    .unwrap();
-                            }
+                            MetricValue::Temperature(scalar) => writer
+                                .write_record(&[
+                                    domain_systime.as_millis().to_string(),
+                                    domain.source.to_string(),
+                                    scalar.to_string(),
+                                ])
+                                .unwrap(),
+                            MetricValue::Acceleration(vector) => writer
+                                .write_record(&[
+                                    domain_systime.as_millis().to_string(),
+                                    domain.source.to_string(),
+                                    vector.x.to_string(),
+                                    vector.y.to_string(),
+                                    vector.z.to_string(),
+                                ])
+                                .unwrap(),
                         }
 
-                        writer.flush().unwrap();
+                        // Best effort to reduce I/O.
+                        if domain_systime.as_secs() % 5 == 0 {
+                            writer.flush().unwrap();
+                        }
                     }
 
                     domain.last = self
