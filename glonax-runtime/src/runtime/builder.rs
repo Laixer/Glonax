@@ -70,6 +70,8 @@ where
 
         info!("Runtime session ID: {}", session.id);
 
+        crate::workspace::store_value(&config.workspace, "session", session.id);
+
         let program_queue = mpsc::channel(config.program_queue);
 
         let mut runtime = Runtime {

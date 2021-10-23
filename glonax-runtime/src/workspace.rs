@@ -27,6 +27,15 @@ pub fn create_directory<T: ToString>(path: &Path, name: &T) -> std::path::PathBu
 }
 
 // TODO: return IO result
+/// Store a persistent value in the workspace.
+pub fn store_value<T: ToString>(path: &Path, key: &str, value: T) {
+    use std::io::Write;
+
+    let mut workspace_session = std::fs::File::create(path.join(key)).unwrap();
+    writeln!(workspace_session, "{}", value.to_string()).unwrap();
+}
+
+// TODO: return IO result
 /// Lock the workspace.
 pub fn lock(path: &Path) -> super::runtime::Result<File> {
     use fs2::FileExt;
