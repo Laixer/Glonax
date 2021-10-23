@@ -6,14 +6,11 @@ use super::{Actuator, DRIVE_SPEED_MAX};
 
 /// Drive strait forward.
 ///
-/// This program is part of the excavator kernel. It
-/// drives both tracks straight forward for 5 seconds
-/// then stops.
+/// This program is part of the excavator kernel. It drives both tracks straight
+/// forward until the desired position is reached.
 pub struct DriveProgram {
     profile: TrapezoidalDistanceProfile,
 }
-
-const DRIVE_DISTANCE: f32 = 25.0;
 
 struct TrapezoidalProfile {
     ramp_time: std::time::Duration,
@@ -111,9 +108,15 @@ impl TrapezoidalDistanceProfile {
 }
 
 impl DriveProgram {
-    pub fn new() -> Self {
+    pub fn new(params: Parameter) -> Self {
+        if params.len() != 1 {
+            panic!("Expected 1 parameter, got {}", params.len());
+        } else if params[0] == 0.0 {
+            panic!("Distance cannot be zero");
+        }
+
         Self {
-            profile: TrapezoidalDistanceProfile::new(DRIVE_SPEED_MAX, DRIVE_DISTANCE),
+            profile: TrapezoidalDistanceProfile::new(DRIVE_SPEED_MAX, params[0]),
         }
     }
 }

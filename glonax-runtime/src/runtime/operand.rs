@@ -11,12 +11,17 @@ pub trait Operand: Default + Clone + Send + Sync {
     /// Try convert input scancode to motion.
     fn try_from_input_device(&self, input: Scancode) -> Result<Motion, ()>;
 
+    // TODO: Handle result.
     /// Fetch program by identifier.
     ///
     /// The factory method returns a pointer to the program which
     /// will be execured by the runtime. The program identifier
     /// is a per kernel unique program identifier.
-    fn fetch_program(&self, id: i32) -> Result<Box<dyn Program + Send + Sync>, ()>;
+    fn fetch_program(
+        &self,
+        id: i32,
+        params: Parameter,
+    ) -> Result<Box<dyn Program + Send + Sync>, ()>;
 }
 
 pub struct Context {
@@ -41,6 +46,8 @@ impl Context {
         }
     }
 }
+
+pub type Parameter = Vec<f32>;
 
 /// Program trait.
 ///
