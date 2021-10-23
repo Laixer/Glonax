@@ -3,7 +3,7 @@ use std::time::Instant;
 use glonax_core::{input::Scancode, motion::Motion};
 
 use super::{
-    pipeline::{Domain, Sink},
+    pipeline::{Signal, Sink},
     RuntimeSession,
 };
 
@@ -68,7 +68,7 @@ pub trait Program: Sink {
     /// must determine if and how the value is used.
     /// The id represents the device from which this
     /// value originates.
-    fn push(&mut self, _domain: Domain) {}
+    fn push(&mut self, _domain: Signal) {}
 
     /// Propagate the program forwards.
     ///
@@ -96,7 +96,7 @@ pub trait Program: Sink {
 /// so that it remains optional to adopt the domain value.
 impl<T: Program> Sink for T {
     #[inline]
-    fn distribute(&mut self, domain: Domain) {
+    fn distribute(&mut self, domain: Signal) {
         self.push(domain)
     }
 }

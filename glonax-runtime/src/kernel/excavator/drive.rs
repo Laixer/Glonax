@@ -7,7 +7,8 @@ use super::{Actuator, DRIVE_SPEED_MAX};
 /// Drive strait forward.
 ///
 /// This program is part of the excavator kernel. It drives both tracks straight
-/// forward until the desired position is reached.
+/// forward until the desired position is reached. It takes acceleration and
+/// decceleration into account.
 pub struct DriveProgram {
     profile: TrapezoidalDistanceProfile,
 }
@@ -125,7 +126,7 @@ impl Program for DriveProgram {
     fn step(&mut self, context: &mut Context) -> Option<Motion> {
         let (phase, power, distance) = self.profile.phase_frame(&context.start.elapsed());
 
-        info!(
+        debug!(
             "Phase {}; Time: {}; Power: {}; Distance: {}",
             phase,
             context.start.elapsed().as_secs(),

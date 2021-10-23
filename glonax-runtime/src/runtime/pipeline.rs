@@ -5,15 +5,19 @@ use glonax_core::metric::MetricValue;
 use crate::device::{DeviceDescriptor, MetricDevice};
 
 #[derive(Debug, Clone)]
-pub struct Domain {
+pub struct Signal {
+    /// Signal source.
     pub source: u32,
+    /// Timestamp when this signal was received.
     pub timestamp: SystemTime,
+    /// Signal value.
     pub value: MetricValue,
-    pub last: Option<std::rc::Rc<Domain>>,
+    /// Optional last value.
+    pub last: Option<std::rc::Rc<Signal>>,
 }
 
 pub trait Sink {
-    fn distribute(&mut self, domain: Domain);
+    fn distribute(&mut self, domain: Signal);
 }
 
 pub(super) struct PipelineBuilder<'a> {
@@ -47,7 +51,7 @@ impl<'a> PipelineBuilder<'a> {
 
 pub(super) struct Pipeline<'a> {
     source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
-    cache: std::collections::HashMap<u32, Domain>,
+    cache: std::collections::HashMap<u32, Signal>,
     trace_writer: Option<csv::Writer<std::fs::File>>,
     timeout: Duration,
 }
@@ -62,7 +66,7 @@ impl<'a> Pipeline<'a> {
             // timeout is reached this read is cancelled and we poll the next device.
             match tokio::time::timeout(self.timeout, metric_device.lock().await.next()).await {
                 Ok(Some((id, value))) => {
-                    let mut domain = Domain {
+                    let mut domain = Signal {
                         source: id as u32,
                         timestamp: SystemTime::now(),
                         value,

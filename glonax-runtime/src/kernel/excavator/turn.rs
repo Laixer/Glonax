@@ -8,8 +8,8 @@ use super::Actuator;
 
 /// Turn strait forward.
 ///
-/// This program is part of the excavator kernel. It drives both tracks straight
-/// forward for 5 seconds then stops.
+/// This program is part of the excavator kernel. It drives both tracks then
+/// stops when the time limit is reached.
 pub struct TurnProgram {
     drive_time: Duration,
 }

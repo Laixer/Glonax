@@ -14,7 +14,7 @@ use crate::{
 
 pub mod operand;
 pub mod pipeline;
-pub use pipeline::Domain;
+pub use pipeline::Signal;
 
 mod error;
 pub use self::error::Error;
@@ -23,7 +23,7 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 mod builder;
 pub use self::builder::Builder;
-use self::operand::Operand;
+use self::operand::{Operand, Parameter};
 
 #[derive(Debug)]
 pub enum RuntimeEvent {
@@ -126,7 +126,7 @@ pub struct Runtime<A, K> {
     /// Runtime event bus.
     pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
     /// Program queue.
-    pub(super) program_queue: (Sender<i32>, Option<Receiver<i32>>),
+    pub(super) program_queue: (Sender<(i32, Parameter)>, Option<Receiver<(i32, Parameter)>>),
     /// Runtime settings.
     pub(super) settings: RuntimeSettings,
     /// Task pool.
@@ -261,8 +261,7 @@ where
         let mut receiver = self.program_queue.1.take().unwrap();
 
         self.spawn(async move {
-            while let Some(id) = receiver.recv().await {
-                let params = crate::runtime::operand::Parameter::new();
+            while let Some((id, params)) = receiver.recv().await {
                 let mut program = match operand.fetch_program(id, params) {
                     Ok(program) => program,
                     Err(_) => {
@@ -271,11 +270,11 @@ where
                     }
                 };
 
-                info!("Start new program");
+                info!("Start new program: {}", id);
 
                 let mut pipeline = pipeline::PipelineBuilder {
                     source_list: &mut metric_devices,
-                    trace_path: Some(runtime_session.path.join("metric_raw.csv")),
+                    trace_path: Some(runtime_session.path.join("signal_trace.csv")),
                     timeout: Duration::from_millis(5),
                 }
                 .build();

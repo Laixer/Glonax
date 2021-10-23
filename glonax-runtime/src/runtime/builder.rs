@@ -181,8 +181,16 @@ where
         self.startup_events().await;
 
         // TODO: This is only for testing.
-        // self.runtime.program_queue.0.send(700).await.unwrap();
-        self.runtime.program_queue.0.send(601).await.unwrap();
+        // Queue the drive program
+        self.runtime
+            .program_queue
+            .0
+            .send((700, vec![10.0]))
+            .await
+            .unwrap();
+
+        // Queue the noop. No operation will run forever.
+        // self.runtime.program_queue.0.send(900).await.unwrap();
 
         self.runtime.run().await;
 
