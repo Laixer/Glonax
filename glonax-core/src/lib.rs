@@ -1,6 +1,7 @@
 pub mod input;
 pub mod metric;
 pub mod motion;
+pub mod algorithm;
 
 pub use nalgebra;
 

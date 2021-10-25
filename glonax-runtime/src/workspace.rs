@@ -31,7 +31,7 @@ pub fn create_directory<T: ToString>(path: &Path, name: &T) -> std::path::PathBu
 pub fn store_value<T: ToString>(path: &Path, key: &str, value: T) {
     use std::io::Write;
 
-    let mut workspace_session = std::fs::File::create(path.join(key)).unwrap();
+    let mut workspace_session = File::create(path.join(key)).unwrap();
     writeln!(workspace_session, "{}", value.to_string()).unwrap();
 }
 
