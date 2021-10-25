@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use glonax_core::{motion::Motion, Identity};
 
 use crate::{
@@ -118,6 +120,7 @@ where
         self.runtime.spawn_program_queue();
     }
 
+    /// Enable input devices to control the machine.
     async fn enable_input(&mut self) {
         info!("Enable input device(s)");
 
@@ -125,7 +128,7 @@ where
             .runtime
             .device_manager
             .observer()
-            .scan_once::<Gamepad>(std::time::Duration::from_millis(250))
+            .scan_once::<Gamepad>(Duration::from_millis(250))
             .await
         {
             Some(input_device) => self.runtime.spawn_input_device(input_device),
