@@ -10,6 +10,7 @@ use crate::runtime::operand::{Operand, Parameter, Program};
 
 mod arm_balance;
 mod arm_fk;
+mod bucket;
 mod drive;
 mod noop;
 mod turn;
@@ -125,6 +126,7 @@ impl Operand for Excavator {
             // Arm chain programs.
             600 => Ok(Box::new(arm_balance::ArmBalanceProgram::new())),
             601 => Ok(Box::new(arm_fk::ArmFkProgram::new())),
+            602 => Ok(Box::new(bucket::BucketProgram::new())),
 
             // Movement programs.
             700 => Ok(Box::new(drive::DriveProgram::new(params))),
