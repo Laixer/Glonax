@@ -1,98 +1,78 @@
-use glonax_core::motion::Motion;
+use glonax_core::{algorithm::lowpass::SimpleExpSmoothing, metric::MetricValue, motion::Motion};
 
-use crate::runtime::operand::*;
+use crate::runtime::{operand::*, Signal};
 
 use super::Actuator;
 
-// TODO: Find range.
-// Arm range: -0.45 <> -2.47 (25 <> 140)
-// Boom range:
-// Bucket range:
-
-// const SET_POINT: f32 = -std::f32::consts::PI / 2.;
-// const KP: f32 = 2.7;
-// const KI: f32 = 0.0;
-// const KD: f32 = 0.4;
+// const SET_POINT: f32 = -std::f32::consts::PI / 2.0;
+const SET_POINT: f32 = -1.0;
+const EXP_ALPHA: f32 = 0.1;
+const PROP_FACTOR: f32 = 70.0;
 
 pub struct ArmBalanceProgram {
-    // pid: pid::Pid<f32>,
-// pos: Option<Position>,
-// diff: f32,
-// iteration: u32,
+    angle: Option<f32>,
+    filter: SimpleExpSmoothing,
 }
 
 impl ArmBalanceProgram {
     pub fn new() -> Self {
         Self {
-            // pid: pid::Pid::new(KP, KI, KD, 1.0, 1.0, 1.0, 1.0, SET_POINT),
-            // pos: None,
-            // diff: 0.,
-            // iteration: 0,
+            angle: None,
+            filter: SimpleExpSmoothing::new(EXP_ALPHA),
         }
     }
 }
 
 impl Program for ArmBalanceProgram {
     fn can_terminate(&self, _: &mut Context) -> bool {
-        // if let Some(pos) = self.pos {
-        //     let e = SET_POINT - pos.pitch;
-        //     e.abs() < 0.1
-        // } else {
-        //     false
-        // }
-
-        false
+        self.angle
+            .map_or(false, |angle| (SET_POINT - angle).abs() < 0.02)
     }
 
     fn term_action(&self, _: &mut Context) -> Option<Motion> {
-        Some(Motion::Stop(vec![Actuator::Arm.into()])) // TODO: auto conv.
+        Some(Motion::Stop(vec![Actuator::Arm.into()]))
     }
 
-    // fn push(&mut self, _: u32, value: MetricValue, _: &mut Context) {
-    // match value {
-    // MetricValue::Position(pos) => match id {
-    //     0 => {
-    //         if let Some(lpos) = self.pos {
-    //             self.diff = lpos.pitch - pos.pitch;
-    //         }
-    //         self.pos = Some(pos);
-    //     }
-    //     _ => {}
-    // },
-    // _ => {}
-    // }
-    // }
+    fn push(&mut self, domain: Signal) {
+        match domain.value {
+            MetricValue::Acceleration(vec) => {
+                let signal_angle = -vec.x.atan2(vec.y);
 
-    fn step(&mut self, _: &mut Context) -> Option<Motion> {
-        // self.iteration += 1;
+                let forecast_angle = self.filter.fit(signal_angle);
 
-        // if self.pos.is_none() {
-        //     return None;
-        // }
+                debug!(
+                    "Angle {:>+5.2} Forecast {:>+5.2}",
+                    signal_angle, forecast_angle
+                );
 
-        // if self.diff < -0.2 {
-        //     return None;
-        // }
+                self.angle = Some(forecast_angle);
+            }
+            _ => self.angle = None,
+        }
+    }
 
-        // debug!(
-        //     "{} Position: Pitch {:+.5} Delta {:+.5} Error {:+.5}",
-        //     self.iteration,
-        //     self.pos.unwrap().pitch,
-        //     self.diff,
-        //     SET_POINT - self.pos.unwrap().pitch,
-        // );
-        // let output = self.pid.next_control_output(self.pos.unwrap().pitch);
-        // debug!("Output: {}", output.output);
+    fn step(&mut self, _context: &mut Context) -> Option<Motion> {
+        self.angle.map_or(None, |angle| {
+            let err = SET_POINT - angle;
+            let power = ((err.abs() * PROP_FACTOR) + 175.0).min(255.0);
 
-        // Some(
-        //     NormalControl {
-        //         actuator: Actuator::Arm.into(),
-        //         value: output.output,
-        //         ..Default::default()
-        //     }
-        //     .into(),
-        // )
+            let power = if err.is_sign_negative() {
+                -power
+            } else {
+                power
+            };
 
-        None
+            debug!(
+                "Angle {:>+5.2} Error {:>+5.2} Power {:>+5}",
+                angle,
+                err,
+                power.round()
+            );
+
+            Some(Motion::Change(vec![(
+                Actuator::Arm.into(),
+                power.round() as i16,
+            )]))
+        })
     }
 }

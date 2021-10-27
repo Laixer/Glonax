@@ -2,35 +2,34 @@ use glonax_core::{metric::MetricValue, motion::Motion};
 
 use crate::runtime::{operand::*, Signal};
 
-pub struct ArmFkProgram(glonax_core::nalgebra::Rotation2<f32>);
+pub struct ArmFkProgram;
 
 impl ArmFkProgram {
     pub fn new() -> Self {
-        Self(glonax_core::nalgebra::Rotation2::new(0.0))
+        Self {}
     }
 }
 
 impl Program for ArmFkProgram {
     fn push(&mut self, domain: Signal) {
-        match domain.value {
-            MetricValue::Temperature(_) => (),
-            MetricValue::Acceleration(vec) => {
-                self.0 = glonax_core::nalgebra::Rotation2::new(-vec.x.atan2(vec.y));
-                debug!("XY Angle: {:?}", self.0.angle());
-            }
+        if let MetricValue::Acceleration(vec) = domain.value {
+            let signal_angle = -vec.x.atan2(vec.y);
+            debug!("XY Angle: {:>+5.2}", signal_angle);
+
+            let theta1: f32 = (super::ARM_LENGTH / super::BOOM_LENGTH).asin();
+            let theta2: f32 = signal_angle;
+
+            let fk_x = (super::BOOM_LENGTH * theta1.cos()) + (super::ARM_LENGTH * theta2.cos());
+            let fk_y = (super::BOOM_LENGTH * theta1.sin()) + (super::ARM_LENGTH * theta2.sin());
+
+            let fk_y = fk_y + super::FRAME_HEIGHT;
+
+            let reach = glonax_core::nalgebra::Point2::new(fk_x, fk_y);
+            debug!("Effector point: X {:>+5.2} Y {:>+5.2}", reach.x, reach.y);
         }
     }
 
     fn step(&mut self, _context: &mut Context) -> Option<Motion> {
-        let theta2: f32 = super::ARM_RANGE.end;
-
-        let fk_y = super::BOOM_LENGTH * self.0.angle().sin()
-            + (super::ARM_LENGTH * (self.0.angle() + theta2).sin());
-        let fk_x = super::BOOM_LENGTH * self.0.angle().cos()
-            + (super::ARM_LENGTH * (self.0.angle() + theta2).cos());
-        let reach = glonax_core::nalgebra::Point2::new(fk_x, fk_y);
-        println!("Effector point: {}", reach);
-
         None
     }
 
