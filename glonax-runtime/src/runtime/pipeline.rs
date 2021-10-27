@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime};
 
-use glonax_core::metric::MetricValue;
+use glonax_core::{metric::MetricValue, Trace, TraceWriter};
 
 use crate::device::{DeviceDescriptor, MetricDevice};
 
@@ -16,49 +16,69 @@ pub struct Signal {
     pub last: Option<std::rc::Rc<Signal>>,
 }
 
-pub trait Sink {
-    fn distribute(&mut self, domain: Signal);
+#[derive(serde::Serialize)]
+struct SignalTrace {
+    /// Timestamp of the trace.
+    timestamp: u128,
+    /// Signal source.
+    source: u32,
+    /// Generic value 0.
+    value0: f32,
+    /// Generic value 1.
+    value1: f32,
+    /// Generic value 2.
+    value2: f32,
 }
 
-pub(super) struct PipelineBuilder<'a> {
-    pub(super) source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
-    pub(super) trace_path: Option<std::path::PathBuf>,
-    pub(super) timeout: Duration,
-}
-
-impl<'a> PipelineBuilder<'a> {
-    /// Build the pipeline from its properties.
-    ///
-    /// This call consumes the builder.
-    pub(super) fn build(self) -> Pipeline<'a> {
-        let trace_writer = self.trace_path.map(|path| {
-            let mut wtr = csv::Writer::from_path(path).unwrap();
-
-            wtr.write_record(&["timestamp", "source", "value_0", "value_1", "value_2"])
-                .unwrap();
-
-            wtr
-        });
-
-        Pipeline {
-            source_list: self.source_list,
-            cache: std::collections::HashMap::new(),
-            trace_writer,
-            timeout: self.timeout,
+impl<T: TraceWriter> Trace<T> for Signal {
+    fn record(&self, writer: &mut T, timestamp: Duration) {
+        match self.value {
+            MetricValue::Temperature(scalar) => writer.write_record(SignalTrace {
+                timestamp: timestamp.as_millis(),
+                source: self.source,
+                value0: scalar as f32,
+                value1: 0.0,
+                value2: 0.0,
+            }),
+            MetricValue::Acceleration(vector) => writer.write_record(SignalTrace {
+                timestamp: timestamp.as_millis(),
+                source: self.source,
+                value0: vector.x,
+                value1: vector.y,
+                value2: vector.z,
+            }),
         }
     }
 }
 
-pub(super) struct Pipeline<'a> {
+pub trait Sink {
+    fn distribute(&mut self, domain: Signal);
+}
+
+pub(super) struct Pipeline<'a, W> {
     source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
     cache: std::collections::HashMap<u32, Signal>,
-    trace_writer: Option<csv::Writer<std::fs::File>>,
+    tracer_instance: &'a mut W,
     timeout: Duration,
 }
 
-unsafe impl Send for Pipeline<'_> {}
+unsafe impl<W> Send for Pipeline<'_, W> {}
 
-impl<'a> Pipeline<'a> {
+impl<'a, W: TraceWriter> Pipeline<'a, W> {
+    /// Construct a new pipeline.
+    pub(super) fn new(
+        source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
+        tracer_instance: &'a mut W,
+        timeout: Duration,
+    ) -> Self {
+        Self {
+            source_list,
+            cache: std::collections::HashMap::new(),
+            tracer_instance,
+            timeout,
+        }
+    }
+
     // FUTURE: lock all devices at the same time.
     pub(super) async fn push_all<T: Sink + ?Sized>(&mut self, sink: &mut T) {
         for metric_device in self.source_list.iter_mut() {
@@ -66,52 +86,23 @@ impl<'a> Pipeline<'a> {
             // timeout is reached this read is cancelled and we poll the next device.
             match tokio::time::timeout(self.timeout, metric_device.lock().await.next()).await {
                 Ok(Some((id, value))) => {
-                    let mut domain = Signal {
+                    let mut signal = Signal {
                         source: id as u32,
                         timestamp: SystemTime::now(),
                         value,
                         last: None,
                     };
 
-                    trace!("Source {} ⇨ {}", domain.source, domain.value);
+                    signal.record(self.tracer_instance, glonax_core::time::now());
 
-                    if let Some(writer) = self.trace_writer.as_mut() {
-                        let domain_systime = domain
-                            .timestamp
-                            .duration_since(SystemTime::UNIX_EPOCH)
-                            .unwrap();
+                    trace!("Source {} ⇨ {}", signal.source, signal.value);
 
-                        match domain.value {
-                            MetricValue::Temperature(scalar) => writer
-                                .write_record(&[
-                                    domain_systime.as_millis().to_string(),
-                                    domain.source.to_string(),
-                                    scalar.to_string(),
-                                ])
-                                .unwrap(),
-                            MetricValue::Acceleration(vector) => writer
-                                .write_record(&[
-                                    domain_systime.as_millis().to_string(),
-                                    domain.source.to_string(),
-                                    vector.x.to_string(),
-                                    vector.y.to_string(),
-                                    vector.z.to_string(),
-                                ])
-                                .unwrap(),
-                        }
-
-                        // Best effort to reduce I/O.
-                        if domain_systime.as_secs() % 5 == 0 {
-                            writer.flush().unwrap();
-                        }
-                    }
-
-                    domain.last = self
+                    signal.last = self
                         .cache
-                        .insert(domain.source, domain.clone())
+                        .insert(signal.source, signal.clone())
                         .map_or(None, |last_domain| Some(std::rc::Rc::new(last_domain)));
 
-                    sink.distribute(domain);
+                    sink.distribute(signal);
                 }
                 Ok(None) => {}
                 Err(_) => warn!("Timeout occured while reading from metric device"),
