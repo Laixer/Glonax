@@ -105,6 +105,7 @@ impl std::fmt::Display for RuntimeSession {
 }
 
 pub(super) struct RuntimeSettings {
+    /// Timer idle interval.
     timer_interval: u64,
 }
 

@@ -37,13 +37,11 @@ struct MotionTrace {
 impl<T: TraceWriter> Trace<T> for Motion {
     fn record(&self, writer: &mut T, timestamp: Duration) {
         match self {
-            Motion::StopAll => {
-                writer.write_record(MotionTrace {
-                    timestamp: timestamp.as_millis(),
-                    actuator: u8::MAX as u32,
-                    value: 0,
-                });
-            }
+            Motion::StopAll => writer.write_record(MotionTrace {
+                timestamp: timestamp.as_millis(),
+                actuator: u8::MAX as u32,
+                value: 0,
+            }),
             Motion::Stop(actuators) => {
                 for actuator in actuators {
                     writer.write_record(MotionTrace {
