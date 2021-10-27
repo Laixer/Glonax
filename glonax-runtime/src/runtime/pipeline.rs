@@ -58,7 +58,7 @@ pub trait Sink {
 pub(super) struct Pipeline<'a, W> {
     source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
     cache: std::collections::HashMap<u32, Signal>,
-    tracer_instance: &'a mut W,
+    trace_writer: &'a mut W,
     timeout: Duration,
 }
 
@@ -68,13 +68,13 @@ impl<'a, W: TraceWriter> Pipeline<'a, W> {
     /// Construct a new pipeline.
     pub(super) fn new(
         source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
-        tracer_instance: &'a mut W,
+        trace_writer: &'a mut W,
         timeout: Duration,
     ) -> Self {
         Self {
             source_list,
             cache: std::collections::HashMap::new(),
-            tracer_instance,
+            trace_writer,
             timeout,
         }
     }
@@ -93,7 +93,7 @@ impl<'a, W: TraceWriter> Pipeline<'a, W> {
                         last: None,
                     };
 
-                    signal.record(self.tracer_instance, glonax_core::time::now());
+                    signal.record(self.trace_writer, glonax_core::time::now());
 
                     trace!("Source {} ⇨ {}", signal.source, signal.value);
 

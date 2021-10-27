@@ -262,6 +262,14 @@ where
     }
 }
 
+#[derive(serde::Serialize)]
+struct ProgramTrace {
+    /// Timestamp of the trace.
+    timestamp: u128,
+    /// Program identifier.
+    id: i32,
+}
+
 impl<A, K, R> Runtime<A, K, R>
 where
     A: MotionDevice,
@@ -278,7 +286,8 @@ where
 
         let mut receiver = self.program_queue.1.take().unwrap();
 
-        let mut tracer_instance = self.tracer.instance("signal");
+        let mut program_tracer = self.tracer.instance("program");
+        let mut signal_tracer = self.tracer.instance("signal");
 
         self.spawn(async move {
             while let Some((id, params)) = receiver.recv().await {
@@ -292,9 +301,14 @@ where
 
                 info!("Start new program: {}", id);
 
+                program_tracer.write_record(ProgramTrace {
+                    timestamp: glonax_core::time::now().as_millis(),
+                    id,
+                });
+
                 let mut pipeline = pipeline::Pipeline::new(
                     &mut metric_devices,
-                    &mut tracer_instance,
+                    &mut signal_tracer,
                     Duration::from_millis(5),
                 );
 
