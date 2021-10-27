@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use glonax_core::{motion::Motion, Identity};
+use glonax_core::{motion::Motion, Identity, TraceWriter, Tracer};
 
 use crate::{
     device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
@@ -18,26 +18,28 @@ use super::Operand;
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub struct Builder<'a, M, K> {
+pub struct Builder<'a, M, K, R> {
     /// Current application configuration.
     config: &'a Config,
     /// Current application workspace.
     #[allow(dead_code)]
     lock: std::fs::File,
     /// Runtime core.
-    runtime: Runtime<M, K>,
+    runtime: Runtime<M, K, R>,
 }
 
-impl<'a, M: 'static + Send, K> Builder<'a, M, K>
+impl<'a, M: 'static + Send, K, R> Builder<'a, M, K, R>
 where
     M: IoDevice + MotionDevice,
     M::DeviceProfile: IoDeviceProfile,
     K: Operand + Identity + 'static,
+    R: Tracer,
+    R::Instance: TraceWriter + Send + 'static,
 {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, M, K>> {
+    pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, M, K, R>> {
         crate::workspace::setup_if_not_exists(&config.workspace);
 
         Ok(Self {
@@ -51,7 +53,7 @@ where
     ///
     /// The runtime core is created and initialized by the configuration.
     /// Any errors are fatal errors at this point.
-    async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K>> {
+    async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K, R>> {
         use tokio::sync::mpsc;
 
         info!("{}", K::intro());
@@ -74,6 +76,8 @@ where
 
         crate::workspace::store_value(&config.workspace, "session", session.id);
 
+        let tracer = R::from_path(&session.path);
+
         let program_queue = mpsc::channel(config.program_queue);
 
         let mut runtime = Runtime {
@@ -86,6 +90,7 @@ where
             task_pool: vec![],
             device_manager,
             session,
+            tracer,
         };
 
         for metric_device in runtime

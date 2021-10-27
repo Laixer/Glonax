@@ -25,6 +25,17 @@ pub trait Identity {
     fn intro() -> String;
 }
 
+pub trait Tracer {
+    type Instance;
+
+    /// Create tracer from path.
+    fn from_path<P: AsRef<std::path::Path>>(path: P) -> Self;
+
+    /// Construct new tracer instance. Data recorded to this
+    /// writer will be filed under the provided instance name.
+    fn instance(&self, name: &str) -> Self::Instance;
+}
+
 pub trait TraceWriter {
     /// Write the record to the tracer.
     ///

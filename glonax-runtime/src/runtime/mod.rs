@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use glonax_core::motion::Motion;
+use glonax_core::{motion::Motion, time, TraceWriter, Tracer};
 
 use tokio::{
     sync::mpsc::{Receiver, Sender},
@@ -13,6 +13,10 @@ use crate::{
 };
 
 pub mod operand;
+mod trace;
+pub use trace::CsvTracer;
+pub use trace::NullTracer;
+
 pub mod pipeline;
 pub use pipeline::Signal;
 
@@ -117,7 +121,7 @@ impl From<&Config> for RuntimeSettings {
     }
 }
 
-pub struct Runtime<A, K> {
+pub struct Runtime<A, K, R> {
     /// Runtime operand.
     pub(super) operand: K,
     /// The standard motion device.
@@ -136,9 +140,11 @@ pub struct Runtime<A, K> {
     pub(super) device_manager: DeviceManager,
     /// Runtime session.
     pub(super) session: RuntimeSession,
+    /// Tracer used to record telemetrics.
+    pub(super) tracer: R,
 }
 
-impl<A, K> Runtime<A, K> {
+impl<A, K, R> Runtime<A, K, R> {
     /// Create a runtime dispatcher.
     ///
     /// The dispatcher is the input channel to the runtime event queue. This
@@ -164,7 +170,13 @@ impl<A, K> Runtime<A, K> {
     }
 }
 
-impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
+impl<A, K, R> Runtime<A, K, R>
+where
+    A: MotionDevice,
+    K: Operand + 'static,
+    R: Tracer,
+    R::Instance: TraceWriter,
+{
     /// Run idle time operations.
     ///
     /// This method is called when the runtime is idle. Operations run here may
@@ -190,7 +202,10 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
     /// The runtime will process the events from the event bus. The runtime
     /// should only every break out of the loop if shutdown was requested.
     pub(super) async fn run(&mut self) {
+        use glonax_core::Trace;
         use tokio::time::sleep;
+
+        let mut tracer = self.tracer.instance("motion");
 
         loop {
             let wait = sleep(Duration::from_secs(self.settings.timer_interval));
@@ -201,9 +216,9 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
                 event = self.event_bus.1.recv() => {
                     match event.unwrap() {
                         RuntimeEvent::DriveMotion(motion_event) => {
+                            motion_event.record(&mut tracer, time::now());
                             let mut motion_device = self.motion_device.lock().await;
                             motion_device.actuate(motion_event).await;
-
                         }
                         RuntimeEvent::Shutdown => break,
                     }
@@ -221,7 +236,7 @@ impl<A: MotionDevice, K: Operand + 'static> Runtime<A, K> {
     }
 }
 
-impl<A, K> Runtime<A, K>
+impl<A, K, R> Runtime<A, K, R>
 where
     K: Operand + 'static,
 {
@@ -247,10 +262,12 @@ where
     }
 }
 
-impl<A, K> Runtime<A, K>
+impl<A, K, R> Runtime<A, K, R>
 where
     A: MotionDevice,
     K: Operand + 'static,
+    R: Tracer,
+    R::Instance: TraceWriter + Send + 'static,
 {
     pub(super) fn spawn_program_queue(&mut self) {
         let dispatcher = self.dispatch();
@@ -260,6 +277,8 @@ where
         let runtime_session = self.session.clone();
 
         let mut receiver = self.program_queue.1.take().unwrap();
+
+        let mut tracer_instance = self.tracer.instance("signal");
 
         self.spawn(async move {
             while let Some((id, params)) = receiver.recv().await {
@@ -273,12 +292,11 @@ where
 
                 info!("Start new program: {}", id);
 
-                let mut pipeline = pipeline::PipelineBuilder {
-                    source_list: &mut metric_devices,
-                    trace_path: Some(runtime_session.path.join("signal_trace.csv")),
-                    timeout: Duration::from_millis(5),
-                }
-                .build();
+                let mut pipeline = pipeline::Pipeline::new(
+                    &mut metric_devices,
+                    &mut tracer_instance,
+                    Duration::from_millis(5),
+                );
 
                 let mut ctx = operand::Context::new(runtime_session.clone());
                 program.boot(&mut ctx);

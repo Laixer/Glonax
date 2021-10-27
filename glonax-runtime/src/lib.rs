@@ -64,7 +64,7 @@ where
     /// Test the runtime service, then return.
     pub fn test<'a>(config: &'a Config) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            self::runtime::Builder::<M, K>::from_config(&config)
+            self::runtime::Builder::<M, K, self::runtime::NullTracer>::from_config(&config)
                 .await?
                 .validate()
                 .await
@@ -74,7 +74,7 @@ where
     /// Start the runtime service.
     pub fn launch<'a>(config: &'a Config) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            self::runtime::Builder::<M, K>::from_config(&config)
+            self::runtime::Builder::<M, K, self::runtime::CsvTracer>::from_config(&config)
                 .await?
                 .spawn()
                 .await
