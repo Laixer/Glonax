@@ -1,9 +1,21 @@
+pub mod algorithm;
 pub mod input;
 pub mod metric;
 pub mod motion;
-pub mod algorithm;
 
 pub use nalgebra;
+
+pub mod time {
+    use std::time::{Duration, SystemTime};
+
+    /// Return the current time as a duration.
+    #[inline]
+    pub fn now() -> Duration {
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+    }
+}
 
 pub trait Identity {
     /// Introduction message.
@@ -11,4 +23,19 @@ pub trait Identity {
     /// Returns a string to introduce the object for the first time and
     /// should only be called once.
     fn intro() -> String;
+}
+
+pub trait TraceWriter {
+    /// Write the record to the tracer.
+    ///
+    /// This stocks the record as part of the tracers series. A record must be
+    /// serializable so that it can be consumed by binary tracers and its types
+    /// persist.
+    fn write_record<T: serde::Serialize>(&mut self, record: T);
+}
+
+pub trait Trace<T: TraceWriter> {
+    /// Record the state of the object. How the object implements this
+    /// is unspecified and left to the implementation.
+    fn record(&self, writer: &mut T, timestamp: std::time::Duration);
 }

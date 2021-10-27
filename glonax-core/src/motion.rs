@@ -1,4 +1,6 @@
-use std::{ops::Range, u32};
+use std::{ops::Range, time::Duration, u32};
+
+use crate::{Trace, TraceWriter};
 
 /// Motion instruction.
 ///
@@ -21,6 +23,48 @@ pub enum Motion {
 
 unsafe impl Sync for Motion {}
 unsafe impl Send for Motion {}
+
+#[derive(serde::Serialize)]
+struct MotionTrace {
+    /// Timestamp of the trace.
+    timestamp: u128,
+    /// Respective actuator.
+    actuator: u32,
+    /// Motion value.
+    value: i16,
+}
+
+impl<T: TraceWriter> Trace<T> for Motion {
+    fn record(&self, writer: &mut T, timestamp: Duration) {
+        match self {
+            Motion::StopAll => {
+                writer.write_record(MotionTrace {
+                    timestamp: timestamp.as_millis(),
+                    actuator: u8::MAX as u32,
+                    value: 0,
+                });
+            }
+            Motion::Stop(actuators) => {
+                for actuator in actuators {
+                    writer.write_record(MotionTrace {
+                        timestamp: timestamp.as_millis(),
+                        actuator: *actuator,
+                        value: 0,
+                    });
+                }
+            }
+            Motion::Change(actuators) => {
+                for (actuator, value) in actuators {
+                    writer.write_record(MotionTrace {
+                        timestamp: timestamp.as_millis(),
+                        actuator: *actuator,
+                        value: *value,
+                    });
+                }
+            }
+        }
+    }
+}
 
 pub struct NormalControl {
     /// Actuator.
