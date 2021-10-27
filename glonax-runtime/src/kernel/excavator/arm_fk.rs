@@ -1,4 +1,4 @@
-use glonax_core::{metric::MetricValue, motion::Motion};
+use glonax_core::{algorithm::fk::ForwardKinematics, metric::MetricValue, motion::Motion};
 
 use crate::runtime::{operand::*, Signal};
 
@@ -16,16 +16,20 @@ impl Program for ArmFkProgram {
             let signal_angle = -vec.x.atan2(vec.y);
             debug!("XY Angle: {:>+5.2}", signal_angle);
 
-            let theta1: f32 = (super::ARM_LENGTH / super::BOOM_LENGTH).asin();
-            let theta2: f32 = signal_angle;
+            let fk = ForwardKinematics::new(super::BOOM_LENGTH, super::ARM_LENGTH);
 
-            let fk_x = (super::BOOM_LENGTH * theta1.cos()) + (super::ARM_LENGTH * theta2.cos());
-            let fk_y = (super::BOOM_LENGTH * theta1.sin()) + (super::ARM_LENGTH * theta2.sin());
+            let mut effector_point = fk.solve((
+                0.0,
+                (super::ARM_LENGTH / super::BOOM_LENGTH).asin(),
+                signal_angle,
+            ));
 
-            let fk_y = fk_y + super::FRAME_HEIGHT;
+            effector_point.y += super::FRAME_HEIGHT;
 
-            let reach = glonax_core::nalgebra::Point2::new(fk_x, fk_y);
-            debug!("Effector point: X {:>+5.2} Y {:>+5.2}", reach.x, reach.y);
+            debug!(
+                "Effector point: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
+                effector_point.x, effector_point.y, effector_point.z
+            );
         }
     }
 
