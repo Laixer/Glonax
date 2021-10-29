@@ -22,26 +22,47 @@ pub use self::runtime::Runtime;
 ///
 /// The excavator builder binds the excavator kernel to the hydraulic motion
 /// device. The caller should tread this type as opaque.
-pub type ExcavatorService = LaunchStub<device::Hydraulic, kernel::excavator::Excavator>;
+pub type ExcavatorService =
+    LaunchStub<device::Hydraulic, kernel::excavator::Excavator, runtime::NullTracer>;
 
-/// Opaque runtime service for the frozed excavator kernel. The frozen exacator service
-/// act similair to the exacator service but without any commanded movements. This
-/// effectively renders the kernel immobile.
+/// Start the machine kernel from configuration. This is the recommended way to
+/// run a machine kernel from an dynamic external caller. Call this factory for
+/// the default machine behaviour.
 ///
-/// The excavator builder binds the excavator kernel to the sink device. The caller should
-/// tread this type as opaque.
-pub type FrozenExcavatorService = LaunchStub<device::Sink, kernel::excavator::Excavator>;
+/// This factory method obtains the service from the combination of configuration
+/// settings. This service is then run to completion.
+pub fn start_machine(config: &Config) -> runtime::Result {
+    use device::{Hydraulic, Sink};
+    use kernel::excavator::Excavator;
+    use runtime::{CsvTracer, NullTracer};
 
-pub struct LaunchStub<M, K> {
-    _1: std::marker::PhantomData<M>,
-    _2: std::marker::PhantomData<K>,
+    Ok(match config {
+        cnf if !cnf.enable_motion && cnf.enable_test => {
+            LaunchStub::<Sink, Excavator, NullTracer>::test(&config)?
+        }
+        cnf if !cnf.enable_motion && cnf.enable_trace => {
+            LaunchStub::<Sink, Excavator, CsvTracer>::launch(&config)?
+        }
+        cnf if !cnf.enable_motion => LaunchStub::<Sink, Excavator, NullTracer>::launch(&config)?,
+        cnf if cnf.enable_test => ExcavatorService::test(&config)?,
+        cnf if cnf.enable_trace => LaunchStub::<Hydraulic, Excavator, CsvTracer>::launch(&config)?,
+        _ => ExcavatorService::launch(&config)?,
+    })
 }
 
-impl<M, K> LaunchStub<M, K>
+pub struct LaunchStub<M, K, R> {
+    _1: std::marker::PhantomData<M>,
+    _2: std::marker::PhantomData<K>,
+    _3: std::marker::PhantomData<R>,
+}
+
+impl<M, K, R> LaunchStub<M, K, R>
 where
     M: 'static + device::IoDevice + device::MotionDevice + Send,
     M::DeviceProfile: device::IoDeviceProfile,
     K: 'static + runtime::operand::Operand + glonax_core::Identity,
+    R: glonax_core::Tracer,
+    R::Instance: glonax_core::TraceWriter + Send + 'static,
 {
     /// Create the runtime reactor.
     ///
@@ -64,7 +85,7 @@ where
     /// Test the runtime service, then return.
     pub fn test<'a>(config: &'a Config) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            self::runtime::Builder::<M, K, self::runtime::NullTracer>::from_config(&config)
+            self::runtime::Builder::<M, K, R>::from_config(&config)
                 .await?
                 .validate()
                 .await
@@ -74,7 +95,7 @@ where
     /// Start the runtime service.
     pub fn launch<'a>(config: &'a Config) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            self::runtime::Builder::<M, K, self::runtime::CsvTracer>::from_config(&config)
+            self::runtime::Builder::<M, K, R>::from_config(&config)
                 .await?
                 .spawn()
                 .await

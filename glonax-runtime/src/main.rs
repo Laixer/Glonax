@@ -38,13 +38,8 @@ fn main() -> anyhow::Result<()> {
                 .help("Test configuration and exit"),
         )
         .arg(
-            Arg::with_name("record")
-                .short("R")
-                .long("record")
-                .help("Record log to disk"),
-        )
-        .arg(
             Arg::with_name("no-auto")
+                .short("n")
                 .long("no-auto")
                 .help("Disable autopilot program"),
         )
@@ -62,6 +57,11 @@ fn main() -> anyhow::Result<()> {
             Arg::with_name("systemd")
                 .long("systemd")
                 .help("Run as systemd service unit"),
+        )
+        .arg(
+            Arg::with_name("trace")
+                .long("trace")
+                .help("Record telemetrics to disk"),
         )
         .arg(
             Arg::with_name("workers")
@@ -94,6 +94,12 @@ fn main() -> anyhow::Result<()> {
     }
     if matches.is_present("no-motion") {
         config.enable_motion = false;
+    }
+    if matches.is_present("trace") {
+        config.enable_trace = true;
+    }
+    if matches.is_present("test") {
+        config.enable_test = true;
     }
     if matches.is_present("workers") {
         config.runtime_workers = matches.value_of("workers").unwrap().parse().unwrap();
@@ -144,21 +150,7 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{}", config);
 
-    if !config.enable_motion {
-        log::info!("All motion controls are frozen");
-
-        if matches.is_present("test") {
-            glonax::FrozenExcavatorService::test(&config)?;
-        } else {
-            glonax::FrozenExcavatorService::launch(&config)?;
-        }
-    } else {
-        if matches.is_present("test") {
-            glonax::ExcavatorService::test(&config)?;
-        } else {
-            glonax::ExcavatorService::launch(&config)?;
-        }
-    }
+    glonax::start_machine(&config)?;
 
     Ok(())
 }

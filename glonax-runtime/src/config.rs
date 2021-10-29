@@ -13,6 +13,14 @@ pub struct Config {
     #[serde(default)]
     pub enable_input: bool,
 
+    /// Whether tracing is enabled.
+    #[serde(default)]
+    pub enable_trace: bool,
+
+    /// Whether this is a validation run or not.
+    #[serde(default)]
+    pub enable_test: bool,
+
     /// Whether motion is enabled.
     #[serde(default = "Config::enable_motion")]
     pub enable_motion: bool,
@@ -45,6 +53,8 @@ impl std::fmt::Display for Config {
             "Configuration:
             \tAutopilot enabled: {}
             \tInput enabled: {}
+            \tTracing enabled: {}
+            \tValidation enabled: {}
             \tMotion enabled: {}
             \tWorkspace: {}
             \tEvent queue size: {}
@@ -53,6 +63,8 @@ impl std::fmt::Display for Config {
             \tRuntime idle interval: {}",
             self.enable_autopilot,
             self.enable_input,
+            self.enable_trace,
+            self.enable_test,
             self.enable_motion,
             self.workspace.to_str().unwrap(),
             self.event_queue,
