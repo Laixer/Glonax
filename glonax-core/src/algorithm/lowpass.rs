@@ -1,13 +1,17 @@
 /// Simple exponential smoothing filter.
 pub struct SimpleExpSmoothing {
     /// Smoothing factor.
+    ///
+    /// Incease this factor will favor more recent datapoints over previous
+    /// trends.
     alpha: f32,
     /// Best estimate for time series.
     s_t: Option<f32>,
 }
 
 impl SimpleExpSmoothing {
-    /// Construct the filter.
+    /// Construct the lowpass filter.
+    #[inline]
     pub fn new(alpha: f32) -> Self {
         Self { alpha, s_t: None }
     }

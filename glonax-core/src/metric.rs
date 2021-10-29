@@ -1,7 +1,10 @@
+use nalgebra as na;
+
 #[derive(Debug, Clone, Copy)]
 pub enum MetricValue {
+    // TODO: nalgebra::Vector1<f32>
     Temperature(i16),
-    Acceleration(nalgebra::Vector3<f32>),
+    Acceleration(na::Vector3<f32>),
 }
 
 impl std::fmt::Display for MetricValue {

@@ -3,6 +3,7 @@ pub mod input;
 pub mod metric;
 pub mod motion;
 
+// TODO: Remove?
 pub use nalgebra;
 
 pub mod time {

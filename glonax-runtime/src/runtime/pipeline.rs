@@ -55,6 +55,7 @@ pub trait Sink {
     fn distribute(&mut self, domain: Signal);
 }
 
+// TODO: Take any iterator which can be polled as source.
 pub(super) struct Pipeline<'a, W> {
     source_list: &'a mut Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
     cache: std::collections::HashMap<u32, Signal>,
