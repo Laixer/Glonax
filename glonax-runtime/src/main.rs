@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Laixer Equipment B.V.
+// Copyright (C) 2022 Laixer Equipment B.V.
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -13,7 +13,7 @@ const PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 fn main() -> anyhow::Result<()> {
     let matches = App::new(BIN_NAME)
         .version(PKG_VERSION)
-        .author("Copyright (C) 2021 Laixer Equipment B.V.")
+        .author("Copyright (C) 2022 Laixer Equipment B.V.")
         .about(PKG_DESCRIPTION)
         .arg(
             Arg::with_name("listen")

@@ -1,3 +1,9 @@
+// Copyright (C) 2022 Laixer Equipment B.V.
+// All rights reserved.
+//
+// This software may be modified and distributed under the terms
+// of the included license.  See the LICENSE file for details.
+
 use std::{convert::TryInto, path::Path};
 
 #[macro_use]
@@ -128,7 +134,7 @@ fn serial(path: &Path, baud: usize) -> anyhow::Result<glonax_serial::Uart> {
 async fn main() -> anyhow::Result<()> {
     let matches = App::new(BIN_NAME)
         .version(PKG_VERSION)
-        .author("Copyright (C) 2021 Laixer Equipment B.V.")
+        .author("Copyright (C) 2022 Laixer Equipment B.V.")
         .about("Hardware communication diagnostics")
         .arg(
             Arg::with_name("serial")
