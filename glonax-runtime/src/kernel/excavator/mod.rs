@@ -24,7 +24,7 @@ const BOOM_LENGTH: f32 = 6.0;
 const ARM_LENGTH: f32 = 2.97;
 // TODO: Rename. This is not an height but an transformation.
 /// Frame height in meters.
-const FRAME_HEIGHT: f32 = 1.86;
+const FRAME_HEIGHT: f32 = 1.88;
 /// Arm angle range.
 #[allow(dead_code)]
 const ARM_RANGE: std::ops::Range<f32> = -0.45..-2.47;
