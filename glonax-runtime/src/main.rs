@@ -4,20 +4,20 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::{App, Arg};
+use clap::{App, Arg, Command};
 
 const BIN_NAME: &str = env!("CARGO_BIN_NAME");
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 const PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
 fn main() -> anyhow::Result<()> {
-    let matches = App::new(BIN_NAME)
+    let matches = Command::new(BIN_NAME)
         .version(PKG_VERSION)
         .author("Copyright (C) 2022 Laixer Equipment B.V.")
         .about(PKG_DESCRIPTION)
         .arg(
             Arg::with_name("listen")
-                .short("l")
+                .short('l')
                 .long("listen")
                 .value_name("address:port")
                 .help("Network address to bind")
@@ -25,7 +25,7 @@ fn main() -> anyhow::Result<()> {
         )
         .arg(
             Arg::with_name("workspace")
-                .short("D")
+                .short('D')
                 .long("workspace")
                 .value_name("DIR")
                 .help("Workspace directory")
@@ -33,13 +33,13 @@ fn main() -> anyhow::Result<()> {
         )
         .arg(
             Arg::with_name("test")
-                .short("t")
+                .short('t')
                 .long("test")
                 .help("Test configuration and exit"),
         )
         .arg(
             Arg::with_name("no-auto")
-                .short("n")
+                .short('n')
                 .long("no-auto")
                 .help("Disable autopilot program"),
         )
@@ -72,7 +72,7 @@ fn main() -> anyhow::Result<()> {
         )
         .arg(
             Arg::with_name("v")
-                .short("v")
+                .short('v')
                 .multiple(true)
                 .help("Sets the level of verbosity"),
         )

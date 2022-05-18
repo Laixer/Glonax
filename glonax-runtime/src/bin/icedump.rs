@@ -9,7 +9,7 @@ use std::{convert::TryInto, path::Path};
 #[macro_use]
 extern crate log;
 
-use clap::{App, Arg};
+use clap::{App, Arg, Command};
 use glonax_ice::{eval::ContainerSession, DeviceInfo, PayloadType, Session, Vector3x16};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 
@@ -132,38 +132,38 @@ fn serial(path: &Path, baud: usize) -> anyhow::Result<glonax_serial::Uart> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let matches = App::new(BIN_NAME)
+    let matches = Command::new(BIN_NAME)
         .version(PKG_VERSION)
         .author("Copyright (C) 2022 Laixer Equipment B.V.")
         .about("Hardware communication diagnostics")
         .arg(
             Arg::with_name("serial")
-                .short("p")
+                .short('p')
                 .value_name("port")
                 .help("Serial port to use (/dev/tty0)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("baud")
-                .short("b")
+                .short('b')
                 .help("Serial baud rate")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("hex")
-                .short("x")
+                .short('x')
                 .long("hex")
                 .help("Show the raw data buffer"),
         )
         .arg(
             Arg::with_name("diagnose")
-                .short("d")
+                .short('d')
                 .long("diag")
                 .help("Diagnose the device"),
         )
         .arg(
             Arg::with_name("v")
-                .short("v")
+                .short('v')
                 .multiple(true)
                 .help("Sets the level of verbosity"),
         )
@@ -201,7 +201,7 @@ async fn main() -> anyhow::Result<()> {
             read_packet(port).await;
         }
     } else {
-        println!("{}", matches.usage());
+        println!("See help");
     }
 
     Ok(())
