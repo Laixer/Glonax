@@ -3,6 +3,7 @@ members = [
   "glonax-core",
   "glonax-gamepad",
   "glonax-ice",
+  "glonax-j1939",
   "glonax-net",
   "glonax-runtime",
   "glonax-serial",
