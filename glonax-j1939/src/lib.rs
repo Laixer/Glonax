@@ -43,7 +43,7 @@ impl J1939Socket {
 
     pub async fn send_to(&self, frame: &j1939::Frame) -> io::Result<()> {
         loop {
-            let mut guard = self.0.readable().await?;
+            let mut guard = self.0.writable().await?;
 
             match guard.try_io(|inner| inner.get_ref().sendto(frame)) {
                 Ok(result) => return result,
