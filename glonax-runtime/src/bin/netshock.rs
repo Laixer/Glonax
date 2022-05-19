@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use clap::Parser;
 use glonax_j1939::{j1939::decode, J1939Socket};
-use log::info;
+use log::{debug, info};
 
 async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
     use ansi_term::Colour::{Green, Red, White, Yellow};
@@ -107,9 +107,30 @@ struct Args {
     #[clap(short, long)]
     dump: bool,
 
+    /// Analyze incoming frames.
+    #[clap(short, long)]
+    analyze: bool,
+
+    /// Destination target.
+    #[clap(short, long)]
+    target: Option<u8>,
+
     /// Level of verbosity.
     #[clap(short, long, parse(from_occurrences))]
     verbose: usize,
+
+    #[clap(subcommand)]
+    command: Command,
+}
+
+#[derive(clap::Subcommand)]
+enum Command {
+    /// Enable or disable identification LED.
+    LED { toggle: u8 },
+    /// Reset the node.
+    Reset,
+    /// Reassign the node a new address.
+    Assign { address: u8 },
 }
 
 #[tokio::main]
@@ -135,15 +156,74 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
-    info!("Binding to interface {}", args.interface);
+    debug!("Binding to interface {}", args.interface);
 
     let socket = glonax_j1939::J1939Socket::bind(args.interface.as_str(), args.address)?;
     socket.set_broadcast(true)?;
 
     if args.dump {
         print_frames(&socket).await?;
-    } else {
+    } else if args.analyze {
         analyze_frames(&socket).await?;
+    }
+
+    let mut target_node = 0x0;
+
+    if let Some(target) = args.target {
+        debug!("Targeting node: 0x{:X?}", target);
+        target_node = target;
+    }
+
+    match &args.command {
+        Command::LED { toggle } => {
+            info!(
+                "Turn LED {} on node 0x{:X?}",
+                if toggle == &0 { "off" } else { "on" },
+                target_node
+            );
+
+            let frame = glonax_j1939::j1939::Frame::new(
+                glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
+                    .da(target_node)
+                    .build(),
+                [
+                    b'Z',
+                    b'C',
+                    if toggle == &0 { 0x0 } else { 0x1 },
+                    0xff,
+                    0xff,
+                    0xff,
+                    0xff,
+                    0xff,
+                ],
+            );
+
+            socket.send_to(&frame).await?;
+        }
+        Command::Reset => {
+            info!("Reset node 0x{:X?}", target_node);
+
+            let frame = glonax_j1939::j1939::Frame::new(
+                glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
+                    .da(target_node)
+                    .build(),
+                [b'Z', b'C', 0xff, 0x69, 0xff, 0xff, 0xff, 0xff],
+            );
+
+            socket.send_to(&frame).await?;
+        }
+        Command::Assign { address } => {
+            info!("Reassign node 0x{:X?}", target_node);
+
+            let frame = glonax_j1939::j1939::Frame::new(
+                glonax_j1939::j1939::IdBuilder::from_pgn(45_568)
+                    .da(target_node)
+                    .build(),
+                [b'Z', b'C', *address, 0xff, 0xff, 0xff, 0xff, 0xff],
+            );
+
+            socket.send_to(&frame).await?;
+        }
     }
 
     Ok(())
