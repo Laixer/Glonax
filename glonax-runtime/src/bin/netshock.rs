@@ -113,9 +113,9 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
                     ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickY),
                     ..
                 } => {
-                    println!("RightStickY {}", event.value());
+                    println!("RightStickY {}", event.value);
 
-                    let rpm_ba = &event.value().to_le_bytes()[..2];
+                    let rpm_ba = &event.value.to_le_bytes()[..2];
                     let id = 0x18A04A00;
                     // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
                     let frame = glonax_j1939::j1939::Frame::new(
@@ -129,9 +129,9 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
                     ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickX),
                     ..
                 } => {
-                    println!("RightStickX {}", event.value());
+                    println!("RightStickX {}", event.value);
 
-                    let rpm_ba = &event.value().to_le_bytes()[..2];
+                    let rpm_ba = &event.value.to_le_bytes()[..2];
                     let id = 0x18A14A00;
                     // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
                     let frame = glonax_j1939::j1939::Frame::new(
@@ -145,9 +145,9 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
                     ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::LeftStickY),
                     ..
                 } => {
-                    println!("RightStickX {}", event.value());
+                    println!("RightStickX {}", event.value);
 
-                    let rpm_ba = &event.value().to_le_bytes()[..2];
+                    let rpm_ba = &event.value.to_le_bytes()[..2];
                     let id = 0x18A14A00;
                     // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
                     let frame = glonax_j1939::j1939::Frame::new(
