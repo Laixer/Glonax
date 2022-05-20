@@ -4,10 +4,7 @@
 // - Multiple actuators
 // - Recipient address
 
-use std::{
-    convert::TryFrom,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 #[macro_use]
 extern crate log;
