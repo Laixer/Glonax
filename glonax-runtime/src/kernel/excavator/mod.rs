@@ -97,7 +97,10 @@ impl Identity for Excavator {
     /// The introduction message makes it easier to spot the current running
     /// configuration.
     fn intro() -> String {
-        "Hello, I'm an excavator 🏗. Lets go diggin'!".to_owned()
+        format!(
+            "Hello, I'm an {} 🏗. Lets go diggin'! ⚒️",
+            ansi_term::Color::Yellow.paint("excavator")
+        )
     }
 }
 

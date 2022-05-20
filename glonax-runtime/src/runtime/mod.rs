@@ -32,7 +32,7 @@ use self::operand::{Operand, Parameter};
 #[derive(Debug)]
 pub enum RuntimeEvent {
     /// Request to drive motion.
-    DriveMotion(Motion),
+    ExciteMotion(Motion),
     /// Request to shutdown runtime core.
     Shutdown,
 }
@@ -53,7 +53,7 @@ impl Dispatch {
         &self,
         motion: Motion,
     ) -> std::result::Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
-        self.0.send(RuntimeEvent::DriveMotion(motion)).await
+        self.0.send(RuntimeEvent::ExciteMotion(motion)).await
     }
 
     /// Request runtime shutdown.
@@ -215,7 +215,7 @@ where
 
                 event = self.event_bus.1.recv() => {
                     match event.unwrap() {
-                        RuntimeEvent::DriveMotion(motion_event) => {
+                        RuntimeEvent::ExciteMotion(motion_event) => {
                             motion_event.record(&mut tracer, time::now());
                             let mut motion_device = self.motion_device.lock().await;
                             motion_device.actuate(motion_event).await;

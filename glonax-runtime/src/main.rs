@@ -13,6 +13,10 @@ use clap::{Parser, ValueHint};
 #[clap(version)]
 #[clap(about, long_about = None)]
 struct Args {
+    /// CAN network interface.
+    #[clap(short, long, default_value = "can0")]
+    interface: String,
+
     /// Workspace directory.
     #[clap(short = 'D', long, value_name = "DIR", value_hint = ValueHint::DirPath)]
     workspace: Option<PathBuf>,

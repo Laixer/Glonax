@@ -58,7 +58,7 @@ impl IoDevice for Hydraulic {
 
     #[inline]
     async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
-        Hydraulic::new(path)
+        Self::new(path)
     }
 }
 
