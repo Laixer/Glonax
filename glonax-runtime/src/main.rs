@@ -4,81 +4,56 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::{App, Arg, Command};
+use std::path::PathBuf;
 
-const BIN_NAME: &str = env!("CARGO_BIN_NAME");
-const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
-const PKG_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
+use clap::{Parser, ValueHint};
+
+#[derive(Parser)]
+#[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
+#[clap(version)]
+#[clap(about, long_about = None)]
+struct Args {
+    /// Workspace directory.
+    #[clap(short = 'D', long, value_name = "DIR", value_hint = ValueHint::DirPath)]
+    workspace: Option<PathBuf>,
+
+    /// Test configuration and exit.
+    #[clap(short, long)]
+    test: bool,
+
+    /// Disable autopilot program.
+    #[clap(short, long)]
+    no_auto: bool,
+
+    /// Disable input controls.
+    #[clap(long)]
+    no_input: bool,
+
+    /// Disable machine motion (frozen mode).
+    #[clap(long)]
+    no_motion: bool,
+
+    /// Run as systemd service.
+    #[clap(long)]
+    systemd: bool,
+
+    /// Record telemetrics to disk.
+    #[clap(long)]
+    trace: bool,
+
+    /// Number of runtime workers.
+    #[clap(long)]
+    workers: Option<usize>,
+
+    /// Level of verbosity.
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: usize,
+}
 
 fn main() -> anyhow::Result<()> {
-    let matches = Command::new(BIN_NAME)
-        .version(PKG_VERSION)
-        .author("Copyright (C) 2022 Laixer Equipment B.V.")
-        .about(PKG_DESCRIPTION)
-        .arg(
-            Arg::with_name("listen")
-                .short('l')
-                .long("listen")
-                .value_name("address:port")
-                .help("Network address to bind")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("workspace")
-                .short('D')
-                .long("workspace")
-                .value_name("DIR")
-                .help("Workspace directory")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("test")
-                .short('t')
-                .long("test")
-                .help("Test configuration and exit"),
-        )
-        .arg(
-            Arg::with_name("no-auto")
-                .short('n')
-                .long("no-auto")
-                .help("Disable autopilot program"),
-        )
-        .arg(
-            Arg::with_name("no-input")
-                .long("no-input")
-                .help("Disable input controls"),
-        )
-        .arg(
-            Arg::with_name("no-motion")
-                .long("no-motion")
-                .help("Disable machine motion (frozen mode)"),
-        )
-        .arg(
-            Arg::with_name("systemd")
-                .long("systemd")
-                .help("Run as systemd service unit"),
-        )
-        .arg(
-            Arg::with_name("trace")
-                .long("trace")
-                .help("Record telemetrics to disk"),
-        )
-        .arg(
-            Arg::with_name("workers")
-                .long("workers")
-                .value_name("N")
-                .help("Number of runtime workers")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("v")
-                .short('v')
-                .multiple(true)
-                .help("Sets the level of verbosity"),
-        )
-        .get_matches();
+    let args = Args::parse();
 
-    let local_config = std::env::current_dir().unwrap().join("glonaxd.toml");
+    let local_config = std::env::current_dir()?.join("glonaxd.toml");
 
     // Try read configuration from global system location first, then from local directory.
     let mut config = glonax::Config::try_from_file(vec![
@@ -86,30 +61,21 @@ fn main() -> anyhow::Result<()> {
         local_config.to_str().unwrap(),
     ])?;
 
-    if matches.is_present("no-auto") {
-        config.enable_autopilot = false;
+    config.enable_autopilot = !args.no_auto;
+    config.enable_input = !args.no_input;
+    config.enable_motion = !args.no_motion;
+    config.enable_trace = args.trace;
+    config.enable_test = args.test;
+
+    if let Some(workers) = args.workers {
+        config.runtime_workers = workers;
     }
-    if matches.is_present("no-input") {
-        config.enable_input = false;
-    }
-    if matches.is_present("no-motion") {
-        config.enable_motion = false;
-    }
-    if matches.is_present("trace") {
-        config.enable_trace = true;
-    }
-    if matches.is_present("test") {
-        config.enable_test = true;
-    }
-    if matches.is_present("workers") {
-        config.runtime_workers = matches.value_of("workers").unwrap().parse().unwrap();
-    }
-    if matches.is_present("workspace") {
-        config.workspace = matches.value_of("workspace").unwrap().parse().unwrap();
+    if let Some(workspace) = args.workspace {
+        config.workspace = workspace;
     }
 
     let mut log_config = simplelog::ConfigBuilder::new();
-    if matches.is_present("systemd") {
+    if args.systemd {
         log_config.set_time_level(log::LevelFilter::Off);
         log_config.set_thread_level(log::LevelFilter::Off);
         log_config.set_target_level(log::LevelFilter::Off);
@@ -123,10 +89,10 @@ fn main() -> anyhow::Result<()> {
     log_config.add_filter_ignore_str("sled");
     log_config.add_filter_ignore_str("mio");
 
-    let log_level = if matches.is_present("systemd") {
+    let log_level = if args.systemd {
         log::LevelFilter::Info
     } else {
-        match matches.occurrences_of("v") {
+        match args.verbose {
             0 => log::LevelFilter::Error,
             1 => log::LevelFilter::Info,
             2 => log::LevelFilter::Debug,
@@ -134,7 +100,7 @@ fn main() -> anyhow::Result<()> {
         }
     };
 
-    let color_choice = if matches.is_present("systemd") {
+    let color_choice = if args.systemd {
         simplelog::ColorChoice::Never
     } else {
         simplelog::ColorChoice::Auto
@@ -145,8 +111,7 @@ fn main() -> anyhow::Result<()> {
         log_config.build(),
         simplelog::TerminalMode::Mixed,
         color_choice,
-    )
-    .unwrap();
+    )?;
 
     log::trace!("{}", config);
 

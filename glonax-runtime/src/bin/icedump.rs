@@ -4,20 +4,17 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use std::{convert::TryInto, path::Path};
+use std::path::{Path, PathBuf};
 
 #[macro_use]
 extern crate log;
 
-use clap::{App, Arg, Command};
+use clap::Parser;
 use glonax_ice::{eval::ContainerSession, DeviceInfo, PayloadType, Session, Vector3x16};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite};
 
 /// This is our local device address.
 const DEVICE_ADDR: u16 = 0x60;
-
-const BIN_NAME: &str = env!("CARGO_BIN_NAME");
-const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Read the incoming packets.
 ///
@@ -130,44 +127,35 @@ fn serial(path: &Path, baud: usize) -> anyhow::Result<glonax_serial::Uart> {
     Ok(port)
 }
 
+#[derive(Parser)]
+#[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
+#[clap(version)]
+#[clap(about = "Hardware communication diagnostics", long_about = None)]
+struct Args {
+    /// Serial port to use (/dev/tty0).
+    #[clap(short, long)]
+    port: PathBuf,
+
+    /// Serial baud rate.
+    #[clap(short, long, default_value_t = 9600)]
+    baud: usize,
+
+    /// Show the raw data buffer.
+    #[clap(short, long)]
+    hex: bool,
+
+    /// Diagnose the device.
+    #[clap(short, long)]
+    diagnose: bool,
+
+    /// Level of verbosity.
+    #[clap(short, long, parse(from_occurrences))]
+    verbose: usize,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let matches = Command::new(BIN_NAME)
-        .version(PKG_VERSION)
-        .author("Copyright (C) 2022 Laixer Equipment B.V.")
-        .about("Hardware communication diagnostics")
-        .arg(
-            Arg::with_name("serial")
-                .short('p')
-                .value_name("port")
-                .help("Serial port to use (/dev/tty0)")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("baud")
-                .short('b')
-                .help("Serial baud rate")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("hex")
-                .short('x')
-                .long("hex")
-                .help("Show the raw data buffer"),
-        )
-        .arg(
-            Arg::with_name("diagnose")
-                .short('d')
-                .long("diag")
-                .help("Diagnose the device"),
-        )
-        .arg(
-            Arg::with_name("v")
-                .short('v')
-                .multiple(true)
-                .help("Sets the level of verbosity"),
-        )
-        .get_matches();
+    let args = Args::parse();
 
     let log_config = simplelog::ConfigBuilder::new()
         .set_time_level(log::LevelFilter::Off)
@@ -175,7 +163,7 @@ async fn main() -> anyhow::Result<()> {
         .set_thread_level(log::LevelFilter::Off)
         .build();
 
-    let log_level = match matches.occurrences_of("v") {
+    let log_level = match args.verbose {
         0 => log::LevelFilter::Info,
         1 => log::LevelFilter::Debug,
         2 | _ => log::LevelFilter::Trace,
@@ -186,22 +174,16 @@ async fn main() -> anyhow::Result<()> {
         log_config,
         simplelog::TerminalMode::Mixed,
         simplelog::ColorChoice::Auto,
-    )
-    .unwrap();
+    )?;
 
-    if let Some(port) = matches.value_of("serial") {
-        let baud = matches.value_of("baud").unwrap_or("9600");
-        let mut port = serial(Path::new(port), baud.parse()?)?;
+    let mut port = serial(args.port.as_path(), args.baud)?;
 
-        if matches.is_present("hex") {
-            read_buffer(&mut port).await;
-        } else if matches.is_present("diagnose") {
-            diagnose(&mut port).await;
-        } else {
-            read_packet(port).await;
-        }
+    if args.hex {
+        read_buffer(&mut port).await;
+    } else if args.diagnose {
+        diagnose(&mut port).await;
     } else {
-        println!("See help");
+        read_packet(port).await;
     }
 
     Ok(())
