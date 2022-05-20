@@ -5,6 +5,18 @@ use clap::Parser;
 use glonax_j1939::{j1939::decode, J1939Socket};
 use log::{debug, info};
 
+fn style_node(address: u8) -> String {
+    Purple.paint(format!("[node 0x{:X?}]", address)).to_string()
+}
+
+fn node_address(address: &String) -> Result<u8, std::num::ParseIntError> {
+    if address.starts_with("0x") {
+        u8::from_str_radix(address.trim_start_matches("0x"), 16)
+    } else {
+        u8::from_str_radix(address, 16)
+    }
+}
+
 async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
@@ -49,7 +61,7 @@ async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
 
                 info!(
                     "{} Software identification: {}.{}.{}",
-                    Purple.paint(format!("[node 0x{:X?}]", frame.id().sa())),
+                    style_node(frame.id().sa()),
                     major,
                     minor,
                     patch
@@ -67,7 +79,7 @@ async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
 
                 info!(
                     "{} State: {}; Last error: {}",
-                    Purple.paint(format!("[node 0x{:X?}]", frame.id().sa())),
+                    style_node(frame.id().sa()),
                     state,
                     u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap())
                 );
@@ -149,10 +161,6 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
     }
 }
 
-async fn report_node(socket: &mut J1939Socket, target_node: u8) -> anyhow::Result<()> {
-    Ok(())
-}
-
 #[derive(Parser)]
 #[clap(name = "netshock")]
 #[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
@@ -167,10 +175,6 @@ struct Args {
     #[clap(long, default_value_t = 0x9e)]
     address: u8,
 
-    /// Destination target.
-    #[clap(short, long)]
-    target: Option<u8>,
-
     /// Level of verbosity.
     #[clap(short, long, parse(from_occurrences))]
     verbose: usize,
@@ -183,7 +187,9 @@ struct Args {
 enum Command {
     /// Target node.
     Node {
-        address: u8,
+        /// Target node address.
+        address: String,
+
         #[clap(subcommand)]
         command: NodeCommand,
     },
@@ -198,7 +204,7 @@ enum NodeCommand {
     /// Enable or disable identification LED.
     LED { toggle: u8 },
     /// Assign the node a new address.
-    Assign { address_new: u8 },
+    Assign { address_new: String },
     /// Reset the node.
     Reset,
     /// Report node status.
@@ -236,9 +242,11 @@ async fn main() -> anyhow::Result<()> {
     match &args.command {
         Command::Node { address, command } => match command {
             NodeCommand::LED { toggle } => {
+                let address_id = node_address(address)?;
+
                 info!(
                     "{} Turn identification LED {}",
-                    Purple.paint(format!("[node 0x{:X?}]", address)),
+                    style_node(address_id),
                     if toggle == &0 {
                         Red.paint("off")
                     } else {
@@ -248,7 +256,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let frame = glonax_j1939::j1939::Frame::new(
                     glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(*address)
+                        .da(address_id)
                         .build(),
                     [
                         b'Z',
@@ -265,27 +273,28 @@ async fn main() -> anyhow::Result<()> {
                 socket.send_to(&frame).await?;
             }
             NodeCommand::Assign { address_new } => {
-                info!(
-                    "{} Assign 0x{:X?}",
-                    Purple.paint(format!("[node 0x{:X?}]", address)),
-                    *address_new
-                );
+                let address_id = node_address(address)?;
+                let address_new_id = node_address(address_new)?;
+
+                info!("{} Assign 0x{:X?}", style_node(address_id), address_new_id);
 
                 let frame = glonax_j1939::j1939::Frame::new(
                     glonax_j1939::j1939::IdBuilder::from_pgn(45_568)
-                        .da(*address)
+                        .da(address_id)
                         .build(),
-                    [b'Z', b'C', *address_new, 0xff, 0xff, 0xff, 0xff, 0xff],
+                    [b'Z', b'C', address_new_id, 0xff, 0xff, 0xff, 0xff, 0xff],
                 );
 
                 socket.send_to(&frame).await?;
             }
             NodeCommand::Reset => {
-                info!("{} Reset", Purple.paint(format!("[node 0x{:X?}]", address)));
+                let address_id = node_address(address)?;
+
+                info!("{} Reset", style_node(address_id));
 
                 let frame = glonax_j1939::j1939::Frame::new(
                     glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(*address)
+                        .da(address_id)
                         .build(),
                     [b'Z', b'C', 0xff, 0x69, 0xff, 0xff, 0xff, 0xff],
                 );
@@ -293,9 +302,11 @@ async fn main() -> anyhow::Result<()> {
                 socket.send_to(&frame).await?;
             }
             NodeCommand::Status => {
+                let address_id = node_address(address)?;
+
                 let frame = glonax_j1939::j1939::Frame::new(
                     glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(*address)
+                        .da(address_id)
                         .build(),
                     [b'Z', b'C', 0x1, 0xff, 0xff, 0xff, 0xff, 0xff],
                 );
@@ -307,7 +318,7 @@ async fn main() -> anyhow::Result<()> {
                 loop {
                     let frame = glonax_j1939::j1939::Frame::new(
                         glonax_j1939::j1939::IdBuilder::from_pgn(59_904)
-                            .da(*address)
+                            .da(address_id)
                             .build(),
                         [0xfe, 0x18, 0xda, 0xff, 0xff, 0xff, 0xff, 0xff],
                     );
@@ -336,7 +347,7 @@ async fn main() -> anyhow::Result<()> {
 
                         info!(
                             "{} Reports {} version {}",
-                            Purple.paint(format!("[node 0x{:X?}]", address)),
+                            style_node(address_id),
                             Green.paint("alive"),
                             White.paint(format!("{}.{}.{}", major, minor, patch))
                         );
@@ -349,7 +360,7 @@ async fn main() -> anyhow::Result<()> {
 
                 let frame = glonax_j1939::j1939::Frame::new(
                     glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(*address)
+                        .da(address_id)
                         .build(),
                     [b'Z', b'C', 0x0, 0xff, 0xff, 0xff, 0xff, 0xff],
                 );
