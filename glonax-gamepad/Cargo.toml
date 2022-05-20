@@ -2,7 +2,7 @@
 name = "glonax-gamepad"
 version = "1.0.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 description = """
 Linux gamepad driver.

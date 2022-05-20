@@ -413,8 +413,6 @@ impl<T: tokio::io::AsyncRead + Unpin> Session<T> {
     /// This method can block if the underlaying reader device
     /// blocks on read calls.
     pub async fn accept(&mut self) -> Result<Frame, SessionError> {
-        use std::convert::TryInto;
-
         loop {
             match self.next().await {
                 Ok(frame) => {
