@@ -6,6 +6,7 @@
 
 mod device;
 pub mod kernel;
+pub mod net;
 mod workspace;
 
 #[macro_use]

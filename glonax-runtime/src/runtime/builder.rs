@@ -145,7 +145,7 @@ where
     ///
     /// These runtime services depend on the application configuration.
     async fn config_services(&mut self) -> runtime::Result {
-        // Enable shutdown service.
+        // Enable terminal shutdown service.
         self.enable_term_shutdown().await;
 
         // Enable autopilot service if configured.
