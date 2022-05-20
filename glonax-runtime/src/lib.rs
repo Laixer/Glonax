@@ -22,7 +22,7 @@ pub use self::runtime::Runtime;
 ///
 /// The excavator builder binds the excavator kernel to the hydraulic motion
 /// device. The caller should tread this type as opaque.
-pub type ExcavatorService =
+type ExcavatorService =
     LaunchStub<device::Hydraulic, kernel::excavator::Excavator, runtime::NullTracer>;
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -50,7 +50,7 @@ pub fn start_machine(config: &Config) -> runtime::Result {
     })
 }
 
-pub struct LaunchStub<M, K, R> {
+struct LaunchStub<M, K, R> {
     _1: std::marker::PhantomData<M>,
     _2: std::marker::PhantomData<K>,
     _3: std::marker::PhantomData<R>,
