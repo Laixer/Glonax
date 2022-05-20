@@ -4,10 +4,10 @@ mod imp;
 
 pub use j1939;
 
-pub struct J1939Socket(tokio::io::unix::AsyncFd<imp::J1939Socket>);
+pub struct J1939Listener(tokio::io::unix::AsyncFd<imp::J1939Socket>);
 
-impl J1939Socket {
-    pub fn bind(ifname: &str, addr: u8) -> Result<J1939Socket, io::Error> {
+impl J1939Listener {
+    pub fn bind(ifname: &str, addr: u8) -> Result<J1939Listener, io::Error> {
         let sock = imp::J1939Socket::bind(ifname, addr)?;
         sock.set_nonblocking(true)?;
 

@@ -2,10 +2,7 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Green, Purple, Red, White, Yellow};
 use clap::Parser;
-use glonax_j1939::{
-    j1939::{self, decode},
-    J1939Socket,
-};
+use glonax_j1939::{j1939::decode, J1939Listener};
 use log::{debug, info};
 
 fn style_node(address: u8) -> String {
@@ -20,7 +17,7 @@ fn node_address(address: &String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
-async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
+async fn analyze_frames(socket: &J1939Listener) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
@@ -93,7 +90,7 @@ async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
 }
 
 /// Print frames to screen.
-async fn print_frames(socket: &J1939Socket) -> anyhow::Result<()> {
+async fn print_frames(socket: &J1939Listener) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
@@ -103,7 +100,7 @@ async fn print_frames(socket: &J1939Socket) -> anyhow::Result<()> {
     }
 }
 
-async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
+async fn _control(net: &mut glonax::net::ControlNet) -> anyhow::Result<()> {
     let mut pad = glonax_gamepad::Gamepad::new(std::path::Path::new("/dev/input/js0")).await?;
 
     loop {
@@ -115,15 +112,7 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
                 } => {
                     println!("RightStickY {}", event.value);
 
-                    let rpm_ba = &event.value.to_le_bytes()[..2];
-                    let id = 0x18A04A00;
-                    // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
-                    let frame = glonax_j1939::j1939::Frame::new(
-                        glonax_j1939::j1939::Id::new(id),
-                        [0x00, 0x00, 0x00, 0x00, rpm_ba[0], rpm_ba[1], 0x00, 0x00],
-                    );
-
-                    socket.send_to(&frame).await?;
+                    net.gate_control(0x4a, 0, [0, 0, event.value, 0]).await;
                 }
                 glonax_gamepad::Event {
                     ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickX),
@@ -131,15 +120,7 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
                 } => {
                     println!("RightStickX {}", event.value);
 
-                    let rpm_ba = &event.value.to_le_bytes()[..2];
-                    let id = 0x18A14A00;
-                    // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
-                    let frame = glonax_j1939::j1939::Frame::new(
-                        glonax_j1939::j1939::Id::new(id),
-                        [0x00, 0x00, 0x00, 0x00, rpm_ba[0], rpm_ba[1], 0x00, 0x00],
-                    );
-
-                    socket.send_to(&frame).await?;
+                    net.gate_control(0x4a, 1, [0, 0, event.value, 0]).await;
                 }
                 glonax_gamepad::Event {
                     ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::LeftStickY),
@@ -147,15 +128,7 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
                 } => {
                     println!("RightStickX {}", event.value);
 
-                    let rpm_ba = &event.value.to_le_bytes()[..2];
-                    let id = 0x18A14A00;
-                    // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
-                    let frame = glonax_j1939::j1939::Frame::new(
-                        glonax_j1939::j1939::Id::new(id),
-                        [0x00, 0x00, 0x00, 0x00, 0x0, 0x0, rpm_ba[0], rpm_ba[1]],
-                    );
-
-                    socket.send_to(&frame).await?;
+                    net.gate_control(0x4a, 1, [0, 0, 0, event.value]).await;
                 }
                 _ => {}
             },
@@ -165,7 +138,6 @@ async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
 }
 
 #[derive(Parser)]
-#[clap(name = "netshock")]
 #[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[clap(version)]
 #[clap(about = "Network diagnosis and system analyzer", long_about = None)]
@@ -239,8 +211,7 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Binding to interface {}", args.interface);
 
-    let socket = glonax_j1939::J1939Socket::bind(args.interface.as_str(), args.address)?;
-    socket.set_broadcast(true)?;
+    let net = glonax::net::ControlNet::open(args.interface.as_str(), args.address);
 
     match &args.command {
         Command::Node { address, command } => match command {
@@ -257,13 +228,7 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                let frame = j1939::FrameBuilder::new(
-                    j1939::IdBuilder::from_pgn(45_312).da(address_id).build(),
-                )
-                .from_slice(&[b'Z', b'C', if toggle == &0 { 0x0 } else { 0x1 }])
-                .build();
-
-                socket.send_to(&frame).await?;
+                net.set_led(address_id, toggle == &1).await;
             }
             NodeCommand::Assign { address_new } => {
                 let address_id = node_address(address)?;
@@ -271,69 +236,40 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Assign 0x{:X?}", style_node(address_id), address_new_id);
 
-                let frame = j1939::FrameBuilder::new(
-                    j1939::IdBuilder::from_pgn(45_568).da(address_id).build(),
-                )
-                .from_slice(&[b'Z', b'C', address_new_id])
-                .build();
-
-                socket.send_to(&frame).await?;
+                net.set_address(address_id, address_new_id).await;
             }
             NodeCommand::Reset => {
                 let address_id = node_address(address)?;
 
                 info!("{} Reset", style_node(address_id));
 
-                let frame = j1939::FrameBuilder::new(
-                    j1939::IdBuilder::from_pgn(45_568).da(address_id).build(),
-                )
-                .from_slice(&[b'Z', b'C', 0xff, 0x69])
-                .build();
-
-                socket.send_to(&frame).await?;
+                net.reset(address_id).await;
             }
             NodeCommand::Status => {
                 let address_id = node_address(address)?;
 
-                let frame = j1939::FrameBuilder::new(
-                    j1939::IdBuilder::from_pgn(45_312).da(address_id).build(),
-                )
-                .from_slice(&[b'Z', b'C', 0x1])
-                .build();
-
-                socket.send_to(&frame).await?;
-
-                //
+                net.set_led(address_id, true).await;
 
                 let mut found = false;
                 for _ in 0..3 {
-                    let frame = j1939::FrameBuilder::new(
-                        j1939::IdBuilder::from_pgn(59_904).da(address_id).build(),
-                    )
-                    .from_slice(&[0xfe, 0x18, 0xda])
-                    .build();
+                    net.request(address_id, 0x18feda00).await;
 
-                    socket.send_to(&frame).await?;
-                    // 18EA7B00 # FE 18 DA # Software Identification
-
-                    //
-
-                    let frame = socket.recv_from().await?;
+                    let frame = net.as_ref().recv_from().await?;
 
                     if frame.id().pgn() == 65_242 {
-                        let mut major = 0;
-                        let mut minor = 0;
-                        let mut patch = 0;
+                        // let mut major = 0;
+                        // let mut minor = 0;
+                        // let mut patch = 0;
 
-                        if frame.pdu()[3] != 0xff {
-                            major = frame.pdu()[3];
-                        }
-                        if frame.pdu()[4] != 0xff {
-                            minor = frame.pdu()[4];
-                        }
-                        if frame.pdu()[5] != 0xff {
-                            patch = frame.pdu()[5];
-                        }
+                        // if frame.pdu()[3] != 0xff {
+                        //     major = frame.pdu()[3];
+                        // }
+                        // if frame.pdu()[4] != 0xff {
+                        //     minor = frame.pdu()[4];
+                        // }
+                        // if frame.pdu()[5] != 0xff {
+                        //     patch = frame.pdu()[5];
+                        // }
 
                         found = true;
                         break;
@@ -351,22 +287,14 @@ async fn main() -> anyhow::Result<()> {
                     info!("{} Node is {}", style_node(address_id), Red.paint("down"));
                 }
 
-                //
-
-                let frame = j1939::FrameBuilder::new(
-                    j1939::IdBuilder::from_pgn(45_312).da(address_id).build(),
-                )
-                .from_slice(&[b'Z', b'C', 0x0])
-                .build();
-
-                socket.send_to(&frame).await?;
+                net.set_led(address_id, false).await;
             }
         },
         Command::Dump => {
-            print_frames(&socket).await?;
+            print_frames(net.as_ref()).await?;
         }
         Command::Analyze => {
-            analyze_frames(&socket).await?;
+            analyze_frames(net.as_ref()).await?;
         }
     }
 
