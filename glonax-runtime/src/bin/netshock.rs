@@ -1,13 +1,12 @@
 use std::convert::TryInto;
 
+use ansi_term::Colour::{Green, Purple, Red, White, Yellow};
 use clap::Parser;
 use glonax_j1939::{j1939::decode, J1939Socket};
 use log::{debug, info};
 
 async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
-    use ansi_term::Colour::{Green, Red, White, Yellow};
-
-    info!("Print incoming frames on screen");
+    debug!("Print incoming frames on screen");
 
     loop {
         let frame = socket.recv_from().await?;
@@ -49,8 +48,8 @@ async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
                 }
 
                 info!(
-                    "[device {}] Software identification: {}.{}.{}",
-                    White.paint(format!("0x{:X?}", frame.id().sa())),
+                    "{} Software identification: {}.{}.{}",
+                    Purple.paint(format!("[node 0x{:X?}]", frame.id().sa())),
                     major,
                     minor,
                     patch
@@ -67,8 +66,8 @@ async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
                 };
 
                 info!(
-                    "[device {}] State: {}; Last error: {}",
-                    White.paint(format!("0x{:X?}", frame.id().sa())),
+                    "{} State: {}; Last error: {}",
+                    Purple.paint(format!("[node 0x{:X?}]", frame.id().sa())),
                     state,
                     u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap())
                 );
@@ -80,13 +79,78 @@ async fn analyze_frames(socket: &J1939Socket) -> anyhow::Result<()> {
 
 /// Print frames to screen.
 async fn print_frames(socket: &J1939Socket) -> anyhow::Result<()> {
-    info!("Print incoming frames on screen");
+    debug!("Print incoming frames on screen");
 
     loop {
         let frame = socket.recv_from().await?;
 
         info!("{}", frame);
     }
+}
+
+async fn _control(socket: &mut J1939Socket) -> anyhow::Result<()> {
+    let mut pad = glonax_gamepad::Gamepad::new(std::path::Path::new("/dev/input/js0")).await?;
+
+    loop {
+        match pad.next_event().await {
+            Ok(event) => match event {
+                glonax_gamepad::Event {
+                    ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickY),
+                    ..
+                } => {
+                    println!("RightStickY {}", event.value());
+
+                    let rpm_ba = &event.value().to_le_bytes()[..2];
+                    let id = 0x18A04A00;
+                    // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
+                    let frame = glonax_j1939::j1939::Frame::new(
+                        glonax_j1939::j1939::Id::new(id),
+                        [0x00, 0x00, 0x00, 0x00, rpm_ba[0], rpm_ba[1], 0x00, 0x00],
+                    );
+
+                    socket.send_to(&frame).await?;
+                }
+                glonax_gamepad::Event {
+                    ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickX),
+                    ..
+                } => {
+                    println!("RightStickX {}", event.value());
+
+                    let rpm_ba = &event.value().to_le_bytes()[..2];
+                    let id = 0x18A14A00;
+                    // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
+                    let frame = glonax_j1939::j1939::Frame::new(
+                        glonax_j1939::j1939::Id::new(id),
+                        [0x00, 0x00, 0x00, 0x00, rpm_ba[0], rpm_ba[1], 0x00, 0x00],
+                    );
+
+                    socket.send_to(&frame).await?;
+                }
+                glonax_gamepad::Event {
+                    ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::LeftStickY),
+                    ..
+                } => {
+                    println!("RightStickX {}", event.value());
+
+                    let rpm_ba = &event.value().to_le_bytes()[..2];
+                    let id = 0x18A14A00;
+                    // let id2 = glonax_j1939::j1939::IdBuilder::from_pgn(0).da(0x0).build();
+                    let frame = glonax_j1939::j1939::Frame::new(
+                        glonax_j1939::j1939::Id::new(id),
+                        [0x00, 0x00, 0x00, 0x00, 0x0, 0x0, rpm_ba[0], rpm_ba[1]],
+                    );
+
+                    socket.send_to(&frame).await?;
+                }
+                _ => {}
+            },
+            Err(_) => {}
+        }
+    }
+}
+
+async fn report_node(socket: &mut J1939Socket, target_node: u8) -> anyhow::Result<()> {
+    Ok(())
 }
 
 #[derive(Parser)]
@@ -96,20 +160,12 @@ async fn print_frames(socket: &J1939Socket) -> anyhow::Result<()> {
 #[clap(about = "Network diagnosis and system analyzer", long_about = None)]
 struct Args {
     /// CAN network interface.
-    // #[clap(short, long)]
+    #[clap(short, long, default_value = "can0")]
     interface: String,
 
     /// Local network address.
     #[clap(long, default_value_t = 0x9e)]
     address: u8,
-
-    /// Show raw frames on screen.
-    #[clap(short, long)]
-    dump: bool,
-
-    /// Analyze incoming frames.
-    #[clap(short, long)]
-    analyze: bool,
 
     /// Destination target.
     #[clap(short, long)]
@@ -125,12 +181,28 @@ struct Args {
 
 #[derive(clap::Subcommand)]
 enum Command {
+    /// Target node.
+    Node {
+        address: u8,
+        #[clap(subcommand)]
+        command: NodeCommand,
+    },
+    /// Show raw frames on screen.
+    Dump,
+    /// Analyze network frames.
+    Analyze,
+}
+
+#[derive(clap::Subcommand)]
+enum NodeCommand {
     /// Enable or disable identification LED.
     LED { toggle: u8 },
+    /// Assign the node a new address.
+    Assign { address_new: u8 },
     /// Reset the node.
     Reset,
-    /// Reassign the node a new address.
-    Assign { address: u8 },
+    /// Report node status.
+    Status,
 }
 
 #[tokio::main]
@@ -161,68 +233,135 @@ async fn main() -> anyhow::Result<()> {
     let socket = glonax_j1939::J1939Socket::bind(args.interface.as_str(), args.address)?;
     socket.set_broadcast(true)?;
 
-    if args.dump {
-        print_frames(&socket).await?;
-    } else if args.analyze {
-        analyze_frames(&socket).await?;
-    }
-
-    let mut target_node = 0x0;
-
-    if let Some(target) = args.target {
-        debug!("Targeting node: 0x{:X?}", target);
-        target_node = target;
-    }
-
     match &args.command {
-        Command::LED { toggle } => {
-            info!(
-                "Turn LED {} on node 0x{:X?}",
-                if toggle == &0 { "off" } else { "on" },
-                target_node
-            );
+        Command::Node { address, command } => match command {
+            NodeCommand::LED { toggle } => {
+                info!(
+                    "{} Turn identification LED {}",
+                    Purple.paint(format!("[node 0x{:X?}]", address)),
+                    if toggle == &0 {
+                        Red.paint("off")
+                    } else {
+                        Green.paint("on")
+                    },
+                );
 
-            let frame = glonax_j1939::j1939::Frame::new(
-                glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                    .da(target_node)
-                    .build(),
-                [
-                    b'Z',
-                    b'C',
-                    if toggle == &0 { 0x0 } else { 0x1 },
-                    0xff,
-                    0xff,
-                    0xff,
-                    0xff,
-                    0xff,
-                ],
-            );
+                let frame = glonax_j1939::j1939::Frame::new(
+                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
+                        .da(*address)
+                        .build(),
+                    [
+                        b'Z',
+                        b'C',
+                        if toggle == &0 { 0x0 } else { 0x1 },
+                        0xff,
+                        0xff,
+                        0xff,
+                        0xff,
+                        0xff,
+                    ],
+                );
 
-            socket.send_to(&frame).await?;
+                socket.send_to(&frame).await?;
+            }
+            NodeCommand::Assign { address_new } => {
+                info!(
+                    "{} Assign 0x{:X?}",
+                    Purple.paint(format!("[node 0x{:X?}]", address)),
+                    *address_new
+                );
+
+                let frame = glonax_j1939::j1939::Frame::new(
+                    glonax_j1939::j1939::IdBuilder::from_pgn(45_568)
+                        .da(*address)
+                        .build(),
+                    [b'Z', b'C', *address_new, 0xff, 0xff, 0xff, 0xff, 0xff],
+                );
+
+                socket.send_to(&frame).await?;
+            }
+            NodeCommand::Reset => {
+                info!("{} Reset", Purple.paint(format!("[node 0x{:X?}]", address)));
+
+                let frame = glonax_j1939::j1939::Frame::new(
+                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
+                        .da(*address)
+                        .build(),
+                    [b'Z', b'C', 0xff, 0x69, 0xff, 0xff, 0xff, 0xff],
+                );
+
+                socket.send_to(&frame).await?;
+            }
+            NodeCommand::Status => {
+                let frame = glonax_j1939::j1939::Frame::new(
+                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
+                        .da(*address)
+                        .build(),
+                    [b'Z', b'C', 0x1, 0xff, 0xff, 0xff, 0xff, 0xff],
+                );
+
+                socket.send_to(&frame).await?;
+
+                //
+
+                loop {
+                    let frame = glonax_j1939::j1939::Frame::new(
+                        glonax_j1939::j1939::IdBuilder::from_pgn(59_904)
+                            .da(*address)
+                            .build(),
+                        [0xfe, 0x18, 0xda, 0xff, 0xff, 0xff, 0xff, 0xff],
+                    );
+
+                    socket.send_to(&frame).await?;
+                    // 18EA7B00 # FE 18 DA # Software Identification
+
+                    //
+
+                    let frame = socket.recv_from().await?;
+
+                    if frame.id().pgn() == 65_242 {
+                        let mut major = 0;
+                        let mut minor = 0;
+                        let mut patch = 0;
+
+                        if frame.pdu()[3] != 0xff {
+                            major = frame.pdu()[3];
+                        }
+                        if frame.pdu()[4] != 0xff {
+                            minor = frame.pdu()[4];
+                        }
+                        if frame.pdu()[5] != 0xff {
+                            patch = frame.pdu()[5];
+                        }
+
+                        info!(
+                            "{} Reports {} version {}",
+                            Purple.paint(format!("[node 0x{:X?}]", address)),
+                            Green.paint("alive"),
+                            White.paint(format!("{}.{}.{}", major, minor, patch))
+                        );
+
+                        break;
+                    }
+                }
+
+                //
+
+                let frame = glonax_j1939::j1939::Frame::new(
+                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
+                        .da(*address)
+                        .build(),
+                    [b'Z', b'C', 0x0, 0xff, 0xff, 0xff, 0xff, 0xff],
+                );
+
+                socket.send_to(&frame).await?;
+            }
+        },
+        Command::Dump => {
+            print_frames(&socket).await?;
         }
-        Command::Reset => {
-            info!("Reset node 0x{:X?}", target_node);
-
-            let frame = glonax_j1939::j1939::Frame::new(
-                glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                    .da(target_node)
-                    .build(),
-                [b'Z', b'C', 0xff, 0x69, 0xff, 0xff, 0xff, 0xff],
-            );
-
-            socket.send_to(&frame).await?;
-        }
-        Command::Assign { address } => {
-            info!("Reassign node 0x{:X?}", target_node);
-
-            let frame = glonax_j1939::j1939::Frame::new(
-                glonax_j1939::j1939::IdBuilder::from_pgn(45_568)
-                    .da(target_node)
-                    .build(),
-                [b'Z', b'C', *address, 0xff, 0xff, 0xff, 0xff, 0xff],
-            );
-
-            socket.send_to(&frame).await?;
+        Command::Analyze => {
+            analyze_frames(&socket).await?;
         }
     }
 
