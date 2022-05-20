@@ -9,21 +9,21 @@ pub enum ButtonState {
 /// Input device scancode.
 ///
 /// Scancodes are indirectly mapped to input pheripherials. Any
-/// input device can emit these codes. There effect is left to
+/// input device can emit these codes. Their effect is left to
 /// device implementations.
 pub enum Scancode {
     /// Left stick X axis.
-    LeftStickX(f32),
+    LeftStickX(i16),
     /// Left stick Y axis.
-    LeftStickY(f32),
+    LeftStickY(i16),
     /// Right stick X axis.
-    RightStickX(f32),
+    RightStickX(i16),
     /// Right stick Y axis.
-    RightStickY(f32),
+    RightStickY(i16),
     /// Left trigger axis.
-    LeftTrigger(f32),
+    LeftTrigger(i16),
     /// Right trigger axis.
-    RightTrigger(f32),
+    RightTrigger(i16),
     /// Activate button.
     Activate(ButtonState),
     /// Cancel button.

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use glonax_core::{
     input::{ButtonState, Scancode},
-    motion::{Motion, NormalControl},
+    motion::Motion,
     Identity,
 };
 
@@ -104,6 +104,20 @@ impl Identity for Excavator {
     }
 }
 
+trait Level {
+    fn ramp(self, lower: Self) -> Self;
+}
+
+impl Level for i16 {
+    fn ramp(self, lower: Self) -> Self {
+        if self < lower && self > -lower {
+            0
+        } else {
+            self
+        }
+    }
+}
+
 impl Operand for Excavator {
     /// Try to convert input scancode to motion.
     ///
@@ -112,24 +126,30 @@ impl Operand for Excavator {
     /// less sensitive based on the actuator (and input control).
     fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()> {
         match input {
-            Scancode::LeftStickX(value) => {
-                Ok(NormalControl::new(Actuator::Slew.into(), value).into())
-            }
-            Scancode::LeftStickY(value) => {
-                Ok(NormalControl::new(Actuator::Arm.into(), value).into())
-            }
-            Scancode::RightStickX(value) => {
-                Ok(NormalControl::new(Actuator::Bucket.into(), value).into())
-            }
-            Scancode::RightStickY(value) => {
-                Ok(NormalControl::new(Actuator::Boom.into(), value).into())
-            }
-            Scancode::LeftTrigger(value) => {
-                Ok(NormalControl::new(Actuator::LimpLeft.into(), value).into())
-            }
-            Scancode::RightTrigger(value) => {
-                Ok(NormalControl::new(Actuator::LimpRight.into(), value).into())
-            }
+            Scancode::LeftStickX(value) => Ok(Motion::Change(vec![(
+                Actuator::Slew.into(),
+                value.ramp(1024),
+            )])),
+            Scancode::LeftStickY(value) => Ok(Motion::Change(vec![(
+                Actuator::Arm.into(),
+                value.ramp(1024),
+            )])),
+            Scancode::RightStickX(value) => Ok(Motion::Change(vec![(
+                Actuator::Bucket.into(),
+                value.ramp(1024),
+            )])),
+            Scancode::RightStickY(value) => Ok(Motion::Change(vec![(
+                Actuator::Boom.into(),
+                value.ramp(1024),
+            )])),
+            Scancode::LeftTrigger(value) => Ok(Motion::Change(vec![(
+                Actuator::LimpLeft.into(),
+                value.ramp(1024),
+            )])),
+            Scancode::RightTrigger(value) => Ok(Motion::Change(vec![(
+                Actuator::LimpRight.into(),
+                value.ramp(1024),
+            )])),
             Scancode::Cancel(ButtonState::Pressed) => Ok(Motion::StopAll),
             Scancode::Cancel(ButtonState::Released) => Err(()),
             _ => {

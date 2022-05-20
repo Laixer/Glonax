@@ -75,20 +75,20 @@ impl InputDevice for Gamepad {
                 Event {
                     ty: EventType::Axis(Axis::LeftStickY),
                     ..
-                } => Some(Scancode::LeftStickY(event.value_normal())),
+                } => Some(Scancode::LeftStickY(event.value)),
                 Event {
                     ty: EventType::Axis(Axis::LeftStickX),
                     ..
-                } => Some(Scancode::LeftStickX(event.value_normal())),
+                } => Some(Scancode::LeftStickX(event.value)),
 
                 Event {
                     ty: EventType::Axis(Axis::RightStickY),
                     ..
-                } => Some(Scancode::RightStickY(event.value_normal())),
+                } => Some(Scancode::RightStickY(event.value)),
                 Event {
                     ty: EventType::Axis(Axis::RightStickX),
                     ..
-                } => Some(Scancode::RightStickX(event.value_normal())),
+                } => Some(Scancode::RightStickX(event.value)),
                 Event {
                     ty: EventType::Button(Button::LeftBumper),
                     ..
@@ -107,17 +107,17 @@ impl InputDevice for Gamepad {
                     ty: EventType::Axis(Axis::LeftTrigger),
                     ..
                 } => Some(Scancode::LeftTrigger(if self.reverse_left {
-                    -event.value_flatten_normal()
+                    ((event.value as i32 - i16::MAX as i32) / 2) as i16
                 } else {
-                    event.value_flatten_normal()
+                    (((event.value as i32 - i16::MAX as i32) / 2) as i16).abs()
                 })),
                 Event {
                     ty: EventType::Axis(Axis::RightTrigger),
                     ..
                 } => Some(Scancode::RightTrigger(if self.reverse_right {
-                    -event.value_flatten_normal()
+                    ((event.value as i32 - i16::MAX as i32) / 2) as i16
                 } else {
-                    event.value_flatten_normal()
+                    (((event.value as i32 - i16::MAX as i32) / 2) as i16).abs()
                 })),
                 Event {
                     ty: EventType::Button(Button::East),
