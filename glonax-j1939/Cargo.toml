@@ -14,4 +14,4 @@ keywords = ["protocol", "hardware", "glonax"]
 log = "0.4"
 tokio = { version = "1.18", features = ["full"] }
 libc = "0.2"
-j1939 = { path = "../../j1939"}
+j1939 = { git = "https://github.com/Laixer/J1939" }

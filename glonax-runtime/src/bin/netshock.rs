@@ -2,7 +2,10 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Green, Purple, Red, White, Yellow};
 use clap::Parser;
-use glonax_j1939::{j1939::decode, J1939Socket};
+use glonax_j1939::{
+    j1939::{self, decode},
+    J1939Socket,
+};
 use log::{debug, info};
 
 fn style_node(address: u8) -> String {
@@ -254,21 +257,11 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                let frame = glonax_j1939::j1939::Frame::new(
-                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(address_id)
-                        .build(),
-                    [
-                        b'Z',
-                        b'C',
-                        if toggle == &0 { 0x0 } else { 0x1 },
-                        0xff,
-                        0xff,
-                        0xff,
-                        0xff,
-                        0xff,
-                    ],
-                );
+                let frame = j1939::FrameBuilder::new(
+                    j1939::IdBuilder::from_pgn(45_312).da(address_id).build(),
+                )
+                .from_slice(&[b'Z', b'C', if toggle == &0 { 0x0 } else { 0x1 }])
+                .build();
 
                 socket.send_to(&frame).await?;
             }
@@ -278,12 +271,11 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Assign 0x{:X?}", style_node(address_id), address_new_id);
 
-                let frame = glonax_j1939::j1939::Frame::new(
-                    glonax_j1939::j1939::IdBuilder::from_pgn(45_568)
-                        .da(address_id)
-                        .build(),
-                    [b'Z', b'C', address_new_id, 0xff, 0xff, 0xff, 0xff, 0xff],
-                );
+                let frame = j1939::FrameBuilder::new(
+                    j1939::IdBuilder::from_pgn(45_568).da(address_id).build(),
+                )
+                .from_slice(&[b'Z', b'C', address_new_id])
+                .build();
 
                 socket.send_to(&frame).await?;
             }
@@ -292,36 +284,34 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Reset", style_node(address_id));
 
-                let frame = glonax_j1939::j1939::Frame::new(
-                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(address_id)
-                        .build(),
-                    [b'Z', b'C', 0xff, 0x69, 0xff, 0xff, 0xff, 0xff],
-                );
+                let frame = j1939::FrameBuilder::new(
+                    j1939::IdBuilder::from_pgn(45_568).da(address_id).build(),
+                )
+                .from_slice(&[b'Z', b'C', 0xff, 0x69])
+                .build();
 
                 socket.send_to(&frame).await?;
             }
             NodeCommand::Status => {
                 let address_id = node_address(address)?;
 
-                let frame = glonax_j1939::j1939::Frame::new(
-                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(address_id)
-                        .build(),
-                    [b'Z', b'C', 0x1, 0xff, 0xff, 0xff, 0xff, 0xff],
-                );
+                let frame = j1939::FrameBuilder::new(
+                    j1939::IdBuilder::from_pgn(45_312).da(address_id).build(),
+                )
+                .from_slice(&[b'Z', b'C', 0x1])
+                .build();
 
                 socket.send_to(&frame).await?;
 
                 //
 
-                loop {
-                    let frame = glonax_j1939::j1939::Frame::new(
-                        glonax_j1939::j1939::IdBuilder::from_pgn(59_904)
-                            .da(address_id)
-                            .build(),
-                        [0xfe, 0x18, 0xda, 0xff, 0xff, 0xff, 0xff, 0xff],
-                    );
+                let mut found = false;
+                for _ in 0..3 {
+                    let frame = j1939::FrameBuilder::new(
+                        j1939::IdBuilder::from_pgn(59_904).da(address_id).build(),
+                    )
+                    .from_slice(&[0xfe, 0x18, 0xda])
+                    .build();
 
                     socket.send_to(&frame).await?;
                     // 18EA7B00 # FE 18 DA # Software Identification
@@ -345,25 +335,29 @@ async fn main() -> anyhow::Result<()> {
                             patch = frame.pdu()[5];
                         }
 
-                        info!(
-                            "{} Reports {} version {}",
-                            style_node(address_id),
-                            Green.paint("alive"),
-                            White.paint(format!("{}.{}.{}", major, minor, patch))
-                        );
-
+                        found = true;
                         break;
                     }
                 }
 
+                if found {
+                    info!(
+                        "{} Reports {} version {}",
+                        style_node(address_id),
+                        Green.paint("alive"),
+                        White.paint(format!("{}.{}.{}", 0, 2, 2))
+                    );
+                } else {
+                    info!("{} Node is {}", style_node(address_id), Red.paint("down"));
+                }
+
                 //
 
-                let frame = glonax_j1939::j1939::Frame::new(
-                    glonax_j1939::j1939::IdBuilder::from_pgn(45_312)
-                        .da(address_id)
-                        .build(),
-                    [b'Z', b'C', 0x0, 0xff, 0xff, 0xff, 0xff, 0xff],
-                );
+                let frame = j1939::FrameBuilder::new(
+                    j1939::IdBuilder::from_pgn(45_312).da(address_id).build(),
+                )
+                .from_slice(&[b'Z', b'C', 0x0])
+                .build();
 
                 socket.send_to(&frame).await?;
             }
