@@ -114,13 +114,6 @@ pub trait IoDeviceProfile {
 pub trait MotionDevice: Device {
     /// Issue actuate command.
     async fn actuate(&mut self, motion: Motion); // TODO: Return result.
-
-    /// Halt all operation.
-    ///
-    /// Instruct all motion to stop. A device does not have to
-    /// implement the halt method. This method should be called
-    /// in rare occasions, for example in an emergency.
-    async fn halt(&mut self) {} // TODO: Return result.
 }
 
 /// Device which can read input events.

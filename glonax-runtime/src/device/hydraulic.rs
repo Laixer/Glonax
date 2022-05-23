@@ -186,8 +186,4 @@ impl MotionDevice for Hydraulic {
             error!("Session error: {:?}", err);
         };
     }
-
-    async fn halt(&mut self) {
-        self.actuate(Motion::StopAll).await;
-    }
 }
