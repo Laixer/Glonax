@@ -13,8 +13,10 @@ use crate::{Trace, TraceWriter};
 /// motion indicator. However this is left to the motion device.
 #[derive(Debug)]
 pub enum Motion {
-    /// Stop all motion.
+    /// Stop all motion until resumed.
     StopAll,
+    /// Resume all motion.
+    ResumeAll,
     /// Stop motion on actuators.
     Stop(Vec<u32>),
     /// Change motion on actuators.
@@ -38,6 +40,12 @@ impl<T: TraceWriter> Trace<T> for Motion {
     fn record(&self, writer: &mut T, timestamp: Duration) {
         match self {
             Motion::StopAll => writer.write_record(MotionTrace {
+                timestamp: timestamp.as_millis(),
+                actuator: u8::MAX as u32,
+                value: 0,
+            }),
+            // TODO: Maybe something else.
+            Motion::ResumeAll => writer.write_record(MotionTrace {
                 timestamp: timestamp.as_millis(),
                 actuator: u8::MAX as u32,
                 value: 0,

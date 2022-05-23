@@ -48,6 +48,9 @@ impl MotionDevice for Sink {
             Motion::StopAll => {
                 trace!("Stop all actuators");
             }
+            Motion::ResumeAll => {
+                trace!("Resume all actuators");
+            }
             Motion::Stop(actuators) => {
                 for actuator in actuators {
                     trace!("Stop actuator {} ", actuator);

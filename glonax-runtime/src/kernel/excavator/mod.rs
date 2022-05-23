@@ -151,7 +151,7 @@ impl Operand for Excavator {
                 value.ramp(2048),
             )])),
             Scancode::Cancel(ButtonState::Pressed) => Ok(Motion::StopAll),
-            Scancode::Cancel(ButtonState::Released) => Err(()),
+            Scancode::Cancel(ButtonState::Released) => Ok(Motion::ResumeAll),
             _ => {
                 warn!("Scancode not mapped to action");
                 Err(()) // TODO:

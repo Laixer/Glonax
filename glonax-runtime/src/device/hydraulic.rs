@@ -43,6 +43,7 @@ pub struct Hydraulic {
     session: Session<Uart>,
     node_path: PathBuf,
     debounce: Debounce<u32, i16>,
+    locked: bool,
 }
 
 #[async_trait::async_trait]
@@ -78,6 +79,7 @@ impl Hydraulic {
             session: Session::new(port, DEVICE_ADDR),
             node_path: path.to_path_buf(),
             debounce: Debounce::new(),
+            locked: true,
         })
     }
 }
@@ -124,6 +126,13 @@ impl MotionDevice for Hydraulic {
                 if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
                     error!("Session error: {:?}", err);
                 }
+
+                self.locked = true;
+            }
+            Motion::ResumeAll => {
+                trace!("Resume all actuators");
+
+                self.locked = false;
             }
             Motion::Stop(actuators) => {
                 for actuator in actuators {
@@ -148,6 +157,10 @@ impl MotionDevice for Hydraulic {
                 }
             }
             Motion::Change(actuators) => {
+                if self.locked {
+                    return;
+                }
+
                 for (actuator, value) in actuators {
                     // Test the motion event against the debouncer. There is
                     // no point in sending the exact same motion value over and over again.
