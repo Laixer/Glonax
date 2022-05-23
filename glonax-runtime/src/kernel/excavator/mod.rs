@@ -49,11 +49,11 @@ const SERVICE_POSITION_D: (f32, f32) = (0.0, 0.0);
 #[derive(Debug)]
 enum Actuator {
     Boom = 2,
-    Arm = 1,
-    Bucket = 0,
+    Arm = 6,
+    Bucket = 7,
     Slew = 3,
-    LimpLeft = 4,
-    LimpRight = 5,
+    LimpLeft = 5,
+    LimpRight = 4,
 }
 
 impl From<Actuator> for u32 {
@@ -98,7 +98,7 @@ impl Identity for Excavator {
     /// configuration.
     fn intro() -> String {
         format!(
-            "Hello, I'm an {} 🏗. Lets go diggin'! ⚒️",
+            "Hello, I'm an {} 🏗. Gimme som dirt! ⚒️",
             ansi_term::Color::Yellow.paint("excavator")
         )
     }
@@ -128,27 +128,27 @@ impl Operand for Excavator {
         match input {
             Scancode::LeftStickX(value) => Ok(Motion::Change(vec![(
                 Actuator::Slew.into(),
-                value.ramp(1024),
+                value.ramp(3072),
             )])),
             Scancode::LeftStickY(value) => Ok(Motion::Change(vec![(
                 Actuator::Arm.into(),
-                value.ramp(1024),
+                value.ramp(3072),
             )])),
             Scancode::RightStickX(value) => Ok(Motion::Change(vec![(
                 Actuator::Bucket.into(),
-                value.ramp(1024),
+                value.ramp(4096),
             )])),
             Scancode::RightStickY(value) => Ok(Motion::Change(vec![(
                 Actuator::Boom.into(),
-                value.ramp(1024),
+                value.ramp(3072),
             )])),
             Scancode::LeftTrigger(value) => Ok(Motion::Change(vec![(
                 Actuator::LimpLeft.into(),
-                value.ramp(1024),
+                value.ramp(2048),
             )])),
             Scancode::RightTrigger(value) => Ok(Motion::Change(vec![(
                 Actuator::LimpRight.into(),
-                value.ramp(1024),
+                value.ramp(2048),
             )])),
             Scancode::Cancel(ButtonState::Pressed) => Ok(Motion::StopAll),
             Scancode::Cancel(ButtonState::Released) => Err(()),
