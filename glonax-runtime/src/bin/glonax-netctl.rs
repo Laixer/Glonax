@@ -84,6 +84,28 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                     u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap())
                 );
             }
+            65_535 => {
+                if frame.pdu()[..2] != [0xff, 0xff] {
+                    let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
+
+                    info!("{} Encoder 1: {}", style_node(frame.id().sa()), data,);
+                }
+                if frame.pdu()[2..4] != [0xff, 0xff] {
+                    let data = u16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+
+                    info!("{} Encoder 2: {}", style_node(frame.id().sa()), data,);
+                }
+                if frame.pdu()[4..6] != [0xff, 0xff] {
+                    let data = u16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+
+                    info!("{} Encoder 3: {}", style_node(frame.id().sa()), data,);
+                }
+                if frame.pdu()[6..8] != [0xff, 0xff] {
+                    let data = u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
+
+                    info!("{} Encoder 4: {}", style_node(frame.id().sa()), data,);
+                }
+            }
             _ => {}
         }
     }
