@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Green, Purple, Red, White, Yellow};
 use clap::Parser;
-use glonax_j1939::{j1939::decode, J1939Listener};
+use glonax_j1939::j1939::decode;
 use log::{debug, info};
 
 fn style_node(address: u8) -> String {
@@ -17,11 +17,11 @@ fn node_address(address: &String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
-async fn analyze_frames(socket: &J1939Listener) -> anyhow::Result<()> {
+async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = socket.recv_from().await?;
+        let frame = net.accept().await;
 
         match frame.id().pgn() {
             61_444 => {
@@ -90,50 +90,13 @@ async fn analyze_frames(socket: &J1939Listener) -> anyhow::Result<()> {
 }
 
 /// Print frames to screen.
-async fn print_frames(socket: &J1939Listener) -> anyhow::Result<()> {
+async fn print_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = socket.recv_from().await?;
+        let frame = net.accept().await;
 
         info!("{}", frame);
-    }
-}
-
-async fn _control(net: &mut glonax::net::ControlNet) -> anyhow::Result<()> {
-    let mut pad = glonax_gamepad::Gamepad::new(std::path::Path::new("/dev/input/js0")).await?;
-
-    loop {
-        match pad.next_event().await {
-            Ok(event) => match event {
-                glonax_gamepad::Event {
-                    ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickY),
-                    ..
-                } => {
-                    println!("RightStickY {}", event.value);
-
-                    net.gate_control(0x4a, 0, [0, 0, event.value, 0]).await;
-                }
-                glonax_gamepad::Event {
-                    ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::RightStickX),
-                    ..
-                } => {
-                    println!("RightStickX {}", event.value);
-
-                    net.gate_control(0x4a, 1, [0, 0, event.value, 0]).await;
-                }
-                glonax_gamepad::Event {
-                    ty: glonax_gamepad::EventType::Axis(glonax_gamepad::Axis::LeftStickY),
-                    ..
-                } => {
-                    println!("RightStickX {}", event.value);
-
-                    net.gate_control(0x4a, 1, [0, 0, 0, event.value]).await;
-                }
-                _ => {}
-            },
-            Err(_) => {}
-        }
     }
 }
 
@@ -250,31 +213,31 @@ async fn main() -> anyhow::Result<()> {
 
                 net.set_led(address_id, true).await;
 
-                let mut found = false;
-                for _ in 0..3 {
-                    net.request(address_id, 0x18feda00).await;
+                let found = false;
+                // for _ in 0..3 {
+                //     net.request(address_id, 0x18feda00).await;
 
-                    let frame = net.as_ref().recv_from().await?;
+                //     let frame = net.as_ref().recv_from().await?;
 
-                    if frame.id().pgn() == 65_242 {
-                        // let mut major = 0;
-                        // let mut minor = 0;
-                        // let mut patch = 0;
+                //     if frame.id().pgn() == 65_242 {
+                //         // let mut major = 0;
+                //         // let mut minor = 0;
+                //         // let mut patch = 0;
 
-                        // if frame.pdu()[3] != 0xff {
-                        //     major = frame.pdu()[3];
-                        // }
-                        // if frame.pdu()[4] != 0xff {
-                        //     minor = frame.pdu()[4];
-                        // }
-                        // if frame.pdu()[5] != 0xff {
-                        //     patch = frame.pdu()[5];
-                        // }
+                //         // if frame.pdu()[3] != 0xff {
+                //         //     major = frame.pdu()[3];
+                //         // }
+                //         // if frame.pdu()[4] != 0xff {
+                //         //     minor = frame.pdu()[4];
+                //         // }
+                //         // if frame.pdu()[5] != 0xff {
+                //         //     patch = frame.pdu()[5];
+                //         // }
 
-                        found = true;
-                        break;
-                    }
-                }
+                //         found = true;
+                //         break;
+                //     }
+                // }
 
                 if found {
                     info!(
@@ -291,10 +254,10 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Command::Dump => {
-            print_frames(net.as_ref()).await?;
+            print_frames(&net).await?;
         }
         Command::Analyze => {
-            analyze_frames(net.as_ref()).await?;
+            analyze_frames(&net).await?;
         }
     }
 

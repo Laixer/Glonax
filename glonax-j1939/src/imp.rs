@@ -180,7 +180,7 @@ impl J1939Socket {
 
         let (_, peer_addr_ptr, peer_addr_len) = Self::socket_address(
             None,
-            frame.id().destination_address().unwrap(),
+            frame.id().destination_address().unwrap_or(J1939_NO_ADDR),
             frame.id().pgn() as u32,
         );
 

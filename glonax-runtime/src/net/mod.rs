@@ -12,8 +12,31 @@ impl ControlNet {
         Self { socket }
     }
 
-    pub fn as_ref(&self) -> &J1939Listener {
-        &self.socket
+    pub async fn accept(&self) -> j1939::Frame {
+        loop {
+            match tokio::time::timeout(
+                std::time::Duration::from_millis(100),
+                self.socket.recv_from(),
+            )
+            .await
+            {
+                Ok(e) => {
+                    break e.unwrap();
+                }
+                Err(_) => {
+                    self.status().await;
+                    continue;
+                }
+            }
+        }
+    }
+
+    pub async fn status(&self) {
+        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(65_282).build())
+            .from_slice(&[0x71])
+            .build();
+
+        self.socket.send_to(&frame).await.unwrap();
     }
 
     pub async fn set_led(&self, node: u8, led_on: bool) {
