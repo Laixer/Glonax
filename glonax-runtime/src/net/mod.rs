@@ -56,7 +56,7 @@ impl ControlNet {
     }
 
     pub async fn reset(&self, node: u8) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_568).da(node).build())
+        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_312).da(node).build())
             .from_slice(&[b'Z', b'C', 0xff, 0x69])
             .build();
 
