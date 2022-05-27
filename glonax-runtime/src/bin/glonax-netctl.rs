@@ -162,13 +162,15 @@ enum Command {
 #[derive(clap::Subcommand)]
 enum NodeCommand {
     /// Enable or disable identification LED.
-    LED { toggle: u8 },
+    Led { toggle: u8 },
     /// Assign the node a new address.
     Assign { address_new: String },
     /// Reset the node.
     Reset,
     /// Report node status.
     Status,
+    /// Enable or disable motion lock.
+    Motion { toggle: u8 },
 }
 
 #[tokio::main]
@@ -200,7 +202,7 @@ async fn main() -> anyhow::Result<()> {
 
     match &args.command {
         Command::Node { address, command } => match command {
-            NodeCommand::LED { toggle } => {
+            NodeCommand::Led { toggle } => {
                 let address_id = node_address(address)?;
 
                 info!(
@@ -273,6 +275,21 @@ async fn main() -> anyhow::Result<()> {
                 }
 
                 net.set_led(address_id, false).await;
+            }
+            NodeCommand::Motion { toggle } => {
+                let address_id = node_address(address)?;
+
+                info!(
+                    "{} Turn motion {}",
+                    style_node(address_id),
+                    if toggle == &0 {
+                        Red.paint("off")
+                    } else {
+                        Green.paint("on")
+                    },
+                );
+
+                net.set_motion_lock(address_id, toggle == &0).await;
             }
         },
         Command::Dump => {

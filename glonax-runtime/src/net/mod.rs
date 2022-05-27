@@ -63,6 +63,14 @@ impl ControlNet {
         self.socket.send_to(&frame).await.unwrap();
     }
 
+    pub async fn set_motion_lock(&self, node: u8, locked: bool) {
+        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
+            .from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
+            .build();
+
+        self.socket.send_to(&frame).await.unwrap();
+    }
+
     pub async fn request(&self, node: u8, _pgn: u32) {
         let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(59_904).da(node).build())
             .from_slice(&[0xfe, 0x18, 0xda])
