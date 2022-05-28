@@ -63,6 +63,22 @@ impl ControlNet {
         self.socket.send_to(&frame).await.unwrap();
     }
 
+    pub async fn enable_encoder(&self, node: u8, encoder: u8, encoder_on: bool) {
+        let state = match (encoder, encoder_on) {
+            (0, true) => 0b1101,
+            (0, false) => 0b1100,
+            (1, true) => 0b0111,
+            (1, false) => 0b0011,
+            _ => panic!(),
+        };
+
+        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
+            .from_slice(&[b'Z', b'C', state])
+            .build();
+
+        self.socket.send_to(&frame).await.unwrap();
+    }
+
     pub async fn set_motion_lock(&self, node: u8, locked: bool) {
         let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
             .from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
