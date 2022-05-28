@@ -38,16 +38,17 @@ pub fn start_machine(config: &Config) -> runtime::Result {
     use runtime::{CsvTracer, NullTracer};
 
     Ok(match config {
-        cnf if !cnf.enable_motion && cnf.enable_test => {
-            LaunchStub::<Sink, Excavator, NullTracer>::test(&config)?
-        }
-        cnf if !cnf.enable_motion && cnf.enable_trace => {
-            LaunchStub::<Sink, Excavator, CsvTracer>::launch(&config)?
-        }
-        cnf if !cnf.enable_motion => LaunchStub::<Sink, Excavator, NullTracer>::launch(&config)?,
-        cnf if cnf.enable_test => ExcavatorService::test(&config)?,
-        cnf if cnf.enable_trace => LaunchStub::<Hydraulic, Excavator, CsvTracer>::launch(&config)?,
-        _ => ExcavatorService::launch(&config)?,
+        // cnf if !cnf.enable_motion && cnf.enable_test => {
+        //     LaunchStub::<Sink, Excavator, NullTracer>::test(&config)?
+        // }
+        // cnf if !cnf.enable_motion && cnf.enable_trace => {
+        //     LaunchStub::<Sink, Excavator, CsvTracer>::launch(&config)?
+        // }
+        // cnf if !cnf.enable_motion => LaunchStub::<Sink, Excavator, NullTracer>::launch(&config)?,
+        // cnf if cnf.enable_test => ExcavatorService::test(&config)?,
+        // cnf if cnf.enable_trace => LaunchStub::<Hydraulic, Excavator, CsvTracer>::launch(&config)?,
+        // _ => ExcavatorService::launch(&config)?,
+        _ => LaunchStub::<device::ControlAreaUnit, Excavator, NullTracer>::launch(&config)?,
     })
 }
 
@@ -59,8 +60,8 @@ struct LaunchStub<M, K, R> {
 
 impl<M, K, R> LaunchStub<M, K, R>
 where
-    M: 'static + device::IoDevice + device::MotionDevice + Send,
-    M::DeviceProfile: device::IoDeviceProfile,
+    M: 'static + device::MotionDevice + Default + Send,
+    // M::DeviceProfile: device::IoDeviceProfile,
     K: 'static + runtime::operand::Operand + glonax_core::Identity,
     R: glonax_core::Tracer,
     R::Instance: glonax_core::TraceWriter + Send + 'static,

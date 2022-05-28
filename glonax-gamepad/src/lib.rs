@@ -2,6 +2,13 @@ use std::path::Path;
 
 use tokio::{fs::File, io::AsyncReadExt};
 
+/// Button pressed/released.
+const JS_EVENT_TYPE_BUTTON: u8 = 0x1;
+/// Joystick moved.
+const JS_EVENT_TYPE_AXIS: u8 = 0x2;
+/// Initial state of device.
+const JS_EVENT_INIT: u8 = 0x80;
+
 #[derive(Debug)]
 pub enum Button {
     North,
@@ -69,9 +76,13 @@ impl From<u8> for Axis {
 #[derive(Debug)]
 pub enum EventType {
     /// Button pressed/released.
+    ButtonInit(Button),
+    /// Button pressed/released.
     Button(Button),
     /// Axis moved.
     Axis(Axis),
+    /// Axis moved.
+    AxisInit(Axis),
 }
 
 #[derive(Debug)]
@@ -94,41 +105,35 @@ impl Event {
     }
 }
 
-pub struct Gamepad {
-    file: File,
+#[derive(Debug)]
+#[repr(C)]
+struct JsEvent {
+    /// Event timestamp in milliseconds.
+    time: u32,
+    /// Value.
+    value: i16,
+    /// Event type.
+    ty: u8,
+    /// Axis/button number.
+    number: u8,
 }
+
+pub struct Gamepad(tokio::io::BufReader<File>);
 
 impl Gamepad {
     /// Construct new gamepad driver.
-    pub async fn new(path: &Path) -> Result<Self, std::io::Error> {
-        Ok(Self {
-            file: File::open(path).await?,
-        })
+    pub async fn new(path: &Path) -> std::io::Result<Self> {
+        Ok(Self(tokio::io::BufReader::new(File::open(path).await?)))
     }
 
-    // TODO: Retrieve multiple events in one read.
     /// Return the next event from the gamepad.
-    pub async fn next_event(&mut self) -> Result<Event, ()> {
-        const JS_EVENT_TYPE_BUTTON: u8 = 0x1;
-        const JS_EVENT_TYPE_AXIS: u8 = 0x2;
-
-        #[derive(Debug)]
-        #[repr(C)]
-        struct JsEvent {
-            /// Event timestamp in milliseconds.
-            time: u32,
-            /// Value.
-            value: i16,
-            /// Event type.
-            ty: u8,
-            /// Axis/button number.
-            number: u8,
-        }
-
+    pub async fn next_event(&mut self) -> std::io::Result<Event> {
         let mut buf = [0; std::mem::size_of::<JsEvent>()];
-        self.file.read(&mut buf).await.unwrap();
+
+        self.0.read_exact(&mut buf).await?;
 
         let event: JsEvent = unsafe { std::ptr::read(buf.as_ptr() as *const JsEvent) };
+
         if event.ty == JS_EVENT_TYPE_BUTTON {
             Ok(Event {
                 ty: EventType::Button(event.number.into()),
@@ -137,10 +142,20 @@ impl Gamepad {
         } else if event.ty == JS_EVENT_TYPE_AXIS {
             Ok(Event {
                 ty: EventType::Axis(event.number.into()),
-                value: event.value * -1,
+                value: -event.value,
+            })
+        } else if event.ty == JS_EVENT_INIT | JS_EVENT_TYPE_BUTTON {
+            Ok(Event {
+                ty: EventType::ButtonInit(event.number.into()),
+                value: event.value,
+            })
+        } else if event.ty == JS_EVENT_INIT | JS_EVENT_TYPE_AXIS {
+            Ok(Event {
+                ty: EventType::AxisInit(event.number.into()),
+                value: -event.value,
             })
         } else {
-            Err(())
+            unimplemented!();
         }
     }
 }

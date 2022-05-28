@@ -13,6 +13,9 @@ pub use manager::DeviceManager;
 mod gamepad;
 pub use gamepad::Gamepad;
 
+mod cau;
+pub use cau::ControlAreaUnit;
+
 mod hydraulic;
 pub use hydraulic::Hydraulic;
 
@@ -107,6 +110,12 @@ pub trait IoDeviceProfile {
     fn filter(_device: &udev::Device) -> bool {
         true
     }
+}
+
+/// Network device.
+#[async_trait::async_trait]
+pub trait NetDevice: Device + Sized {
+    async fn from_interface(interface: &str) -> Result<Self>;
 }
 
 /// Device which can exercise motion.

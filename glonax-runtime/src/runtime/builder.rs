@@ -30,8 +30,8 @@ pub struct Builder<'a, M, K, R> {
 
 impl<'a, M: 'static + Send, K, R> Builder<'a, M, K, R>
 where
-    M: IoDevice + MotionDevice,
-    M::DeviceProfile: IoDeviceProfile,
+    M: MotionDevice + Default,
+    // M::DeviceProfile: IoDeviceProfile,
     K: Operand + Identity + 'static,
     R: Tracer,
     R::Instance: TraceWriter + Send + 'static,
@@ -61,14 +61,16 @@ where
         let mut device_manager = crate::device::DeviceManager::new();
 
         // Locate one and only one motion device.
-        let motion_device = match device_manager
-            .observer()
-            .scan_once::<M>(std::time::Duration::from_millis(500))
-            .await
-        {
-            Some(motion_device) => motion_device,
-            None => return Err(super::Error::MotionDeviceNotFound),
-        };
+        // let motion_device = match device_manager
+        //     .observer()
+        //     .scan_once::<M>(std::time::Duration::from_millis(500))
+        //     .await
+        // {
+        //     Some(motion_device) => motion_device,
+        //     None => return Err(super::Error::MotionDeviceNotFound),
+        // };
+
+        let motion_device = std::sync::Arc::new(tokio::sync::Mutex::new(M::default()));
 
         let session = runtime::RuntimeSession::new(&config.workspace);
 
