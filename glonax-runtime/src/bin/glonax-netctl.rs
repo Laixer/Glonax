@@ -88,22 +88,12 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                 if frame.pdu()[..2] != [0xff, 0xff] {
                     let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
 
-                    info!("{} Encoder 1: {}", style_node(frame.id().sa()), data,);
+                    info!("{} Encoder 0: {}", style_node(frame.id().sa()), data,);
                 }
                 if frame.pdu()[2..4] != [0xff, 0xff] {
                     let data = u16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
 
-                    info!("{} Encoder 2: {}", style_node(frame.id().sa()), data,);
-                }
-                if frame.pdu()[4..6] != [0xff, 0xff] {
-                    let data = u16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-
-                    info!("{} Encoder 3: {}", style_node(frame.id().sa()), data,);
-                }
-                if frame.pdu()[6..8] != [0xff, 0xff] {
-                    let data = u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
-
-                    info!("{} Encoder 4: {}", style_node(frame.id().sa()), data,);
+                    info!("{} Encoder 1: {}", style_node(frame.id().sa()), data,);
                 }
             }
             _ => {}
@@ -171,6 +161,8 @@ enum NodeCommand {
     Status,
     /// Enable or disable motion lock.
     Motion { toggle: u8 },
+    /// Enable or disable encoders.
+    Encoder { encoder: u8, encoder_on: u8 },
 }
 
 #[tokio::main]
@@ -239,9 +231,9 @@ async fn main() -> anyhow::Result<()> {
 
                 let found = false;
                 // for _ in 0..3 {
-                //     net.request(address_id, 0x18feda00).await;
+                net.request(address_id, 0x18feda00).await;
 
-                //     let frame = net.as_ref().recv_from().await?;
+                let frame = net.accept().await;
 
                 //     if frame.id().pgn() == 65_242 {
                 //         // let mut major = 0;
@@ -290,6 +282,26 @@ async fn main() -> anyhow::Result<()> {
                 );
 
                 net.set_motion_lock(address_id, toggle == &0).await;
+            }
+            NodeCommand::Encoder {
+                encoder,
+                encoder_on,
+            } => {
+                let address_id = node_address(address)?;
+
+                info!(
+                    "{} Turn encoder {} {}",
+                    style_node(address_id),
+                    encoder,
+                    if encoder_on == &0 {
+                        Red.paint("off")
+                    } else {
+                        Green.paint("on")
+                    },
+                );
+
+                net.enable_encoder(address_id, *encoder, encoder_on == &1)
+                    .await;
             }
         },
         Command::Dump => {
