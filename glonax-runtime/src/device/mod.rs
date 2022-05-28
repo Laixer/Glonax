@@ -128,7 +128,7 @@ pub trait MotionDevice: Device {
 /// Device which can read input events.
 #[async_trait::async_trait]
 pub trait InputDevice: Device {
-    async fn next(&mut self) -> Option<Scancode>;
+    async fn next(&mut self) -> Result<Scancode>;
 }
 
 /// Device which can read field metrics.

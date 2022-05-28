@@ -248,16 +248,15 @@ where
         let operand = self.operand.clone();
 
         self.spawn(async move {
-            loop {
-                if let Some(input) = input_device.lock().await.next().await {
-                    if let Ok(motion) = operand.try_from_input_device(input) {
-                        if let Err(_) = dispatcher.motion(motion).await {
-                            warn!("Input event terminated without completion");
-                            return;
-                        }
+            while let Ok(input) = input_device.lock().await.next().await {
+                if let Ok(motion) = operand.try_from_input_device(input) {
+                    if let Err(_) = dispatcher.motion(motion).await {
+                        warn!("Input event terminated without completion");
+                        return;
                     }
                 }
             }
+            warn!("Input device lost");
         });
     }
 }
