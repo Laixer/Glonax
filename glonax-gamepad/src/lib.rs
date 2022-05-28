@@ -123,7 +123,10 @@ pub struct Gamepad(tokio::io::BufReader<File>);
 impl Gamepad {
     /// Construct new gamepad driver.
     pub async fn new(path: &Path) -> std::io::Result<Self> {
-        Ok(Self(tokio::io::BufReader::new(File::open(path).await?)))
+        Ok(Self(tokio::io::BufReader::with_capacity(
+            4 * std::mem::size_of::<JsEvent>(),
+            File::open(path).await?,
+        )))
     }
 
     /// Return the next event from the gamepad.
