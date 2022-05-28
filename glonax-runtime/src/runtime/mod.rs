@@ -182,7 +182,7 @@ where
     /// This method is called when the runtime is idle. Operations run here may
     /// *never* block, halt or otherwise obstruct the runtime. Doing so will
     /// sarve the runtime and can increase the event latency.
-    async fn idle_tlime(&mut self) {
+    async fn idle_time(&mut self) {
         self.device_manager.health_check().await;
 
         // TODO: Move to builder.
@@ -203,31 +203,30 @@ where
     /// should only every break out of the loop if shutdown was requested.
     pub(super) async fn run(&mut self) {
         use glonax_core::Trace;
-        use tokio::time::sleep;
 
         let mut tracer = self.tracer.instance("motion");
 
         loop {
-            let wait = sleep(Duration::from_secs(self.settings.timer_interval));
+            match tokio::time::timeout(
+                Duration::from_secs(self.settings.timer_interval),
+                self.event_bus.1.recv(),
+            )
+            .await
+            {
+                Ok(event) => match event.unwrap() {
+                    RuntimeEvent::ExciteMotion(motion_event) => {
+                        motion_event.record(&mut tracer, time::now());
 
-            tokio::select! {
-                biased;
-
-                event = self.event_bus.1.recv() => {
-                    match event.unwrap() {
-                        RuntimeEvent::ExciteMotion(motion_event) => {
-                            motion_event.record(&mut tracer, time::now());
-                            let mut motion_device = self.motion_device.lock().await;
-                            motion_device.actuate(motion_event).await;
-                        }
-                        RuntimeEvent::Shutdown => break,
+                        let mut motion_device = self.motion_device.lock().await;
+                        motion_device.actuate(motion_event).await;
                     }
-                    // TODO: handle err.
-                }
-
-                _ = wait => self.idle_tlime().await,
-            };
+                    RuntimeEvent::Shutdown => break,
+                },
+                Err(_) => self.idle_time().await,
+            }
         }
+
+        debug!("Abort running tasks");
 
         // Cancel all async tasks.
         for handle in &self.task_pool {
