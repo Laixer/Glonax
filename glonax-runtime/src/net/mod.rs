@@ -95,7 +95,7 @@ impl ControlNet {
         self.socket.send_to(&frame).await.unwrap();
     }
 
-    pub async fn gate_control(&self, node: u8, gate_bank: usize, value: [i16; 4]) {
+    pub async fn gate_control(&self, node: u8, gate_bank: usize, value: [Option<i16>; 4]) {
         let bank = [40_960, 41_216];
 
         let frame = glonax_j1939::j1939::Frame::new(
@@ -103,14 +103,14 @@ impl ControlNet {
                 .da(node)
                 .build(),
             [
-                value[0].to_le_bytes()[0],
-                value[0].to_le_bytes()[1],
-                value[1].to_le_bytes()[0],
-                value[1].to_le_bytes()[1],
-                value[2].to_le_bytes()[0],
-                value[2].to_le_bytes()[1],
-                value[3].to_le_bytes()[0],
-                value[3].to_le_bytes()[1],
+                value[0].map_or(0xff, |v| v.to_le_bytes()[0]),
+                value[0].map_or(0xff, |v| v.to_le_bytes()[1]),
+                value[1].map_or(0xff, |v| v.to_le_bytes()[0]),
+                value[1].map_or(0xff, |v| v.to_le_bytes()[1]),
+                value[2].map_or(0xff, |v| v.to_le_bytes()[0]),
+                value[2].map_or(0xff, |v| v.to_le_bytes()[1]),
+                value[3].map_or(0xff, |v| v.to_le_bytes()[0]),
+                value[3].map_or(0xff, |v| v.to_le_bytes()[1]),
             ],
         );
 

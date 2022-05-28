@@ -116,7 +116,7 @@ impl MotionDevice for Hydraulic {
     async fn actuate(&mut self, motion: Motion) {
         match motion {
             Motion::StopAll => {
-                trace!("Stop all actuators");
+                trace!("Disable motion");
 
                 // FUTURE: Handle error, translate to device error?
                 if let Err(err) = self.session.dispatch_valve_control(u8::MAX, 0).await {
@@ -130,7 +130,7 @@ impl MotionDevice for Hydraulic {
                 self.locked = true;
             }
             Motion::ResumeAll => {
-                trace!("Resume all actuators");
+                trace!("Enable motion");
 
                 self.locked = false;
             }
