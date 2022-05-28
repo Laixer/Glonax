@@ -1,26 +1,20 @@
 use std::path::Path;
 
+mod driver;
 mod node;
 mod observer;
 mod profile;
 
-mod sink;
-pub use sink::Sink;
-
 mod manager;
 pub use manager::DeviceManager;
-
-mod gamepad;
-pub use gamepad::Gamepad;
 
 mod cau;
 pub use cau::ControlAreaUnit;
 
-mod hydraulic;
-pub use hydraulic::Hydraulic;
-
-mod inertial;
-pub use inertial::Inertial;
+pub use driver::gamepad::Gamepad;
+pub use driver::hydraulic::Hydraulic;
+pub use driver::inertial::Inertial;
+pub use driver::sink::Sink;
 
 mod error;
 pub use error::{DeviceError, ErrorKind, Result};

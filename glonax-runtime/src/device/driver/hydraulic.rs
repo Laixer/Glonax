@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use super::{Device, IoDevice, MotionDevice};
-
 use glonax_core::motion::Motion;
 use glonax_ice::{eval::Evaluation, Session};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
+
+use crate::device::{self, Device, IoDevice, MotionDevice};
 
 const DEVICE_NAME: &str = "hydraulic";
 const DEVICE_ADDR: u16 = 0x7;
@@ -50,7 +50,7 @@ pub struct Hydraulic {
 impl IoDevice for Hydraulic {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = super::profile::SerialDeviceProfile;
+    type DeviceProfile = device::profile::SerialDeviceProfile;
 
     #[inline]
     fn node_path(&self) -> &Path {
@@ -58,22 +58,22 @@ impl IoDevice for Hydraulic {
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
+    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
         Self::new(path)
     }
 }
 
 impl Hydraulic {
-    fn new(path: &std::path::Path) -> super::Result<Self> {
+    fn new(path: &std::path::Path) -> device::Result<Self> {
         let port = glonax_serial::builder(path)
-            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
+            .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_baud_rate(BaudRate::Baud115200)
-            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
+            .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_parity(Parity::ParityNone)
             .set_stop_bits(StopBits::Stop1)
             .set_flow_control(FlowControl::FlowNone)
             .build()
-            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?;
+            .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?;
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
@@ -90,13 +90,13 @@ impl Device for Hydraulic {
         DEVICE_NAME.to_owned()
     }
 
-    async fn probe(&mut self) -> super::Result<()> {
+    async fn probe(&mut self) -> device::Result<()> {
         let mut eval = Evaluation::new(&mut self.session);
 
         let scan = eval
             .network_scan()
             .await
-            .map_err(|e| super::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
+            .map_err(|e| device::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
 
         trace!("Network scan result: {:?}", scan);
 

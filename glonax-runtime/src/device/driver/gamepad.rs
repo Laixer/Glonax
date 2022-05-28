@@ -3,14 +3,14 @@ use std::path::{Path, PathBuf};
 use glonax_core::input::{ButtonState, Scancode};
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
-use super::{Device, InputDevice, IoDevice};
+use crate::device::{self, Device, InputDevice, IoDevice, IoDeviceProfile};
 
 const DEVICE_NAME: &str = "gamepad";
 
 pub struct JoystickDeviceProfile {}
 
-impl super::IoDeviceProfile for JoystickDeviceProfile {
-    const CLASS: super::Subsystem = super::Subsystem::Input;
+impl IoDeviceProfile for JoystickDeviceProfile {
+    const CLASS: device::Subsystem = device::Subsystem::Input;
 
     fn properties() -> std::collections::HashMap<&'static str, &'static str> {
         let mut props = std::collections::HashMap::<&str, &str>::new();
@@ -43,7 +43,7 @@ impl IoDevice for Gamepad {
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
+    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
         Ok(Gamepad::new(path).await)
     }
 }
@@ -69,7 +69,7 @@ impl Device for Gamepad {
 
 #[async_trait::async_trait]
 impl InputDevice for Gamepad {
-    async fn next(&mut self) -> super::Result<Scancode> {
+    async fn next(&mut self) -> device::Result<Scancode> {
         loop {
             match self.driver.next_event().await {
                 Ok(event) => match event {
@@ -145,7 +145,7 @@ impl InputDevice for Gamepad {
                     _ => {}
                 },
                 Err(_) => {
-                    break Err(super::DeviceError::no_such_device(
+                    break Err(device::DeviceError::no_such_device(
                         self.name(),
                         &self.node_path,
                     ))

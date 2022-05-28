@@ -3,10 +3,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::{Device, IoDevice, MetricDevice, MetricValue};
-
 use glonax_ice::{eval::Evaluation, PayloadType, Session, Vector3x16};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
+
+use crate::device::{self, Device, IoDevice, MetricDevice, MetricValue};
 
 const DEVICE_NAME: &str = "imu";
 const DEVICE_ADDR: u16 = 0x7;
@@ -22,29 +22,29 @@ pub struct Inertial {
 impl IoDevice for Inertial {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = super::profile::SerialDeviceProfile;
+    type DeviceProfile = device::profile::SerialDeviceProfile;
 
     #[inline]
     fn node_path(&self) -> &Path {
         self.node_path.as_path()
     }
 
-    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
+    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
         Inertial::new(path)
     }
 }
 
 impl Inertial {
-    fn new(path: &std::path::Path) -> super::Result<Self> {
+    fn new(path: &std::path::Path) -> device::Result<Self> {
         let port = glonax_serial::builder(path)
-            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
+            .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_baud_rate(BaudRate::Baud115200)
-            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
+            .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_parity(Parity::ParityNone)
             .set_stop_bits(StopBits::Stop1)
             .set_flow_control(FlowControl::FlowNone)
             .build()
-            .map_err(|e| super::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?;
+            .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?;
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
@@ -59,20 +59,20 @@ impl Device for Inertial {
         DEVICE_NAME.to_owned()
     }
 
-    async fn probe(&mut self) -> super::Result<()> {
+    async fn probe(&mut self) -> device::Result<()> {
         let mut eval = Evaluation::new(&mut self.session);
 
         let scan = eval
             .network_scan()
             .await
-            .map_err(|e| super::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
+            .map_err(|e| device::DeviceError::from_session(DEVICE_NAME.to_owned(), e))?;
 
         trace!("Network scan result: {:?}", scan);
 
         if scan.address != REMOTE_DEVICE_ADDR {
-            return Err(crate::device::DeviceError {
+            return Err(device::DeviceError {
                 device: DEVICE_NAME.to_owned(),
-                kind: crate::device::ErrorKind::InvalidDeviceFunction,
+                kind: device::ErrorKind::InvalidDeviceFunction,
             });
         }
 

@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use super::{Device, IoDevice, MotionDevice};
-
 use glonax_core::motion::Motion;
+
+use crate::device::{self, Device, IoDevice, MotionDevice};
 
 const DEVICE_NAME: &str = "sink";
 
@@ -14,7 +14,7 @@ pub struct Sink {
 impl IoDevice for Sink {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = super::profile::NullDeviceProfile;
+    type DeviceProfile = device::profile::NullDeviceProfile;
 
     #[inline]
     fn node_path(&self) -> &Path {
@@ -22,13 +22,13 @@ impl IoDevice for Sink {
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> super::Result<Self> {
+    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
         Sink::new(path)
     }
 }
 
 impl Sink {
-    fn new(path: &std::path::Path) -> super::Result<Self> {
+    fn new(path: &std::path::Path) -> device::Result<Self> {
         Ok(Self {
             node_path: path.to_path_buf(),
         })
