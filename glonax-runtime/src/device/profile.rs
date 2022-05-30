@@ -20,3 +20,14 @@ impl super::IoDeviceProfile for NullDeviceProfile {
         device.sysname().to_str().unwrap() == "null"
     }
 }
+
+pub struct CanDeviceRuleset {}
+
+impl super::IoDeviceProfile for CanDeviceRuleset {
+    const CLASS: super::Subsystem = super::Subsystem::Net;
+
+    #[inline]
+    fn filter(device: &udev::Device) -> bool {
+        device.sysname().to_str().unwrap().starts_with("can")
+    }
+}

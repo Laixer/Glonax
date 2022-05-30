@@ -1,24 +1,13 @@
 use glonax_core::motion::Motion;
 
 use crate::{
-    device::{self, Device, IoDeviceProfile, MotionDevice, UserDevice},
+    device::{self, profile::CanDeviceRuleset, Device, MotionDevice, UserDevice},
     Config,
 };
 
 const DEVICE_NAME: &str = "can";
 const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 const DEVICE_NET_HCU_ADDR: u8 = 0x4a;
-
-pub struct CanDeviceProfile {}
-
-impl IoDeviceProfile for CanDeviceProfile {
-    const CLASS: device::Subsystem = device::Subsystem::Net;
-
-    #[inline]
-    fn filter(device: &udev::Device) -> bool {
-        device.sysname().to_str().unwrap().starts_with("can")
-    }
-}
 
 pub struct Can {
     interface: String,
@@ -29,7 +18,7 @@ pub struct Can {
 impl UserDevice for Can {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceRuleset = CanDeviceProfile;
+    type DeviceRuleset = CanDeviceRuleset;
 
     #[inline]
     fn sysname(&self) -> &str {
