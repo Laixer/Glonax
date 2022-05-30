@@ -1,69 +1,46 @@
-use crate::device::node::IoNode;
+use super::{node::Applicant, IoDeviceProfile};
 
-use super::IoDeviceProfile;
-
-pub struct HostInterface {
-    /// Device enumerator.
-    enumerator: udev::Enumerator,
-}
+pub struct HostInterface(udev::Enumerator);
 
 impl HostInterface {
     /// Construct new host interface.
     pub fn new() -> Self {
-        Self {
-            enumerator: udev::Enumerator::new().unwrap(),
-        }
+        Self(udev::Enumerator::new().unwrap())
     }
 
-    /// Host global device filter.
-    ///
-    /// The filter ignores incompatible device nodes from the host device list.
-    /// None of the devices should match a global excluded device node.
-    fn global_device_filter(device: &udev::Device) -> bool {
-        // Uninitialized devices cannot be used.
-        if !device.is_initialized() {
-            return false;
-        }
-
-        // Ignore device which have been claimed by a driver.
-        if device.driver().is_some() {
-            return false;
-        }
-
-        // Devices will use the `devnode` for communication. Although not strictly
-        // necessary, `sysnodes` may be inaccessible. `devnodes` are often setup
-        // with the correct permissions and umask.
-        if device.devnode().is_none() {
-            return false;
-        }
-
-        true
-    }
-
-    /// Elect device candidates for the provided I/O device.
+    /// Select device candidates for the provided I/O device.
     ///
     /// Elected device nodes are matched based on the I/O device profile criteria.
     /// This method returns an iterator with the elected device candidates.
-    pub(crate) fn elect<T: IoDeviceProfile + 'static>(
+    pub(crate) fn select_devices<T: IoDeviceProfile + 'static>(
         &mut self,
-    ) -> impl Iterator<Item = IoNode> + '_ {
+    ) -> impl Iterator<Item = Applicant> + '_ {
         let subsystem: &str = T::CLASS.into();
 
         trace!("Selecting subsystem '{}'", subsystem);
 
-        self.enumerator.match_is_initialized().unwrap();
-        self.enumerator.match_subsystem(subsystem).unwrap();
+        self.0.match_is_initialized().unwrap();
+        self.0.match_subsystem(subsystem).unwrap();
 
         for (key, value) in T::properties() {
-            self.enumerator.match_property(key, value).unwrap();
+            self.0.match_property(key, value).unwrap();
         }
 
-        self.enumerator
+        self.0
             .scan_devices()
             .unwrap()
-            .filter(Self::global_device_filter)
+            .filter(|device| device.is_initialized() && device.driver().is_none())
             .filter(T::filter)
-            .map(|d| IoNode::from(d.devnode().unwrap()))
+            .filter(|device| match T::CLASS {
+                crate::device::Subsystem::Net => device
+                    .attribute_value("carrier")
+                    .map_or(false, |a| a == "1"),
+                crate::device::Subsystem::Input | crate::device::Subsystem::TTY => {
+                    device.devnode().is_some()
+                }
+                _ => true,
+            })
+            .map(|device| Applicant::new(device.sysname().to_str().unwrap(), device.devnode()))
     }
 }
 

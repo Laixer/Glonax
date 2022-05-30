@@ -7,79 +7,73 @@ use std::{
 
 use crate::device::DeviceError;
 
-use super::{DeviceDescriptor, IoDevice};
+use super::{DeviceDescriptor, UserDevice};
 
-pub(crate) struct IoNode {
-    pub(super) node_path: PathBuf,
+pub(crate) struct Applicant {
+    pub(super) sysname: String,
+    pub(super) node_path: Option<PathBuf>,
 }
 
-impl From<&Path> for IoNode {
-    fn from(value: &Path) -> Self {
+impl Applicant {
+    pub(crate) fn new(name: &str, node_path: Option<&Path>) -> Self {
         Self {
-            node_path: value.to_path_buf(),
+            sysname: name.to_owned(),
+            node_path: node_path.map(|p| p.to_path_buf()),
         }
     }
-}
 
-impl IoNode {
     #[inline]
-    pub fn as_path(&self) -> &Path {
-        &self.node_path
-    }
-
-    // FUTURE: path.try_exists()
-    /// Checks to see if the node path exists in the operating system.
-    ///
-    /// This methdd only checks that the I/O resource exist, but not if it is
-    /// accessible.
-    #[inline]
-    pub(crate) fn exists(&self) -> bool {
-        self.node_path.exists()
+    pub fn sysname(&self) -> &str {
+        self.sysname.as_str()
     }
 
     /// Try to construe a device from an I/O node.
     ///
     /// This function will return a shared handle to the device.
     /// This is the recommended way to instantiate and claim IO devices.
-    pub(crate) async fn try_construe_device<T: IoDevice>(
+    pub(crate) async fn try_construe_device<T: UserDevice>(
         self,
         timeout: Duration,
     ) -> super::Result<DeviceDescriptor<T>> {
-        // Every IO device must have an I/O resource on disk. If that node does
-        // not exist then exit right here. Doing this early on will ensure that
-        // every IO device returns the same error if the IO resource was not found.
-        if !self.exists() {
-            return Err(DeviceError::no_such_device(
-                T::NAME.to_owned(),
-                &self.node_path,
-            ));
+        if let Some(node_path) = &self.node_path {
+            if !node_path.exists() {
+                return Err(DeviceError::no_such_device(
+                    T::NAME.to_owned(),
+                    node_path.as_path(),
+                ));
+            }
         }
 
-        let mut io_device = T::from_node_path(&self.node_path).await?;
+        let mut device = if let Some(node_path) = &self.node_path {
+            T::from_node_path(node_path.as_path()).await?
+        } else {
+            T::from_sysname(&self.sysname).await?
+        };
 
         debug!(
-            "Probe I/O device '{}' from I/O node: {}",
+            "Probe device driver '{}' for applicant '{}'",
             T::NAME.to_owned(),
             self
         );
 
         // Only probe the I/O device for so long. If the timeout is reached the device
         // is not considered a match, even though it could have been given more time.
-        if tokio::time::timeout(timeout, io_device.probe())
-            .await
-            .is_err()
-        {
+        if tokio::time::timeout(timeout, device.probe()).await.is_err() {
             return Err(DeviceError::timeout(T::NAME.to_owned()));
         }
 
-        info!("I/O Device '{}' is construed", T::NAME.to_owned());
+        info!("Device driver '{}' is initialized", T::NAME.to_owned());
 
-        Ok(Arc::new(tokio::sync::Mutex::new(io_device)))
+        Ok(Arc::new(tokio::sync::Mutex::new(device)))
     }
 }
 
-impl Display for IoNode {
+impl Display for Applicant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.node_path.to_str().unwrap())
+        if let Some(node_path) = &self.node_path {
+            write!(f, "{} [{}]", self.sysname, node_path.to_str().unwrap())
+        } else {
+            write!(f, "{}", self.sysname)
+        }
     }
 }

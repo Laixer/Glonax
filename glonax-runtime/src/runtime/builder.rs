@@ -3,7 +3,7 @@ use std::time::Duration;
 use glonax_core::{motion::Motion, Identity, TraceWriter, Tracer};
 
 use crate::{
-    device::{Gamepad, Inertial, IoDevice, IoDeviceProfile, MotionDevice},
+    device::{Gamepad, Inertial, IoDeviceProfile, MotionDevice, UserDevice},
     runtime::{self, RuntimeSettings},
     Config, Runtime,
 };
@@ -30,8 +30,8 @@ pub struct Builder<'a, M, K, R> {
 
 impl<'a, M: 'static + Send, K, R> Builder<'a, M, K, R>
 where
-    M: MotionDevice + Default,
-    // M::DeviceProfile: IoDeviceProfile,
+    M: MotionDevice + UserDevice,
+    M::DeviceRuleset: IoDeviceProfile,
     K: Operand + Identity + 'static,
     R: Tracer,
     R::Instance: TraceWriter + Send + 'static,
@@ -135,7 +135,7 @@ where
             .runtime
             .device_manager
             .observer()
-            .scan_once::<Gamepad>(Duration::from_millis(250))
+            .scan_first::<Gamepad>(Duration::from_millis(250))
             .await
         {
             Some(input_device) => self.runtime.spawn_input_device(input_device),

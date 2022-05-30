@@ -1,4 +1,4 @@
-use super::{node::IoNode, observer::Observer, Device, DeviceDescriptor};
+use super::{observer::Observer, Device, DeviceDescriptor};
 
 // TODO: Generate I/O node from device.
 /// Device manager.
@@ -10,16 +10,16 @@ use super::{node::IoNode, observer::Observer, Device, DeviceDescriptor};
 ///
 /// By default devices selection is based on a simple round robin distribution.
 pub struct DeviceManager {
-    device_list: Vec<DeviceDescriptor<dyn Device>>,
-    io_node_list: Vec<IoNode>,
+    driver_list: Vec<DeviceDescriptor<dyn Device>>,
+    device_list: Vec<String>,
 }
 
 impl DeviceManager {
     /// Construct new device manager.
     pub fn new() -> Self {
         Self {
+            driver_list: Vec::new(),
             device_list: Vec::new(),
-            io_node_list: Vec::new(),
         }
     }
 
@@ -29,20 +29,19 @@ impl DeviceManager {
         Observer { manager: self }
     }
 
-    /// Returned claimed I/O devices.
     #[inline]
-    pub(crate) fn claimed(&self) -> &Vec<IoNode> {
-        &self.io_node_list
+    pub fn device_claimed(&self, name: &str) -> bool {
+        self.device_list.contains(&name.to_owned())
     }
 
     /// Register a device with the device manager.
     pub(crate) fn register_io_device(
         &mut self,
         device: DeviceDescriptor<dyn Device>,
-        io_node: IoNode,
+        device_sysname: &str,
     ) {
-        self.device_list.push(device);
-        self.io_node_list.push(io_node);
+        self.driver_list.push(device);
+        self.device_list.push(device_sysname.to_owned());
     }
 
     /// Run the device health check.
@@ -50,19 +49,19 @@ impl DeviceManager {
     /// The device health check removes any dead I/O nodes so that new devices
     /// can be identified using the same I/O node path.
     pub(crate) async fn health_check(&mut self) {
-        let evict: Vec<usize> = self
-            .io_node_list
-            .iter()
-            .enumerate()
-            .filter(|(_, node)| !node.exists())
-            .map(|(idx, _)| idx)
-            .collect();
+        // let evict: Vec<usize> = self
+        //     .io_node_list
+        //     .iter()
+        //     .enumerate()
+        //     .filter(|(_, node)| !node.exists())
+        //     .map(|(idx, _)| idx)
+        //     .collect();
 
-        for idx in evict {
-            trace!("Evict dead I/O node: {}", self.io_node_list[idx]);
+        // for idx in evict {
+        //     trace!("Evict dead I/O node: {}", self.io_node_list[idx]);
 
-            self.device_list.remove(idx);
-            self.io_node_list.remove(idx);
-        }
+        //     self.device_list.remove(idx);
+        //     self.io_node_list.remove(idx);
+        // }
     }
 }

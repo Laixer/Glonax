@@ -23,8 +23,7 @@ pub use self::runtime::Runtime;
 ///
 /// The excavator builder binds the excavator kernel to the hydraulic motion
 /// device. The caller should tread this type as opaque.
-type ExcavatorService =
-    LaunchStub<device::Hydraulic, kernel::excavator::Excavator, runtime::NullTracer>;
+type ExcavatorService = LaunchStub<device::Can, kernel::excavator::Excavator, runtime::NullTracer>;
 
 /// Start the machine kernel from configuration. This is the recommended way to
 /// run a machine kernel from an dynamic external caller. Call this factory for
@@ -33,22 +32,21 @@ type ExcavatorService =
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn start_machine(config: &Config) -> runtime::Result {
-    use device::{Hydraulic, Sink};
+    use device::{Can, Sink};
     use kernel::excavator::Excavator;
     use runtime::{CsvTracer, NullTracer};
 
     Ok(match config {
-        // cnf if !cnf.enable_motion && cnf.enable_test => {
-        //     LaunchStub::<Sink, Excavator, NullTracer>::test(&config)?
-        // }
-        // cnf if !cnf.enable_motion && cnf.enable_trace => {
-        //     LaunchStub::<Sink, Excavator, CsvTracer>::launch(&config)?
-        // }
-        // cnf if !cnf.enable_motion => LaunchStub::<Sink, Excavator, NullTracer>::launch(&config)?,
-        // cnf if cnf.enable_test => ExcavatorService::test(&config)?,
-        // cnf if cnf.enable_trace => LaunchStub::<Hydraulic, Excavator, CsvTracer>::launch(&config)?,
-        // _ => ExcavatorService::launch(&config)?,
-        _ => LaunchStub::<device::ControlAreaUnit, Excavator, NullTracer>::launch(&config)?,
+        cnf if !cnf.enable_motion && cnf.enable_test => {
+            LaunchStub::<Sink, Excavator, NullTracer>::test(&config)?
+        }
+        cnf if !cnf.enable_motion && cnf.enable_trace => {
+            LaunchStub::<Sink, Excavator, CsvTracer>::launch(&config)?
+        }
+        cnf if !cnf.enable_motion => LaunchStub::<Sink, Excavator, NullTracer>::launch(&config)?,
+        cnf if cnf.enable_test => ExcavatorService::test(&config)?,
+        cnf if cnf.enable_trace => LaunchStub::<Can, Excavator, CsvTracer>::launch(&config)?,
+        _ => ExcavatorService::launch(&config)?,
     })
 }
 
@@ -60,8 +58,8 @@ struct LaunchStub<M, K, R> {
 
 impl<M, K, R> LaunchStub<M, K, R>
 where
-    M: 'static + device::MotionDevice + Default + Send,
-    // M::DeviceProfile: device::IoDeviceProfile,
+    M: 'static + device::MotionDevice + device::UserDevice + Send,
+    M::DeviceRuleset: device::IoDeviceProfile,
     K: 'static + runtime::operand::Operand + glonax_core::Identity,
     R: glonax_core::Tracer,
     R::Instance: glonax_core::TraceWriter + Send + 'static,
