@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use glonax_core::motion::Motion;
 
-use crate::device::{self, Device, IoDevice, MotionDevice};
+use crate::device::{self, Device, MotionDevice, UserDevice};
 
 const DEVICE_NAME: &str = "sink";
 
@@ -11,27 +11,37 @@ pub struct Sink {
 }
 
 #[async_trait::async_trait]
-impl IoDevice for Sink {
+impl UserDevice for Sink {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = device::profile::NullDeviceProfile;
+    type DeviceRuleset = device::profile::NullDeviceProfile;
+
+    // #[inline]
+    // fn node_path(&self) -> &Path {
+    //     self.node_path.as_path()
+    // }
 
     #[inline]
-    fn node_path(&self) -> &Path {
-        self.node_path.as_path()
+    fn sysname(&self) -> &str {
+        self.node_path.to_str().unwrap()
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-        Sink::new(path)
+    async fn from_sysname(name: &str) -> device::Result<Self> {
+        Ok(Self::new(&Path::new(name)))
     }
+
+    // #[inline]
+    // async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
+    //     Sink::new(path)
+    // }
 }
 
 impl Sink {
-    fn new(path: &std::path::Path) -> device::Result<Self> {
-        Ok(Self {
+    fn new(path: &std::path::Path) -> Self {
+        Self {
             node_path: path.to_path_buf(),
-        })
+        }
     }
 }
 

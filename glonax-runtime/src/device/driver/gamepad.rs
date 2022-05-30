@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use glonax_core::input::{ButtonState, Scancode};
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
-use crate::device::{self, Device, InputDevice, IoDevice, IoDeviceProfile};
+use crate::device::{self, Device, InputDevice, IoDeviceProfile, UserDevice};
 
 const DEVICE_NAME: &str = "gamepad";
 
@@ -32,19 +32,29 @@ pub struct Gamepad {
 }
 
 #[async_trait::async_trait]
-impl IoDevice for Gamepad {
+impl UserDevice for Gamepad {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = JoystickDeviceProfile;
+    type DeviceRuleset = JoystickDeviceProfile;
 
     #[inline]
-    fn node_path(&self) -> &Path {
-        self.node_path.as_path()
+    fn sysname(&self) -> &str {
+        self.node_path.to_str().unwrap()
+    }
+
+    // #[inline]
+    // fn node_path(&self) -> &Path {
+    //     self.node_path.as_path()
+    // }
+
+    #[inline]
+    async fn from_sysname(_name: &str) -> device::Result<Self> {
+        unimplemented!()
     }
 
     #[inline]
     async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-        Ok(Gamepad::new(path).await)
+        Ok(Self::new(path).await)
     }
 }
 

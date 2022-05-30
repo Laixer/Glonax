@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use glonax_core::motion::Motion;
 use glonax_ice::{eval::Evaluation, Session};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
-use crate::device::{self, Device, IoDevice, MotionDevice};
+use crate::device::{self, Device, MotionDevice, UserDevice};
 
 const DEVICE_NAME: &str = "hydraulic";
 const DEVICE_ADDR: u16 = 0x7;
@@ -47,14 +47,24 @@ pub struct Hydraulic {
 }
 
 #[async_trait::async_trait]
-impl IoDevice for Hydraulic {
+impl UserDevice for Hydraulic {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = device::profile::SerialDeviceProfile;
+    type DeviceRuleset = device::profile::SerialDeviceProfile;
 
     #[inline]
-    fn node_path(&self) -> &Path {
-        self.node_path.as_path()
+    fn sysname(&self) -> &str {
+        self.node_path.to_str().unwrap()
+    }
+
+    // #[inline]
+    // fn node_path(&self) -> &Path {
+    //     self.node_path.as_path()
+    // }
+
+    #[inline]
+    async fn from_sysname(_name: &str) -> device::Result<Self> {
+        unimplemented!()
     }
 
     #[inline]

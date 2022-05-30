@@ -1,12 +1,9 @@
-use std::{
-    convert::TryInto,
-    path::{Path, PathBuf},
-};
+use std::{convert::TryInto, path::PathBuf};
 
 use glonax_ice::{eval::Evaluation, PayloadType, Session, Vector3x16};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
-use crate::device::{self, Device, IoDevice, MetricDevice, MetricValue};
+use crate::device::{self, Device, MetricDevice, MetricValue, UserDevice};
 
 const DEVICE_NAME: &str = "imu";
 const DEVICE_ADDR: u16 = 0x7;
@@ -19,18 +16,29 @@ pub struct Inertial {
 }
 
 #[async_trait::async_trait]
-impl IoDevice for Inertial {
+impl UserDevice for Inertial {
     const NAME: &'static str = DEVICE_NAME;
 
-    type DeviceProfile = device::profile::SerialDeviceProfile;
+    type DeviceRuleset = device::profile::SerialDeviceProfile;
 
     #[inline]
-    fn node_path(&self) -> &Path {
-        self.node_path.as_path()
+    fn sysname(&self) -> &str {
+        self.node_path.to_str().unwrap()
     }
 
+    // #[inline]
+    // fn node_path(&self) -> &Path {
+    //     self.node_path.as_path()
+    // }
+
+    #[inline]
+    async fn from_sysname(_name: &str) -> device::Result<Self> {
+        unimplemented!()
+    }
+
+    #[inline]
     async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-        Inertial::new(path)
+        Self::new(path)
     }
 }
 

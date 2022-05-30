@@ -32,6 +32,8 @@ pub enum Subsystem {
     TTY,
     /// Virtual memory class.
     Memory,
+    /// Network device class.
+    Net,
 }
 
 /// Convert device subsystem to string.
@@ -41,6 +43,7 @@ impl From<Subsystem> for &str {
             Subsystem::Input => "input",
             Subsystem::TTY => "tty",
             Subsystem::Memory => "mem",
+            Subsystem::Net => "net",
         }
     }
 }
@@ -52,6 +55,7 @@ pub trait Device: Send {
     /// Return the device name.
     fn name(&self) -> String;
 
+    // TODO: Move into Udev
     /// Probe the device.
     ///
     /// Can be used to signal that the device is ready. If the probe returns
@@ -69,29 +73,37 @@ pub trait Device: Send {
     async fn status(&mut self) -> Result<()> {
         Ok(())
     }
+
+    // TODO: add state change fn
 }
 
-/// I/O device.
+/// udev hotplug device.
 ///
 /// An I/O device takes a local resource such as a node or socket
 /// as its communication medium.
 #[async_trait::async_trait]
-pub trait IoDevice: Device + Sized {
+pub trait UserDevice: Device + Sized {
     /// Device name.
     const NAME: &'static str;
 
-    /// Get the node path from I/O device.
-    fn node_path(&self) -> &Path;
+    /// Get the system name.
+    fn sysname(&self) -> &str;
 
-    /// Hardware device profile.
+    /// Device match ruleset.
     ///
-    /// This profile will be used to match host device nodes.
-    type DeviceProfile;
+    /// This ruleset will be used to match host device candidates.
+    type DeviceRuleset;
+
+    /// Construct device from system name.
+    async fn from_sysname(name: &str) -> Result<Self>;
 
     /// Construct device from node path.
-    async fn from_node_path(path: &Path) -> Result<Self>;
+    async fn from_node_path(_path: &Path) -> Result<Self> {
+        unimplemented!()
+    }
 }
 
+// TODO: Renam to UserDeviceRuleset
 /// I/O device profile.
 pub trait IoDeviceProfile {
     const CLASS: Subsystem;
