@@ -85,28 +85,26 @@ impl<'a, W: TraceWriter> Pipeline<'a, W> {
         for metric_device in self.source_list.iter_mut() {
             // Set the timeout and wait for the operation to complete. if the
             // timeout is reached this read is cancelled and we poll the next device.
-            match tokio::time::timeout(self.timeout, metric_device.lock().await.next()).await {
-                Ok(Some((id, value))) => {
-                    let mut signal = Signal {
-                        source: id as u32,
-                        timestamp: SystemTime::now(),
-                        value,
-                        last: None,
-                    };
+            if let Ok(Some((id, value))) =
+                tokio::time::timeout(self.timeout, metric_device.lock().await.next()).await
+            {
+                let mut signal = Signal {
+                    source: id as u32,
+                    timestamp: SystemTime::now(),
+                    value,
+                    last: None,
+                };
 
-                    signal.record(self.trace_writer, glonax_core::time::now());
+                signal.record(self.trace_writer, glonax_core::time::now());
 
-                    trace!("Source {} ⇨ {}", signal.source, signal.value);
+                trace!("Source {} ⇨ {}", signal.source, signal.value);
 
-                    signal.last = self
-                        .cache
-                        .insert(signal.source, signal.clone())
-                        .map_or(None, |last_domain| Some(std::rc::Rc::new(last_domain)));
+                signal.last = self
+                    .cache
+                    .insert(signal.source, signal.clone())
+                    .map_or(None, |last_domain| Some(std::rc::Rc::new(last_domain)));
 
-                    sink.distribute(signal);
-                }
-                Ok(None) => {}
-                Err(_) => warn!("Timeout occured while reading from metric device"),
+                sink.distribute(signal);
             }
         }
     }
