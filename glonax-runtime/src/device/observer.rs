@@ -47,7 +47,10 @@ impl<'a> Observer<'a> {
             trace!("Elected applicant: {}", applicant);
 
             // TODO: Can be optimized.
-            match applicant.try_construe_device::<T>(timeout).await {
+            match applicant
+                .try_construe_device::<T>(timeout, self.manager.config())
+                .await
+            {
                 Ok(device) => {
                     self.manager
                         .register_device_driver(device.clone(), device.lock().await.sysname());
@@ -74,7 +77,10 @@ impl<'a> Observer<'a> {
         for applicant in self.host_elect_applicants::<T>() {
             trace!("Elected applicant: {}", applicant);
 
-            match applicant.try_construe_device::<T>(timeout).await {
+            match applicant
+                .try_construe_device::<T>(timeout, self.manager.config())
+                .await
+            {
                 Ok(device) => {
                     self.manager
                         .register_device_driver(device.clone(), device.lock().await.sysname());

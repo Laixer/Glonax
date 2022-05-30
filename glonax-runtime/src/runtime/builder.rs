@@ -58,8 +58,7 @@ where
 
         info!("{}", K::intro());
 
-        // TODO: Maybe ref the config in the dev mgr
-        let mut device_manager = crate::device::DeviceManager::new();
+        let mut device_manager = crate::device::DeviceManager::new(config.clone());
 
         // Locate one and only one motion device.
         let motion_device = match device_manager

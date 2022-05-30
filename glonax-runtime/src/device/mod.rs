@@ -22,6 +22,8 @@ pub mod host;
 
 use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
 
+use crate::Config;
+
 pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
 
 /// Device subsystems.
@@ -95,10 +97,10 @@ pub trait UserDevice: Device + Sized {
     type DeviceRuleset;
 
     /// Construct device from system name.
-    async fn from_sysname(name: &str) -> Result<Self>;
+    async fn from_sysname(name: &str, config: &Config) -> Result<Self>;
 
     /// Construct device from node path.
-    async fn from_node_path(_name: &str, _path: &Path) -> Result<Self> {
+    async fn from_node_path(_name: &str, _config: &Config, _path: &Path) -> Result<Self> {
         unimplemented!()
     }
 }

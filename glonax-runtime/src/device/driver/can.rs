@@ -1,6 +1,9 @@
 use glonax_core::motion::Motion;
 
-use crate::device::{self, Device, IoDeviceProfile, MotionDevice, UserDevice};
+use crate::{
+    device::{self, Device, IoDeviceProfile, MotionDevice, UserDevice},
+    Config,
+};
 
 const DEVICE_NAME: &str = "can";
 const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
@@ -34,7 +37,7 @@ impl UserDevice for Can {
     }
 
     #[inline]
-    async fn from_sysname(name: &str) -> device::Result<Self> {
+    async fn from_sysname(name: &str, _config: &Config) -> device::Result<Self> {
         Ok(Self::new(name).await)
     }
 }

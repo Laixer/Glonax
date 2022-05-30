@@ -1,13 +1,14 @@
-use std::path::{Path, PathBuf};
-
 use glonax_core::motion::Motion;
 
-use crate::device::{self, Device, MotionDevice, UserDevice};
+use crate::{
+    device::{self, Device, MotionDevice, UserDevice},
+    Config,
+};
 
 const DEVICE_NAME: &str = "sink";
 
 pub struct Sink {
-    node_path: PathBuf,
+    sysname: String,
 }
 
 #[async_trait::async_trait]
@@ -16,31 +17,21 @@ impl UserDevice for Sink {
 
     type DeviceRuleset = device::profile::NullDeviceProfile;
 
-    // #[inline]
-    // fn node_path(&self) -> &Path {
-    //     self.node_path.as_path()
-    // }
-
     #[inline]
     fn sysname(&self) -> &str {
-        self.node_path.to_str().unwrap()
+        self.sysname.as_str()
     }
 
     #[inline]
-    async fn from_sysname(name: &str) -> device::Result<Self> {
-        Ok(Self::new(&Path::new(name)))
+    async fn from_sysname(name: &str, _config: &Config) -> device::Result<Self> {
+        Ok(Self::new(name))
     }
-
-    // #[inline]
-    // async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-    //     Sink::new(path)
-    // }
 }
 
 impl Sink {
-    fn new(path: &std::path::Path) -> Self {
+    fn new(name: &str) -> Self {
         Self {
-            node_path: path.to_path_buf(),
+            sysname: name.to_owned(),
         }
     }
 }

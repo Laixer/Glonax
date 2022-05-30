@@ -1,10 +1,13 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use glonax_core::motion::Motion;
 use glonax_ice::{eval::Evaluation, Session};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
-use crate::device::{self, Device, MotionDevice, UserDevice};
+use crate::{
+    device::{self, Device, MotionDevice, UserDevice},
+    Config,
+};
 
 const DEVICE_NAME: &str = "hydraulic";
 const DEVICE_ADDR: u16 = 0x7;
@@ -42,7 +45,6 @@ where
 pub struct Hydraulic {
     session: Session<Uart>,
     sysname: String,
-    node_path: PathBuf,
     debounce: Debounce<u32, i16>,
     locked: bool,
 }
@@ -59,12 +61,12 @@ impl UserDevice for Hydraulic {
     }
 
     #[inline]
-    async fn from_sysname(_name: &str) -> device::Result<Self> {
+    async fn from_sysname(_name: &str, _config: &Config) -> device::Result<Self> {
         unimplemented!()
     }
 
     #[inline]
-    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+    async fn from_node_path(name: &str, _config: &Config, path: &Path) -> device::Result<Self> {
         Self::new(name, path)
     }
 }
@@ -84,7 +86,6 @@ impl Hydraulic {
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
             sysname: name.to_owned(),
-            node_path: path.to_path_buf(),
             debounce: Debounce::new(),
             locked: true,
         })

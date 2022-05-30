@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use crate::device::DeviceError;
+use crate::{device::DeviceError, Config};
 
 use super::{DeviceDescriptor, UserDevice};
 
@@ -34,6 +34,7 @@ impl Applicant {
     pub(crate) async fn try_construe_device<T: UserDevice>(
         self,
         timeout: Duration,
+        config: &Config,
     ) -> super::Result<DeviceDescriptor<T>> {
         if let Some(node_path) = &self.node_path {
             if !node_path.exists() {
@@ -45,9 +46,9 @@ impl Applicant {
         }
 
         let mut device = if let Some(node_path) = &self.node_path {
-            T::from_node_path(&self.sysname, node_path.as_path()).await?
+            T::from_node_path(&self.sysname, config, node_path.as_path()).await?
         } else {
-            T::from_sysname(&self.sysname).await?
+            T::from_sysname(&self.sysname, config).await?
         };
 
         debug!(

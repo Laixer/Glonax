@@ -1,6 +1,7 @@
+use crate::Config;
+
 use super::{observer::Observer, Device, DeviceDescriptor};
 
-// TODO: Generate I/O node from device.
 /// Device manager.
 ///
 /// The device manager keeps track of registered devices. Methods on the devices
@@ -10,14 +11,16 @@ use super::{observer::Observer, Device, DeviceDescriptor};
 ///
 /// By default devices selection is based on a simple round robin distribution.
 pub struct DeviceManager {
+    config: Config,
     driver_list: Vec<DeviceDescriptor<dyn Device>>,
     device_list: Vec<String>,
 }
 
 impl DeviceManager {
     /// Construct new device manager.
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         Self {
+            config,
             driver_list: Vec::new(),
             device_list: Vec::new(),
         }
@@ -27,6 +30,11 @@ impl DeviceManager {
     #[inline]
     pub fn observer(&mut self) -> Observer {
         Observer { manager: self }
+    }
+
+    #[inline]
+    pub fn config(&self) -> &Config {
+        &self.config
     }
 
     #[inline]

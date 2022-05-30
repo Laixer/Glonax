@@ -3,7 +3,10 @@ use std::path::{Path, PathBuf};
 use glonax_core::input::{ButtonState, Scancode};
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
-use crate::device::{self, Device, InputDevice, IoDeviceProfile, UserDevice};
+use crate::{
+    device::{self, Device, InputDevice, IoDeviceProfile, UserDevice},
+    Config,
+};
 
 const DEVICE_NAME: &str = "gamepad";
 
@@ -44,12 +47,12 @@ impl UserDevice for Gamepad {
     }
 
     #[inline]
-    async fn from_sysname(_name: &str) -> device::Result<Self> {
+    async fn from_sysname(_name: &str, _config: &Config) -> device::Result<Self> {
         unimplemented!()
     }
 
     #[inline]
-    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+    async fn from_node_path(name: &str, _config: &Config, path: &Path) -> device::Result<Self> {
         Ok(Self::new(name, path).await)
     }
 }

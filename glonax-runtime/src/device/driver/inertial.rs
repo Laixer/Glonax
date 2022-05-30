@@ -1,12 +1,12 @@
-use std::{
-    convert::TryInto,
-    path::{Path, PathBuf},
-};
+use std::{convert::TryInto, path::Path};
 
 use glonax_ice::{eval::Evaluation, PayloadType, Session, Vector3x16};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
-use crate::device::{self, Device, MetricDevice, MetricValue, UserDevice};
+use crate::{
+    device::{self, Device, MetricDevice, MetricValue, UserDevice},
+    Config,
+};
 
 const DEVICE_NAME: &str = "imu";
 const DEVICE_ADDR: u16 = 0x7;
@@ -16,7 +16,6 @@ const REMOTE_DEVICE_ADDR: u16 = 0x9;
 pub struct Inertial {
     session: Session<Uart>,
     sysname: String,
-    node_path: PathBuf,
 }
 
 #[async_trait::async_trait]
@@ -31,12 +30,12 @@ impl UserDevice for Inertial {
     }
 
     #[inline]
-    async fn from_sysname(_name: &str) -> device::Result<Self> {
+    async fn from_sysname(_name: &str, _config: &Config) -> device::Result<Self> {
         unimplemented!()
     }
 
     #[inline]
-    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+    async fn from_node_path(name: &str, _config: &Config, path: &Path) -> device::Result<Self> {
         Self::new(name, path)
     }
 }
@@ -56,7 +55,6 @@ impl Inertial {
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
             sysname: name.to_owned(),
-            node_path: path.to_path_buf(),
         })
     }
 }
