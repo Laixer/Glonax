@@ -1,4 +1,4 @@
-use super::{Device, MotionDevice, NetDevice};
+use crate::device::{self, Device, MotionDevice, NetDevice};
 
 use glonax_core::motion::Motion;
 
@@ -11,7 +11,7 @@ pub struct ControlAreaUnit {
 }
 
 impl ControlAreaUnit {
-    pub fn new(interface: &str) -> super::Result<Self> {
+    pub fn new(interface: &str) -> device::Result<Self> {
         let net = crate::net::ControlNet::open(interface, DEVICE_NET_LOCAL_ADDR);
 
         Ok(Self { net })
@@ -20,7 +20,7 @@ impl ControlAreaUnit {
 
 #[async_trait::async_trait]
 impl NetDevice for ControlAreaUnit {
-    async fn from_interface(interface: &str) -> super::Result<Self> {
+    async fn from_interface(interface: &str) -> device::Result<Self> {
         Self::new(interface)
     }
 }

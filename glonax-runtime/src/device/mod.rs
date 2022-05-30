@@ -8,9 +8,8 @@ mod profile;
 mod manager;
 pub use manager::DeviceManager;
 
-mod cau;
-pub use cau::ControlAreaUnit;
-
+pub use driver::can::Can;
+pub use driver::cau::ControlAreaUnit;
 pub use driver::gamepad::Gamepad;
 pub use driver::hydraulic::Hydraulic;
 pub use driver::inertial::Inertial;
