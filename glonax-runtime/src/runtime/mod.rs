@@ -189,7 +189,7 @@ where
         match self
             .device_manager
             .observer()
-            .scan_once::<crate::device::Gamepad>(Duration::from_millis(100))
+            .scan_first::<crate::device::Gamepad>(Duration::from_millis(100))
             .await
         {
             Some(input_device) => self.spawn_input_device(input_device),

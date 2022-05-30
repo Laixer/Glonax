@@ -45,7 +45,7 @@ impl Applicant {
         }
 
         let mut device = if let Some(node_path) = &self.node_path {
-            T::from_node_path(node_path.as_path()).await?
+            T::from_node_path(&self.sysname, node_path.as_path()).await?
         } else {
             T::from_sysname(&self.sysname).await?
         };

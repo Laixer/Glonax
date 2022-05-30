@@ -26,6 +26,7 @@ impl IoDeviceProfile for JoystickDeviceProfile {
 
 pub struct Gamepad {
     driver: glonax_gamepad::Gamepad,
+    sysname: String,
     node_path: PathBuf,
     reverse_left: bool,
     reverse_right: bool,
@@ -39,13 +40,8 @@ impl UserDevice for Gamepad {
 
     #[inline]
     fn sysname(&self) -> &str {
-        self.node_path.to_str().unwrap()
+        self.sysname.as_str()
     }
-
-    // #[inline]
-    // fn node_path(&self) -> &Path {
-    //     self.node_path.as_path()
-    // }
 
     #[inline]
     async fn from_sysname(_name: &str) -> device::Result<Self> {
@@ -53,15 +49,16 @@ impl UserDevice for Gamepad {
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-        Ok(Self::new(path).await)
+    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+        Ok(Self::new(name, path).await)
     }
 }
 
 impl Gamepad {
-    async fn new(path: &Path) -> Self {
+    async fn new(name: &str, path: &Path) -> Self {
         Self {
             driver: glonax_gamepad::Gamepad::new(path).await.unwrap(),
+            sysname: name.to_owned(),
             node_path: path.to_path_buf(),
             reverse_left: false,
             reverse_right: false,

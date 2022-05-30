@@ -1,4 +1,7 @@
-use std::{convert::TryInto, path::PathBuf};
+use std::{
+    convert::TryInto,
+    path::{Path, PathBuf},
+};
 
 use glonax_ice::{eval::Evaluation, PayloadType, Session, Vector3x16};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
@@ -12,6 +15,7 @@ const REMOTE_DEVICE_ADDR: u16 = 0x9;
 
 pub struct Inertial {
     session: Session<Uart>,
+    sysname: String,
     node_path: PathBuf,
 }
 
@@ -23,13 +27,8 @@ impl UserDevice for Inertial {
 
     #[inline]
     fn sysname(&self) -> &str {
-        self.node_path.to_str().unwrap()
+        self.sysname.as_str()
     }
-
-    // #[inline]
-    // fn node_path(&self) -> &Path {
-    //     self.node_path.as_path()
-    // }
 
     #[inline]
     async fn from_sysname(_name: &str) -> device::Result<Self> {
@@ -37,13 +36,13 @@ impl UserDevice for Inertial {
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-        Self::new(path)
+    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+        Self::new(name, path)
     }
 }
 
 impl Inertial {
-    fn new(path: &std::path::Path) -> device::Result<Self> {
+    fn new(name: &str, path: &std::path::Path) -> device::Result<Self> {
         let port = glonax_serial::builder(path)
             .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_baud_rate(BaudRate::Baud115200)
@@ -56,6 +55,7 @@ impl Inertial {
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
+            sysname: name.to_owned(),
             node_path: path.to_path_buf(),
         })
     }

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use glonax_core::motion::Motion;
 use glonax_ice::{eval::Evaluation, Session};
@@ -41,6 +41,7 @@ where
 
 pub struct Hydraulic {
     session: Session<Uart>,
+    sysname: String,
     node_path: PathBuf,
     debounce: Debounce<u32, i16>,
     locked: bool,
@@ -54,13 +55,8 @@ impl UserDevice for Hydraulic {
 
     #[inline]
     fn sysname(&self) -> &str {
-        self.node_path.to_str().unwrap()
+        self.sysname.as_str()
     }
-
-    // #[inline]
-    // fn node_path(&self) -> &Path {
-    //     self.node_path.as_path()
-    // }
 
     #[inline]
     async fn from_sysname(_name: &str) -> device::Result<Self> {
@@ -68,13 +64,13 @@ impl UserDevice for Hydraulic {
     }
 
     #[inline]
-    async fn from_node_path(path: &std::path::Path) -> device::Result<Self> {
-        Self::new(path)
+    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+        Self::new(name, path)
     }
 }
 
 impl Hydraulic {
-    fn new(path: &std::path::Path) -> device::Result<Self> {
+    fn new(name: &str, path: &Path) -> device::Result<Self> {
         let port = glonax_serial::builder(path)
             .map_err(|e| device::DeviceError::from_serial(DEVICE_NAME.to_owned(), path, e))?
             .set_baud_rate(BaudRate::Baud115200)
@@ -87,6 +83,7 @@ impl Hydraulic {
 
         Ok(Self {
             session: Session::new(port, DEVICE_ADDR),
+            sysname: name.to_owned(),
             node_path: path.to_path_buf(),
             debounce: Debounce::new(),
             locked: true,

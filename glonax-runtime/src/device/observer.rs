@@ -50,7 +50,7 @@ impl<'a> Observer<'a> {
             match applicant.try_construe_device::<T>(timeout).await {
                 Ok(device) => {
                     self.manager
-                        .register_io_device(device.clone(), device.lock().await.sysname());
+                        .register_device_driver(device.clone(), device.lock().await.sysname());
 
                     break Some(device);
                 }
@@ -77,7 +77,7 @@ impl<'a> Observer<'a> {
             match applicant.try_construe_device::<T>(timeout).await {
                 Ok(device) => {
                     self.manager
-                        .register_io_device(device.clone(), device.lock().await.sysname());
+                        .register_device_driver(device.clone(), device.lock().await.sysname());
                     construed_devices.push(device);
                 }
                 Err(e) => {

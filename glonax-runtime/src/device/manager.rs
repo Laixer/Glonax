@@ -35,11 +35,17 @@ impl DeviceManager {
     }
 
     /// Register a device with the device manager.
-    pub(crate) fn register_io_device(
+    pub(crate) fn register_device_driver(
         &mut self,
         device: DeviceDescriptor<dyn Device>,
         device_sysname: &str,
     ) {
+        // TODO: Also want the device name.
+        trace!(
+            "Register driver with device '{}'",
+            device_sysname.to_owned()
+        );
+
         self.driver_list.push(device);
         self.device_list.push(device_sysname.to_owned());
     }

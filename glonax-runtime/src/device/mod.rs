@@ -98,7 +98,7 @@ pub trait UserDevice: Device + Sized {
     async fn from_sysname(name: &str) -> Result<Self>;
 
     /// Construct device from node path.
-    async fn from_node_path(_path: &Path) -> Result<Self> {
+    async fn from_node_path(_name: &str, _path: &Path) -> Result<Self> {
         unimplemented!()
     }
 }
