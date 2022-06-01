@@ -133,7 +133,7 @@ where
             .runtime
             .device_manager
             .observer()
-            .scan_first::<Gamepad>(Duration::from_millis(250))
+            .scan_first::<Gamepad>(Duration::from_millis(100))
             .await
         {
             Some(input_device) => self.runtime.spawn_input_device(input_device),
@@ -151,11 +151,19 @@ where
         // Enable autopilot service if configured.
         if self.config.enable_autopilot {
             self.enable_autopilot().await;
+        } else {
+            info!("Autopilot not enabled");
         }
 
         // Enable input service if configured.
         if self.config.enable_input {
             self.enable_input().await;
+        } else {
+            info!("Input not enabled");
+        }
+
+        if !self.config.enable_motion {
+            info!("Motion not enabled");
         }
 
         Ok(())
