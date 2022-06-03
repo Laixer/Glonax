@@ -127,7 +127,7 @@ impl Operand for Excavator {
     /// Each individual scancode is mapped to its own motion
     /// structure. This way an input scancode can be more or
     /// less sensitive based on the actuator (and input control).
-    fn try_from_input_device(&self, input: Scancode) -> std::result::Result<Motion, ()> {
+    fn try_from_input_device(&mut self, input: Scancode) -> std::result::Result<Motion, ()> {
         match input {
             Scancode::LeftStickX(value) => Ok(Motion::Change(vec![(
                 Actuator::Slew.into(),
