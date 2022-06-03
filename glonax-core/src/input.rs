@@ -28,4 +28,6 @@ pub enum Scancode {
     Activate(ButtonState),
     /// Cancel button.
     Cancel(ButtonState),
+    /// Activate button.
+    Restrict(ButtonState),
 }

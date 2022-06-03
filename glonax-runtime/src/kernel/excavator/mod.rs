@@ -24,7 +24,7 @@ const BOOM_LENGTH: f32 = 6.0;
 const ARM_LENGTH: f32 = 2.97;
 // TODO: Rename. This is not an height but an transformation.
 /// Frame height in meters.
-const FRAME_HEIGHT: f32 = 1.88;
+const FRAME_HEIGHT: f32 = 1.885;
 /// Arm angle range.
 #[allow(dead_code)]
 const ARM_RANGE: std::ops::Range<f32> = -0.45..-2.47;
@@ -85,11 +85,13 @@ impl TryFrom<u32> for Metric {
 }
 
 #[derive(Clone, Copy)]
-pub struct Excavator;
+pub struct Excavator {
+    slow_motion: bool,
+}
 
 impl Default for Excavator {
     fn default() -> Self {
-        Self {}
+        Self { slow_motion: false }
     }
 }
 
@@ -104,6 +106,7 @@ impl Identity for Excavator {
     }
 }
 
+// TODO: Move somewhere.
 trait Level {
     fn ramp(self, lower: Self) -> Self;
 }
@@ -128,30 +131,62 @@ impl Operand for Excavator {
         match input {
             Scancode::LeftStickX(value) => Ok(Motion::Change(vec![(
                 Actuator::Slew.into(),
-                value.ramp(3072),
+                if self.slow_motion {
+                    value.ramp(3072) / 4
+                } else {
+                    value.ramp(3072)
+                },
             )])),
             Scancode::LeftStickY(value) => Ok(Motion::Change(vec![(
                 Actuator::Arm.into(),
-                value.ramp(3072),
+                if self.slow_motion {
+                    value.ramp(3072) / 4
+                } else {
+                    value.ramp(3072)
+                },
             )])),
             Scancode::RightStickX(value) => Ok(Motion::Change(vec![(
                 Actuator::Bucket.into(),
-                value.ramp(4096),
+                if self.slow_motion {
+                    value.ramp(4096) / 4
+                } else {
+                    value.ramp(4096)
+                },
             )])),
             Scancode::RightStickY(value) => Ok(Motion::Change(vec![(
                 Actuator::Boom.into(),
-                value.ramp(3072),
+                if self.slow_motion {
+                    value.ramp(3072) / 4
+                } else {
+                    value.ramp(3072)
+                },
             )])),
             Scancode::LeftTrigger(value) => Ok(Motion::Change(vec![(
                 Actuator::LimpLeft.into(),
-                value.ramp(2048),
+                if self.slow_motion {
+                    value.ramp(2048) / 4
+                } else {
+                    value.ramp(2048)
+                },
             )])),
             Scancode::RightTrigger(value) => Ok(Motion::Change(vec![(
                 Actuator::LimpRight.into(),
-                value.ramp(2048),
+                if self.slow_motion {
+                    value.ramp(2048) / 4
+                } else {
+                    value.ramp(2048)
+                },
             )])),
             Scancode::Cancel(ButtonState::Pressed) => Ok(Motion::StopAll),
             Scancode::Cancel(ButtonState::Released) => Ok(Motion::ResumeAll),
+            Scancode::Restrict(ButtonState::Pressed) => {
+                self.slow_motion = true;
+                Err(())
+            }
+            Scancode::Restrict(ButtonState::Released) => {
+                self.slow_motion = false;
+                Err(())
+            }
             _ => {
                 warn!("Scancode not mapped to action");
                 Err(()) // TODO:

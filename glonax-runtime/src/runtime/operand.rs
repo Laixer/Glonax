@@ -9,7 +9,7 @@ use super::{
 
 pub trait Operand: Default + Clone + Send + Sync {
     /// Try convert input scancode to motion.
-    fn try_from_input_device(&self, input: Scancode) -> Result<Motion, ()>;
+    fn try_from_input_device(&mut self, input: Scancode) -> Result<Motion, ()>;
 
     // TODO: Handle result.
     /// Fetch program by identifier.
