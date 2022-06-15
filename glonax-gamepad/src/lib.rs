@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use tokio::{fs::File, io::AsyncReadExt};
-
 /// Button pressed/released.
 const JS_EVENT_TYPE_BUTTON: u8 = 0x1;
 /// Joystick moved.
@@ -118,47 +116,76 @@ struct JsEvent {
     number: u8,
 }
 
-pub struct Gamepad(tokio::io::BufReader<File>);
+fn read_event(buffer: &[u8]) -> Event {
+    let event: JsEvent = unsafe { std::ptr::read(buffer.as_ptr() as *const JsEvent) };
 
-impl Gamepad {
+    if event.ty == JS_EVENT_TYPE_BUTTON {
+        Event {
+            ty: EventType::Button(event.number.into()),
+            value: event.value,
+        }
+    } else if event.ty == JS_EVENT_TYPE_AXIS {
+        Event {
+            ty: EventType::Axis(event.number.into()),
+            value: -event.value,
+        }
+    } else if event.ty == JS_EVENT_INIT | JS_EVENT_TYPE_BUTTON {
+        Event {
+            ty: EventType::ButtonInit(event.number.into()),
+            value: event.value,
+        }
+    } else if event.ty == JS_EVENT_INIT | JS_EVENT_TYPE_AXIS {
+        Event {
+            ty: EventType::AxisInit(event.number.into()),
+            value: -event.value,
+        }
+    } else {
+        unimplemented!();
+    }
+}
+
+pub struct AsyncGamepad(tokio::io::BufReader<tokio::fs::File>);
+
+impl AsyncGamepad {
     /// Construct new gamepad driver.
     pub async fn new(path: &Path) -> std::io::Result<Self> {
         Ok(Self(tokio::io::BufReader::with_capacity(
             4 * std::mem::size_of::<JsEvent>(),
-            File::open(path).await?,
+            tokio::fs::File::open(path).await?,
         )))
     }
 
     /// Return the next event from the gamepad.
     pub async fn next_event(&mut self) -> std::io::Result<Event> {
+        use tokio::io::AsyncReadExt;
+
         let mut buf = [0; std::mem::size_of::<JsEvent>()];
 
         self.0.read_exact(&mut buf).await?;
 
-        let event: JsEvent = unsafe { std::ptr::read(buf.as_ptr() as *const JsEvent) };
+        Ok(read_event(&buf))
+    }
+}
 
-        if event.ty == JS_EVENT_TYPE_BUTTON {
-            Ok(Event {
-                ty: EventType::Button(event.number.into()),
-                value: event.value,
-            })
-        } else if event.ty == JS_EVENT_TYPE_AXIS {
-            Ok(Event {
-                ty: EventType::Axis(event.number.into()),
-                value: -event.value,
-            })
-        } else if event.ty == JS_EVENT_INIT | JS_EVENT_TYPE_BUTTON {
-            Ok(Event {
-                ty: EventType::ButtonInit(event.number.into()),
-                value: event.value,
-            })
-        } else if event.ty == JS_EVENT_INIT | JS_EVENT_TYPE_AXIS {
-            Ok(Event {
-                ty: EventType::AxisInit(event.number.into()),
-                value: -event.value,
-            })
-        } else {
-            unimplemented!();
-        }
+pub struct Gamepad(std::io::BufReader<std::fs::File>);
+
+impl Gamepad {
+    /// Construct new gamepad driver.
+    pub fn new(path: &Path) -> std::io::Result<Self> {
+        Ok(Self(std::io::BufReader::with_capacity(
+            4 * std::mem::size_of::<JsEvent>(),
+            std::fs::File::open(path)?,
+        )))
+    }
+
+    /// Return the next event from the gamepad.
+    pub fn next_event(&mut self) -> std::io::Result<Event> {
+        use std::io::Read;
+
+        let mut buf = [0; std::mem::size_of::<JsEvent>()];
+
+        self.0.read_exact(&mut buf)?;
+
+        Ok(read_event(&buf))
     }
 }
