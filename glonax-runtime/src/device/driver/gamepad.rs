@@ -77,11 +77,10 @@ impl Device for Gamepad {
     }
 }
 
-#[async_trait::async_trait]
 impl InputDevice for Gamepad {
-    async fn next(&mut self) -> device::Result<Scancode> {
+    fn next(&mut self) -> device::Result<Scancode> {
         loop {
-            match self.driver.next_event().await {
+            match self.driver.next_event() {
                 Ok(event) => match event {
                     Event {
                         ty: EventType::Axis(Axis::LeftStickY),
