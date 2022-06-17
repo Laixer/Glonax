@@ -1,10 +1,12 @@
-pub mod algorithm;
+// pub mod algorithm;
 pub mod input;
 pub mod metric;
 pub mod motion;
 
+use std::f32::consts::PI;
+
 // TODO: Remove?
-pub use nalgebra;
+// pub use nalgebra;
 
 pub mod time {
     use std::time::{Duration, SystemTime};
@@ -16,6 +18,16 @@ pub mod time {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
     }
+}
+
+// TODO: TMP
+pub fn deg_to_rad(input: f32) -> f32 {
+    input * (PI / 180.0)
+}
+
+// TODO: TMP
+pub fn rad_to_deg(input: f32) -> f32 {
+    input * (180.0 / PI)
 }
 
 pub trait Identity {

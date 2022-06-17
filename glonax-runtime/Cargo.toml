@@ -15,7 +15,6 @@ name = "glonaxd"
 path = "src/main.rs"
 
 [dependencies]
-glonax-core = { version = "1.0", path = "../glonax-core" }
 glonax-ice = { version = "1.0", path = "../glonax-ice" }
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 glonax-serial = { version = "1.0", path = "../glonax-serial" }

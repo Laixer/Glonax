@@ -1,6 +1,6 @@
-use std::{ops::Range, time::Duration, u32};
+use std::{time::Duration, u32};
 
-use crate::{Trace, TraceWriter};
+use super::{Trace, TraceWriter};
 
 /// Motion instruction.
 ///
@@ -25,6 +25,16 @@ pub enum Motion {
 
 unsafe impl Sync for Motion {}
 unsafe impl Send for Motion {}
+
+pub trait ToMotion: Sync + Send {
+    fn to_motion(self) -> Motion;
+}
+
+impl ToMotion for Motion {
+    fn to_motion(self) -> Motion {
+        self
+    }
+}
 
 #[derive(serde::Serialize)]
 struct MotionTrace {
@@ -68,75 +78,6 @@ impl<T: TraceWriter> Trace<T> for Motion {
                     });
                 }
             }
-        }
-    }
-}
-
-pub struct NormalControl {
-    /// Actuator.
-    pub actuator: u32,
-    /// Actuation normal.
-    pub value: f32,
-    /// Actuation range.
-    pub range: Range<i16>,
-}
-
-impl NormalControl {
-    pub const MAX: f32 = 1.0;
-    pub const NIL: f32 = 0.0;
-    pub const MIN: f32 = -1.0;
-
-    pub fn new(actuator: u32, value: f32) -> Self {
-        Self {
-            actuator,
-            value,
-            ..Default::default()
-        }
-    }
-
-    /// Convert normal to effective range.
-    ///
-    /// If the unbound range is outside the absolute
-    /// range it is rounded to the range upperound.
-    ///
-    /// The `DEAD_VALUE` constitudes a measurement error.
-    /// Any value below this constant is interpreted as 0.
-    pub fn to_motion(&self) -> Motion {
-        const DEAD_VALUE: f32 = 0.02;
-
-        if self.value.abs() < DEAD_VALUE {
-            Motion::Stop(vec![self.actuator])
-        } else {
-            let unbound_range = (self.value * (self.range.end - self.range.start) as f32) as i16;
-            let value = if self.value.is_sign_positive() {
-                self.range.end.min(unbound_range + self.range.start)
-            } else {
-                // FUTURE: use min(..)
-                let value = unbound_range - self.range.start;
-                if value < -self.range.end {
-                    -self.range.end
-                } else {
-                    value
-                }
-            };
-
-            Motion::Change(vec![(self.actuator, value)])
-        }
-    }
-}
-
-impl From<NormalControl> for Motion {
-    fn from(value: NormalControl) -> Self {
-        value.to_motion()
-    }
-}
-
-impl Default for NormalControl {
-    fn default() -> Self {
-        NormalControl {
-            actuator: 0,
-            value: NormalControl::NIL,
-            range: 150..256,
         }
     }
 }
