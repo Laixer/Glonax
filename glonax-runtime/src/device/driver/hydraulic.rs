@@ -1,12 +1,11 @@
 use std::path::Path;
 
-use glonax_core::motion::Motion;
 use glonax_ice::{eval::Evaluation, Session};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
 use crate::{
+    core::motion::Motion,
     device::{self, Device, MotionDevice, UserDevice},
-    Config,
 };
 
 const DEVICE_NAME: &str = "hydraulic";
@@ -61,12 +60,12 @@ impl UserDevice for Hydraulic {
     }
 
     #[inline]
-    async fn from_sysname(_name: &str, _config: &Config) -> device::Result<Self> {
+    async fn from_sysname(_name: &str) -> device::Result<Self> {
         unimplemented!()
     }
 
     #[inline]
-    async fn from_node_path(name: &str, _config: &Config, path: &Path) -> device::Result<Self> {
+    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
         Self::new(name, path)
     }
 }

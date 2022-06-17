@@ -1,6 +1,6 @@
-use glonax_core::motion::Motion;
-
 use crate::runtime::operand::*;
+
+use super::HydraulicMotion;
 
 pub struct NoopProgram;
 
@@ -11,8 +11,16 @@ impl NoopProgram {
 }
 
 impl Program for NoopProgram {
-    fn step(&mut self, context: &mut Context) -> Option<Motion> {
+    type MotionPlan = HydraulicMotion;
+
+    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         trace!("Last step: {:?}", context.last_step.elapsed());
+
+        if let Some(guard) = context.reader.try_lock() {
+            if let Some((source, signal)) = guard.most_recent() {
+                debug!("Source {} ⇨ {}", source, signal.value);
+            }
+        }
 
         None
     }

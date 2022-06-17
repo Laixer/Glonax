@@ -3,10 +3,7 @@ use std::{convert::TryInto, path::Path};
 use glonax_ice::{eval::Evaluation, PayloadType, Session, Vector3x16};
 use glonax_serial::{BaudRate, FlowControl, Parity, StopBits, Uart};
 
-use crate::{
-    device::{self, Device, MetricDevice, MetricValue, UserDevice},
-    Config,
-};
+use crate::device::{self, Device, MetricDevice, UserDevice};
 
 const DEVICE_NAME: &str = "imu";
 const DEVICE_ADDR: u16 = 0x7;
@@ -30,12 +27,12 @@ impl UserDevice for Inertial {
     }
 
     #[inline]
-    async fn from_sysname(_name: &str, _config: &Config) -> device::Result<Self> {
+    async fn from_sysname(_name: &str) -> device::Result<Self> {
         unimplemented!()
     }
 
     #[inline]
-    async fn from_node_path(name: &str, _config: &Config, path: &Path) -> device::Result<Self> {
+    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
         Self::new(name, path)
     }
 }
@@ -88,25 +85,24 @@ impl Device for Inertial {
 
 #[async_trait::async_trait]
 impl MetricDevice for Inertial {
-    async fn next(&mut self) -> Option<(u16, MetricValue)> {
+    async fn next(&mut self) {
         match self.session.accept().await {
             Ok(frame) => match frame.packet().payload_type.try_into().unwrap() {
                 PayloadType::MeasurementAcceleration => {
-                    let acc: Vector3x16 = frame.get(6).unwrap();
-                    Some((
-                        REMOTE_DEVICE_ADDR,
-                        MetricValue::Acceleration(glonax_core::nalgebra::Vector3::new(
-                            acc.x as f32,
-                            acc.y as f32,
-                            acc.z as f32,
-                        )),
-                    ))
+                    let _acc: Vector3x16 = frame.get(6).unwrap();
+                    // Some((
+                    //     REMOTE_DEVICE_ADDR,
+                    //     MetricValue::Acceleration(glonax_core::nalgebra::Vector3::new(
+                    //         acc.x as f32,
+                    //         acc.y as f32,
+                    //         acc.z as f32,
+                    //     )),
+                    // ))
                 }
-                _ => None,
+                _ => {}
             },
             Err(e) => {
                 warn!("Session fault: {:?}", e);
-                None
             }
         }
     }

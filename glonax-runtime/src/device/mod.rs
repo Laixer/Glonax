@@ -1,28 +1,27 @@
 use std::path::Path;
 
+mod applicant;
 mod driver;
-mod node;
-mod observer;
 mod profile;
 
 mod manager;
 pub use manager::DeviceManager;
 
-pub use driver::can::Can;
-pub use driver::cau::ControlAreaUnit;
 pub use driver::gamepad::Gamepad;
+pub use driver::gateway::*;
+pub use driver::hcu::Hcu;
 pub use driver::hydraulic::Hydraulic;
 pub use driver::inertial::Inertial;
+pub use driver::mecu::Mecu;
 pub use driver::sink::Sink;
+pub use driver::vecu::Vecu;
 
 mod error;
 pub use error::{DeviceError, ErrorKind, Result};
 
 pub mod host;
 
-use glonax_core::{input::Scancode, metric::MetricValue, motion::Motion};
-
-use crate::Config;
+use crate::core::{input::Scancode, motion::Motion};
 
 pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
 
@@ -97,10 +96,10 @@ pub trait UserDevice: Device + Sized {
     type DeviceRuleset;
 
     /// Construct device from system name.
-    async fn from_sysname(name: &str, config: &Config) -> Result<Self>;
+    async fn from_sysname(name: &str) -> Result<Self>;
 
     /// Construct device from node path.
-    async fn from_node_path(_name: &str, _config: &Config, _path: &Path) -> Result<Self> {
+    async fn from_node_path(_name: &str, _path: &Path) -> Result<Self> {
         unimplemented!()
     }
 }
@@ -119,12 +118,6 @@ pub trait IoDeviceProfile {
     }
 }
 
-/// Network device.
-#[async_trait::async_trait]
-pub trait NetDevice: Device + Sized {
-    async fn from_interface(interface: &str) -> Result<Self>;
-}
-
 /// Device which can exercise motion.
 #[async_trait::async_trait]
 pub trait MotionDevice: Device {
@@ -137,6 +130,9 @@ pub trait InputDevice: Device {
     fn next(&mut self) -> Result<Scancode>;
 }
 
+#[async_trait::async_trait]
+pub trait CoreDevice: Device {
+    async fn next(&mut self) -> Result<()>;
 }
 
 /// Device which can read field metrics.
@@ -145,5 +141,5 @@ pub trait MetricDevice: Device {
     /// Return the next metric value and the device address from which the
     /// measurement originated. The device address may be used by the operand
     /// to map to a known machine component.
-    async fn next(&mut self) -> Option<(u16, MetricValue)>;
+    async fn next(&mut self);
 }

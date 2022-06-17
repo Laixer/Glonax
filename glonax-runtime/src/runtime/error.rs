@@ -9,6 +9,10 @@ pub enum Error {
     WorkspaceInUse,
     /// No motion device was found on the network.
     MotionDeviceNotFound,
+    /// No core device was found on the network.
+    CoreDeviceNotFound,
+    /// Timeout reached while contacting network nodes.
+    NetworkTimeout,
     /// Indicates an unhandled error with a device.
     Device(DeviceError),
 }
@@ -18,6 +22,8 @@ impl fmt::Display for Error {
         match self {
             Error::Device(e) => write!(f, "{}", e),
             Error::MotionDeviceNotFound => write!(f, "no motion device was found on the network"),
+            Error::CoreDeviceNotFound => write!(f, "no core device was found on the network"),
+            Error::NetworkTimeout => write!(f, "timeout reached while contacting network nodes"),
             Error::WorkspaceInUse => write!(f, "workspace is in use by another instance"),
         }
     }

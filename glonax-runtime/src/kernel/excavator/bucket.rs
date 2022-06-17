@@ -1,8 +1,6 @@
-use glonax_core::motion::Motion;
-
 use crate::runtime::operand::*;
 
-use super::Actuator;
+use super::{Actuator, HydraulicMotion};
 
 pub struct BucketProgram;
 
@@ -13,8 +11,10 @@ impl BucketProgram {
 }
 
 impl Program for BucketProgram {
-    fn step(&mut self, _context: &mut Context) -> Option<Motion> {
-        Some(Motion::Change(vec![(Actuator::Bucket.into(), 255)]))
+    type MotionPlan = HydraulicMotion;
+
+    fn step(&mut self, _context: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Change(vec![(Actuator::Bucket, 255)]))
     }
 
     fn can_terminate(&self, context: &mut Context) -> bool {

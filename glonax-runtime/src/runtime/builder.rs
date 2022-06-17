@@ -1,9 +1,8 @@
 use std::time::Duration;
 
-use glonax_core::{motion::Motion, Identity, TraceWriter, Tracer};
-
 use crate::{
-    device::{Gamepad, Inertial, IoDeviceProfile, MotionDevice, UserDevice},
+    core::{motion::Motion, Identity, TraceWriter, Tracer},
+    device::{DeviceDescriptor, Gamepad, Gateway, Hcu, Mecu, MotionDevice, Sink, Vecu},
     runtime::{self, RuntimeSettings},
     Config, Runtime,
 };
@@ -18,28 +17,26 @@ use super::Operand;
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub struct Builder<'a, M, K, R> {
+pub struct Builder<'a, K, R> {
     /// Current application configuration.
     config: &'a Config,
     /// Current application workspace.
     #[allow(dead_code)]
     lock: std::fs::File,
     /// Runtime core.
-    runtime: Runtime<M, K, R>,
+    runtime: Runtime<K, R>,
 }
 
-impl<'a, M: 'static + Send, K, R> Builder<'a, M, K, R>
+impl<'a, K, R> Builder<'a, K, R>
 where
-    M: MotionDevice + UserDevice,
-    M::DeviceRuleset: IoDeviceProfile,
     K: Operand + Identity + 'static,
-    R: Tracer,
+    R: Tracer + 'static,
     R::Instance: TraceWriter + Send + 'static,
 {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, M, K, R>> {
+    pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, K, R>> {
         crate::workspace::setup_if_not_exists(&config.workspace);
 
         Ok(Self {
@@ -53,22 +50,10 @@ where
     ///
     /// The runtime core is created and initialized by the configuration.
     /// Any errors are fatal errors at this point.
-    async fn bootstrap(config: &'a Config) -> super::Result<Runtime<M, K, R>> {
-        use tokio::sync::mpsc;
+    async fn bootstrap(config: &'a Config) -> super::Result<Runtime<K, R>> {
+        use tokio::sync::{broadcast, mpsc};
 
         info!("{}", K::intro());
-
-        let mut device_manager = crate::device::DeviceManager::new(config.clone());
-
-        // Locate one and only one motion device.
-        let motion_device = match device_manager
-            .observer()
-            .scan_first::<M>(std::time::Duration::from_millis(500))
-            .await
-        {
-            Some(motion_device) => motion_device,
-            None => return Err(super::Error::MotionDeviceNotFound),
-        };
 
         let session = runtime::RuntimeSession::new(&config.workspace);
 
@@ -78,14 +63,58 @@ where
 
         let tracer = R::from_path(&session.path);
 
+        let mut device_manager = crate::device::DeviceManager::new();
+
+        let gateway: DeviceDescriptor<Gateway> = match device_manager
+            .register_device_driver_first(|a, _| Gateway::new(a.as_str()))
+            .await
+        {
+            Some(gateway) => gateway,
+            None => return Err(super::Error::CoreDeviceNotFound),
+        };
+
+        if tokio::time::timeout(Duration::from_secs(1), gateway.lock().await.wait_online())
+            .await
+            .is_err()
+        {
+            return Err(super::Error::NetworkTimeout);
+        }
+
+        info!("Controller network is active");
+
+        let motion_device = if config.enable_motion {
+            gateway.lock().await.new_gateway_device::<Hcu>();
+
+            let motion_device =
+                device_manager.register_driver(gateway.lock().await.new_gateway_device::<Hcu>());
+            gateway.lock().await.subscribe(motion_device.clone());
+            motion_device as DeviceDescriptor<dyn MotionDevice>
+        } else {
+            device_manager.register_driver(Sink::new())
+        };
+
+        // let signal_tracer = tracer.instance("signal");
+
+        let signal_manager = crate::signal::SignalManager::new();
+
+        let signal_device = device_manager.register_driver(Mecu::new(signal_manager.pusher()));
+        gateway.lock().await.subscribe(signal_device);
+
+        let vehicle_device =
+            device_manager.register_driver(gateway.lock().await.new_gateway_device::<Vecu>());
+
+        gateway.lock().await.subscribe(vehicle_device);
+
         let program_queue = mpsc::channel(config.program_queue);
 
-        let mut runtime = Runtime {
-            operand: K::default(),
+        let runtime = Runtime {
+            operand: K::from_config(config),
+            core_device: gateway,
             motion_device,
-            metric_devices: vec![],
-            event_bus: mpsc::channel(config.event_queue),
+            motion: tokio::sync::mpsc::channel(32),
+            shutdown: broadcast::channel(1),
             program_queue: (program_queue.0, Some(program_queue.1)),
+            signal_manager,
             settings: RuntimeSettings::from(config),
             task_pool: vec![],
             device_manager,
@@ -93,30 +122,27 @@ where
             tracer,
         };
 
-        for metric_device in runtime
-            .device_manager
-            .observer()
-            .scan::<Inertial>(std::time::Duration::from_millis(500))
-            .await
-        {
-            runtime.metric_devices.push(metric_device);
-        }
-
         Ok(runtime)
     }
 
     async fn enable_term_shutdown(&self) {
         info!("Enable signals shutdown");
 
-        let dispatcher = self.runtime.dispatch();
+        let sender = self.runtime.shutdown.0.clone();
 
         tokio::spawn(async move {
             tokio::signal::ctrl_c().await.unwrap();
 
             info!("Termination requested");
 
-            dispatcher.gracefull_shutdown().await.unwrap();
+            sender.send(()).unwrap();
         });
+    }
+
+    async fn spawn_motion_tracer(&self) {
+        info!("Start motion tracer");
+
+        self.runtime.spawn_motion_tracer();
     }
 
     async fn enable_autopilot(&mut self) {
@@ -132,8 +158,7 @@ where
         match self
             .runtime
             .device_manager
-            .observer()
-            .scan_first::<Gamepad>(Duration::from_millis(100))
+            .try_register_device_driver_first::<Gamepad>(Duration::from_millis(100))
             .await
         {
             Some(input_device) => self.runtime.spawn_input_device(input_device),
@@ -147,6 +172,13 @@ where
     async fn config_services(&mut self) -> runtime::Result {
         // Enable terminal shutdown service.
         self.enable_term_shutdown().await;
+
+        self.runtime.device_manager.startup();
+
+        // Spawn the core device.
+        self.runtime.spawn_core_device();
+
+        self.spawn_motion_tracer().await;
 
         // Enable autopilot service if configured.
         if self.config.enable_autopilot {
@@ -174,11 +206,13 @@ where
     /// Startup events will be queued and run on the runtime core before any
     /// other events are executed.
     async fn startup_events(&self) {
-        let dispatcher = self.runtime.dispatch();
-
         info!("Running startup events");
 
-        dispatcher.motion(Motion::StopAll).await.unwrap();
+        self.runtime
+            .motion_dispatch()
+            .send(Motion::StopAll)
+            .await
+            .ok(); // TODO: Handle result
     }
 
     /// Validate the runtime setup and exit.
@@ -198,17 +232,23 @@ where
 
         self.startup_events().await;
 
-        // TODO: This is only for testing.
-        // Queue the drive program
-        self.runtime
-            .program_queue
-            .0
-            .send((700, vec![10.0]))
-            .await
-            .unwrap();
-
-        // Queue the noop. No operation will run forever.
-        // self.runtime.program_queue.0.send(900).await.unwrap();
+        if let Some(id) = self.config.program_id {
+            self.runtime
+                .program_queue
+                .0
+                .send((id, vec![]))
+                .await
+                .unwrap();
+        } else {
+            // TODO: This is only for testing.
+            // Queue the drive program
+            self.runtime
+                .program_queue
+                .0
+                .send((604, vec![]))
+                .await
+                .unwrap();
+        }
 
         self.runtime.run().await;
 

@@ -1,6 +1,7 @@
-use glonax_core::motion::Motion;
-
-use crate::device::{Device, MotionDevice};
+use crate::{
+    core::motion::Motion,
+    device::{Device, MotionDevice},
+};
 
 const DEVICE_NAME: &str = "sink";
 

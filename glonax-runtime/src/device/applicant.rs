@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{device::DeviceError, Config};
+use crate::device::DeviceError;
 
 use super::{DeviceDescriptor, UserDevice};
 
@@ -31,11 +31,38 @@ impl Applicant {
     ///
     /// This function will return a shared handle to the device.
     /// This is the recommended way to instantiate and claim IO devices.
-    pub(crate) async fn try_construe_device<T: UserDevice>(
+    pub(crate) async fn construe_device<T, F>(self, func: F) -> super::Result<DeviceDescriptor<T>>
+    where
+        T: UserDevice,
+        F: FnOnce(&String, &Option<PathBuf>) -> T,
+    {
+        if let Some(node_path) = &self.node_path {
+            if !node_path.exists() {
+                return Err(DeviceError::no_such_device(
+                    T::NAME.to_owned(),
+                    node_path.as_path(),
+                ));
+            }
+        }
+
+        let device = func(&self.sysname, &self.node_path);
+
+        info!("Device driver '{}' is initialized", T::NAME.to_owned());
+
+        Ok(Arc::new(tokio::sync::Mutex::new(device)))
+    }
+
+    /// Try to construe a device from an I/O node.
+    ///
+    /// This function will return a shared handle to the device.
+    /// This is the recommended way to instantiate and claim IO devices.
+    pub(crate) async fn try_construe_device<T>(
         self,
         timeout: Duration,
-        config: &Config,
-    ) -> super::Result<DeviceDescriptor<T>> {
+    ) -> super::Result<DeviceDescriptor<T>>
+    where
+        T: UserDevice,
+    {
         if let Some(node_path) = &self.node_path {
             if !node_path.exists() {
                 return Err(DeviceError::no_such_device(
@@ -46,9 +73,9 @@ impl Applicant {
         }
 
         let mut device = if let Some(node_path) = &self.node_path {
-            T::from_node_path(&self.sysname, config, node_path.as_path()).await?
+            T::from_node_path(&self.sysname, node_path.as_path()).await?
         } else {
-            T::from_sysname(&self.sysname, config).await?
+            T::from_sysname(&self.sysname).await?
         };
 
         debug!(

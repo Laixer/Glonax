@@ -1,8 +1,6 @@
-use glonax_core::motion::Motion;
-
 use crate::runtime::operand::*;
 
-use super::{Actuator, DRIVE_SPEED_MAX};
+use super::{Actuator, HydraulicMotion, DRIVE_SPEED_MAX};
 
 /// Drive strait forward.
 ///
@@ -123,7 +121,9 @@ impl DriveProgram {
 }
 
 impl Program for DriveProgram {
-    fn step(&mut self, context: &mut Context) -> Option<Motion> {
+    type MotionPlan = HydraulicMotion;
+
+    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         let (phase, power, distance) = self.profile.phase_frame(&context.start.elapsed());
 
         debug!(
@@ -134,20 +134,17 @@ impl Program for DriveProgram {
             distance.round()
         );
 
-        Some(Motion::Change(vec![
-            (Actuator::LimpLeft.into(), power.round() as i16),
-            (Actuator::LimpRight.into(), power.round() as i16),
-        ]))
+        Some(HydraulicMotion::StraightDrive(power.round() as i16))
     }
 
     fn can_terminate(&self, context: &mut Context) -> bool {
         self.profile.is_finished(&context.start.elapsed())
     }
 
-    fn term_action(&self, _: &mut Context) -> Option<Motion> {
-        Some(Motion::Stop(vec![
-            Actuator::LimpLeft.into(),
-            Actuator::LimpRight.into(),
+    fn term_action(&self, _: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Stop(vec![
+            Actuator::LimpLeft,
+            Actuator::LimpRight,
         ]))
     }
 }

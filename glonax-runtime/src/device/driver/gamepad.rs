@@ -1,11 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use glonax_core::input::{ButtonState, Scancode};
 use glonax_gamepad::{Axis, Button, Event, EventType};
 
 use crate::{
+    core::input::{ButtonState, Scancode},
     device::{self, Device, InputDevice, IoDeviceProfile, UserDevice},
-    Config,
 };
 
 const DEVICE_NAME: &str = "gamepad";
@@ -47,20 +46,20 @@ impl UserDevice for Gamepad {
     }
 
     #[inline]
-    async fn from_sysname(_name: &str, _config: &Config) -> device::Result<Self> {
+    async fn from_sysname(_name: &str) -> device::Result<Self> {
         unimplemented!()
     }
 
     #[inline]
-    async fn from_node_path(name: &str, _config: &Config, path: &Path) -> device::Result<Self> {
-        Ok(Self::new(name, path).await)
+    async fn from_node_path(name: &str, path: &Path) -> device::Result<Self> {
+        Ok(Self::new(name, path))
     }
 }
 
 impl Gamepad {
-    async fn new(name: &str, path: &Path) -> Self {
+    fn new(name: &str, path: &Path) -> Self {
         Self {
-            driver: glonax_gamepad::Gamepad::new(path).await.unwrap(),
+            driver: glonax_gamepad::Gamepad::new(path).unwrap(),
             sysname: name.to_owned(),
             node_path: path.to_path_buf(),
             reverse_left: false,
@@ -146,6 +145,16 @@ impl InputDevice for Gamepad {
                         value,
                     } => {
                         break Ok(Scancode::Activate(if value == 1 {
+                            ButtonState::Pressed
+                        } else {
+                            ButtonState::Released
+                        }))
+                    }
+                    Event {
+                        ty: EventType::Button(Button::West),
+                        value,
+                    } => {
+                        break Ok(Scancode::Restrict(if value == 1 {
                             ButtonState::Pressed
                         } else {
                             ButtonState::Released

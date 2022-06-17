@@ -1,4 +1,4 @@
-use super::{node::Applicant, IoDeviceProfile};
+use super::{applicant::Applicant, IoDeviceProfile};
 
 pub struct HostInterface(udev::Enumerator);
 

@@ -1,15 +1,21 @@
 use std::time::Instant;
 
-use glonax_core::{input::Scancode, motion::Motion};
-
-use super::{
-    pipeline::{Signal, Sink},
-    RuntimeSession,
+use crate::{
+    core::{input::Scancode, motion::ToMotion},
+    signal::SignalReader,
+    Config,
 };
 
-pub trait Operand: Default + Clone + Send + Sync {
+use super::RuntimeSession;
+
+pub trait Operand: Clone + Send + Sync {
+    type MotionPlan: ToMotion;
+
+    /// Construct operand from configuration.
+    fn from_config(config: &Config) -> Self;
+
     /// Try convert input scancode to motion.
-    fn try_from_input_device(&mut self, input: Scancode) -> Result<Motion, ()>;
+    fn try_from_input_device(&mut self, input: Scancode) -> Result<Self::MotionPlan, ()>;
 
     // TODO: Handle result.
     /// Fetch program by identifier.
@@ -21,7 +27,7 @@ pub trait Operand: Default + Clone + Send + Sync {
         &self,
         id: i32,
         params: Parameter,
-    ) -> Result<Box<dyn Program + Send + Sync>, ()>;
+    ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()>;
 }
 
 pub struct Context {
@@ -33,16 +39,19 @@ pub struct Context {
     pub step_count: usize,
     /// Runtime session.
     pub session: RuntimeSession,
+    /// Signal reader.
+    pub reader: SignalReader,
 }
 
 impl Context {
     /// Construct new program context.
-    pub fn new(session: RuntimeSession) -> Self {
+    pub fn new(reader: SignalReader, session: RuntimeSession) -> Self {
         Self {
             start: Instant::now(),
             last_step: Instant::now(),
             step_count: 0,
             session,
+            reader,
         }
     }
 }
@@ -55,25 +64,19 @@ pub type Parameter = Vec<f32>;
 /// sources and returns an optional motion instruction. A program
 /// is run to completion. The completion condition is polled on
 /// every cycle.
-pub trait Program: Sink {
+pub trait Program {
+    type MotionPlan: ToMotion;
+
     /// Boot the program.
     ///
     /// This method is called when the runtime accepted
     /// this progam and started its routine.
     fn boot(&mut self, _context: &mut Context) {}
 
-    /// Push incoming value to program.
-    ///
-    /// This value can be any metric. The program
-    /// must determine if and how the value is used.
-    /// The id represents the device from which this
-    /// value originates.
-    fn push(&mut self, _domain: Signal) {}
-
     /// Propagate the program forwards.
     ///
     /// This method returns an optional motion instruction.
-    fn step(&mut self, context: &mut Context) -> Option<Motion>;
+    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan>;
 
     /// Program termination condition.
     ///
@@ -85,18 +88,7 @@ pub trait Program: Sink {
     /// This is an optional method to send a last motion
     /// instruction. This method is called after `can_terminate`
     /// returns true and before the program is terminated.
-    fn term_action(&self, _context: &mut Context) -> Option<Motion> {
+    fn term_action(&self, _context: &mut Context) -> Option<Self::MotionPlan> {
         None
-    }
-}
-
-/// Blanket implementation of the oipeline sink for all programs.
-///
-/// The `Program` trait offers a default implementation for the domain push
-/// so that it remains optional to adopt the domain value.
-impl<T: Program> Sink for T {
-    #[inline]
-    fn distribute(&mut self, domain: Signal) {
-        self.push(domain)
     }
 }

@@ -1,14 +1,13 @@
 use std::time::{Duration, Instant};
 
-use glonax_core::{motion::Motion, time, TraceWriter, Tracer};
-
 use tokio::{
     sync::mpsc::{Receiver, Sender},
     task::JoinHandle,
 };
 
 use crate::{
-    device::{DeviceDescriptor, DeviceManager, InputDevice, MetricDevice, MotionDevice},
+    core::{self, motion::Motion, time, Trace, TraceWriter, Tracer},
+    device::{CoreDevice, DeviceDescriptor, DeviceManager, InputDevice, MotionDevice},
     Config,
 };
 
@@ -16,9 +15,6 @@ pub mod operand;
 mod trace;
 pub use trace::CsvTracer;
 pub use trace::NullTracer;
-
-pub mod pipeline;
-pub use pipeline::Signal;
 
 mod error;
 pub use self::error::Error;
@@ -29,46 +25,40 @@ mod builder;
 pub use self::builder::Builder;
 use self::operand::{Operand, Parameter};
 
-#[derive(Debug)]
-pub enum RuntimeEvent {
-    /// Request to drive motion.
-    ExciteMotion(Motion),
-    /// Request to shutdown runtime core.
-    Shutdown,
+struct MotionChain<R>
+where
+    R: Tracer,
+    R::Instance: TraceWriter + Send + 'static,
+{
+    trace: R::Instance,
+    motion_device: DeviceDescriptor<dyn MotionDevice>,
 }
 
-unsafe impl Sync for RuntimeEvent {}
-unsafe impl Send for RuntimeEvent {}
-
-pub struct Dispatch(Sender<RuntimeEvent>);
-
-impl Dispatch {
-    // FUTURE: Maybe rename in the future
-    /// Request motion.
-    ///
-    /// Post motion request on the runtime queue. This method will
-    /// *not* wait until the action is executed.
-    #[inline]
-    async fn motion(
-        &self,
-        motion: Motion,
-    ) -> std::result::Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
-        self.0.send(RuntimeEvent::ExciteMotion(motion)).await
+impl<R> MotionChain<R>
+where
+    R: Tracer,
+    R::Instance: TraceWriter + Send + 'static,
+{
+    pub fn new(motion_device: DeviceDescriptor<dyn MotionDevice>, tracer: &R) -> Self {
+        Self {
+            motion_device,
+            trace: tracer.instance("motion"),
+        }
     }
 
-    /// Request runtime shutdown.
-    ///
-    /// This is the recommended way to shutdown the runtime. Some
-    /// subsystems may need time to close resources or dispose
-    /// managed objects.
-    ///
-    /// This method will *not* wait until the action is executed.
-    #[inline]
-    pub async fn gracefull_shutdown(
-        &self,
-    ) -> std::result::Result<(), tokio::sync::mpsc::error::SendError<RuntimeEvent>> {
-        self.0.send(RuntimeEvent::Shutdown).await
+    pub async fn request(&mut self, motion: Motion) {
+        motion.record(&mut self.trace, time::now());
+
+        self.motion_device.lock().await.actuate(motion).await;
     }
+}
+
+#[derive(serde::Serialize)]
+struct ProgramTrace {
+    /// Timestamp of the trace.
+    timestamp: u128,
+    /// Program identifier.
+    id: i32,
 }
 
 #[derive(Clone)]
@@ -109,29 +99,36 @@ impl std::fmt::Display for RuntimeSession {
 }
 
 pub(super) struct RuntimeSettings {
-    /// Timer idle interval.
-    timer_interval: u64,
+    //
 }
 
 impl From<&Config> for RuntimeSettings {
-    fn from(config: &Config) -> Self {
-        Self {
-            timer_interval: config.runtime_idle_interval as u64,
-        }
+    fn from(_config: &Config) -> Self {
+        Self {}
     }
 }
 
-pub struct Runtime<A, K, R> {
+pub struct Runtime<K, R> {
     /// Runtime operand.
     pub(super) operand: K,
+    /// Core device that runs machine logic.
+    pub(super) core_device: DeviceDescriptor<dyn CoreDevice>,
     /// The standard motion device.
-    pub(super) motion_device: DeviceDescriptor<A>,
-    /// The standard motion device.
-    pub(super) metric_devices: Vec<DeviceDescriptor<dyn MetricDevice + Send>>,
+    pub(super) motion_device: DeviceDescriptor<dyn MotionDevice>,
     /// Runtime event bus.
-    pub(super) event_bus: (Sender<RuntimeEvent>, Receiver<RuntimeEvent>),
+    pub(super) motion: (
+        tokio::sync::mpsc::Sender<Motion>,
+        tokio::sync::mpsc::Receiver<Motion>,
+    ),
+    /// Runtime event bus.
+    pub(super) shutdown: (
+        tokio::sync::broadcast::Sender<()>,
+        tokio::sync::broadcast::Receiver<()>,
+    ),
     /// Program queue.
     pub(super) program_queue: (Sender<(i32, Parameter)>, Option<Receiver<(i32, Parameter)>>),
+    /// Signal manager.
+    pub(super) signal_manager: crate::signal::SignalManager,
     /// Runtime settings.
     pub(super) settings: RuntimeSettings,
     /// Task pool.
@@ -144,16 +141,7 @@ pub struct Runtime<A, K, R> {
     pub(super) tracer: R,
 }
 
-impl<A, K, R> Runtime<A, K, R> {
-    /// Create a runtime dispatcher.
-    ///
-    /// The dispatcher is the input channel to the runtime event queue. This
-    /// is the recommended method to post to the event queue.
-    #[inline]
-    pub fn dispatch(&self) -> Dispatch {
-        Dispatch(self.event_bus.0.clone())
-    }
-
+impl<K, R> Runtime<K, R> {
     /// Spawn background task.
     ///
     /// Run a future in the background. The background task is supposed to run
@@ -168,33 +156,27 @@ impl<A, K, R> Runtime<A, K, R> {
     {
         self.task_pool.push(tokio::task::spawn(future));
     }
+
+    pub(super) fn spawn_core_device(&mut self) {
+        let core_device = self.core_device.clone();
+
+        self.spawn(async move { while core_device.lock().await.next().await.is_ok() {} });
+    }
+
+    pub(super) fn spawn_motion_tracer(&self) {
+        //
+    }
 }
 
-impl<A, K, R> Runtime<A, K, R>
+impl<K, R> Runtime<K, R>
 where
-    A: MotionDevice,
     K: Operand + 'static,
-    R: Tracer,
-    R::Instance: TraceWriter,
+    R: Tracer + 'static,
+    R::Instance: TraceWriter + Send + 'static,
 {
-    /// Run idle time operations.
-    ///
-    /// This method is called when the runtime is idle. Operations run here may
-    /// *never* block, halt or otherwise obstruct the runtime. Doing so will
-    /// sarve the runtime and can increase the event latency.
-    async fn idle_time(&mut self) {
-        self.device_manager.health_check().await;
-
-        // TODO: Move to builder.
-        match self
-            .device_manager
-            .observer()
-            .scan_first::<crate::device::Gamepad>(Duration::from_millis(100))
-            .await
-        {
-            Some(input_device) => self.spawn_input_device(input_device),
-            None => (),
-        };
+    #[inline]
+    fn motion_dispatch(&self) -> Sender<Motion> {
+        self.motion.0.clone()
     }
 
     /// Start the runtime.
@@ -202,29 +184,23 @@ where
     /// The runtime will process the events from the event bus. The runtime
     /// should only every break out of the loop if shutdown was requested.
     pub(super) async fn run(&mut self) {
-        use glonax_core::Trace;
-
-        let mut tracer = self.tracer.instance("motion");
+        let mut motion_chain = MotionChain::new(self.motion_device.clone(), &self.tracer);
 
         loop {
-            match tokio::time::timeout(
-                Duration::from_secs(self.settings.timer_interval),
-                self.event_bus.1.recv(),
-            )
-            .await
-            {
-                Ok(event) => match event.unwrap() {
-                    RuntimeEvent::ExciteMotion(motion_event) => {
-                        motion_event.record(&mut tracer, time::now());
-
-                        let mut motion_device = self.motion_device.lock().await;
-                        motion_device.actuate(motion_event).await;
+            tokio::select! {
+                motion = self.motion.1.recv() => {
+                    if let Some(motion) = motion {
+                        motion_chain.request(motion).await;
                     }
-                    RuntimeEvent::Shutdown => break,
-                },
-                Err(_) => self.idle_time().await,
+                }
+                _ = self.shutdown.1.recv() => {
+                    break;
+                }
             }
         }
+
+        // Stop all motion before exit.
+        motion_chain.request(Motion::StopAll).await;
 
         debug!("Abort running tasks");
 
@@ -233,59 +209,40 @@ where
             handle.abort();
         }
     }
-}
 
-impl<A, K, R> Runtime<A, K, R>
-where
-    K: Operand + 'static,
-{
     pub(super) fn spawn_input_device<C: InputDevice + 'static>(
         &mut self,
         input_device: DeviceDescriptor<C>,
     ) {
-        let dispatcher = self.dispatch();
-        let operand = self.operand.clone();
+        use crate::core::motion::ToMotion;
 
-        self.spawn(async move {
-            while let Ok(input) = input_device.lock().await.next().await {
+        let mut operand = self.operand.clone();
+        let motion_dispatch = self.motion_dispatch();
+
+        std::thread::spawn(move || {
+            while let Ok(input) = input_device.blocking_lock().next() {
                 if let Ok(motion) = operand.try_from_input_device(input) {
-                    if let Err(_) = dispatcher.motion(motion).await {
-                        warn!("Input event terminated without completion");
-                        return;
-                    }
+                    motion_dispatch
+                        .blocking_send(motion.to_motion())
+                        .expect("channel gone");
+                    // TODO: Replace expect
                 }
             }
-            warn!("Input device lost");
         });
     }
-}
 
-#[derive(serde::Serialize)]
-struct ProgramTrace {
-    /// Timestamp of the trace.
-    timestamp: u128,
-    /// Program identifier.
-    id: i32,
-}
-
-impl<A, K, R> Runtime<A, K, R>
-where
-    A: MotionDevice,
-    K: Operand + 'static,
-    R: Tracer,
-    R::Instance: TraceWriter + Send + 'static,
-{
     pub(super) fn spawn_program_queue(&mut self) {
-        let dispatcher = self.dispatch();
-        let operand = self.operand.clone();
+        use crate::core::motion::ToMotion;
 
-        let mut metric_devices = self.metric_devices.clone();
+        let operand = self.operand.clone();
+        let motion_dispatch = self.motion_dispatch();
+
         let runtime_session = self.session.clone();
+        let signal_reader = self.signal_manager.reader();
 
         let mut receiver = self.program_queue.1.take().unwrap();
 
         let mut program_tracer = self.tracer.instance("program");
-        let mut signal_tracer = self.tracer.instance("signal");
 
         self.spawn(async move {
             while let Some((id, params)) = receiver.recv().await {
@@ -297,27 +254,21 @@ where
                     }
                 };
 
-                info!("Start new program: {}", id);
+                info!("Start program: {}", id);
 
                 program_tracer.write_record(ProgramTrace {
-                    timestamp: glonax_core::time::now().as_millis(),
+                    timestamp: core::time::now().as_millis(),
                     id,
                 });
 
-                let mut pipeline = pipeline::Pipeline::new(
-                    &mut metric_devices,
-                    &mut signal_tracer,
-                    Duration::from_millis(5),
-                );
+                motion_dispatch.send(Motion::ResumeAll).await.ok(); // TOOD: Handle result
 
-                let mut ctx = operand::Context::new(runtime_session.clone());
+                let mut ctx = operand::Context::new(signal_reader.clone(), runtime_session.clone());
                 program.boot(&mut ctx);
 
                 // Loop until this program reaches its termination condition. If
                 // the program does not terminate we'll run forever.
                 while !program.can_terminate(&mut ctx) {
-                    pipeline.push_all(program.as_mut()).await;
-
                     // Deliberately slow down the program loop to limit CPU cycles.
                     // If the delay is small then this won't effect the program
                     // procession.
@@ -330,10 +281,7 @@ where
                     // entire thread is dedicated to the program therefore steps
                     // can take as long as they require.
                     if let Some(motion) = program.step(&mut ctx) {
-                        if let Err(_) = dispatcher.motion(motion).await {
-                            warn!("Program terminated without completion");
-                            return;
-                        }
+                        motion_dispatch.send(motion.to_motion()).await.ok(); // TOOD: Handle result
                     }
 
                     ctx.step_count += 1;
@@ -342,11 +290,11 @@ where
 
                 // Execute an optional last action before program termination.
                 if let Some(motion) = program.term_action(&mut ctx) {
-                    if let Err(_) = dispatcher.motion(motion).await {
-                        warn!("Program terminated without completion");
-                        return;
-                    }
+                    motion_dispatch.send(motion.to_motion()).await.ok(); // TOOD: Handle result
                 }
+
+                // Stop all motion for safety.
+                motion_dispatch.send(Motion::StopAll).await.ok(); // TOOD: Handle result
 
                 info!("Program terminated");
             }

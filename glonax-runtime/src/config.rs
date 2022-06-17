@@ -29,21 +29,18 @@ pub struct Config {
     #[serde(default = "Config::workspace")]
     pub workspace: PathBuf,
 
-    /// Number of events to queue.
-    #[serde(default = "Config::event_queue")]
-    pub event_queue: usize,
-
     /// Number of programs to queue.
     #[serde(default = "Config::program_queue")]
     pub program_queue: usize,
 
+    // TODO; Maybe not here?
+    /// Number of programs to queue.
+    #[serde(default)]
+    pub program_id: Option<i32>,
+
     /// Runtime workers.
     #[serde(default = "Config::runtime_workers")]
     pub runtime_workers: usize,
-
-    /// Runtime idle interval in seconds.
-    #[serde(default = "Config::runtime_idle_interval")]
-    pub runtime_idle_interval: usize,
 }
 
 impl std::fmt::Display for Config {
@@ -57,20 +54,16 @@ impl std::fmt::Display for Config {
             \tValidation enabled: {}
             \tMotion enabled: {}
             \tWorkspace: {}
-            \tEvent queue size: {}
             \tProgram queue size: {}
-            \tRuntime workers: {}
-            \tRuntime idle interval: {}",
+            \tRuntime workers: {}",
             self.enable_autopilot,
             self.enable_input,
             self.enable_trace,
             self.enable_test,
             self.enable_motion,
             self.workspace.to_str().unwrap(),
-            self.event_queue,
             self.program_queue,
             self.runtime_workers,
-            self.runtime_idle_interval
         )
     }
 }
@@ -116,11 +109,6 @@ impl Config {
     }
 
     #[inline]
-    fn event_queue() -> usize {
-        32
-    }
-
-    #[inline]
     fn program_queue() -> usize {
         1024
     }
@@ -128,11 +116,6 @@ impl Config {
     #[inline]
     fn runtime_workers() -> usize {
         8
-    }
-
-    #[inline]
-    fn runtime_idle_interval() -> usize {
-        5
     }
 }
 

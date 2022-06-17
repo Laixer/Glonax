@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use glonax_core::{TraceWriter, Tracer};
+use crate::core::{TraceWriter, Tracer};
 
 pub struct NullTracer;
 

@@ -37,6 +37,14 @@ struct Args {
     #[clap(long)]
     no_motion: bool,
 
+    /// Run motion requests slow.
+    #[clap(long)]
+    slow_motion: bool,
+
+    /// Execute provided program id.
+    #[clap(long)]
+    program: Option<i32>,
+
     /// Run as systemd service.
     #[clap(long)]
     systemd: bool,
@@ -71,6 +79,8 @@ fn main() -> anyhow::Result<()> {
     config.enable_trace = args.trace;
     config.enable_test = args.test;
 
+    config.program_id = args.program;
+
     if let Some(workers) = args.workers {
         config.runtime_workers = workers;
     }
@@ -84,8 +94,8 @@ fn main() -> anyhow::Result<()> {
         log_config.set_thread_level(log::LevelFilter::Off);
         log_config.set_target_level(log::LevelFilter::Off);
     } else {
-        log_config.set_time_to_local(true);
-        log_config.set_time_format("%X %6f".to_owned());
+        log_config.set_time_offset_to_local().ok();
+        log_config.set_time_format_rfc2822();
     }
 
     log_config.set_target_level(log::LevelFilter::Off);

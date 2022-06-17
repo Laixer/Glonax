@@ -1,6 +1,6 @@
-use crate::Config;
+use crate::device::host::HostInterface;
 
-use super::{observer::Observer, Device, DeviceDescriptor};
+use super::{Device, DeviceDescriptor};
 
 /// Device manager.
 ///
@@ -11,30 +11,22 @@ use super::{observer::Observer, Device, DeviceDescriptor};
 ///
 /// By default devices selection is based on a simple round robin distribution.
 pub struct DeviceManager {
-    config: Config,
     driver_list: Vec<DeviceDescriptor<dyn Device>>,
     device_list: Vec<String>,
 }
 
 impl DeviceManager {
     /// Construct new device manager.
-    pub fn new(config: Config) -> Self {
+    pub fn new() -> Self {
         Self {
-            config,
             driver_list: Vec::new(),
             device_list: Vec::new(),
         }
     }
 
-    /// Create a new I/O node observer.
-    #[inline]
-    pub fn observer(&mut self) -> Observer {
-        Observer { manager: self }
-    }
-
-    #[inline]
-    pub fn config(&self) -> &Config {
-        &self.config
+    pub(crate) fn startup(&self) {
+        // TODO: List all drivers.
+        trace!("Registered device drivers: {}", self.driver_list.len());
     }
 
     #[inline]
@@ -42,40 +34,104 @@ impl DeviceManager {
         self.device_list.contains(&name.to_owned())
     }
 
-    /// Register a device with the device manager.
-    pub(crate) fn register_device_driver(
-        &mut self,
-        device: DeviceDescriptor<dyn Device>,
-        device_sysname: &str,
-    ) {
-        // TODO: Also want the device name.
-        trace!(
-            "Register driver with device '{}'",
-            device_sysname.to_owned()
-        );
+    pub(crate) fn register_driver<T>(&mut self, dev: T) -> DeviceDescriptor<T>
+    where
+        T: Device + 'static,
+    {
+        let device = std::sync::Arc::new(tokio::sync::Mutex::new(dev));
 
-        self.driver_list.push(device);
-        self.device_list.push(device_sysname.to_owned());
+        trace!("Register driver without device");
+
+        self.driver_list.push(device.clone());
+        device
     }
 
-    /// Run the device health check.
-    ///
-    /// The device health check removes any dead I/O nodes so that new devices
-    /// can be identified using the same I/O node path.
-    pub(crate) async fn health_check(&mut self) {
-        // let evict: Vec<usize> = self
-        //     .io_node_list
-        //     .iter()
-        //     .enumerate()
-        //     .filter(|(_, node)| !node.exists())
-        //     .map(|(idx, _)| idx)
-        //     .collect();
+    pub(crate) async fn register_device_driver_first<T, F>(
+        &mut self,
+        func: F,
+    ) -> Option<DeviceDescriptor<T>>
+    where
+        T: super::UserDevice + 'static,
+        T::DeviceRuleset: super::IoDeviceProfile,
+        F: FnOnce(&String, &Option<std::path::PathBuf>) -> T + Copy,
+    {
+        for applicant in self.host_elect_applicants::<T>() {
+            trace!("Elected applicant: {}", applicant);
 
-        // for idx in evict {
-        //     trace!("Evict dead I/O node: {}", self.io_node_list[idx]);
+            match applicant.construe_device::<T, F>(func).await {
+                Ok(device) => {
+                    {
+                        let devx = &device.lock().await;
+                        let sysname = devx.sysname();
 
-        //     self.device_list.remove(idx);
-        //     self.io_node_list.remove(idx);
-        // }
+                        // TODO: Also want the device name.
+                        trace!("Register driver with device '{}'", sysname.to_owned());
+
+                        self.driver_list.push(device.clone());
+                        self.device_list.push(sysname.to_owned());
+                    }
+
+                    return Some(device);
+                }
+                Err(e) => {
+                    warn!("Device not construed: {}", e);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub(crate) async fn try_register_device_driver_first<T>(
+        &mut self,
+        timeout: std::time::Duration,
+    ) -> Option<DeviceDescriptor<T>>
+    where
+        T: super::UserDevice + 'static,
+        T::DeviceRuleset: super::IoDeviceProfile,
+    {
+        for applicant in self.host_elect_applicants::<T>() {
+            trace!("Elected applicant: {}", applicant);
+
+            match applicant.try_construe_device::<T>(timeout).await {
+                Ok(device) => {
+                    {
+                        let devx = &device.lock().await;
+                        let sysname = devx.sysname();
+
+                        // TODO: Also want the device name.
+                        trace!("Register driver with device '{}'", sysname.to_owned());
+
+                        self.driver_list.push(device.clone());
+                        self.device_list.push(sysname.to_owned());
+                    }
+
+                    return Some(device);
+                }
+                Err(e) => {
+                    warn!("Device not construed: {}", e);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn host_elect_applicants<T>(&self) -> Vec<super::applicant::Applicant>
+    where
+        T: super::UserDevice + 'static,
+        T::DeviceRuleset: super::IoDeviceProfile,
+    {
+        let applicant_list: Vec<crate::device::applicant::Applicant> = HostInterface::new()
+            .select_devices::<T::DeviceRuleset>()
+            .filter(|a| !self.device_claimed(a.sysname()))
+            .collect();
+
+        trace!(
+            "Device driver applicants after scan: {}",
+            applicant_list.len()
+        );
+
+        applicant_list
     }
 }

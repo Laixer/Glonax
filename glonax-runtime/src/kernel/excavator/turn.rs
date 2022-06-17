@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use glonax_core::motion::Motion;
-
 use crate::runtime::operand::*;
 
-use super::Actuator;
+use super::{Actuator, HydraulicMotion};
+
+const DRIVE_POWER: i16 = -12096;
 
 /// Turn strait forward.
 ///
@@ -13,8 +13,6 @@ use super::Actuator;
 pub struct TurnProgram {
     drive_time: Duration,
 }
-
-const DRIVE_POWER: i16 = 200;
 
 impl TurnProgram {
     pub fn new(params: Parameter) -> Self {
@@ -31,15 +29,17 @@ impl TurnProgram {
 }
 
 impl Program for TurnProgram {
-    fn step(&mut self, _: &mut Context) -> Option<Motion> {
-        Some(Motion::Change(vec![(Actuator::Slew.into(), DRIVE_POWER)]))
+    type MotionPlan = HydraulicMotion;
+
+    fn step(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Change(vec![(Actuator::Slew, DRIVE_POWER)]))
     }
 
     fn can_terminate(&self, context: &mut Context) -> bool {
         context.start.elapsed() >= self.drive_time
     }
 
-    fn term_action(&self, _: &mut Context) -> Option<Motion> {
-        Some(Motion::Stop(vec![Actuator::Slew.into()]))
+    fn term_action(&self, _: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Stop(vec![Actuator::Slew]))
     }
 }
