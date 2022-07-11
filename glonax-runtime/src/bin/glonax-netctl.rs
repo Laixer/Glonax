@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use ansi_term::Colour::{Green, Purple, Red, White, Yellow};
+use ansi_term::Colour::{Blue, Green, Purple, Red, White, Yellow};
 use clap::Parser;
 use glonax_j1939::j1939::decode;
 use log::{debug, info};
@@ -163,6 +163,8 @@ enum NodeCommand {
     Motion { toggle: u8 },
     /// Enable or disable encoders.
     Encoder { encoder: u8, encoder_on: u8 },
+    /// Contorl motion gate.
+    Actuator { actuator: u8, value: i16 },
 }
 
 #[tokio::main]
@@ -302,6 +304,35 @@ async fn main() -> anyhow::Result<()> {
 
                 net.enable_encoder(address_id, *encoder, encoder_on == &1)
                     .await;
+            }
+            NodeCommand::Actuator { actuator, value } => {
+                let address_id = node_address(address)?;
+
+                let gate_bank = (actuator / 4) as usize;
+                let gate = actuator % 4;
+
+                info!(
+                    "{} Set actuator {} to {}",
+                    style_node(address_id),
+                    actuator,
+                    if value.is_positive() {
+                        Blue.paint(value.to_string())
+                    } else {
+                        Green.paint(value.abs().to_string())
+                    },
+                );
+
+                net.gate_control(
+                    address_id,
+                    gate_bank,
+                    [
+                        if gate == 0 { Some(*value) } else { None },
+                        if gate == 1 { Some(*value) } else { None },
+                        if gate == 2 { Some(*value) } else { None },
+                        if gate == 3 { Some(*value) } else { None },
+                    ],
+                )
+                .await;
             }
         },
         Command::Dump => {
