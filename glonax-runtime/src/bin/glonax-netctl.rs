@@ -68,6 +68,7 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                 );
             }
             65_282 => {
+                // TODO: Change to new state
                 let state = match frame.pdu()[1] {
                     1 => Yellow.paint("boot0").to_string(),
                     5 => Yellow.paint("init core peripherals").to_string(),
@@ -77,11 +78,29 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                     _ => White.paint("other").to_string(),
                 };
 
+                let firmware_version = if frame.pdu()[2..5] != [0xff; 3] {
+                    Some((frame.pdu()[2], frame.pdu()[3], frame.pdu()[4]))
+                } else {
+                    None
+                };
+
+                let last_error = {
+                    if frame.pdu()[6..8] != [0xff; 2] {
+                        Some(u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()))
+                    } else {
+                        None
+                    }
+                };
+
                 info!(
-                    "{} State: {}; Last error: {}",
+                    "{} State: {}; Version: {} Last error: {}",
                     style_node(frame.id().sa()),
                     state,
-                    u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap())
+                    firmware_version.map_or_else(
+                        || "-".to_owned(),
+                        |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
+                    ),
+                    last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
                 );
             }
             65_535 => {
