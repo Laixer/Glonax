@@ -1,17 +1,20 @@
 use std::io;
 
-mod imp;
+use tokio::io::unix::AsyncFd;
 
 pub use j1939;
 
-pub struct J1939Listener(tokio::io::unix::AsyncFd<imp::J1939Socket>);
+mod imp;
+
+// TODO: Rename to J1939Socket
+pub struct J1939Listener(AsyncFd<imp::J1939Socket>);
 
 impl J1939Listener {
     pub fn bind(ifname: &str, addr: u8) -> Result<J1939Listener, io::Error> {
         let sock = imp::J1939Socket::bind(ifname, addr)?;
         sock.set_nonblocking(true)?;
 
-        Ok(Self(tokio::io::unix::AsyncFd::new(sock)?))
+        Ok(Self(AsyncFd::new(sock)?))
     }
 
     // TODO:
@@ -19,6 +22,8 @@ impl J1939Listener {
     // - local_addr()
     // - peer_addr()
 
+    /// Receives a single J1939 frame on the socket from the remote address
+    /// to which it is connected. On success, returns the J1939 frame.
     pub async fn recv(&self) -> io::Result<j1939::Frame> {
         loop {
             let mut guard = self.0.readable().await?;
@@ -30,6 +35,8 @@ impl J1939Listener {
         }
     }
 
+    /// Receives a single J1939 frame on the socket from the remote address
+    /// to which it is connected. On success, returns the J1939 frame.
     pub async fn recv_from(&self) -> io::Result<j1939::Frame> {
         loop {
             let mut guard = self.0.readable().await?;
@@ -52,10 +59,6 @@ impl J1939Listener {
         }
     }
 
-    // pub async fn connect(&self, addr: u8) -> io::Result<()> {
-    //     self.0.get_ref().connect();
-    // }
-
     /// Gets the value of the `SO_BROADCAST` option for this socket.
     ///
     /// For more information about this option, see [`set_broadcast`].
@@ -71,5 +74,10 @@ impl J1939Listener {
     /// address.
     pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
         self.0.get_ref().set_broadcast(on)
+    }
+
+    /// Returns the value of the `SO_ERROR` option.
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        self.0.get_ref().take_error()
     }
 }

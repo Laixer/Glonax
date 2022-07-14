@@ -1,9 +1,9 @@
-use std::{io, os::unix::prelude::*};
+use std::{io, mem, os::unix::prelude::*};
 
 use libc::{
     bind, c_int, c_void, close, fcntl, getsockopt, recv, recvfrom, sendto, setsockopt, socket,
     socklen_t, AF_CAN, CAN_J1939, F_GETFL, F_SETFL, O_NONBLOCK, PF_CAN, SOCK_DGRAM, SOL_SOCKET,
-    SO_BROADCAST,
+    SO_BROADCAST, SO_ERROR,
 };
 
 const _J1939_MAX_UNICAST_ADDR: u8 = 0xfd;
@@ -127,54 +127,6 @@ impl J1939Socket {
         Ok(())
     }
 
-    /// Gets the value of the `SO_BROADCAST` option for this socket.
-    ///
-    /// For more information about this option, see [`set_broadcast`].
-    ///
-    /// [`set_broadcast`]: method@Self::set_broadcast
-    pub fn broadcast(&self) -> io::Result<bool> {
-        let mut value: c_int = 0;
-        let mut optlen = std::mem::size_of::<c_int>() as socklen_t;
-
-        unsafe {
-            if getsockopt(
-                self.fd,
-                SOL_SOCKET,
-                SO_BROADCAST,
-                &mut value as *mut i32 as *mut c_void,
-                &mut optlen,
-            ) < 0
-            {
-                return Err(io::Error::last_os_error());
-            }
-        };
-
-        Ok(if value == 0 { false } else { true })
-    }
-
-    /// Sets the value of the `SO_BROADCAST` option for this socket.
-    ///
-    /// When enabled, this socket is allowed to send packets to a broadcast
-    /// address.
-    pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
-        let value: c_int = if on { 1 } else { 0 };
-
-        unsafe {
-            if setsockopt(
-                self.fd,
-                SOL_SOCKET,
-                SO_BROADCAST,
-                &value as *const i32 as *const c_void,
-                std::mem::size_of::<c_int>() as socklen_t,
-            ) < 0
-            {
-                return Err(io::Error::last_os_error());
-            }
-        };
-
-        Ok(())
-    }
-
     pub fn sendto(&self, frame: &j1939::Frame) -> Result<(), io::Error> {
         let pdu_ptr = frame.pdu().as_ptr();
 
@@ -241,6 +193,77 @@ impl J1939Socket {
                 .build();
 
             Ok(frame.id(id).build())
+        }
+    }
+
+    /// Gets the value of the `SO_BROADCAST` option for this socket.
+    ///
+    /// For more information about this option, see [`set_broadcast`].
+    ///
+    /// [`set_broadcast`]: method@Self::set_broadcast
+    pub fn broadcast(&self) -> io::Result<bool> {
+        let ret: c_int = self.getsockopt(SOL_SOCKET, SO_BROADCAST)?;
+        Ok(if ret == 0 { false } else { true })
+    }
+
+    /// Sets the value of the `SO_BROADCAST` option for this socket.
+    ///
+    /// When enabled, this socket is allowed to send packets to a broadcast
+    /// address.
+    pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
+        self.setsockopt(SOL_SOCKET, SO_BROADCAST, on as c_int)
+    }
+
+    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
+        let ret: c_int = self.getsockopt(SOL_SOCKET, SO_ERROR)?;
+        if ret == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(io::Error::from_raw_os_error(ret as i32)))
+        }
+    }
+
+    fn getsockopt<T: Copy>(&self, level: c_int, option_name: c_int) -> io::Result<T> {
+        unsafe {
+            let mut option_value: T = mem::zeroed();
+            let mut option_len = mem::size_of::<T>() as socklen_t;
+
+            if getsockopt(
+                self.fd,
+                level,
+                option_name,
+                &mut option_value as *mut T as *mut _,
+                &mut option_len,
+            )
+            .is_negative()
+            {
+                Err(crate::io::Error::last_os_error())
+            } else {
+                Ok(option_value)
+            }
+        }
+    }
+
+    pub fn setsockopt<T>(
+        &self,
+        level: c_int,
+        option_name: c_int,
+        option_value: T,
+    ) -> io::Result<()> {
+        unsafe {
+            if setsockopt(
+                self.fd,
+                level,
+                option_name,
+                &option_value as *const T as *const _,
+                mem::size_of::<T>() as socklen_t,
+            )
+            .is_negative()
+            {
+                Err(crate::io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
         }
     }
 }
