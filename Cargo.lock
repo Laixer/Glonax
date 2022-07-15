@@ -189,7 +189,7 @@ dependencies = [
 
 [[package]]
 name = "glonax"
-version = "0.12.3"
+version = "0.12.8"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -230,11 +230,12 @@ dependencies = [
 
 [[package]]
 name = "glonax-j1939"
-version = "1.0.0"
+version = "1.2.1"
 dependencies = [
  "j1939",
  "libc",
  "log",
+ "socket2",
  "tokio",
 ]
 

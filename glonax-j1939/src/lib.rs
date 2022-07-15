@@ -1,62 +1,56 @@
 use std::io;
 
-use tokio::io::unix::AsyncFd;
+pub use j1939::{Frame, FrameBuilder, IdBuilder, decode};
+pub use socket::J1939Socket;
 
-pub use j1939;
+mod socket;
 
-mod imp;
+mod sys {
+    pub(super) fn if_nametoindex(iface_name: &str) -> i32 {
+        let iface_name_raw = std::ffi::CString::new(iface_name).unwrap();
 
-// TODO: Rename to J1939Socket
-pub struct J1939Listener(AsyncFd<imp::J1939Socket>);
+        unsafe { libc::if_nametoindex(iface_name_raw.as_ptr()) as i32 }
+    }
+}
 
-impl J1939Listener {
-    pub fn bind(ifname: &str, addr: u8) -> Result<J1939Listener, io::Error> {
-        let sock = imp::J1939Socket::bind(ifname, addr)?;
-        sock.set_nonblocking(true)?;
+pub struct J1939Stream(J1939Socket);
 
-        Ok(Self(AsyncFd::new(sock)?))
+impl J1939Stream {
+    pub fn bind(ifname: &str, addr: u8) -> io::Result<Self> {
+        let address = socket::SockAddrJ1939::bind(addr, ifname);
+        J1939Socket::bind(&address).map(J1939Stream)
     }
 
-    // TODO:
-    // - send()
-    // - local_addr()
-    // - peer_addr()
+    pub async fn read(&self) -> io::Result<Frame> {
+        let mut frame = FrameBuilder::default();
 
-    /// Receives a single J1939 frame on the socket from the remote address
-    /// to which it is connected. On success, returns the J1939 frame.
-    pub async fn recv(&self) -> io::Result<j1939::Frame> {
-        loop {
-            let mut guard = self.0.readable().await?;
+        let (_, peer_addr) = self.0.recv_from(frame.pdu_mut_ref()).await?;
 
-            match guard.try_io(|inner| inner.get_ref().recv()) {
-                Ok(result) => return result,
-                Err(_would_block) => continue,
-            }
-        }
+        let id = IdBuilder::from_pgn(peer_addr.pgn as u16)
+            .sa(peer_addr.addr)
+            .build();
+
+        Ok(frame.id(id).build())
     }
 
-    /// Receives a single J1939 frame on the socket from the remote address
-    /// to which it is connected. On success, returns the J1939 frame.
-    pub async fn recv_from(&self) -> io::Result<j1939::Frame> {
-        loop {
-            let mut guard = self.0.readable().await?;
+    pub async fn write(&self, frame: &Frame) -> io::Result<usize> {
+        let address = socket::SockAddrJ1939::send(
+            frame
+                .id()
+                .destination_address()
+                .unwrap_or(libc::J1939_NO_ADDR),
+            frame.id().pgn() as u32,
+        );
 
-            match guard.try_io(|inner| inner.get_ref().recvfrom()) {
-                Ok(result) => return result,
-                Err(_would_block) => continue,
-            }
-        }
+        self.0.send_to(frame.pdu(), &address).await
     }
 
-    pub async fn send_to(&self, frame: &j1939::Frame) -> io::Result<()> {
-        loop {
-            let mut guard = self.0.writable().await?;
-
-            match guard.try_io(|inner| inner.get_ref().sendto(frame)) {
-                Ok(result) => return result,
-                Err(_would_block) => continue,
-            }
-        }
+    /// Shuts down the read, write, or both halves of this connection.
+    ///
+    /// This function will cause all pending and future I/O on the specified
+    /// portions to return immediately with an appropriate value.
+    pub fn shutdown(&self, how: std::net::Shutdown) -> io::Result<()> {
+        self.0.shutdown(how)
     }
 
     /// Gets the value of the `SO_BROADCAST` option for this socket.
@@ -65,7 +59,7 @@ impl J1939Listener {
     ///
     /// [`set_broadcast`]: method@Self::set_broadcast
     pub fn broadcast(&self) -> io::Result<bool> {
-        self.0.get_ref().broadcast()
+        self.0.broadcast()
     }
 
     /// Sets the value of the `SO_BROADCAST` option for this socket.
@@ -73,11 +67,17 @@ impl J1939Listener {
     /// When enabled, this socket is allowed to send packets to a broadcast
     /// address.
     pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
-        self.0.get_ref().set_broadcast(on)
+        self.0.set_broadcast(on)
     }
 
     /// Returns the value of the `SO_ERROR` option.
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        self.0.get_ref().take_error()
+        self.0.take_error()
+    }
+}
+
+impl From<J1939Socket> for J1939Stream {
+    fn from(value: J1939Socket) -> Self {
+        J1939Stream(value)
     }
 }

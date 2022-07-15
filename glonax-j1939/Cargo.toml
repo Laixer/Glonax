@@ -1,17 +1,18 @@
 [package]
 name = "glonax-j1939"
-version = "1.0.0"
+version = "1.2.1"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 description = """
 J1939 network protocol.
 """
-categories = ["protocol", "decoder", "encoder", "network"]
-keywords = ["protocol", "hardware", "glonax"]
+categories = ["protocol", "network-programming", "network"]
+keywords = ["io", "socket", "network", "j1939", "sae", "can"]
 
 [dependencies]
 log = "0.4"
 tokio = { version = "1.18", features = ["full"] }
 libc = "0.2"
 j1939 = { git = "https://github.com/Laixer/J1939" }
+socket2 = "0.4"
