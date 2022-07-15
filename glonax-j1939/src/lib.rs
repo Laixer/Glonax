@@ -1,6 +1,6 @@
 use std::io;
 
-pub use j1939::{Frame, FrameBuilder, IdBuilder, decode};
+pub use j1939::{decode, Frame, FrameBuilder, IdBuilder};
 pub use socket::J1939Socket;
 
 mod socket;
@@ -13,6 +13,21 @@ mod sys {
     }
 }
 
+impl From<&j1939::Id> for socket::SockAddrJ1939 {
+    fn from(value: &j1939::Id) -> Self {
+        socket::SockAddrJ1939::send(
+            value.destination_address().unwrap_or(libc::J1939_NO_ADDR),
+            value.pgn() as u32,
+        )
+    }
+}
+
+impl From<socket::SockAddrJ1939> for j1939::Id {
+    fn from(value: socket::SockAddrJ1939) -> Self {
+        IdBuilder::from_pgn(value.pgn as u16).sa(value.addr).build()
+    }
+}
+
 pub struct J1939Stream(J1939Socket);
 
 impl J1939Stream {
@@ -21,28 +36,18 @@ impl J1939Stream {
         J1939Socket::bind(&address).map(J1939Stream)
     }
 
+    /// Read frame from network stream.
     pub async fn read(&self) -> io::Result<Frame> {
         let mut frame = FrameBuilder::default();
 
         let (_, peer_addr) = self.0.recv_from(frame.pdu_mut_ref()).await?;
 
-        let id = IdBuilder::from_pgn(peer_addr.pgn as u16)
-            .sa(peer_addr.addr)
-            .build();
-
-        Ok(frame.id(id).build())
+        Ok(frame.id(peer_addr.into()).build())
     }
 
+    /// Write frame over the network stream.
     pub async fn write(&self, frame: &Frame) -> io::Result<usize> {
-        let address = socket::SockAddrJ1939::send(
-            frame
-                .id()
-                .destination_address()
-                .unwrap_or(libc::J1939_NO_ADDR),
-            frame.id().pgn() as u32,
-        );
-
-        self.0.send_to(frame.pdu(), &address).await
+        self.0.send_to(frame.pdu(), &frame.id().into()).await
     }
 
     /// Shuts down the read, write, or both halves of this connection.
