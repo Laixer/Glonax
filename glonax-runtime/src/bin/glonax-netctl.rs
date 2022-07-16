@@ -2,29 +2,79 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Blue, Green, Purple, Red, White, Yellow};
 use clap::Parser;
-use glonax_j1939::j1939::decode;
+use glonax::net::ControlNet;
+use glonax_j1939::decode;
 use log::{debug, info};
 
 fn style_node(address: u8) -> String {
     Purple.paint(format!("[node 0x{:X?}]", address)).to_string()
 }
 
-fn node_address(address: &String) -> Result<u8, std::num::ParseIntError> {
+fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
     if address.starts_with("0x") {
         u8::from_str_radix(address.trim_start_matches("0x"), 16)
     } else {
-        u8::from_str_radix(address, 16)
+        u8::from_str_radix(address.as_str(), 16)
     }
 }
 
-async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
+fn string_to_bool(str: &String) -> bool {
+    match str.to_lowercase().trim() {
+        "yes" => true,
+        "true" => true,
+        "on" => true,
+        "1" => true,
+        "no" => false,
+        "false" => false,
+        "off" => false,
+        "0" => false,
+        _ => false,
+    }
+}
+
+/// Parameter group number.
+pub enum ParameterGroupNumber {
+    /// Electronic Engine Controller 1.
+    EEC1,
+    /// Electronic Engine Controller 2.
+    EEC2,
+    /// Software Identification.
+    SOFT,
+    /// Other PGN.
+    Other(u16),
+}
+
+impl From<u16> for ParameterGroupNumber {
+    fn from(value: u16) -> Self {
+        match value {
+            61_443 => ParameterGroupNumber::EEC2,
+            61_444 => ParameterGroupNumber::EEC1,
+            65_242 => ParameterGroupNumber::SOFT,
+            _ => ParameterGroupNumber::Other(value),
+        }
+    }
+}
+
+async fn analyze_frames(net: &ControlNet, pgn_filter: Option<u16>) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = net.accept().await;
+        let frame = loop {
+            match tokio::time::timeout(std::time::Duration::from_millis(500), net.accept()).await {
+                Ok(x) => break x?,
+                Err(_) => net.announce_status().await,
+            }
+        };
 
-        match frame.id().pgn() {
-            61_444 => {
+        let pgn = frame.id().pgn();
+        if let Some(pgn_filter) = pgn_filter {
+            if pgn_filter != pgn {
+                continue;
+            }
+        }
+
+        match pgn.into() {
+            ParameterGroupNumber::EEC1 => {
                 if let Some(engine_torque_mode) = decode::spn899(frame.pdu()[0]) {
                     info!("Torque mode: {:?}", engine_torque_mode);
                 }
@@ -44,7 +94,7 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                     info!("Starter mode: {:?}", starter_mode);
                 }
             }
-            65_242 => {
+            ParameterGroupNumber::SOFT => {
                 let mut major = 0;
                 let mut minor = 0;
                 let mut patch = 0;
@@ -67,7 +117,7 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                     patch
                 );
             }
-            65_282 => {
+            ParameterGroupNumber::Other(65_282) => {
                 // TODO: Change to new state
                 let state = match frame.pdu()[1] {
                     1 => Yellow.paint("boot0").to_string(),
@@ -78,22 +128,13 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                     _ => White.paint("other").to_string(),
                 };
 
-                let firmware_version = if frame.pdu()[2..5] != [0xff; 3] {
-                    Some((frame.pdu()[2], frame.pdu()[3], frame.pdu()[4]))
-                } else {
-                    None
-                };
+                let firmware_version =
+                    glonax::net::spn_firmware_version(frame.pdu()[2..5].try_into().unwrap());
 
-                let last_error = {
-                    if frame.pdu()[6..8] != [0xff; 2] {
-                        Some(u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()))
-                    } else {
-                        None
-                    }
-                };
+                let last_error = glonax::net::spn_last_error(frame.pdu()[6..8].try_into().unwrap());
 
                 info!(
-                    "{} State: {}; Version: {} Last error: {}",
+                    "{} State: {}; Version: {}; Last error: {}",
                     style_node(frame.id().sa()),
                     state,
                     firmware_version.map_or_else(
@@ -103,29 +144,126 @@ async fn analyze_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
                     last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
                 );
             }
-            65_535 => {
-                if frame.pdu()[..2] != [0xff, 0xff] {
-                    let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
+            ParameterGroupNumber::Other(64_258) => {
+                // if frame.pdu()[..4] != [0xff; 4] {
+                let data_x = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
+                // let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+                // let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
 
-                    info!("{} Encoder 0: {}", style_node(frame.id().sa()), data,);
-                }
-                if frame.pdu()[2..4] != [0xff, 0xff] {
-                    let data = u16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+                // let vec_x = data_x as f32;
+                // let vec_y = data_y as f32;
+                // let vec_z = data_z as f32;
+                info!("data: {}", data_x);
+                // let signal_angle = vec_x.atan2(-vec_y);
+                // debug!("XY Angle: {:>+5.2}", signal_angle);
 
-                    info!("{} Encoder 1: {}", style_node(frame.id().sa()), data,);
-                }
+                // let fk_x = (6.0 * 0.349066_f32.cos()) + (2.97 * signal_angle.cos());
+                // let fk_y = (6.0 * 0.349066_f32.sin()) + (2.97 * signal_angle.sin()); // + super::FRAME_HEIGHT;
+
+                // let fk_x = 2.97 * signal_angle.cos();
+                // let fk_y = 2.97 * signal_angle.sin();
+
+                // info!(
+                //     "{} X: {:>+5} Y: {:>+5} Z: {:>+5}    Angle: {:>+5.2}    {:>+5.2} {:>+5.2}",
+                //     style_node(frame.id().sa()),
+                //     data_x,
+                //     data_y,
+                //     data_z,
+                //     signal_angle,
+                //     fk_x,
+                //     fk_y,
+                // );
+                // }
             }
+            // 65_505 => {
+            // if frame.pdu()[..6] != [0xff; 6] {
+            //     let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
+            //     let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+            //     let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+
+            //     let vec_x = data_x as f32;
+            //     let vec_y = data_y as f32;
+            //     let vec_z = data_z as f32;
+
+            //     let signal_angle = vec_x.atan2(-vec_y);
+            //     debug!("XY Angle: {:>+5.2}", signal_angle);
+
+            //     let fk_x = (6.0 * 0.349066_f32.cos()) + (2.97 * signal_angle.cos());
+            //     let fk_y = (6.0 * 0.349066_f32.sin()) + (2.97 * signal_angle.sin());
+            // + super::FRAME_HEIGHT;
+
+            // let fk_x = 2.97 * signal_angle.cos();
+            // let fk_y = 2.97 * signal_angle.sin();
+
+            // info!(
+            //     "{} X: {:>+5} Y: {:>+5} Z: {:>+5}    Angle: {:>+5.2}    {:>+5.2} {:>+5.2}",
+            //     style_node(frame.id().sa()),
+            //     data_x,
+            //     data_y,
+            //     data_z,
+            //     signal_angle,
+            //     fk_x,
+            //     fk_y,
+            // );
+            //     }
+            // }
+            // 65_515 => {
+            // if frame.pdu()[..6] != [0xff; 6] {
+            // let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
+            // let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+            // let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+
+            // let vec_x = data_x as f32;
+            // let vec_y = data_y as f32;
+            // let vec_z = data_z as f32;
+
+            // let signal_angle = vec_x.atan2(vec_y);
+
+            // debug!("XY Angle: {:>+5.2}", signal_angle);
+            // let heading = signal_angle * 180.0 / std::f32::consts::PI;
+
+            // let heading = if heading < 0.0 {
+            //     heading + 360.0
+            // } else {
+            //     heading - 360.0
+            // };
+            // // if (heading > 360) heading -= 360;
+            // let heading = -heading;
+
+            // info!(
+            //     "{} X: {:>+5} Y: {:>+5} Z: {:>+5}    Angle: {:>+5.2}  Heading: {:>+5.2}",
+            //     style_node(frame.id().sa()),
+            //     data_x,
+            //     data_y,
+            //     data_z,
+            //     signal_angle,
+            //     heading
+            // );
+            //     }
+            // }
+            // 65_535 => {
+            //     if frame.pdu()[..2] != [0xff, 0xff] {
+            //         let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
+
+            //         info!("{} Encoder 0: {}", style_node(frame.id().sa()), data,);
+            //     }
+            //     if frame.pdu()[2..4] != [0xff, 0xff] {
+            //         let data = u16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+
+            //         info!("{} Encoder 1: {}", style_node(frame.id().sa()), data,);
+            //     }
+            // }
             _ => {}
         }
     }
 }
 
 /// Print frames to screen.
-async fn print_frames(net: &glonax::net::ControlNet) -> anyhow::Result<()> {
+async fn print_frames(net: &ControlNet) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = net.accept().await;
+        let frame = net.accept().await?;
 
         info!("{}", frame);
     }
@@ -165,24 +303,26 @@ enum Command {
     /// Show raw frames on screen.
     Dump,
     /// Analyze network frames.
-    Analyze,
+    Analyze {
+        /// Filter on PGN.
+        #[clap(long)]
+        pgn: Option<u16>,
+    },
 }
 
 #[derive(clap::Subcommand)]
 enum NodeCommand {
     /// Enable or disable identification LED.
-    Led { toggle: u8 },
+    Led { toggle: String },
     /// Assign the node a new address.
     Assign { address_new: String },
     /// Reset the node.
     Reset,
-    /// Report node status.
-    Status,
     /// Enable or disable motion lock.
-    Motion { toggle: u8 },
+    Motion { toggle: String },
     /// Enable or disable encoders.
     Encoder { encoder: u8, encoder_on: u8 },
-    /// Contorl motion gate.
+    /// Actuator motion.
     Actuator { actuator: u8, value: i16 },
 }
 
@@ -211,128 +351,80 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Binding to interface {}", args.interface);
 
-    let net = glonax::net::ControlNet::open(args.interface.as_str(), args.address);
+    let net = ControlNet::new(args.interface.as_str(), args.address)?;
 
-    match &args.command {
+    match args.command {
         Command::Node { address, command } => match command {
             NodeCommand::Led { toggle } => {
-                let address_id = node_address(address)?;
+                let node = node_address(address)?;
 
                 info!(
                     "{} Turn identification LED {}",
-                    style_node(address_id),
-                    if toggle == &0 {
-                        Red.paint("off")
-                    } else {
+                    style_node(node),
+                    if string_to_bool(&toggle) {
                         Green.paint("on")
+                    } else {
+                        Red.paint("off")
                     },
                 );
 
-                net.set_led(address_id, toggle == &1).await;
+                net.set_led(node, string_to_bool(&toggle)).await;
             }
             NodeCommand::Assign { address_new } => {
-                let address_id = node_address(address)?;
-                let address_new_id = node_address(address_new)?;
+                let node = node_address(address)?;
+                let node_new = node_address(address_new)?;
 
-                info!("{} Assign 0x{:X?}", style_node(address_id), address_new_id);
+                info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
-                net.set_address(address_id, address_new_id).await;
+                net.set_address(node, node_new).await;
             }
             NodeCommand::Reset => {
-                let address_id = node_address(address)?;
+                let node = node_address(address)?;
 
-                info!("{} Reset", style_node(address_id));
+                info!("{} Reset", style_node(node));
 
-                net.reset(address_id).await;
-            }
-            NodeCommand::Status => {
-                let address_id = node_address(address)?;
-
-                net.set_led(address_id, true).await;
-
-                let found = false;
-                // for _ in 0..3 {
-                net.request(address_id, 0x18feda00).await;
-
-                let frame = net.accept().await;
-
-                //     if frame.id().pgn() == 65_242 {
-                //         // let mut major = 0;
-                //         // let mut minor = 0;
-                //         // let mut patch = 0;
-
-                //         // if frame.pdu()[3] != 0xff {
-                //         //     major = frame.pdu()[3];
-                //         // }
-                //         // if frame.pdu()[4] != 0xff {
-                //         //     minor = frame.pdu()[4];
-                //         // }
-                //         // if frame.pdu()[5] != 0xff {
-                //         //     patch = frame.pdu()[5];
-                //         // }
-
-                //         found = true;
-                //         break;
-                //     }
-                // }
-
-                if found {
-                    info!(
-                        "{} Reports {} version {}",
-                        style_node(address_id),
-                        Green.paint("alive"),
-                        White.paint(format!("{}.{}.{}", 0, 2, 2))
-                    );
-                } else {
-                    info!("{} Node is {}", style_node(address_id), Red.paint("down"));
-                }
-
-                net.set_led(address_id, false).await;
+                net.reset(node).await;
             }
             NodeCommand::Motion { toggle } => {
-                let address_id = node_address(address)?;
+                let node = node_address(address)?;
 
                 info!(
                     "{} Turn motion {}",
-                    style_node(address_id),
-                    if toggle == &0 {
-                        Red.paint("off")
-                    } else {
+                    style_node(node),
+                    if string_to_bool(&toggle) {
                         Green.paint("on")
+                    } else {
+                        Red.paint("off")
                     },
                 );
 
-                net.set_motion_lock(address_id, toggle == &0).await;
+                net.set_motion_lock(node, string_to_bool(&toggle)).await;
             }
             NodeCommand::Encoder {
                 encoder,
                 encoder_on,
             } => {
-                let address_id = node_address(address)?;
+                let node = node_address(address)?;
 
                 info!(
                     "{} Turn encoder {} {}",
-                    style_node(address_id),
+                    style_node(node),
                     encoder,
-                    if encoder_on == &0 {
+                    if encoder_on == 0 {
                         Red.paint("off")
                     } else {
                         Green.paint("on")
                     },
                 );
 
-                net.enable_encoder(address_id, *encoder, encoder_on == &1)
-                    .await;
+                net.enable_encoder(node, encoder, encoder_on == 1).await;
             }
             NodeCommand::Actuator { actuator, value } => {
-                let address_id = node_address(address)?;
-
-                let gate_bank = (actuator / 4) as usize;
-                let gate = actuator % 4;
+                let node = node_address(address)?;
 
                 info!(
                     "{} Set actuator {} to {}",
-                    style_node(address_id),
+                    style_node(node),
                     actuator,
                     if value.is_positive() {
                         Blue.paint(value.to_string())
@@ -341,24 +433,15 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                net.gate_control(
-                    address_id,
-                    gate_bank,
-                    [
-                        if gate == 0 { Some(*value) } else { None },
-                        if gate == 1 { Some(*value) } else { None },
-                        if gate == 2 { Some(*value) } else { None },
-                        if gate == 3 { Some(*value) } else { None },
-                    ],
-                )
-                .await;
+                net.actuator_control(node, [(actuator.clone(), value.clone())].into())
+                    .await;
             }
         },
         Command::Dump => {
             print_frames(&net).await?;
         }
-        Command::Analyze => {
-            analyze_frames(&net).await?;
+        Command::Analyze { pgn } => {
+            analyze_frames(&net, pgn).await?;
         }
     }
 
