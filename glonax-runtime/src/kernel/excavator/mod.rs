@@ -79,12 +79,14 @@ impl From<BodyPart> for crate::core::metric::SignalSource {
 
 #[derive(Clone, Copy)]
 pub struct Excavator {
-    slow_motion: bool,
+    drive_lock: bool,
 }
 
 impl Identity for Excavator {
+    /// Operand intro message.
+    ///
     /// The introduction message makes it easier to spot the current running
-    /// configuration.
+    /// configuration. The message is printed with the information level.
     fn intro() -> String {
         format!(
             "Hello, I'm an {} 🏗. Gimme som dirt! ⚒️",
@@ -124,7 +126,7 @@ pub enum HydraulicMotion {
 }
 
 impl HydraulicMotion {
-    fn from_scancode(actuator: Actuator, value: i16, slow_motion: bool) -> Self {
+    fn from_scancode(actuator: Actuator, value: i16, drive_lock: bool) -> Self {
         let value_normal = match actuator {
             Actuator::Boom => value.ramp(3072),
             Actuator::Arm => value.ramp(3072),
@@ -134,8 +136,13 @@ impl HydraulicMotion {
             Actuator::LimpRight => value.ramp(2048),
         };
 
-        if slow_motion {
-            HydraulicMotion::Slow(vec![(actuator, value_normal)])
+        if drive_lock && (actuator == Actuator::LimpLeft || actuator == Actuator::LimpRight) {
+            trace!("Drive motion is locked");
+
+            HydraulicMotion::Change(vec![
+                (Actuator::LimpLeft, value_normal),
+                (Actuator::LimpRight, value_normal),
+            ])
         } else {
             HydraulicMotion::Change(vec![(actuator, value_normal)])
         }
@@ -165,7 +172,7 @@ impl ToMotion for HydraulicMotion {
 impl Operand for Excavator {
     /// Construct operand from configuration.
     fn from_config(_config: &crate::Config) -> Self {
-        Self { slow_motion: false }
+        Self { drive_lock: false }
     }
 
     type MotionPlan = HydraulicMotion;
@@ -177,44 +184,38 @@ impl Operand for Excavator {
     /// less sensitive based on the actuator (and input control).
     fn try_from_input_device(&mut self, input: Scancode) -> Result<Self::MotionPlan, ()> {
         match input {
-            Scancode::LeftStickX(value) => Ok(HydraulicMotion::from_scancode(
-                Actuator::Slew,
-                value,
-                self.slow_motion,
-            )),
-            Scancode::LeftStickY(value) => Ok(HydraulicMotion::from_scancode(
-                Actuator::Arm,
-                value,
-                self.slow_motion,
-            )),
+            Scancode::LeftStickX(value) => {
+                Ok(HydraulicMotion::from_scancode(Actuator::Slew, value, false))
+            }
+            Scancode::LeftStickY(value) => {
+                Ok(HydraulicMotion::from_scancode(Actuator::Arm, value, false))
+            }
             Scancode::RightStickX(value) => Ok(HydraulicMotion::from_scancode(
                 Actuator::Bucket,
                 value,
-                self.slow_motion,
+                false,
             )),
-            Scancode::RightStickY(value) => Ok(HydraulicMotion::from_scancode(
-                Actuator::Boom,
-                value,
-                self.slow_motion,
-            )),
+            Scancode::RightStickY(value) => {
+                Ok(HydraulicMotion::from_scancode(Actuator::Boom, value, false))
+            }
             Scancode::LeftTrigger(value) => Ok(HydraulicMotion::from_scancode(
                 Actuator::LimpLeft,
                 value,
-                self.slow_motion,
+                self.drive_lock,
             )),
             Scancode::RightTrigger(value) => Ok(HydraulicMotion::from_scancode(
                 Actuator::LimpRight,
                 value,
-                self.slow_motion,
+                self.drive_lock,
             )),
             Scancode::Cancel(ButtonState::Pressed) => Ok(HydraulicMotion::StopAll),
             Scancode::Cancel(ButtonState::Released) => Ok(HydraulicMotion::ResumeAll),
             Scancode::Restrict(ButtonState::Pressed) => {
-                self.slow_motion = true;
+                self.drive_lock = true;
                 Err(())
             }
             Scancode::Restrict(ButtonState::Released) => {
-                self.slow_motion = false;
+                self.drive_lock = false;
                 Err(())
             }
             _ => {
