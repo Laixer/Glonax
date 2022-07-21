@@ -49,14 +49,14 @@ const SERVICE_POSITION_C: (f32, f32) = (0.0, 0.0);
 #[allow(dead_code)]
 const SERVICE_POSITION_D: (f32, f32) = (0.0, 0.0);
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Actuator {
-    Boom = 2,
-    Arm = 6,
-    Bucket = 7,
-    Slew = 3,
-    LimpLeft = 5,
-    LimpRight = 4,
+    Boom = 0,
+    Arm = 4,
+    Bucket = 5,
+    Slew = 1,
+    LimpLeft = 3,
+    LimpRight = 2,
 }
 
 impl From<Actuator> for u32 {
