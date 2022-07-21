@@ -115,22 +115,104 @@ async fn analyze_frames(
                 }
 
                 info!(
-                    "{} Software identification: {}.{}.{}",
+                    "{} {} Software identification: {}.{}.{}",
                     style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
                     major,
                     minor,
                     patch
                 );
             }
+            ParameterGroupNumber::Other(40_960) => {
+                if frame.pdu()[0..2] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 0: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+                if frame.pdu()[2..4] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 1: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+                if frame.pdu()[4..6] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 2: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+                if frame.pdu()[6..8] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 3: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+            }
+            ParameterGroupNumber::Other(41_216) => {
+                if frame.pdu()[0..2] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 4: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+                if frame.pdu()[2..4] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 5: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+                if frame.pdu()[4..6] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 6: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+                if frame.pdu()[6..8] != [0xff, 0xff] {
+                    let gate_value = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
+
+                    info!(
+                        "{} {} Set gate 7: {}",
+                        style_node(frame.id().sa()),
+                        Cyan.paint(pgn.to_string()),
+                        gate_value
+                    );
+                }
+            }
             ParameterGroupNumber::Other(65_282) => {
-                // TODO: Change to new state
                 let state = match frame.pdu()[1] {
-                    1 => Yellow.paint("boot0").to_string(),
-                    5 => Yellow.paint("init core peripherals").to_string(),
-                    6 => Yellow.paint("init auxiliary modules").to_string(),
-                    20 => Green.paint("nominal").to_string(),
-                    255 => Red.paint("faulty").to_string(),
-                    _ => White.paint("other").to_string(),
+                    0x14 => Some("nominal"),
+                    0x16 => Some("ident"),
+                    0xfa => Some("faulty"),
+                    _ => None,
                 };
 
                 let firmware_version =
@@ -139,9 +221,10 @@ async fn analyze_frames(
                 let last_error = glonax::net::spn_last_error(frame.pdu()[6..8].try_into().unwrap());
 
                 info!(
-                    "{} State: {}; Version: {}; Last error: {}",
+                    "{} {} State: {}; Version: {}; Last error: {}",
                     style_node(frame.id().sa()),
-                    state,
+                    Cyan.paint(pgn.to_string()),
+                    state.map_or_else(|| "-".to_owned(), |f| { f.to_string() }),
                     firmware_version.map_or_else(
                         || "-".to_owned(),
                         |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
@@ -155,10 +238,17 @@ async fn analyze_frames(
                 // let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
                 // let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
 
+                info!(
+                    "{} {} Encoder: {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    data_x
+                );
+
                 // let vec_x = data_x as f32;
                 // let vec_y = data_y as f32;
                 // let vec_z = data_z as f32;
-                info!("data: {}", data_x);
+                // info!("data: {}", data_x);
                 // let signal_angle = vec_x.atan2(-vec_y);
                 // debug!("XY Angle: {:>+5.2}", signal_angle);
 
