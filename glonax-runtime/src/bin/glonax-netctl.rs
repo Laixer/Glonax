@@ -1,8 +1,8 @@
 use std::convert::TryInto;
 
-use ansi_term::Colour::{Blue, Green, Purple, Red, White, Yellow};
+use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red, White, Yellow};
 use clap::Parser;
-use glonax::net::ControlNet;
+use glonax::net::{ControlNet, ControlService};
 use glonax_j1939::decode;
 use log::{debug, info};
 
@@ -18,17 +18,17 @@ fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
-fn string_to_bool(str: &String) -> bool {
+fn string_to_bool(str: &String) -> Result<bool, ()> {
     match str.to_lowercase().trim() {
-        "yes" => true,
-        "true" => true,
-        "on" => true,
-        "1" => true,
-        "no" => false,
-        "false" => false,
-        "off" => false,
-        "0" => false,
-        _ => false,
+        "yes" => Ok(true),
+        "true" => Ok(true),
+        "on" => Ok(true),
+        "1" => Ok(true),
+        "no" => Ok(false),
+        "false" => Ok(false),
+        "off" => Ok(false),
+        "0" => Ok(false),
+        _ => Err(()),
     }
 }
 
@@ -55,16 +55,15 @@ impl From<u16> for ParameterGroupNumber {
     }
 }
 
-async fn analyze_frames(net: &ControlNet, pgn_filter: Option<u16>) -> anyhow::Result<()> {
+async fn analyze_frames(
+    ctrl_srv: &mut ControlService,
+    pgn_filter: Option<u16>,
+    node_filter: Option<u8>,
+) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = loop {
-            match tokio::time::timeout(std::time::Duration::from_millis(500), net.accept()).await {
-                Ok(x) => break x?,
-                Err(_) => net.announce_status().await,
-            }
-        };
+        let frame = ctrl_srv.accept().await?;
 
         let pgn = frame.id().pgn();
         if let Some(pgn_filter) = pgn_filter {
@@ -265,11 +264,11 @@ async fn analyze_frames(net: &ControlNet, pgn_filter: Option<u16>) -> anyhow::Re
 }
 
 /// Print frames to screen.
-async fn print_frames(net: &ControlNet) -> anyhow::Result<()> {
+async fn print_frames(ctrl_srv: &ControlService) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = net.accept().await?;
+        let frame = ctrl_srv.accept_raw().await?;
 
         info!("{}", frame);
     }
@@ -363,6 +362,7 @@ async fn main() -> anyhow::Result<()> {
     debug!("Binding to interface {}", args.interface);
 
     let net = ControlNet::new(args.interface.as_str(), args.address)?;
+    let mut ctrl_srv = ControlService::from_net(std::sync::Arc::new(net));
 
     match args.command {
         Command::Node { address, command } => match command {
@@ -372,14 +372,17 @@ async fn main() -> anyhow::Result<()> {
                 info!(
                     "{} Turn identification LED {}",
                     style_node(node),
-                    if string_to_bool(&toggle) {
+                    if string_to_bool(&toggle).unwrap() {
                         Green.paint("on")
                     } else {
                         Red.paint("off")
                     },
                 );
 
-                net.set_led(node, string_to_bool(&toggle)).await;
+                ctrl_srv
+                    .net()
+                    .set_led(node, string_to_bool(&toggle).unwrap())
+                    .await;
             }
             NodeCommand::Assign { address_new } => {
                 let node = node_address(address)?;
@@ -387,14 +390,14 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
-                net.set_address(node, node_new).await;
+                ctrl_srv.net().set_address(node, node_new).await;
             }
             NodeCommand::Reset => {
                 let node = node_address(address)?;
 
                 info!("{} Reset", style_node(node));
 
-                net.reset(node).await;
+                ctrl_srv.net().reset(node).await;
             }
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
@@ -402,14 +405,17 @@ async fn main() -> anyhow::Result<()> {
                 info!(
                     "{} Turn motion {}",
                     style_node(node),
-                    if string_to_bool(&toggle) {
+                    if string_to_bool(&toggle).unwrap() {
                         Green.paint("on")
                     } else {
                         Red.paint("off")
                     },
                 );
 
-                net.set_motion_lock(node, string_to_bool(&toggle)).await;
+                ctrl_srv
+                    .net()
+                    .set_motion_lock(node, string_to_bool(&toggle).unwrap())
+                    .await;
             }
             NodeCommand::Encoder {
                 encoder,
@@ -428,7 +434,10 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                net.enable_encoder(node, encoder, encoder_on == 1).await;
+                ctrl_srv
+                    .net()
+                    .enable_encoder(node, encoder, encoder_on == 1)
+                    .await;
             }
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
@@ -444,15 +453,17 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                net.actuator_control(node, [(actuator.clone(), value.clone())].into())
+                ctrl_srv
+                    .actuator_control(node, [(actuator.clone(), value.clone())].into())
                     .await;
             }
         },
         Command::Dump => {
-            print_frames(&net).await?;
+            print_frames(&ctrl_srv).await?;
         }
-        Command::Analyze { pgn } => {
-            analyze_frames(&net, pgn).await?;
+        Command::Analyze { pgn, node } => {
+            let node = node.map(|s| node_address(s).unwrap());
+            analyze_frames(&mut ctrl_srv, pgn, node).await?;
         }
     }
 
