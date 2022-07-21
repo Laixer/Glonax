@@ -73,6 +73,12 @@ async fn analyze_frames(net: &ControlNet, pgn_filter: Option<u16>) -> anyhow::Re
             }
         }
 
+        if let Some(node_filter) = node_filter {
+            if node_filter != frame.id().sa() {
+                continue;
+            }
+        }
+
         match pgn.into() {
             ParameterGroupNumber::EEC1 => {
                 if let Some(engine_torque_mode) = decode::spn899(frame.pdu()[0]) {
@@ -286,6 +292,7 @@ struct Args {
     #[clap(short, long, parse(from_occurrences))]
     verbose: usize,
 
+    /// Node commands.
     #[clap(subcommand)]
     command: Command,
 }
@@ -307,6 +314,10 @@ enum Command {
         /// Filter on PGN.
         #[clap(long)]
         pgn: Option<u16>,
+
+        /// Filter on node.
+        #[clap(long)]
+        node: Option<String>,
     },
 }
 
