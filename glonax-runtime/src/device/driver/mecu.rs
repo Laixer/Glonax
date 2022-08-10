@@ -77,6 +77,18 @@ impl super::gateway::GatewayClient for Mecu {
                     )
                     .await;
             }
+        } else if frame.id().pgn() == 64_258 {
+            // TODO: Value may not be a u32
+            let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
+
+            self.pusher
+                .push(
+                    Self::map_source(frame.id().sa(), 0),
+                    Signal::new(MetricValue::Angle(nalgebra::Vector1::new(
+                        data.try_into().unwrap(),
+                    ))),
+                )
+                .await;
         }
     }
 }
