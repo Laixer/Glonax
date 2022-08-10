@@ -66,8 +66,7 @@ impl From<Actuator> for u32 {
 }
 
 enum BodyPart {
-    // Arm = 0x7c0,
-    Boom = 0x6d0,
+    Boom = 0x6a0,
     Arm = 0x6c0,
 }
 

@@ -95,17 +95,4 @@ impl DeviceError {
             },
         }
     }
-
-    pub(super) fn from_session(device: String, error: glonax_ice::SessionError) -> Self {
-        Self {
-            device,
-            kind: match error {
-                glonax_ice::SessionError::SpuriousAddress => ErrorKind::InvalidInput,
-                glonax_ice::SessionError::Incomplete => ErrorKind::InvalidInput,
-                glonax_ice::SessionError::InvalidData => ErrorKind::InvalidInput,
-                glonax_ice::SessionError::FrameParseError(_) => ErrorKind::InvalidInput,
-                glonax_ice::SessionError::IoError(ioe) => ErrorKind::Io(ioe.kind()),
-            },
-        }
-    }
 }

@@ -10,8 +10,6 @@ pub use manager::DeviceManager;
 pub use driver::gamepad::Gamepad;
 pub use driver::gateway::*;
 pub use driver::hcu::Hcu;
-pub use driver::hydraulic::Hydraulic;
-pub use driver::inertial::Inertial;
 pub use driver::mecu::Mecu;
 pub use driver::sink::Sink;
 pub use driver::vecu::Vecu;

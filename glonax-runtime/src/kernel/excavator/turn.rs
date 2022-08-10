@@ -4,7 +4,7 @@ use crate::runtime::operand::*;
 
 use super::{Actuator, HydraulicMotion};
 
-const DRIVE_POWER: i16 = -12096;
+const DRIVE_POWER: i16 = -20_096;
 
 /// Turn strait forward.
 ///
