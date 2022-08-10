@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red, White, Yellow};
+use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red};
 use clap::Parser;
 use glonax::net::{ControlNet, ControlService};
 use glonax_j1939::decode;

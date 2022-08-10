@@ -33,6 +33,7 @@ pub enum MetricValue {
     Temperature(i16),
     Acceleration(na::Vector3<f32>),
     Stroke(na::Vector1<u16>),
+    Angle(na::Vector1<u16>),
 }
 
 impl std::fmt::Display for MetricValue {
@@ -47,6 +48,7 @@ impl std::fmt::Display for MetricValue {
                 )
             }
             MetricValue::Stroke(vector) => write!(f, "Stroke: {:>+5}", vector.x),
+            MetricValue::Angle(vector) => write!(f, "Angle: {:>+5}", vector.x),
         }
     }
 }
