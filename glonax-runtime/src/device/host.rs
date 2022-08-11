@@ -29,7 +29,7 @@ impl HostInterface {
         self.0
             .scan_devices()
             .unwrap()
-            .filter(|device| device.is_initialized() && device.driver().is_none())
+            .filter(|device| device.driver().is_none())
             .filter(T::filter)
             .filter(|device| match T::CLASS {
                 crate::device::Subsystem::Net => device
