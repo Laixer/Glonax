@@ -174,12 +174,12 @@ impl Program for ArmFk2Program {
                 (-power_boom).min(20_000) + 12_000
             };
 
-            let power_arm = if angle_arm_error.abs() < 0.03 {
+            let power_arm = if angle_arm_error.abs() < 0.02 {
                 0
             } else {
                 power_arm
             };
-            let power_boom = if angle_boom_error.abs() < 0.03 {
+            let power_boom = if angle_boom_error.abs() < 0.02 {
                 0
             } else {
                 power_boom
@@ -201,7 +201,7 @@ impl Program for ArmFk2Program {
             );
 
             if ENACT {
-                if angle_arm_error.abs() < 0.03 && angle_boom_error.abs() < 0.03 {
+                if angle_arm_error.abs() < 0.02 && angle_boom_error.abs() < 0.02 {
                     self.terminate = true;
                     Some(HydraulicMotion::Stop(vec![
                         super::Actuator::Arm,

@@ -245,7 +245,160 @@ where
             self.runtime
                 .program_queue
                 .0
-                .send((604, vec![]))
+                .send((603, vec![-1.73, 1.01]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.31, 0.87]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.56, 0.74]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.19, 0.46]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.82, 0.40]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.77, 0.36]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-2.09, 0.63]))
+                .await
+                .unwrap();
+
+            ///////////////////////////////////////////////////////////////////
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.73, 1.01]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.31, 0.87]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.56, 0.74]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.19, 0.46]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.82, 0.40]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.77, 0.36]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-2.09, 0.63]))
+                .await
+                .unwrap();
+
+            ///////////////////////////////////////////////////////////////////
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.73, 1.01]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.31, 0.87]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.56, 0.74]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.19, 0.46]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-0.82, 0.40]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.77, 0.36]))
+                .await
+                .unwrap();
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-2.09, 0.63]))
+                .await
+                .unwrap();
+
+            ///////////////////////////////////////////////////////////////////
+
+            self.runtime
+                .program_queue
+                .0
+                .send((603, vec![-1.73, 1.01]))
                 .await
                 .unwrap();
         }

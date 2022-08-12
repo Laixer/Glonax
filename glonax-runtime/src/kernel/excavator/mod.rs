@@ -216,7 +216,10 @@ impl Operand for Excavator {
             }
             Scancode::Restrict(ButtonState::Released) => {
                 self.drive_lock = false;
-                Err(())
+                Ok(HydraulicMotion::Stop(vec![
+                    Actuator::LimpLeft,
+                    Actuator::LimpRight,
+                ]))
             }
             _ => {
                 warn!("Scancode not mapped to action");
