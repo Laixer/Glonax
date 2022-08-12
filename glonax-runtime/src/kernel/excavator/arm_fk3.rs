@@ -1,15 +1,12 @@
 use crate::{
-    algorithm::{fk::ForwardKinematics, ik::InverseKinematics},
+    algorithm::fk::ForwardKinematics,
     core::{metric::MetricValue, rad_to_deg},
     runtime::operand::*,
 };
 
 use super::HydraulicMotion;
 
-const ARM_SET_ANGLE: f32 = -1.5708;
 const ARM_SPEED_MAX: i16 = 12_000;
-const ARM_SPEED_MIN: i16 = 5_000;
-
 const BOOM_SET_ANGLE: f32 = 0.80;
 
 pub(super) struct ArmFk3Program {
@@ -90,7 +87,6 @@ impl Program for ArmFk3Program {
     }
 
     fn can_terminate(&self, _context: &mut Context) -> bool {
-        // self.done
         false
     }
 }

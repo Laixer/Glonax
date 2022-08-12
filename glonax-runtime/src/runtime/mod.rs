@@ -23,7 +23,7 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 mod builder;
 pub use self::builder::Builder;
-use self::operand::{Operand, Parameter};
+use self::operand::{Operand, Parameter, ProgramFactory};
 
 struct MotionChain<R>
 where
@@ -170,7 +170,7 @@ impl<K, R> Runtime<K, R> {
 
 impl<K, R> Runtime<K, R>
 where
-    K: Operand + 'static,
+    K: Operand + ProgramFactory + 'static,
     R: Tracer + 'static,
     R::Instance: TraceWriter + Send + 'static,
 {

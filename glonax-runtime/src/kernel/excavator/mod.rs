@@ -126,27 +126,8 @@ pub enum HydraulicMotion {
 }
 
 impl HydraulicMotion {
-    fn from_scancode(actuator: Actuator, value: i16, drive_lock: bool) -> Self {
-        let value_normal = match actuator {
-            Actuator::Boom => value.ramp(3072),
-            Actuator::Arm => value.ramp(3072),
-            Actuator::Bucket => value.ramp(4096),
-            Actuator::Slew => value.ramp(3072),
-            Actuator::LimpLeft => value.ramp(2048),
-            Actuator::LimpRight => value.ramp(2048),
-        };
-
-        if drive_lock && (actuator == Actuator::LimpLeft || actuator == Actuator::LimpRight) {
-            trace!("Drive motion is locked");
-
-            HydraulicMotion::Change(vec![
-                (Actuator::LimpLeft, value_normal),
-                (Actuator::LimpRight, value_normal),
-            ])
-        } else {
-            HydraulicMotion::Change(vec![(actuator, value_normal)])
-        }
-    }
+    pub(super) const POWER_MAX: i16 = i16::MAX;
+    pub(super) const POWER_MIN: i16 = i16::MIN;
 }
 
 impl ToMotion for HydraulicMotion {
@@ -184,30 +165,42 @@ impl Operand for Excavator {
     /// less sensitive based on the actuator (and input control).
     fn try_from_input_device(&mut self, input: Scancode) -> Result<Self::MotionPlan, ()> {
         match input {
-            Scancode::LeftStickX(value) => {
-                Ok(HydraulicMotion::from_scancode(Actuator::Slew, value, false))
-            }
-            Scancode::LeftStickY(value) => {
-                Ok(HydraulicMotion::from_scancode(Actuator::Arm, value, false))
-            }
-            Scancode::RightStickX(value) => Ok(HydraulicMotion::from_scancode(
+            Scancode::LeftStickX(value) => Ok(HydraulicMotion::Change(vec![(
+                Actuator::Slew,
+                value.ramp(3072),
+            )])),
+            Scancode::LeftStickY(value) => Ok(HydraulicMotion::Change(vec![(
+                Actuator::Slew,
+                value.ramp(3072),
+            )])),
+            Scancode::RightStickX(value) => Ok(HydraulicMotion::Change(vec![(
                 Actuator::Bucket,
-                value,
-                false,
-            )),
-            Scancode::RightStickY(value) => {
-                Ok(HydraulicMotion::from_scancode(Actuator::Boom, value, false))
+                value.ramp(4096),
+            )])),
+            Scancode::RightStickY(value) => Ok(HydraulicMotion::Change(vec![(
+                Actuator::Boom,
+                value.ramp(3072),
+            )])),
+            Scancode::LeftTrigger(value) => {
+                if self.drive_lock {
+                    Ok(HydraulicMotion::StraightDrive(value.ramp(2048)))
+                } else {
+                    Ok(HydraulicMotion::Change(vec![(
+                        Actuator::LimpLeft,
+                        value.ramp(2048),
+                    )]))
+                }
             }
-            Scancode::LeftTrigger(value) => Ok(HydraulicMotion::from_scancode(
-                Actuator::LimpLeft,
-                value,
-                self.drive_lock,
-            )),
-            Scancode::RightTrigger(value) => Ok(HydraulicMotion::from_scancode(
-                Actuator::LimpRight,
-                value,
-                self.drive_lock,
-            )),
+            Scancode::RightTrigger(value) => {
+                if self.drive_lock {
+                    Ok(HydraulicMotion::StraightDrive(value.ramp(2048)))
+                } else {
+                    Ok(HydraulicMotion::Change(vec![(
+                        Actuator::LimpRight,
+                        value.ramp(2048),
+                    )]))
+                }
+            }
             Scancode::Cancel(ButtonState::Pressed) => Ok(HydraulicMotion::StopAll),
             Scancode::Cancel(ButtonState::Released) => Ok(HydraulicMotion::ResumeAll),
             Scancode::Restrict(ButtonState::Pressed) => {
@@ -216,10 +209,7 @@ impl Operand for Excavator {
             }
             Scancode::Restrict(ButtonState::Released) => {
                 self.drive_lock = false;
-                Ok(HydraulicMotion::Stop(vec![
-                    Actuator::LimpLeft,
-                    Actuator::LimpRight,
-                ]))
+                Ok(HydraulicMotion::StraightDrive(HydraulicMotion::POWER_MIN))
             }
             _ => {
                 warn!("Scancode not mapped to action");

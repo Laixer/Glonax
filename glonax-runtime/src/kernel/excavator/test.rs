@@ -2,8 +2,6 @@ use crate::runtime::operand::*;
 
 use super::{Actuator, HydraulicMotion};
 
-const POWER: i16 = 32_000;
-
 pub(super) struct TestProgram {
     time: std::time::Instant,
     program: u32,
@@ -34,86 +32,116 @@ impl Program for TestProgram {
         match self.program {
             0 => {
                 info!("Testing actuator: boom up");
-                Some(HydraulicMotion::Change(vec![(Actuator::Boom, POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Boom,
+                    HydraulicMotion::POWER_MAX,
+                )]))
             }
             1 => {
                 info!("Testing actuator: boom down");
-                Some(HydraulicMotion::Change(vec![(Actuator::Boom, -POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Boom,
+                    -HydraulicMotion::POWER_MAX,
+                )]))
             }
             2 => {
                 info!("Testing actuator: arm up");
-                Some(HydraulicMotion::Change(vec![(Actuator::Arm, POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Arm,
+                    HydraulicMotion::POWER_MAX,
+                )]))
             }
             3 => {
                 info!("Testing actuator: arm down");
-                Some(HydraulicMotion::Change(vec![(Actuator::Arm, -POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Arm,
+                    -HydraulicMotion::POWER_MAX,
+                )]))
             }
             4 => {
                 info!("Testing actuator: bucket up");
-                Some(HydraulicMotion::Change(vec![(Actuator::Bucket, POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Bucket,
+                    HydraulicMotion::POWER_MAX,
+                )]))
             }
             5 => {
                 info!("Testing actuator: bucket down");
-                Some(HydraulicMotion::Change(vec![(Actuator::Bucket, -POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Bucket,
+                    -HydraulicMotion::POWER_MAX,
+                )]))
             }
             6 => {
                 info!("Testing actuator: slew up");
-                Some(HydraulicMotion::Change(vec![(Actuator::Slew, POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Slew,
+                    HydraulicMotion::POWER_MAX,
+                )]))
             }
             7 => {
                 info!("Testing actuator: slew down");
-                Some(HydraulicMotion::Change(vec![(Actuator::Slew, -POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::Slew,
+                    -HydraulicMotion::POWER_MAX,
+                )]))
             }
             8 => {
                 info!("Testing actuator: drive left up");
-                Some(HydraulicMotion::Change(vec![(Actuator::LimpLeft, POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::LimpLeft,
+                    HydraulicMotion::POWER_MAX,
+                )]))
             }
             9 => {
                 info!("Testing actuator: drive left down");
-                Some(HydraulicMotion::Change(vec![(Actuator::LimpLeft, -POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::LimpLeft,
+                    -HydraulicMotion::POWER_MAX,
+                )]))
             }
             10 => {
                 info!("Testing actuator: drive right up");
-                Some(HydraulicMotion::Change(vec![(Actuator::LimpRight, POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::LimpRight,
+                    HydraulicMotion::POWER_MAX,
+                )]))
             }
             11 => {
                 info!("Testing actuator: drive right down");
-                Some(HydraulicMotion::Change(vec![(Actuator::LimpRight, -POWER)]))
+                Some(HydraulicMotion::Change(vec![(
+                    Actuator::LimpRight,
+                    -HydraulicMotion::POWER_MAX,
+                )]))
             }
             12 => {
                 info!("Testing actuator: drive straight up");
-                Some(HydraulicMotion::Change(vec![
-                    (Actuator::LimpLeft, POWER),
-                    (Actuator::LimpRight, POWER),
-                ]))
+                Some(HydraulicMotion::StraightDrive(HydraulicMotion::POWER_MAX))
             }
             13 => {
                 info!("Testing actuator: drive straight down");
-                Some(HydraulicMotion::Change(vec![
-                    (Actuator::LimpLeft, -POWER),
-                    (Actuator::LimpRight, -POWER),
-                ]))
+                Some(HydraulicMotion::StraightDrive(-HydraulicMotion::POWER_MAX))
             }
             14 => {
                 info!("Testing all actuators up");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, POWER),
-                    (Actuator::Arm, POWER),
-                    (Actuator::Bucket, POWER),
-                    (Actuator::Slew, POWER),
-                    (Actuator::LimpLeft, POWER),
-                    (Actuator::LimpRight, POWER),
+                    (Actuator::Boom, HydraulicMotion::POWER_MAX),
+                    (Actuator::Arm, HydraulicMotion::POWER_MAX),
+                    (Actuator::Bucket, HydraulicMotion::POWER_MAX),
+                    (Actuator::Slew, HydraulicMotion::POWER_MAX),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_MAX),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_MAX),
                 ]))
             }
             15 => {
                 info!("Testing all actuators down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, -POWER),
-                    (Actuator::Arm, -POWER),
-                    (Actuator::Bucket, -POWER),
-                    (Actuator::Slew, -POWER),
-                    (Actuator::LimpLeft, -POWER),
-                    (Actuator::LimpRight, -POWER),
+                    (Actuator::Boom, -HydraulicMotion::POWER_MAX),
+                    (Actuator::Arm, -HydraulicMotion::POWER_MAX),
+                    (Actuator::Bucket, -HydraulicMotion::POWER_MAX),
+                    (Actuator::Slew, -HydraulicMotion::POWER_MAX),
+                    (Actuator::LimpLeft, -HydraulicMotion::POWER_MAX),
+                    (Actuator::LimpRight, -HydraulicMotion::POWER_MAX),
                 ]))
             }
             _ => {
@@ -123,7 +151,7 @@ impl Program for TestProgram {
         }
     }
 
-    fn can_terminate(&self, context: &mut Context) -> bool {
+    fn can_terminate(&self, _: &mut Context) -> bool {
         false
     }
 }
