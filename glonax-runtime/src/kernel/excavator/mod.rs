@@ -15,6 +15,7 @@ mod arm_ik;
 mod bucket;
 mod drive;
 mod noop;
+mod test;
 mod turn;
 
 // TODO: take all lengths in mm.
@@ -237,7 +238,7 @@ impl Operand for Excavator {
             600 => Ok(Box::new(arm_balance::ArmBalanceProgram::new())),
             601 => Ok(Box::new(arm_fk::ArmFkProgram::new())),
             602 => Ok(Box::new(arm_ik::ArmIkProgram::new())),
-            603 => Ok(Box::new(arm_fk2::ArmFk2Program::new())),
+            603 => Ok(Box::new(arm_fk2::ArmFk2Program::new(params))),
             604 => Ok(Box::new(arm_fk3::ArmFk3Program::new())),
 
             // Movement programs.
@@ -247,6 +248,7 @@ impl Operand for Excavator {
 
             // Miscellaneous programs.
             900 => Ok(Box::new(noop::NoopProgram::new())),
+            901 => Ok(Box::new(test::TestProgram::new())),
 
             _ => Err(()),
         }
