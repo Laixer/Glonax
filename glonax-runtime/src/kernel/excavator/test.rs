@@ -94,6 +94,28 @@ impl Program for TestProgram {
                     (Actuator::LimpRight, -POWER),
                 ]))
             }
+            14 => {
+                info!("Testing all actuators up");
+                Some(HydraulicMotion::Change(vec![
+                    (Actuator::Boom, POWER),
+                    (Actuator::Arm, POWER),
+                    (Actuator::Bucket, POWER),
+                    (Actuator::Slew, POWER),
+                    (Actuator::LimpLeft, POWER),
+                    (Actuator::LimpRight, POWER),
+                ]))
+            }
+            15 => {
+                info!("Testing all actuators down");
+                Some(HydraulicMotion::Change(vec![
+                    (Actuator::Boom, -POWER),
+                    (Actuator::Arm, -POWER),
+                    (Actuator::Bucket, -POWER),
+                    (Actuator::Slew, -POWER),
+                    (Actuator::LimpLeft, -POWER),
+                    (Actuator::LimpRight, -POWER),
+                ]))
+            }
             _ => {
                 self.program = 0;
                 None
