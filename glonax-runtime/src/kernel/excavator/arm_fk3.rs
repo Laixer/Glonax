@@ -12,7 +12,7 @@ const ARM_SPEED_MIN: i16 = 5_000;
 
 const BOOM_SET_ANGLE: f32 = 0.80;
 
-pub struct ArmFk3Program {
+pub(super) struct ArmFk3Program {
     boom_angle: Option<f32>,
     arm_angle: Option<f32>,
     done: bool,

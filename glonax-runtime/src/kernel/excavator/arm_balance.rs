@@ -9,7 +9,7 @@ const SET_POINT: f32 = -1.0;
 const EXP_ALPHA: f32 = 0.1;
 const PROP_FACTOR: f32 = 70.0;
 
-pub struct ArmBalanceProgram {
+pub(super) struct ArmBalanceProgram {
     angle: Option<f32>,
     filter: SimpleExpSmoothing,
 }

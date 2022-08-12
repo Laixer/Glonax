@@ -16,6 +16,10 @@ pub trait Operand: Clone + Send + Sync {
 
     /// Try convert input scancode to motion.
     fn try_from_input_device(&mut self, input: Scancode) -> Result<Self::MotionPlan, ()>;
+}
+
+pub trait ProgramFactory {
+    type MotionPlan: ToMotion;
 
     // TODO: Handle result.
     /// Fetch program by identifier.

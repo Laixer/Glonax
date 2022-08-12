@@ -16,6 +16,8 @@ mod workspace;
 extern crate log;
 
 mod config;
+use runtime::operand::{Operand, ProgramFactory};
+
 pub use self::config::Config;
 
 mod runtime;
@@ -52,7 +54,7 @@ struct LaunchStub<K, R> {
 
 impl<K, R> LaunchStub<K, R>
 where
-    K: 'static + runtime::operand::Operand + core::Identity,
+    K: 'static + Operand + core::Identity + ProgramFactory,
     R: core::Tracer + 'static,
     R::Instance: core::TraceWriter + Send + 'static,
 {

@@ -4,7 +4,7 @@ use super::{Actuator, HydraulicMotion};
 
 const POWER: i16 = 32_000;
 
-pub struct TestProgram {
+pub(super) struct TestProgram {
     time: std::time::Instant,
     program: u32,
 }

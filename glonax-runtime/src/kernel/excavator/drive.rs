@@ -7,7 +7,7 @@ use super::{Actuator, HydraulicMotion, DRIVE_SPEED_MAX};
 /// This program is part of the excavator kernel. It drives both tracks straight
 /// forward until the desired position is reached. It takes acceleration and
 /// decceleration into account.
-pub struct DriveProgram {
+pub(super) struct DriveProgram {
     profile: TrapezoidalDistanceProfile,
 }
 

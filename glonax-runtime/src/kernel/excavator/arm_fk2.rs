@@ -6,7 +6,7 @@ use crate::runtime::operand::*;
 
 use super::HydraulicMotion;
 
-pub struct ArmFk2Program {
+pub(super) struct ArmFk2Program {
     target_boom: f32,
     target_arm: f32,
     theta_boom: Option<f32>,

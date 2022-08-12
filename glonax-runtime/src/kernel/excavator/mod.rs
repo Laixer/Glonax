@@ -4,7 +4,7 @@ use crate::{
         motion::{Motion, ToMotion},
         Identity,
     },
-    runtime::operand::{Operand, Parameter, Program},
+    runtime::operand::{Operand, Parameter, Program, ProgramFactory},
 };
 
 mod arm_balance;
@@ -12,9 +12,9 @@ mod arm_fk;
 mod arm_fk2;
 mod arm_fk3;
 mod arm_ik;
-mod bucket;
 mod drive;
 mod noop;
+mod sleep;
 mod test;
 mod turn;
 
@@ -227,16 +227,17 @@ impl Operand for Excavator {
             }
         }
     }
+}
 
-    /// Fetch program by identifier.
-    ///
-    /// The factory method returns a pointer to the excavator program.
+impl ProgramFactory for Excavator {
+    type MotionPlan = HydraulicMotion;
+
     fn fetch_program(
         &self,
-        order: i32,
+        id: i32,
         params: Parameter,
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()> {
-        match order {
+        match id {
             // Arm chain programs.
             600 => Ok(Box::new(arm_balance::ArmBalanceProgram::new())),
             601 => Ok(Box::new(arm_fk::ArmFkProgram::new())),
@@ -247,11 +248,11 @@ impl Operand for Excavator {
             // Movement programs.
             700 => Ok(Box::new(drive::DriveProgram::new(params))),
             701 => Ok(Box::new(turn::TurnProgram::new(params))),
-            702 => Ok(Box::new(bucket::BucketProgram::new())),
 
             // Miscellaneous programs.
             900 => Ok(Box::new(noop::NoopProgram::new())),
-            901 => Ok(Box::new(test::TestProgram::new())),
+            901 => Ok(Box::new(sleep::SleepProgram::new(params))),
+            910 => Ok(Box::new(test::TestProgram::new())),
 
             _ => Err(()),
         }

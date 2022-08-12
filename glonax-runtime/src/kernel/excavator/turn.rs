@@ -10,7 +10,7 @@ const DRIVE_POWER: i16 = -20_096;
 ///
 /// This program is part of the excavator kernel. It drives both tracks then
 /// stops when the time limit is reached.
-pub struct TurnProgram {
+pub(super) struct TurnProgram {
     drive_time: Duration,
 }
 

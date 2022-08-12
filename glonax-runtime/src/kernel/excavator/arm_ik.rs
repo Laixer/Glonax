@@ -2,7 +2,7 @@ use crate::{algorithm::ik::InverseKinematics, core::metric::MetricValue, runtime
 
 use super::HydraulicMotion;
 
-pub struct ArmIkProgram;
+pub(super) struct ArmIkProgram;
 
 impl ArmIkProgram {
     pub fn new() -> Self {

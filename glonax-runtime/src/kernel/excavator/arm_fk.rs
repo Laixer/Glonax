@@ -2,7 +2,7 @@ use crate::{algorithm::fk::ForwardKinematics, core::metric::MetricValue, runtime
 
 use super::HydraulicMotion;
 
-pub struct ArmFkProgram;
+pub(super) struct ArmFkProgram;
 
 impl ArmFkProgram {
     pub fn new() -> Self {

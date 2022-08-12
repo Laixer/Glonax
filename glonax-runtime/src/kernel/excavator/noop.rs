@@ -2,7 +2,7 @@ use crate::runtime::operand::*;
 
 use super::HydraulicMotion;
 
-pub struct NoopProgram;
+pub(super) struct NoopProgram;
 
 impl NoopProgram {
     pub fn new() -> Self {
