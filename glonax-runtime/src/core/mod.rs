@@ -8,6 +8,23 @@ use std::f32::consts::PI;
 // TODO: Remove?
 // pub use nalgebra;
 
+/// Level trait.
+pub trait Level {
+    /// Return the value of self above the lower threshold.
+    /// Otherwise return a default value.
+    fn ramp(self, lower: Self) -> Self;
+}
+
+impl Level for i16 {
+    fn ramp(self, lower: Self) -> Self {
+        if self < lower && self > -lower {
+            0
+        } else {
+            self
+        }
+    }
+}
+
 pub mod time {
     use std::time::{Duration, SystemTime};
 

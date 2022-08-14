@@ -8,7 +8,6 @@ use tokio::{
 use crate::{
     core::{self, motion::Motion, time, Trace, TraceWriter, Tracer},
     device::{CoreDevice, DeviceDescriptor, DeviceManager, InputDevice, MotionDevice},
-    Config,
 };
 
 pub mod operand;
@@ -98,16 +97,6 @@ impl std::fmt::Display for RuntimeSession {
     }
 }
 
-pub(super) struct RuntimeSettings {
-    //
-}
-
-impl From<&Config> for RuntimeSettings {
-    fn from(_config: &Config) -> Self {
-        Self {}
-    }
-}
-
 pub struct Runtime<K, R> {
     /// Runtime operand.
     pub(super) operand: K,
@@ -129,8 +118,6 @@ pub struct Runtime<K, R> {
     pub(super) program_queue: (Sender<(i32, Parameter)>, Option<Receiver<(i32, Parameter)>>),
     /// Signal manager.
     pub(super) signal_manager: crate::signal::SignalManager,
-    /// Runtime settings.
-    pub(super) settings: RuntimeSettings,
     /// Task pool.
     pub(super) task_pool: Vec<JoinHandle<()>>,
     /// Device manager.

@@ -2,7 +2,7 @@ use crate::{
     core::{
         input::{ButtonState, Scancode},
         motion::{Motion, ToMotion},
-        Identity,
+        Identity, Level,
     },
     runtime::operand::{Operand, Parameter, Program, ProgramFactory},
 };
@@ -92,21 +92,6 @@ impl Identity for Excavator {
             "Hello, I'm an {} 🏗. Gimme som dirt! ⚒️",
             ansi_term::Color::Yellow.paint("excavator")
         )
-    }
-}
-
-// TODO: Move somewhere.
-trait Level {
-    fn ramp(self, lower: Self) -> Self;
-}
-
-impl Level for i16 {
-    fn ramp(self, lower: Self) -> Self {
-        if self < lower && self > -lower {
-            0
-        } else {
-            self
-        }
     }
 }
 

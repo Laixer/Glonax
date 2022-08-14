@@ -78,21 +78,3 @@ impl error::Error for DeviceError {
         None
     }
 }
-
-impl DeviceError {
-    /// Map error from `serial::Error` onto device error.
-    pub(super) fn from_serial(
-        device: String,
-        path: &std::path::Path,
-        error: glonax_serial::Error,
-    ) -> Self {
-        Self {
-            device,
-            kind: match error.kind() {
-                glonax_serial::ErrorKind::NoDevice => ErrorKind::NoSuchDevice(path.to_path_buf()),
-                glonax_serial::ErrorKind::InvalidInput => ErrorKind::InvalidInput,
-                glonax_serial::ErrorKind::Io(ioe) => ErrorKind::Io(ioe),
-            },
-        }
-    }
-}

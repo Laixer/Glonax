@@ -3,8 +3,7 @@ use std::time::Duration;
 use crate::{
     core::{motion::Motion, Identity, TraceWriter, Tracer},
     device::{DeviceDescriptor, Gamepad, Gateway, Hcu, Mecu, MotionDevice, Sink, Vecu},
-    runtime::{self, RuntimeSettings},
-    Config, Runtime,
+    runtime, Config, Runtime,
 };
 
 use super::{operand::ProgramFactory, Operand};
@@ -115,7 +114,6 @@ where
             shutdown: broadcast::channel(1),
             program_queue: (program_queue.0, Some(program_queue.1)),
             signal_manager,
-            settings: RuntimeSettings::from(config),
             task_pool: vec![],
             device_manager,
             session,
