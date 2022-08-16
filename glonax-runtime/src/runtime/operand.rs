@@ -6,8 +6,6 @@ use crate::{
     Config,
 };
 
-use super::RuntimeSession;
-
 pub trait Operand: Clone + Send + Sync {
     type MotionPlan: ToMotion;
 
@@ -41,20 +39,17 @@ pub struct Context {
     pub last_step: Instant,
     /// Total step count.
     pub step_count: usize,
-    /// Runtime session.
-    pub session: RuntimeSession,
     /// Signal reader.
     pub reader: SignalReader,
 }
 
 impl Context {
     /// Construct new program context.
-    pub fn new(reader: SignalReader, session: RuntimeSession) -> Self {
+    pub fn new(reader: SignalReader) -> Self {
         Self {
             start: Instant::now(),
             last_step: Instant::now(),
             step_count: 0,
-            session,
             reader,
         }
     }

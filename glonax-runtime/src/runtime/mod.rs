@@ -60,43 +60,6 @@ struct ProgramTrace {
     id: i32,
 }
 
-#[derive(Clone)]
-pub struct RuntimeSession {
-    /// Session ID.
-    pub id: uuid::Uuid,
-    /// Session path on disk.
-    pub path: std::path::PathBuf,
-}
-
-impl RuntimeSession {
-    /// Construct new runtime session.
-    ///
-    /// The session identifier is unique and valid for the duration of the
-    /// session.
-    ///
-    /// The runtime session will create a directory on disk in the name
-    /// of the session.
-    pub(super) fn new(path: &std::path::Path) -> Self {
-        use std::io::Write;
-
-        let id = uuid::Uuid::new_v4();
-        let path = crate::workspace::create_directory(path, &id);
-
-        debug!("Session directory: {}", &path.to_str().unwrap());
-
-        let mut bootstrap = std::fs::File::create(path.join("bootstrap")).unwrap();
-        writeln!(bootstrap, "BOOT = 1").unwrap();
-
-        Self { id, path }
-    }
-}
-
-impl std::fmt::Display for RuntimeSession {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.id)
-    }
-}
-
 pub struct Runtime<K, R> {
     /// Runtime operand.
     pub(super) operand: K,
@@ -122,8 +85,6 @@ pub struct Runtime<K, R> {
     pub(super) task_pool: Vec<JoinHandle<()>>,
     /// Device manager.
     pub(super) device_manager: DeviceManager,
-    /// Runtime session.
-    pub(super) session: RuntimeSession,
     /// Tracer used to record telemetrics.
     pub(super) tracer: R,
 }
@@ -224,7 +185,6 @@ where
         let operand = self.operand.clone();
         let motion_dispatch = self.motion_dispatch();
 
-        let runtime_session = self.session.clone();
         let signal_reader = self.signal_manager.reader();
 
         let mut receiver = self.program_queue.1.take().unwrap();
@@ -250,7 +210,7 @@ where
 
                 motion_dispatch.send(Motion::ResumeAll).await.ok(); // TOOD: Handle result
 
-                let mut ctx = operand::Context::new(signal_reader.clone(), runtime_session.clone());
+                let mut ctx = operand::Context::new(signal_reader.clone());
                 program.boot(&mut ctx);
 
                 // Loop until this program reaches its termination condition. If
