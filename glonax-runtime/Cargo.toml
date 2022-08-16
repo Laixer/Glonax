@@ -27,7 +27,6 @@ simplelog = "0.12"
 tokio = { version = "1.7", features = ["full"] }
 anyhow = "1.0.59"
 async-trait = "0.1"
-fs2 = "0.4"
 udev = "0.6"
 csv = "1.1"
 nalgebra = "0.31"

@@ -19,9 +19,6 @@ use super::{operand::ProgramFactory, Operand};
 pub struct Builder<'a, K, R> {
     /// Current application configuration.
     config: &'a Config,
-    /// Current application workspace.
-    #[allow(dead_code)]
-    lock: std::fs::File,
     /// Runtime core.
     runtime: Runtime<K, R>,
 }
@@ -36,11 +33,8 @@ where
     ///
     /// Note that this method is certain to block.
     pub(crate) async fn from_config(config: &'a Config) -> super::Result<Builder<'a, K, R>> {
-        crate::workspace::setup_if_not_exists(&config.workspace);
-
         Ok(Self {
             config,
-            lock: crate::workspace::lock(&config.workspace)?,
             runtime: Self::bootstrap(config).await?,
         })
     }
@@ -54,13 +48,7 @@ where
 
         info!("{}", K::intro());
 
-        let session = runtime::RuntimeSession::new(&config.workspace);
-
-        info!("Runtime session ID: {}", session.id);
-
-        crate::workspace::store_value(&config.workspace, "session", session.id);
-
-        let tracer = R::from_path(&session.path);
+        let tracer = R::from_path(std::path::Path::new("/tmp/"));
 
         let mut device_manager = crate::device::DeviceManager::new();
 

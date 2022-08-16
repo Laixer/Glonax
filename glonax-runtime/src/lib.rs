@@ -10,7 +10,6 @@ mod device;
 pub mod kernel;
 pub mod net;
 mod signal;
-mod workspace;
 
 #[macro_use]
 extern crate log;
