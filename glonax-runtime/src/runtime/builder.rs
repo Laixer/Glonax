@@ -187,20 +187,6 @@ where
         Ok(())
     }
 
-    /// Instruct the runtime to execute startup events.
-    ///
-    /// Startup events will be queued and run on the runtime core before any
-    /// other events are executed.
-    async fn startup_events(&self) {
-        info!("Running startup events");
-
-        self.runtime
-            .motion_dispatch()
-            .send(Motion::StopAll)
-            .await
-            .ok(); // TODO: Handle result
-    }
-
     /// Validate the runtime setup and exit.
     ///
     /// This method consumes the runtime service.
@@ -216,7 +202,12 @@ where
     pub async fn spawn(mut self) -> runtime::Result {
         self.config_services().await?;
 
-        self.startup_events().await;
+        self.runtime
+            .program_queue
+            .0
+            .send((902, vec![]))
+            .await
+            .unwrap();
 
         if let Some(id) = self.config.program_id {
             self.runtime
