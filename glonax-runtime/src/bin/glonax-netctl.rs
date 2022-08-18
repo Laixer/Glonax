@@ -449,7 +449,7 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
-    debug!("Binding to interface {}", args.interface);
+    debug!("Bind to interface {}", args.interface);
 
     let net = ControlNet::new(args.interface.as_str(), args.address)?;
     let mut ctrl_srv = ControlService::from_net(std::sync::Arc::new(net));

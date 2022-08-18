@@ -48,15 +48,18 @@ impl Gateway {
     where
         T: Device + GatewayClient + 'static,
     {
-        self.subscribe(Box::new(T::from_net(self.net.clone())));
+        self.subscribe(T::from_net(self.net.clone()));
 
         T::from_net(self.net.clone())
     }
 
-    pub fn subscribe(&mut self, device: Box<dyn GatewayClient>) {
-        trace!("Subscribe new device to gateway");
+    pub fn subscribe<T>(&mut self, device: T)
+    where
+        T: Device + GatewayClient + 'static,
+    {
+        trace!("Subscribe device {} to gateway", device.name());
 
-        self.client_devices.push(device);
+        self.client_devices.push(Box::new(device));
     }
 }
 

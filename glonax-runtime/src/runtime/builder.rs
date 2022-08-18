@@ -36,6 +36,8 @@ where
 
         info!("{}", K::intro());
 
+        debug!("Bind to interface {}", config.global().interface);
+
         let mut gateway_device = Gateway::new(&config.global().interface);
 
         if tokio::time::timeout(Duration::from_secs(1), gateway_device.wait_online())
@@ -73,7 +75,7 @@ where
         debug!("Subscribe M-ECU to gateway");
 
         let signal_device = Mecu::new(self.runtime.signal_manager.pusher());
-        self.core_device.subscribe(Box::new(signal_device));
+        self.core_device.subscribe(signal_device);
 
         self
     }
