@@ -15,30 +15,8 @@ use crate::core::{input::Scancode, motion::Motion};
 /// Device trait.
 #[async_trait::async_trait]
 pub trait Device: Send {
-    // TODO: Maybe remove in future.
     /// Return the device name.
     fn name(&self) -> String;
-
-    // TODO: Move into Udev
-    /// Probe the device.
-    ///
-    /// Can be used to signal that the device is ready. If the probe returns
-    /// with success then we can assume the device is connected. Any pre-use
-    /// checks should be done now.
-    ///
-    /// Implementation is optional.
-    async fn probe(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    /// Returns the current status of the device, or any complications.
-    ///
-    /// Implementation is optional but recommended.
-    async fn status(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    // TODO: add state change fn
 }
 
 /// Device which can exercise motion.

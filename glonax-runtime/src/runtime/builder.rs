@@ -104,14 +104,12 @@ where
         self
     }
 
-    pub fn build_with_core_service(self) -> Runtime<K> {
+    pub fn build_with_core_service(mut self) -> Runtime<K> {
         use crate::device::CoreDevice;
 
         info!("Start core service");
 
-        let mut core_device = self.core_device;
-
-        tokio::task::spawn(async move { while core_device.next().await.is_ok() {} });
+        tokio::task::spawn(async move { while self.core_device.next().await.is_ok() {} });
 
         self.runtime
     }

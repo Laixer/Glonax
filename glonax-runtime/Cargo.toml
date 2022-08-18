@@ -1,6 +1,6 @@
 [package]
 name = "glonax"
-version = "1.0.2"
+version = "1.0.7"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
@@ -24,8 +24,8 @@ toml = "0.5"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 simplelog = "0.12"
-tokio = { version = "1.7", features = ["full"] }
-anyhow = "1.0.59"
+tokio = { version = "1.20", features = ["full"] }
+anyhow = "1.0"
 async-trait = "0.1"
 csv = "1.1"
 nalgebra = "0.31"
