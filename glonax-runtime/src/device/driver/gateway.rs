@@ -21,8 +21,7 @@ pub trait GatewayClient: Send + Sync {
 
 pub struct Gateway {
     net: Arc<ControlNet>,
-    client_devices: Vec<device::DeviceDescriptor<dyn GatewayClient>>,
-    client_devices2: Vec<Box<dyn GatewayClient>>,
+    client_devices: Vec<Box<dyn GatewayClient>>,
 }
 
 impl Gateway {
@@ -31,7 +30,6 @@ impl Gateway {
         Self {
             net: Arc::new(ControlNet::new(name, DEVICE_NET_LOCAL_ADDR).unwrap()),
             client_devices: vec![],
-            client_devices2: vec![],
         }
     }
 
@@ -50,14 +48,15 @@ impl Gateway {
     where
         T: Device + GatewayClient + 'static,
     {
-        self.client_devices2
-            .push(Box::new(T::from_net(self.net.clone())));
+        self.subscribe(Box::new(T::from_net(self.net.clone())));
 
         T::from_net(self.net.clone())
     }
 
     pub fn subscribe(&mut self, device: Box<dyn GatewayClient>) {
-        self.client_devices2.push(device);
+        trace!("Subscribe new device to gateway");
+
+        self.client_devices.push(device);
     }
 }
 
@@ -75,7 +74,7 @@ impl CoreDevice for Gateway {
         // TODO: Wrap error in device result.
         let frame = self.net.accept().await.unwrap();
         for device in self.client_devices.iter_mut() {
-            device.lock().await.incoming(&frame).await;
+            device.incoming(&frame).await
         }
 
         Ok(())
