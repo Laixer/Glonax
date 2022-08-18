@@ -88,6 +88,8 @@ where
                     self::runtime::Builder::<K>::from_config(config)
                         .await?
                         .enable_term_shutdown()
+                        .subscribe_metric_unit()
+                        .subscribe_vehicle_unit()
                         .build_with_core_service(),
                 )
                 .await

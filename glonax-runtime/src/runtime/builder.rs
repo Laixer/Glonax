@@ -19,7 +19,7 @@ use super::Operand;
 /// The runtime builder *must* be used to construct a runtime.
 pub(crate) struct Builder<K> {
     /// Core device.
-    core_device: Box<dyn crate::device::CoreDevice>,
+    core_device: Gateway,
     /// Runtime core.
     runtime: Runtime<K>,
 }
@@ -55,31 +55,39 @@ where
             Box::new(Sink::new())
         };
 
-        let signal_manager = crate::signal::SignalManager::new();
-
-        // TODO: Should be optional, check arg.
-        let signal_device = Mecu::new(signal_manager.pusher());
-        gateway_device.subscribe(Box::new(signal_device));
-
-        // TODO: Should be optional, check arg.
-        gateway_device.new_gateway_device::<Vecu>();
-
         let runtime = Runtime {
             operand: K::from_config(config),
             motion_device,
             shutdown: broadcast::channel(1),
-            signal_manager,
+            signal_manager: crate::signal::SignalManager::new(),
             tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
         };
 
         Ok(Self {
-            core_device: Box::new(gateway_device),
+            core_device: gateway_device,
             runtime,
         })
     }
 
+    pub(crate) fn subscribe_metric_unit(mut self) -> Self {
+        debug!("Subscribe M-ECU to gateway");
+
+        let signal_device = Mecu::new(self.runtime.signal_manager.pusher());
+        self.core_device.subscribe(Box::new(signal_device));
+
+        self
+    }
+
+    pub(crate) fn subscribe_vehicle_unit(mut self) -> Self {
+        debug!("Subscribe V-ECU to gateway");
+
+        self.core_device.new_gateway_device::<Vecu>();
+
+        self
+    }
+
     pub(crate) fn enable_term_shutdown(self) -> Self {
-        info!("Enable signals shutdown");
+        debug!("Enable signals shutdown");
 
         let sender = self.runtime.shutdown.0.clone();
 
@@ -95,6 +103,8 @@ where
     }
 
     pub fn build_with_core_service(self) -> Runtime<K> {
+        use crate::device::CoreDevice;
+
         info!("Start core service");
 
         let mut core_device = self.core_device;
