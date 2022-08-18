@@ -12,8 +12,6 @@ pub use error::{DeviceError, ErrorKind, Result};
 
 use crate::core::{input::Scancode, motion::Motion};
 
-pub type DeviceDescriptor<T> = std::sync::Arc<tokio::sync::Mutex<T>>;
-
 /// Device trait.
 #[async_trait::async_trait]
 pub trait Device: Send {

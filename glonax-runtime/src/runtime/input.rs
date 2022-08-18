@@ -9,11 +9,11 @@ pub struct RuntimeInput {
     input_device: Gamepad,
 }
 
-impl<'a> RuntimeInput {
+impl RuntimeInput {
     pub fn new(config: &InputConfig) -> Self {
-        let input_device = Gamepad::new(std::path::Path::new(&config.device));
-
-        Self { input_device }
+        Self {
+            input_device: Gamepad::new(std::path::Path::new(&config.device)),
+        }
     }
 
     pub async fn exec_service<K>(mut self, mut runtime: Runtime<K>) -> runtime::Result

@@ -84,6 +84,7 @@ where
     pub fn exec_program(config: &config::ProgramConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::RuntimeProgram::new(config)
+                .await
                 .exec_service(
                     self::runtime::Builder::<K>::from_config(config)
                         .await?
