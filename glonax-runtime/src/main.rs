@@ -50,13 +50,6 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    // let local_config = std::env::current_dir()?.join("glonaxd.toml");
-
-    // Try read configuration from global system location first, then from local directory.
-    // let mut config = glonax::Config::try_from_file(vec![
-    //     "/etc/glonax/glonaxd.toml",
-    //     local_config.to_str().unwrap(),
-    // ])?;
     let mut config = glonax::ProgramConfig {
         enable_autopilot: !args.no_auto,
         program_id: args.program,
