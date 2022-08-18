@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use glonax_j1939::J1939Listener;
+use glonax_j1939::Frame;
 
-use crate::{device::Device, net::ControlNet2};
+use crate::{
+    device::Device,
+    net::{ControlNet, StatusService},
+};
 
 const DEVICE_NAME: &str = "v-ecu";
-// const DEVICE_NET_HCU_ADDR: u8 = 0xee;
 
-pub struct Vecu(Arc<ControlNet2<J1939Listener>>);
+pub struct Vecu(StatusService);
 
 unsafe impl Send for Vecu {}
 
@@ -19,26 +21,36 @@ impl Device for Vecu {
 
 #[async_trait::async_trait]
 impl super::gateway::GatewayClient for Vecu {
-    fn from_net(net: Arc<ControlNet2<J1939Listener>>) -> Self {
-        Self(net)
+    fn from_net(net: Arc<ControlNet>) -> Self {
+        Self(StatusService::new(net))
     }
 
-    async fn incoming(&mut self, frame: &glonax_j1939::j1939::Frame) {
+    async fn incoming(&mut self, frame: &Frame) {
+        // TODO: Need an external trigger.
+        self.0.interval().await;
+
         if frame.id().pgn() == 65_282 {
-            let state = match frame.pdu()[1] {
-                1 => "boot0",
-                5 => "init core peripherals",
-                6 => "init auxiliary modules",
-                20 => "nominal",
-                255 => "faulty",
-                _ => "other",
+            let state = match crate::net::spn_state(frame.pdu()[1]) {
+                Some(crate::net::State::Nominal) => Some("nominal"),
+                Some(crate::net::State::Ident) => Some("ident"),
+                Some(crate::net::State::Faulty) => Some("faulty"),
+                _ => None,
             };
 
+            let firmware_version =
+                crate::net::spn_firmware_version(frame.pdu()[2..5].try_into().unwrap());
+
+            let last_error = crate::net::spn_last_error(frame.pdu()[6..8].try_into().unwrap());
+
             trace!(
-                "0x{:X?} State: {}; Last error: {}",
+                "0x{:X?} State: {}; Version: {}; Last error: {}",
                 frame.id().sa(),
-                state,
-                u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap())
+                state.map_or_else(|| "-".to_owned(), |f| { f.to_string() }),
+                firmware_version.map_or_else(
+                    || "-".to_owned(),
+                    |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
+                ),
+                last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
             );
         }
     }

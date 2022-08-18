@@ -43,13 +43,6 @@ impl DeviceError {
             kind: ErrorKind::NoSuchDevice(path.to_path_buf()),
         }
     }
-
-    pub(super) fn timeout(device: String) -> Self {
-        Self {
-            device,
-            kind: ErrorKind::Timeout,
-        }
-    }
 }
 
 impl std::fmt::Display for DeviceError {

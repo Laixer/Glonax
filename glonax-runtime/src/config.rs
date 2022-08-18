@@ -1,74 +1,93 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Deserialize;
 
-/// Glonax configuration.
-#[derive(Clone, Deserialize)]
-pub struct Config {
+pub trait Configurable: Clone {
+    fn global(&self) -> &GlobalConfig;
+}
+
+#[derive(Clone, Debug)]
+pub struct ProgramConfig {
     /// Whether autopilot is enabled.
-    #[serde(default)]
     pub enable_autopilot: bool,
 
-    /// Whether input devices are enabled.
-    #[serde(default)]
-    pub enable_input: bool,
+    /// Number of programs to queue.
+    pub program_queue: usize,
+
+    /// Number of programs to queue.
+    pub program_id: Option<i32>,
+
+    /// Global configuration.
+    pub global: GlobalConfig,
+}
+
+impl Configurable for ProgramConfig {
+    fn global(&self) -> &GlobalConfig {
+        &self.global
+    }
+}
+
+impl Default for ProgramConfig {
+    fn default() -> Self {
+        Self {
+            enable_autopilot: true,
+            program_queue: 1024,
+            program_id: None,
+            global: Default::default(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct InputConfig {
+    /// Input device.
+    pub device: String,
+
+    /// Global configuration.
+    pub global: GlobalConfig,
+}
+
+impl Configurable for InputConfig {
+    fn global(&self) -> &GlobalConfig {
+        &self.global
+    }
+}
+
+/// Glonax global configuration.
+#[derive(Clone, Deserialize, Debug)]
+pub struct GlobalConfig {
+    /// CAN network interface.
+    #[serde(default = "GlobalConfig::default_interface")]
+    pub interface: String,
 
     /// Whether tracing is enabled.
     #[serde(default)]
     pub enable_trace: bool,
 
-    /// Whether this is a validation run or not.
-    #[serde(default)]
-    pub enable_test: bool,
-
     /// Whether motion is enabled.
-    #[serde(default = "Config::enable_motion")]
+    #[serde(default = "GlobalConfig::enable_motion")]
     pub enable_motion: bool,
 
-    /// Library worksapce.
-    #[serde(default = "Config::workspace")]
-    pub workspace: PathBuf,
-
-    /// Number of programs to queue.
-    #[serde(default = "Config::program_queue")]
-    pub program_queue: usize,
-
-    // TODO; Maybe not here?
-    /// Number of programs to queue.
+    /// Whether motion is slowed down.
     #[serde(default)]
-    pub program_id: Option<i32>,
+    pub slow_motion: bool,
+
+    /// Whether the application runs as daemon.
+    #[serde(default)]
+    pub daemon: bool,
 
     /// Runtime workers.
-    #[serde(default = "Config::runtime_workers")]
+    #[serde(default = "GlobalConfig::runtime_workers")]
     pub runtime_workers: usize,
 }
 
-impl std::fmt::Display for Config {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Configuration:
-            \tAutopilot enabled: {}
-            \tInput enabled: {}
-            \tTracing enabled: {}
-            \tValidation enabled: {}
-            \tMotion enabled: {}
-            \tWorkspace: {}
-            \tProgram queue size: {}
-            \tRuntime workers: {}",
-            self.enable_autopilot,
-            self.enable_input,
-            self.enable_trace,
-            self.enable_test,
-            self.enable_motion,
-            self.workspace.to_str().unwrap(),
-            self.program_queue,
-            self.runtime_workers,
-        )
+impl Configurable for GlobalConfig {
+    fn global(&self) -> &GlobalConfig {
+        self
     }
 }
 
-impl Config {
+impl GlobalConfig {
     /// Read configuration from first existing file in the list.
     ///
     /// Values not configured in the configuration file will be set to their
@@ -99,27 +118,22 @@ impl Config {
     }
 
     #[inline]
+    fn default_interface() -> String {
+        String::new()
+    }
+
+    #[inline]
     fn enable_motion() -> bool {
         true
     }
 
     #[inline]
-    fn workspace() -> PathBuf {
-        std::env::current_dir().unwrap().join("data")
-    }
-
-    #[inline]
-    fn program_queue() -> usize {
-        1024
-    }
-
-    #[inline]
     fn runtime_workers() -> usize {
-        8
+        4
     }
 }
 
-impl Default for Config {
+impl Default for GlobalConfig {
     fn default() -> Self {
         toml::from_str("").unwrap()
     }

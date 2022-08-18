@@ -3,14 +3,13 @@ use std::time::Instant;
 use crate::{
     core::{input::Scancode, motion::ToMotion},
     signal::SignalReader,
-    Config,
 };
 
 pub trait Operand: Clone + Send + Sync {
     type MotionPlan: ToMotion;
 
     /// Construct operand from configuration.
-    fn from_config(config: &Config) -> Self;
+    fn from_config<C: crate::config::Configurable>(config: &C) -> Self;
 
     /// Try convert input scancode to motion.
     fn try_from_input_device(&mut self, input: Scancode) -> Result<Self::MotionPlan, ()>;

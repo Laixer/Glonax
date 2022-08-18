@@ -17,10 +17,19 @@ extern crate log;
 mod config;
 use runtime::operand::{Operand, ProgramFactory};
 
-pub use self::config::Config;
+pub use self::config::*;
 
 mod runtime;
 pub use self::runtime::Runtime;
+
+use kernel::excavator::Excavator;
+
+/// Opaque runtime service for the excavator kernel. This is the recommended way
+/// to instantiate a new excavator kernel on the reactor.
+///
+/// The excavator builder binds the excavator kernel to the hydraulic motion
+/// device. The caller should tread this type as opaque.
+type ExcavatorService = LaunchStub<Excavator>;
 
 /// Start the machine kernel from configuration. This is the recommended way to
 /// run a machine kernel from an dynamic external caller. Call this factory for
@@ -28,34 +37,27 @@ pub use self::runtime::Runtime;
 ///
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
-pub fn start_machine(config: &Config) -> runtime::Result {
-    use kernel::excavator::Excavator;
-    use runtime::{CsvTracer, NullTracer};
-
-    /// Opaque runtime service for the excavator kernel. This is the recommended way
-    /// to instantiate a new excavator kernel on the reactor.
-    ///
-    /// The excavator builder binds the excavator kernel to the hydraulic motion
-    /// device. The caller should tread this type as opaque.
-    type ExcavatorService<T> = LaunchStub<Excavator, T>;
-
-    Ok(match config {
-        cnf if cnf.enable_test => ExcavatorService::<NullTracer>::test(&config)?,
-        cnf if cnf.enable_trace => ExcavatorService::<CsvTracer>::launch(&config)?,
-        _ => ExcavatorService::<NullTracer>::launch(&config)?,
-    })
+pub fn runtime_program(config: &config::ProgramConfig) -> runtime::Result {
+    Ok(ExcavatorService::exec_program(config)?)
 }
 
-struct LaunchStub<K, R> {
+/// Start the machine kernel from configuration. This is the recommended way to
+/// run a machine kernel from an dynamic external caller. Call this factory for
+/// the default machine behaviour.
+///
+/// This factory method obtains the service from the combination of configuration
+/// settings. This service is then run to completion.
+pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
+    Ok(ExcavatorService::exec_input(config)?)
+}
+
+struct LaunchStub<K> {
     _1: std::marker::PhantomData<K>,
-    _2: std::marker::PhantomData<R>,
 }
 
-impl<K, R> LaunchStub<K, R>
+impl<K> LaunchStub<K>
 where
-    K: 'static + Operand + core::Identity + ProgramFactory,
-    R: core::Tracer + 'static,
-    R::Instance: core::TraceWriter + Send + 'static,
+    K: Operand + core::Identity + ProgramFactory,
 {
     /// Create the runtime reactor.
     ///
@@ -64,33 +66,43 @@ where
     ///
     /// The runtime reactor should be setup as early as possible so that all
     /// subsequent methods can run on the asynchronous reactor.
-    fn runtime_reactor(config: &Config) -> tokio::runtime::Runtime {
-        debug!("Reactor runtime workers: {}", config.runtime_workers);
+    fn runtime_reactor(config: &impl config::Configurable) -> tokio::runtime::Runtime {
+        debug!(
+            "Reactor runtime workers: {}",
+            config.global().runtime_workers
+        );
 
         tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(config.runtime_workers)
+            .worker_threads(config.global().runtime_workers)
             .enable_all()
             .thread_name("glonax-runtime-worker")
             .build()
             .unwrap()
     }
 
-    /// Test the runtime service, then return.
-    pub fn test<'a>(config: &'a Config) -> runtime::Result {
+    /// Start the runtime service.
+    pub fn exec_program(config: &config::ProgramConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            self::runtime::Builder::<K, R>::from_config(&config)
-                .await?
-                .validate()
+            runtime::RuntimeProgram::new(config)
+                .exec_service(
+                    self::runtime::Builder::<K>::from_config(config)
+                        .await?
+                        .enable_term_shutdown()
+                        .build_with_core_service(),
+                )
                 .await
         })
     }
 
     /// Start the runtime service.
-    pub fn launch<'a>(config: &'a Config) -> runtime::Result {
+    pub fn exec_input(config: &config::InputConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            self::runtime::Builder::<K, R>::from_config(&config)
-                .await?
-                .spawn()
+            runtime::RuntimeInput::new(&config)
+                .exec_service(
+                    self::runtime::Builder::<K>::from_config(config)
+                        .await?
+                        .build(),
+                )
                 .await
         })
     }

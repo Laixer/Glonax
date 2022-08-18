@@ -1,182 +1,72 @@
-use glonax_j1939::{j1939, J1939Listener};
+use std::{collections::HashMap, io};
 
-// TODO: Rename to something with stream.
+use glonax_j1939::{Frame, FrameBuilder, IdBuilder, J1939Stream};
+
+pub use service::ActuatorService;
+pub use service::ControlService;
+pub use service::StatusService;
+
+mod service;
+
 pub struct ControlNet {
-    socket: J1939Listener,
+    stream: J1939Stream,
 }
 
 impl ControlNet {
-    pub fn open(ifname: &str, address: u8) -> Self {
-        let socket = J1939Listener::bind(ifname, address).unwrap();
-        socket.set_broadcast(true).unwrap();
-
-        Self { socket }
+    pub fn new(ifname: &str, addr: u8) -> io::Result<Self> {
+        let stream = glonax_j1939::J1939Stream::bind(ifname, addr)?;
+        stream.set_broadcast(true)?;
+        Ok(Self { stream })
     }
 
-    // TODO: Maybe remove
-    pub async fn send_to(&self, frame: &j1939::Frame) {
-        debug!("Sending raw frame {}", frame);
-        self.socket.send_to(frame).await.unwrap();
-    }
-
-    pub async fn accept(&self) -> j1939::Frame {
-        self.socket.recv_from().await.unwrap()
-    }
-
-    pub async fn status(&self) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(65_282).build())
-            .from_slice(&[0x71])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn set_led(&self, node: u8, led_on: bool) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_312).da(node).build())
-            .from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn set_address(&self, node: u8, address: u8) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_568).da(node).build())
-            .from_slice(&[b'Z', b'C', address])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn reset(&self, node: u8) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_312).da(node).build())
-            .from_slice(&[b'Z', b'C', 0xff, 0x69])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn enable_encoder(&self, node: u8, encoder: u8, encoder_on: bool) {
-        let state = match (encoder, encoder_on) {
-            (0, true) => 0b1101,
-            (0, false) => 0b1100,
-            (1, true) => 0b0111,
-            (1, false) => 0b0011,
-            _ => panic!(),
-        };
-
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
-            .from_slice(&[b'Z', b'C', state])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn set_motion_lock(&self, node: u8, locked: bool) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
-            .from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn request(&self, node: u8, _pgn: u32) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(59_904).da(node).build())
-            .from_slice(&[0xfe, 0x18, 0xda])
-            .build();
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-
-    pub async fn gate_control(&self, node: u8, gate_bank: usize, value: [Option<i16>; 4]) {
-        let bank = [40_960, 41_216];
-
-        let frame = glonax_j1939::j1939::Frame::new(
-            glonax_j1939::j1939::IdBuilder::from_pgn(bank[gate_bank])
-                .da(node)
-                .build(),
-            [
-                value[0].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[0].map_or(0xff, |v| v.to_le_bytes()[1]),
-                value[1].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[1].map_or(0xff, |v| v.to_le_bytes()[1]),
-                value[2].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[2].map_or(0xff, |v| v.to_le_bytes()[1]),
-                value[3].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[3].map_or(0xff, |v| v.to_le_bytes()[1]),
-            ],
-        );
-
-        self.socket.send_to(&frame).await.unwrap();
-    }
-}
-
-/////////////////////
-
-#[async_trait::async_trait]
-pub trait J1939Stream {
-    async fn recv_from(&self) -> std::io::Result<j1939::Frame>;
-
-    async fn send_to(&self, frame: &j1939::Frame) -> std::io::Result<()>;
-}
-
-#[async_trait::async_trait]
-impl J1939Stream for J1939Listener {
-    async fn recv_from(&self) -> std::io::Result<j1939::Frame> {
-        self.recv_from().await
-    }
-
-    async fn send_to(&self, frame: &j1939::Frame) -> std::io::Result<()> {
-        self.send_to(frame).await
-    }
-}
-
-pub struct ControlNet2<T: J1939Stream> {
-    stream: T,
-}
-
-impl<T: J1939Stream> ControlNet2<T> {
-    pub fn new(stream: T) -> Self {
-        Self { stream }
-    }
-
-    pub fn inner(&self) -> &T {
+    pub fn stream(&self) -> &J1939Stream {
         &self.stream
     }
 
-    pub async fn accept(&self) -> j1939::Frame {
-        self.stream.recv_from().await.unwrap()
+    pub async fn accept(&self) -> io::Result<Frame> {
+        self.stream.read().await
     }
 
     pub async fn announce_status(&self) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(65_282).build())
-            .from_slice(&[0x71])
+        let state = 0xff;
+
+        const PKG_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
+        const PKG_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
+        const PKG_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
+
+        let major: u8 = PKG_VERSION_MAJOR.parse().unwrap();
+        let minor: u8 = PKG_VERSION_MINOR.parse().unwrap();
+        let patch: u8 = PKG_VERSION_PATCH.parse().unwrap();
+
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(65_282).build())
+            .from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn set_led(&self, node: u8, led_on: bool) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_312).da(node).build())
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_312).da(node).build())
             .from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn set_address(&self, node: u8, address: u8) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_568).da(node).build())
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_568).da(node).build())
             .from_slice(&[b'Z', b'C', address])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn reset(&self, node: u8) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_312).da(node).build())
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_312).da(node).build())
             .from_slice(&[b'Z', b'C', 0xff, 0x69])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn enable_encoder(&self, node: u8, encoder: u8, encoder_on: bool) {
@@ -188,48 +78,88 @@ impl<T: J1939Stream> ControlNet2<T> {
             _ => panic!(),
         };
 
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
             .from_slice(&[b'Z', b'C', state])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn set_motion_lock(&self, node: u8, locked: bool) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(45_824).da(node).build())
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
             .from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn request(&self, node: u8, _pgn: u32) {
-        let frame = j1939::FrameBuilder::new(j1939::IdBuilder::from_pgn(59_904).da(node).build())
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(59_904).da(node).build())
             .from_slice(&[0xfe, 0x18, 0xda])
             .build();
 
-        self.stream.send_to(&frame).await.unwrap();
+        self.stream.write(&frame).await.unwrap();
     }
 
-    pub async fn gate_control(&self, node: u8, gate_bank: usize, value: [Option<i16>; 4]) {
-        let bank = [40_960, 41_216];
+    /// Control actuators.
+    pub async fn actuator_control(&self, node: u8, actuators: HashMap<u8, i16>) {
+        const BANK_PGN_LIST: [u16; 2] = [40_960, 41_216];
+        const BANK_SLOTS: u8 = 4;
 
-        let frame = glonax_j1939::j1939::Frame::new(
-            glonax_j1939::j1939::IdBuilder::from_pgn(bank[gate_bank])
-                .da(node)
-                .build(),
-            [
-                value[0].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[0].map_or(0xff, |v| v.to_le_bytes()[1]),
-                value[1].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[1].map_or(0xff, |v| v.to_le_bytes()[1]),
-                value[2].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[2].map_or(0xff, |v| v.to_le_bytes()[1]),
-                value[3].map_or(0xff, |v| v.to_le_bytes()[0]),
-                value[3].map_or(0xff, |v| v.to_le_bytes()[1]),
-            ],
-        );
+        for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
+            let mut actuator_list_filled: Vec<Option<i16>> = vec![];
 
-        self.stream.send_to(&frame).await.unwrap();
+            for slot in 0..BANK_SLOTS {
+                let offset = (idx as u8 * 4) + slot;
+
+                actuator_list_filled.push(actuators.get(&offset).map_or(None, |a| Some(*a)));
+            }
+
+            if actuator_list_filled.iter().any(|f| f.is_some()) {
+                let pdu = actuator_list_filled
+                    .iter()
+                    .flat_map(|p| p.map_or([0xff, 0xff], |v| v.to_le_bytes()))
+                    .collect::<Vec<u8>>()
+                    .as_slice()[..8]
+                    .try_into()
+                    .unwrap();
+
+                let frame = Frame::new(IdBuilder::from_pgn(bank).da(node).build(), pdu);
+                self.stream.write(&frame).await.unwrap();
+            }
+        }
+    }
+}
+
+pub enum State {
+    Nominal,
+    Ident,
+    Faulty,
+}
+
+pub fn spn_state(value: u8) -> Option<State> {
+    match value {
+        0x14 => Some(State::Nominal),
+        0x16 => Some(State::Ident),
+        0xfa => Some(State::Faulty),
+        _ => None,
+    }
+}
+
+// TODO: Maybe move?
+pub fn spn_firmware_version(value: &[u8; 3]) -> Option<(u8, u8, u8)> {
+    if value != &[0xff; 3] {
+        Some((value[0], value[1], value[2]))
+    } else {
+        None
+    }
+}
+
+// TODO: Maybe move?
+pub fn spn_last_error(value: &[u8; 2]) -> Option<u16> {
+    if value != &[0xff; 2] {
+        Some(u16::from_le_bytes(value[..2].try_into().unwrap()))
+    } else {
+        None
     }
 }

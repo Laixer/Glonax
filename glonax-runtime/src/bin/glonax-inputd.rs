@@ -4,23 +4,19 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::Parser;
+use clap::{Parser, ValueHint};
 
 #[derive(Parser)]
 #[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[clap(version)]
-#[clap(about, long_about = None)]
+#[clap(about = "Input device dispatcher", long_about = None)]
 struct Args {
     /// CAN network interface.
     interface: String,
 
-    /// Execute provided program id.
-    #[clap(short, long)]
-    program: Option<i32>,
-
-    /// Disable autopilot program.
-    #[clap(short, long)]
-    no_auto: bool,
+    /// Input device.
+    #[clap(value_hint = ValueHint::FilePath)]
+    device: String,
 
     /// Disable machine motion (frozen mode).
     #[clap(long)]
@@ -50,17 +46,9 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    // let local_config = std::env::current_dir()?.join("glonaxd.toml");
-
-    // Try read configuration from global system location first, then from local directory.
-    // let mut config = glonax::Config::try_from_file(vec![
-    //     "/etc/glonax/glonaxd.toml",
-    //     local_config.to_str().unwrap(),
-    // ])?;
-    let mut config = glonax::ProgramConfig {
-        enable_autopilot: !args.no_auto,
-        program_id: args.program,
-        ..Default::default()
+    let mut config = glonax::InputConfig {
+        device: args.device,
+        global: glonax::GlobalConfig::default(),
     };
 
     config.global.interface = args.interface;
@@ -72,6 +60,7 @@ fn main() -> anyhow::Result<()> {
     if let Some(workers) = args.workers {
         config.global.runtime_workers = workers;
     }
+
     let mut log_config = simplelog::ConfigBuilder::new();
     if args.daemon {
         log_config.set_time_level(log::LevelFilter::Off);
@@ -117,7 +106,7 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    glonax::runtime_program(&config)?;
+    glonax::runtime_input(&config)?;
 
     Ok(())
 }

@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use glonax_j1939::J1939Listener;
+use glonax_j1939::Frame;
 
 use crate::{
     core::metric::{MetricValue, Signal},
     device::Device,
-    net::ControlNet2,
+    net::ControlNet,
 };
 
 const DEVICE_NAME: &str = "m-ecu";
@@ -34,11 +34,11 @@ impl Device for Mecu {
 
 #[async_trait::async_trait]
 impl super::gateway::GatewayClient for Mecu {
-    fn from_net(_net: Arc<ControlNet2<J1939Listener>>) -> Self {
+    fn from_net(_net: Arc<ControlNet>) -> Self {
         todo!()
     }
 
-    async fn incoming(&mut self, frame: &glonax_j1939::j1939::Frame) {
+    async fn incoming(&mut self, frame: &Frame) {
         if frame.id().pgn() == 65_535 {
             if frame.pdu()[..2] != [0xff, 0xff] {
                 let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());

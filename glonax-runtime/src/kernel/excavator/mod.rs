@@ -136,9 +136,15 @@ impl ToMotion for HydraulicMotion {
     }
 }
 
+impl Default for Excavator {
+    fn default() -> Self {
+        Self { drive_lock: false }
+    }
+}
+
 impl Operand for Excavator {
     /// Construct operand from configuration.
-    fn from_config(_config: &crate::Config) -> Self {
+    fn from_config<C: crate::config::Configurable>(_config: &C) -> Self {
         Self { drive_lock: false }
     }
 
