@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use glonax_j1939::Frame;
 
@@ -9,9 +9,10 @@ use crate::{
 
 const DEVICE_NAME: &str = "v-ecu";
 
-pub struct Vecu(StatusService);
-
-unsafe impl Send for Vecu {}
+pub struct Vecu {
+    status_serivce: StatusService,
+    node_list: HashMap<u8, u8>,
+}
 
 impl Device for Vecu {
     fn name(&self) -> String {
@@ -22,12 +23,15 @@ impl Device for Vecu {
 #[async_trait::async_trait]
 impl super::gateway::GatewayClient for Vecu {
     fn from_net(net: Arc<ControlNet>) -> Self {
-        Self(StatusService::new(net))
+        Self {
+            status_serivce: StatusService::new(net),
+            node_list: HashMap::new(),
+        }
     }
 
     async fn incoming(&mut self, frame: &Frame) {
         // TODO: Need an external trigger.
-        self.0.interval().await;
+        self.status_serivce.interval().await;
 
         if frame.id().pgn() == 65_282 {
             let state = match crate::net::spn_state(frame.pdu()[1]) {
@@ -52,6 +56,14 @@ impl super::gateway::GatewayClient for Vecu {
                 ),
                 last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
             );
+
+            if self
+                .node_list
+                .insert(frame.id().sa(), frame.pdu()[1])
+                .is_none()
+            {
+                info!("New node on network: 0x{:X?}", frame.id().sa());
+            }
         }
     }
 }

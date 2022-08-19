@@ -23,8 +23,7 @@ pub use program::RuntimeProgram;
 mod input;
 pub use input::RuntimeInput;
 
-// TODO: Move into builder.
-struct MotionChain<'a, R>
+pub(super) struct MotionChain<'a, R>
 where
     R: Tracer,
     R::Instance: TraceWriter + Send + 'static,
@@ -46,10 +45,10 @@ where
     }
 
     pub async fn request<T: ToMotion>(&mut self, motion: T) {
-        let mo = motion.to_motion();
-        mo.record(&mut self.trace, time::now());
+        let motion = motion.to_motion();
+        motion.record(&mut self.trace, time::now());
 
-        self.motion_device.actuate(mo).await;
+        self.motion_device.actuate(motion).await;
     }
 }
 
