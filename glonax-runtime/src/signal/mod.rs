@@ -6,6 +6,9 @@ use crate::core::metric::{Signal, SignalSource, SignalTuple};
 
 const HISTORIC_ITEM_COUNT: usize = 32;
 
+mod scalar;
+pub(crate) use scalar::Scalar;
+
 pub struct SignalPusher {
     queue: Arc<RwLock<VecDeque<SignalTuple>>>,
     // queue2: tokio::sync::mpsc::Sender<SignalTuple>,
