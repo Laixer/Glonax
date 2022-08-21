@@ -3,8 +3,8 @@ use std::time::Duration;
 use crate::{
     config::Configurable,
     core::{Identity, Tracer},
-    device::{Gateway, Hcu, Mecu, MotionDevice, Sink, Vecu},
-    runtime, Runtime,
+    device::Gateway,
+    runtime, RuntimeContext,
 };
 
 use super::Operand;
@@ -18,10 +18,8 @@ use super::Operand;
 ///
 /// The runtime builder *must* be used to construct a runtime.
 pub(crate) struct Builder<K> {
-    /// Core device.
-    core_device: Gateway,
     /// Runtime core.
-    runtime: Runtime<K>,
+    runtime: RuntimeContext<K>,
 }
 
 impl<K> Builder<K>
@@ -38,7 +36,7 @@ where
 
         debug!("Bind to interface {}", config.global().interface);
 
-        let mut gateway_device = Gateway::new(&config.global().interface);
+        let gateway_device = Gateway::new(&config.global().interface);
 
         if tokio::time::timeout(Duration::from_secs(1), gateway_device.wait_online())
             .await
@@ -49,43 +47,15 @@ where
 
         info!("Control network is online");
 
-        let motion_device = if config.global().enable_motion {
-            let motion_device = gateway_device.new_gateway_device::<Hcu>();
-
-            Box::new(motion_device) as Box<dyn MotionDevice>
-        } else {
-            Box::new(Sink::new())
-        };
-
-        let runtime = Runtime {
+        let runtime = RuntimeContext {
             operand: K::from_config(config),
-            motion_device,
+            core_device: gateway_device,
             shutdown: broadcast::channel(1),
             signal_manager: crate::signal::SignalManager::new(),
             tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
         };
 
-        Ok(Self {
-            core_device: gateway_device,
-            runtime,
-        })
-    }
-
-    pub(crate) fn subscribe_metric_unit(mut self) -> Self {
-        debug!("Subscribe M-ECU to gateway");
-
-        let signal_device = Mecu::new(self.runtime.signal_manager.pusher());
-        self.core_device.subscribe(signal_device);
-
-        self
-    }
-
-    pub(crate) fn subscribe_vehicle_unit(mut self) -> Self {
-        debug!("Subscribe V-ECU to gateway");
-
-        self.core_device.new_gateway_device::<Vecu>();
-
-        self
+        Ok(Self { runtime })
     }
 
     pub(crate) fn enable_term_shutdown(self) -> Self {
@@ -104,18 +74,8 @@ where
         self
     }
 
-    pub fn build_with_core_service(mut self) -> Runtime<K> {
-        use crate::device::CoreDevice;
-
-        info!("Start core service");
-
-        tokio::task::spawn(async move { while self.core_device.next().await.is_ok() {} });
-
-        self.runtime
-    }
-
     #[inline]
-    pub fn build(self) -> Runtime<K> {
+    pub fn build(self) -> RuntimeContext<K> {
         self.runtime
     }
 }

@@ -4,8 +4,9 @@ use tokio::sync::mpsc;
 
 use crate::{
     core::{motion::Motion, TraceWriter, Tracer},
+    device::{Hcu, Mecu},
     runtime::{self, operand},
-    Runtime,
+    RuntimeContext,
 };
 
 use super::{
@@ -49,11 +50,20 @@ impl RuntimeProgram {
         Self { queue }
     }
 
-    pub async fn exec_service<K>(mut self, mut runtime: Runtime<K>) -> runtime::Result
+    pub async fn exec_service<K>(mut self, mut runtime: RuntimeContext<K>) -> runtime::Result
     where
         K: Operand + ProgramFactory,
     {
-        let mut motion_chain = MotionChain::new(&mut runtime.motion_device, &runtime.tracer);
+        use crate::device::CoreDevice;
+
+        let signal_device = Mecu::new(runtime.signal_manager.pusher());
+        runtime.core_device.subscribe(signal_device);
+
+        let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
+
+        tokio::task::spawn(async move { while runtime.core_device.next().await.is_ok() {} });
+
+        let mut motion_chain = MotionChain::new(&mut motion_device, &runtime.tracer);
 
         let mut program_tracer = runtime.tracer.instance("program");
 

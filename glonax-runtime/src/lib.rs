@@ -20,7 +20,7 @@ use runtime::operand::{Operand, ProgramFactory};
 pub use self::config::*;
 
 mod runtime;
-pub use self::runtime::Runtime;
+pub use self::runtime::RuntimeContext;
 
 use kernel::excavator::Excavator;
 
@@ -49,6 +49,16 @@ pub fn runtime_program(config: &config::ProgramConfig) -> runtime::Result {
 /// settings. This service is then run to completion.
 pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
     Ok(ExcavatorService::exec_input(config)?)
+}
+
+/// Start the machine kernel from configuration. This is the recommended way to
+/// run a machine kernel from an dynamic external caller. Call this factory for
+/// the default machine behaviour.
+///
+/// This factory method obtains the service from the combination of configuration
+/// settings. This service is then run to completion.
+pub fn runtime_network(config: &config::InputConfig) -> runtime::Result {
+    Ok(ExcavatorService::exec_network(config)?)
 }
 
 struct LaunchStub<K> {
@@ -89,11 +99,22 @@ where
                     self::runtime::Builder::<K>::from_config(config)
                         .await?
                         .enable_term_shutdown()
-                        .subscribe_metric_unit()
-                        .subscribe_vehicle_unit()
-                        .build_with_core_service(),
+                        .build(),
                 )
                 .await
+        })
+    }
+
+    /// Start the runtime service.
+    pub fn exec_network(config: &config::InputConfig) -> runtime::Result {
+        Self::runtime_reactor(config).block_on(async {
+            runtime::ecu::exec_service(
+                config,
+                self::runtime::Builder::<K>::from_config(config)
+                    .await?
+                    .build(),
+            )
+            .await
         })
     }
 

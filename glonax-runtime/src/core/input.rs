@@ -1,4 +1,5 @@
 /// Button state.
+#[derive(PartialEq)]
 pub enum ButtonState {
     /// Button pressed.
     Pressed,

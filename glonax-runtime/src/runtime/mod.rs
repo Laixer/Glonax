@@ -23,21 +23,25 @@ pub use program::RuntimeProgram;
 mod input;
 pub use input::RuntimeInput;
 
-pub(super) struct MotionChain<'a, R>
+pub mod ecu;
+
+pub(super) struct MotionChain<'a, R, M>
 where
     R: Tracer,
     R::Instance: TraceWriter + Send + 'static,
+    M: MotionDevice,
 {
     trace: R::Instance,
-    motion_device: &'a mut Box<dyn MotionDevice>,
+    motion_device: &'a mut M,
 }
 
-impl<'a, R> MotionChain<'a, R>
+impl<'a, R, M> MotionChain<'a, R, M>
 where
     R: Tracer,
     R::Instance: TraceWriter + Send + 'static,
+    M: MotionDevice,
 {
-    pub fn new(motion_device: &'a mut Box<dyn MotionDevice>, tracer: &R) -> Self {
+    pub fn new(motion_device: &'a mut M, tracer: &R) -> Self {
         Self {
             motion_device,
             trace: tracer.instance("motion"),
@@ -53,11 +57,11 @@ where
 }
 
 // TODO: Rename to RuntimeContext
-pub struct Runtime<K> {
+pub struct RuntimeContext<K> {
     /// Runtime operand.
     pub(super) operand: K,
-    /// The standard motion device.
-    pub(super) motion_device: Box<dyn MotionDevice>,
+    /// Core device.
+    pub(super) core_device: crate::device::Gateway,
     /// Runtime event bus.
     pub(super) shutdown: (
         tokio::sync::broadcast::Sender<()>,
