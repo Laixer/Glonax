@@ -1,6 +1,6 @@
 use crate::{
-    device::{Gamepad, InputDevice},
-    runtime, InputConfig, Runtime,
+    device::{Gamepad, Hcu, InputDevice},
+    runtime, InputConfig, RuntimeContext,
 };
 
 use super::{operand::Operand, MotionChain};
@@ -16,16 +16,31 @@ impl RuntimeInput {
         }
     }
 
-    pub async fn exec_service<K>(mut self, mut runtime: Runtime<K>) -> runtime::Result
-    where
-        K: Operand,
-    {
-        let mut motion_chain = MotionChain::new(&mut runtime.motion_device, &runtime.tracer);
+    pub async fn exec_service<K: Operand>(
+        mut self,
+        mut runtime: RuntimeContext<K>,
+    ) -> runtime::Result {
+        let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
+
+        let mut motion_chain = MotionChain::new(&mut motion_device, &runtime.tracer);
 
         info!("Listen for input events");
 
         while let Ok(input) = self.input_device.next() {
             if let Ok(motion) = runtime.operand.try_from_input_device(input) {
+                // use crate::core::motion::ToMotion;
+
+                // let mo = motion.to_motion();
+
+                // let gcx = unsafe {
+                //     std::slice::from_raw_parts(
+                //         (&mo as *const crate::core::motion::Motion) as *const u8,
+                //         std::mem::size_of::<crate::core::motion::Motion>(),
+                //     )
+                // };
+
+                // sock.send_to(gcx, "0.0.0.0:54910").await.unwrap();
+
                 motion_chain.request(motion).await; // TOOD: Handle result
             }
         }

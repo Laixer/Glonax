@@ -56,7 +56,6 @@ where
     }
 }
 
-// TODO: Rename to RuntimeContext
 pub struct RuntimeContext<K> {
     /// Runtime operand.
     pub(super) operand: K,
