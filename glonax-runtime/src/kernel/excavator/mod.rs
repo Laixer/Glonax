@@ -8,10 +8,7 @@ use crate::{
 };
 
 mod arm_balance;
-mod arm_fk;
 mod arm_fk2;
-mod arm_fk3;
-mod arm_ik;
 mod drive;
 mod halt;
 mod noop;
@@ -222,10 +219,7 @@ impl ProgramFactory for Excavator {
         match id {
             // Arm chain programs.
             600 => Ok(Box::new(arm_balance::ArmBalanceProgram::new())),
-            601 => Ok(Box::new(arm_fk::ArmFkProgram::new())),
-            602 => Ok(Box::new(arm_ik::ArmIkProgram::new())),
             603 => Ok(Box::new(arm_fk2::ArmFk2Program::new(params))),
-            604 => Ok(Box::new(arm_fk3::ArmFk3Program::new())),
 
             // Movement programs.
             700 => Ok(Box::new(drive::DriveProgram::new(params))),
