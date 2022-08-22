@@ -110,7 +110,8 @@ pub enum HydraulicMotion {
 
 impl HydraulicMotion {
     pub(super) const POWER_MAX: i16 = i16::MAX;
-    pub(super) const POWER_MIN: i16 = 0;
+    pub(super) const POWER_NEUTRAL: i16 = 0;
+    pub(super) const POWER_MIN: i16 = i16::MIN;
 }
 
 impl ToMotion for HydraulicMotion {
@@ -198,7 +199,9 @@ impl Operand for Excavator {
             }
             Scancode::Restrict(ButtonState::Released) => {
                 self.drive_lock = false;
-                Ok(HydraulicMotion::StraightDrive(HydraulicMotion::POWER_MIN))
+                Ok(HydraulicMotion::StraightDrive(
+                    HydraulicMotion::POWER_NEUTRAL,
+                ))
             }
             _ => {
                 warn!("Scancode not mapped to action");

@@ -23,11 +23,11 @@ impl Program for TestProgram {
                 debug!("Testing actuator: boom up");
                 Some(HydraulicMotion::Change(vec![
                     (Actuator::Boom, HydraulicMotion::POWER_MAX),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             1 => {
@@ -37,12 +37,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: boom down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, -HydraulicMotion::POWER_MAX),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_MIN),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             2 => {
@@ -52,12 +52,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: arm up");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
                     (Actuator::Arm, HydraulicMotion::POWER_MAX),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             3 => {
@@ -67,12 +67,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: arm down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, -HydraulicMotion::POWER_MAX),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_MIN),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             4 => {
@@ -82,12 +82,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: bucket up");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
                     (Actuator::Bucket, HydraulicMotion::POWER_MAX),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             5 => {
@@ -97,12 +97,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: bucket down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, -HydraulicMotion::POWER_MAX),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_MIN),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             6 => {
@@ -112,12 +112,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: slew up");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
                     (Actuator::Slew, HydraulicMotion::POWER_MAX),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             7 => {
@@ -127,12 +127,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: slew down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, -HydraulicMotion::POWER_MAX),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_MIN),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             8 => {
@@ -142,12 +142,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: drive left up");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
                     (Actuator::LimpLeft, HydraulicMotion::POWER_MAX),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             9 => {
@@ -157,12 +157,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: drive left down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, -HydraulicMotion::POWER_MAX),
-                    (Actuator::LimpRight, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_MIN),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_NEUTRAL),
                 ]))
             }
             10 => {
@@ -172,11 +172,11 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: drive right up");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
                     (Actuator::LimpRight, HydraulicMotion::POWER_MAX),
                 ]))
             }
@@ -187,12 +187,12 @@ impl Program for TestProgram {
 
                 debug!("Testing actuator: drive right down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, 0),
-                    (Actuator::Arm, 0),
-                    (Actuator::Bucket, 0),
-                    (Actuator::Slew, 0),
-                    (Actuator::LimpLeft, 0),
-                    (Actuator::LimpRight, -HydraulicMotion::POWER_MAX),
+                    (Actuator::Boom, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Arm, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Bucket, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::Slew, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_NEUTRAL),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_MIN),
                 ]))
             }
             12 => {
@@ -209,7 +209,7 @@ impl Program for TestProgram {
                 std::thread::sleep(std::time::Duration::from_secs(5));
 
                 debug!("Testing actuator: drive straight down");
-                Some(HydraulicMotion::StraightDrive(-HydraulicMotion::POWER_MAX))
+                Some(HydraulicMotion::StraightDrive(HydraulicMotion::POWER_MIN))
             }
             14 => {
                 self.program += 1;
@@ -233,12 +233,12 @@ impl Program for TestProgram {
 
                 debug!("Testing all actuators down");
                 Some(HydraulicMotion::Change(vec![
-                    (Actuator::Boom, -HydraulicMotion::POWER_MAX),
-                    (Actuator::Arm, -HydraulicMotion::POWER_MAX),
-                    (Actuator::Bucket, -HydraulicMotion::POWER_MAX),
-                    (Actuator::Slew, -HydraulicMotion::POWER_MAX),
-                    (Actuator::LimpLeft, -HydraulicMotion::POWER_MAX),
-                    (Actuator::LimpRight, -HydraulicMotion::POWER_MAX),
+                    (Actuator::Boom, HydraulicMotion::POWER_MIN),
+                    (Actuator::Arm, HydraulicMotion::POWER_MIN),
+                    (Actuator::Bucket, HydraulicMotion::POWER_MIN),
+                    (Actuator::Slew, HydraulicMotion::POWER_MIN),
+                    (Actuator::LimpLeft, HydraulicMotion::POWER_MIN),
+                    (Actuator::LimpRight, HydraulicMotion::POWER_MIN),
                 ]))
             }
             _ => {
