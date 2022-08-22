@@ -21,7 +21,7 @@ impl ArmFk2Program {
             panic!("Expected 2 parameter, got {}", params.len());
         }
 
-        let ik = InverseKinematics::new(super::BOOM_LENGTH, super::ARM_LENGTH);
+        let ik = InverseKinematics::new(BOOM_LENGTH, super::consts::ARM_LENGTH);
 
         // let target = nalgebra::Point3::new(params[0], params[1], 0.0);
         let target = nalgebra::Point3::new(5.21, 0.0, 0.0);

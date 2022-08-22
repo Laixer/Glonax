@@ -1,6 +1,6 @@
 use crate::runtime::operand::*;
 
-use super::{Actuator, HydraulicMotion, DRIVE_SPEED_MAX};
+use super::{consts::DRIVE_SPEED_MAX, Actuator, HydraulicMotion};
 
 /// Drive strait forward.
 ///
