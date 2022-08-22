@@ -110,7 +110,7 @@ pub enum HydraulicMotion {
 
 impl HydraulicMotion {
     pub(super) const POWER_MAX: i16 = i16::MAX;
-    pub(super) const POWER_MIN: i16 = i16::MIN;
+    pub(super) const POWER_MIN: i16 = 0;
 }
 
 impl ToMotion for HydraulicMotion {
@@ -159,7 +159,7 @@ impl Operand for Excavator {
                 value.ramp(3072),
             )])),
             Scancode::LeftStickY(value) => Ok(HydraulicMotion::Change(vec![(
-                Actuator::Slew,
+                Actuator::Arm,
                 value.ramp(3072),
             )])),
             Scancode::RightStickX(value) => Ok(HydraulicMotion::Change(vec![(
