@@ -79,8 +79,11 @@ pub enum HydraulicMotion {
 }
 
 impl HydraulicMotion {
+    /// Maximum power setting.
     pub(super) const POWER_MAX: i16 = i16::MAX;
+    /// Neutral power setting.
     pub(super) const POWER_NEUTRAL: i16 = 0;
+    /// Minimum power setting.
     pub(super) const POWER_MIN: i16 = i16::MIN;
 }
 

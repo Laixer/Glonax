@@ -47,15 +47,15 @@ where
 
         info!("Control network is online");
 
-        let runtime = RuntimeContext {
-            operand: K::from_config(config),
-            core_device: gateway_device,
-            shutdown: broadcast::channel(1),
-            signal_manager: crate::signal::SignalManager::new(),
-            tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
-        };
-
-        Ok(Self { runtime })
+        Ok(Self {
+            runtime: RuntimeContext {
+                operand: K::from_config(config),
+                core_device: gateway_device,
+                shutdown: broadcast::channel(1),
+                signal_manager: crate::signal::SignalManager::new(),
+                tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
+            },
+        })
     }
 
     pub(crate) fn enable_term_shutdown(self) -> Self {
