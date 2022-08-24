@@ -49,6 +49,21 @@ impl Configurable for InputConfig {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct EcuConfig {
+    /// ECU network bind address.
+    pub address: String,
+
+    /// Global configuration.
+    pub global: GlobalConfig,
+}
+
+impl Configurable for EcuConfig {
+    fn global(&self) -> &GlobalConfig {
+        &self.global
+    }
+}
+
 /// Glonax global configuration.
 #[derive(Clone, Debug)]
 pub struct GlobalConfig {

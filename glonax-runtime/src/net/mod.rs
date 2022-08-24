@@ -6,6 +6,7 @@ pub use service::ActuatorService;
 pub use service::ControlService;
 pub use service::StatusService;
 
+pub mod motion;
 mod service;
 
 pub struct ControlNet {

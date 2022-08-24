@@ -57,7 +57,7 @@ pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
 ///
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
-pub fn runtime_network(config: &config::InputConfig) -> runtime::Result {
+pub fn runtime_network(config: &config::EcuConfig) -> runtime::Result {
     Ok(ExcavatorService::exec_network(config)?)
 }
 
@@ -106,7 +106,7 @@ where
     }
 
     /// Start the runtime service.
-    pub fn exec_network(config: &config::InputConfig) -> runtime::Result {
+    pub fn exec_network(config: &config::EcuConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::ecu::exec_service(
                 config,
@@ -121,13 +121,13 @@ where
     /// Start the runtime service.
     pub fn exec_input(config: &config::InputConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            runtime::RuntimeInput::new(&config)
-                .exec_service(
-                    self::runtime::Builder::<K>::from_config(config)
-                        .await?
-                        .build(),
-                )
-                .await
+            runtime::input::exec_service(
+                config,
+                self::runtime::Builder::<K>::from_config(config)
+                    .await?
+                    .build(),
+            )
+            .await
         })
     }
 }

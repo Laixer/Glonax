@@ -17,10 +17,7 @@ use super::Operand;
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub(crate) struct Builder<K> {
-    /// Runtime core.
-    runtime: RuntimeContext<K>,
-}
+pub(crate) struct Builder<K>(RuntimeContext<K>);
 
 impl<K> Builder<K>
 where
@@ -47,21 +44,19 @@ where
 
         info!("Control network is online");
 
-        Ok(Self {
-            runtime: RuntimeContext {
-                operand: K::from_config(config),
-                core_device: gateway_device,
-                shutdown: broadcast::channel(1),
-                signal_manager: crate::signal::SignalManager::new(),
-                tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
-            },
-        })
+        Ok(Self(RuntimeContext {
+            operand: K::from_config(config),
+            core_device: gateway_device,
+            shutdown: broadcast::channel(1),
+            signal_manager: crate::signal::SignalManager::new(),
+            tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
+        }))
     }
 
     pub(crate) fn enable_term_shutdown(self) -> Self {
         debug!("Enable signals shutdown");
 
-        let sender = self.runtime.shutdown.0.clone();
+        let sender = self.0.shutdown.0.clone();
 
         tokio::spawn(async move {
             tokio::signal::ctrl_c().await.unwrap();
@@ -76,6 +71,6 @@ where
 
     #[inline]
     pub fn build(self) -> RuntimeContext<K> {
-        self.runtime
+        self.0
     }
 }

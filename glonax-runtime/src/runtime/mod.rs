@@ -20,10 +20,8 @@ use self::operand::Operand;
 mod program;
 pub use program::RuntimeProgram;
 
-mod input;
-pub use input::RuntimeInput;
-
 pub mod ecu;
+pub mod input;
 
 pub(super) struct MotionChain<'a, R, M>
 where

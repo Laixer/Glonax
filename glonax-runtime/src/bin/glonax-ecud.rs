@@ -14,6 +14,10 @@ struct Args {
     /// CAN network interface.
     interface: String,
 
+    /// ECU network bind address.
+    #[clap(short, long, default_value = "0.0.0.0:54910")]
+    address: String,
+
     /// Disable machine motion (frozen mode).
     #[clap(long)]
     disable_motion: bool,
@@ -42,8 +46,8 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut config = glonax::InputConfig {
-        device: String::new(),
+    let mut config = glonax::EcuConfig {
+        address: args.address,
         global: glonax::GlobalConfig::default(),
     };
 

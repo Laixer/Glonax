@@ -1,33 +1,42 @@
 use crate::{
     device::{Hcu, Mecu, Vecu},
-    runtime, InputConfig, RuntimeContext,
+    net::motion::SchematicMotion,
+    runtime, EcuConfig, RuntimeContext,
 };
 
 use runtime::operand::Operand;
 
 pub(crate) async fn exec_service<K: Operand>(
-    _config: &InputConfig,
+    config: &EcuConfig,
     mut runtime: RuntimeContext<K>,
 ) -> runtime::Result {
     use crate::device::CoreDevice;
 
-    info!("Listen for network events");
-
     runtime.core_device.new_gateway_device::<Vecu>();
-    let mut _motion_device = runtime.core_device.new_gateway_device::<Hcu>();
+    let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
+
+    let mut motion_chain = runtime::MotionChain::new(&mut motion_device, &runtime.tracer);
 
     let signal_device = Mecu::new(runtime.signal_manager.pusher());
     runtime.core_device.subscribe(signal_device);
 
     tokio::task::spawn(async move { while runtime.core_device.next().await.is_ok() {} });
 
-    let sock = tokio::net::UdpSocket::bind("0.0.0.0:54910").await.unwrap();
+    let address = if config.address.is_empty() {
+        "0.0.0.0:54910".to_owned()
+    } else {
+        config.address.clone()
+    };
+
+    let sock = tokio::net::UdpSocket::bind(&address).await.unwrap();
     let mut buf = [0; 1024];
 
-    while let Ok((size, addr)) = sock.recv_from(&mut buf).await {
-        debug!("Frame from {} with size {}", addr, size);
+    info!("Listen for network events on {}", address);
 
-        // motion_device.actuate(motion).await; // TOOD: Handle result
+    while let Ok((_size, _addr)) = sock.recv_from(&mut buf).await {
+        let schematic_motion = SchematicMotion::try_from(&buf[..]).unwrap();
+
+        motion_chain.request(schematic_motion).await; // TOOD: Handle result
     }
 
     Ok(())
