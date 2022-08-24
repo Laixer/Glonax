@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 // TODO: take all lengths in mm.
 
 /// Maximum empirical driving speed in meters per second.
@@ -6,12 +8,23 @@ pub const DRIVE_SPEED_MAX: f32 = 26.1 / 30.0;
 pub const BOOM_LENGTH: f32 = 6.0;
 /// Arm length in meters.
 pub const ARM_LENGTH: f32 = 2.97;
+
 // TODO: Rename. This is not an height but an transformation.
 /// Frame height in meters.
-pub const FRAME_HEIGHT: f32 = 1.885;
-/// Arm angle range.
 #[allow(dead_code)]
-pub const ARM_RANGE: std::ops::Range<f32> = -0.45..-2.47;
+pub const FRAME_HEIGHT: f32 = 1.885;
+
+#[allow(dead_code)]
+pub const BOOM_ORIGIN_OFFSET: (f32, f32) = (-0.784, 0.420);
+
+/// Arm encoder range.
+pub const ARM_ENCODER_RANGE: Range<f32> = 246.0..511.0;
+/// Arm angle range.
+pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
+/// Boom encoder range.
+pub const BOOM_ENCODER_RANGE: Range<f32> = 523.0..667.0;
+/// Boom angle range.
+pub const BOOM_ANGLE_RANGE: Range<f32> = 0.0..1.178;
 
 /// Frame dimensions in (L)x(W)x(H)
 #[allow(dead_code)]
