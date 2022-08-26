@@ -7,9 +7,8 @@ use super::consts::*;
 use super::HydraulicMotion;
 
 pub(super) struct KinematicProgram {
-    target_boom: f32,
-    target_arm: f32,
     normal: super::body::DynamicBody,
+    target: super::body::DynamicBody,
     terminate: bool,
 }
 
@@ -19,19 +18,16 @@ impl KinematicProgram {
             panic!("Expected 2 parameter, got {}", params.len());
         }
 
-        let target = nalgebra::Point3::new(params[0], params[1], 0.0);
+        let effector_point = nalgebra::Point3::new(params[0], params[1], 0.0);
 
         let rigid_body = super::body::RigidBody {
             length_boom: BOOM_LENGTH,
             length_arm: ARM_LENGTH,
         };
 
-        let target = super::body::DynamicBody::from_effector_point(rigid_body, target);
-
         Self {
-            target_boom: target.angle_boom.unwrap(),
-            target_arm: target.angle_arm.unwrap(),
             normal: super::body::DynamicBody::with_rigid_body(rigid_body),
+            target: super::body::DynamicBody::from_effector_point(rigid_body, effector_point),
             terminate: false,
         }
     }
@@ -99,23 +95,13 @@ impl Program for KinematicProgram {
         self.decode_signal(&context.reader);
 
         if let Some(effector_point) = self.normal.effector_point() {
-            let boom_point = self.normal.boom_point().unwrap();
-            debug!(
-                "Boom point AGL: X {:>+5.2} Y {:>+5.2}",
-                boom_point.x, boom_point.y,
-            );
-
             debug!(
                 "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
                 effector_point.x, effector_point.y, effector_point.z,
             );
         };
 
-        if let (Some(angle_boom), Some(angle_arm)) = (self.normal.angle_boom, self.normal.angle_arm)
-        {
-            let angle_boom_error = self.target_boom - angle_boom;
-            let angle_arm_error = self.target_arm - angle_arm;
-
+        if let Some((angle_boom_error, angle_arm_error)) = self.target.erorr_diff(&self.normal) {
             let power_boom = (angle_boom_error * 10.0 * 1_500.0) as i16;
             let power_boom = if angle_boom_error.is_sign_positive() {
                 (-power_boom).max(-20_000) - 12_000
@@ -143,15 +129,15 @@ impl Program for KinematicProgram {
 
             debug!(
                 "Boom Angle:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad  Power: {:>+5.2}",
-                angle_boom,
-                core::rad_to_deg(angle_boom),
+                self.normal.angle_boom.unwrap(),
+                core::rad_to_deg(self.normal.angle_boom.unwrap()),
                 angle_boom_error,
                 power_boom
             );
             debug!(
                 "Arm Angle:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad  Power: {:>+5.2}",
-                angle_arm,
-                core::rad_to_deg(angle_arm),
+                self.normal.angle_arm.unwrap(),
+                core::rad_to_deg(self.normal.angle_arm.unwrap()),
                 angle_arm_error,
                 power_arm
             );
