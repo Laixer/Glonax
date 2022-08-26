@@ -92,11 +92,21 @@ impl DynamicBody {
     }
 
     pub fn erorr_diff(&self, rhs: &Self) -> Option<(f32, f32)> {
-        if let (Some(angle_boom), Some(angle_arm)) = (self.angle_boom, self.angle_arm) {
-            let angle_boom_error = angle_boom - rhs.angle_boom.unwrap();
-            let angle_arm_error = angle_arm - rhs.angle_arm.unwrap();
-
-            Some((angle_boom_error, angle_arm_error))
+        if let (
+            Some(lhs_angle_boom),
+            Some(lhs_angle_arm),
+            Some(rhs_angle_boom),
+            Some(rhs_angle_arm),
+        ) = (
+            self.angle_boom,
+            self.angle_arm,
+            rhs.angle_boom,
+            rhs.angle_arm,
+        ) {
+            Some((
+                lhs_angle_boom - rhs_angle_boom,
+                lhs_angle_arm - rhs_angle_arm,
+            ))
         } else {
             None
         }

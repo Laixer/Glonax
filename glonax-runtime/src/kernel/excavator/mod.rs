@@ -7,11 +7,10 @@ use crate::{
     runtime::operand::{Operand, Parameter, Program, ProgramFactory},
 };
 
-mod arm_balance;
-mod arm_fk2;
 mod body;
 mod drive;
 mod halt;
+mod kinematic;
 mod noop;
 mod sleep;
 mod test;
@@ -195,8 +194,7 @@ impl ProgramFactory for Excavator {
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()> {
         match id {
             // Arm chain programs.
-            600 => Ok(Box::new(arm_balance::ArmBalanceProgram::new())),
-            603 => Ok(Box::new(arm_fk2::KinematicProgram::new(params))),
+            603 => Ok(Box::new(kinematic::KinematicProgram::new(params))),
 
             // Movement programs.
             700 => Ok(Box::new(drive::DriveProgram::new(params))),
