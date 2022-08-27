@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "glonax-gamepad",
-  "glonax-ice",
   "glonax-j1939",
   "glonax-net",
   "glonax-runtime",
