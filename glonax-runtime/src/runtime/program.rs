@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use tokio::sync::mpsc;
 
@@ -50,10 +50,10 @@ impl RuntimeProgram {
         Self { queue }
     }
 
-    pub async fn exec_service<K>(mut self, mut runtime: RuntimeContext<K>) -> runtime::Result
-    where
-        K: Operand + ProgramFactory,
-    {
+    pub async fn exec_service<K: Operand + ProgramFactory>(
+        mut self,
+        mut runtime: RuntimeContext<K>,
+    ) -> runtime::Result {
         use crate::device::CoreDevice;
 
         let signal_device = Mecu::new(runtime.signal_manager.pusher());
@@ -106,32 +106,29 @@ impl RuntimeProgram {
                     // Loop until this program reaches its termination condition. If
                     // the program does not terminate we'll run forever.
                     while !program.can_terminate(&mut ctx) {
-                        // Deliberately slow down the program loop to limit CPU cycles.
-                        // If the delay is small then this won't effect the program
-                        // procession.
-                        tokio::time::sleep(Duration::from_millis(2)).await;
-
                         let start_step_execute = Instant::now();
 
-                        // TODO: Make step awaitable.
-                        // Query the operand program for the next motion step. The
-                        // entire thread is dedicated to the program therefore steps
-                        // can take as long as they require.
-                        if let Some(motion) = program.step(&mut ctx).await {
-                            motion_chain.request(motion).await; // TOOD: Handle result
-                        }
+                        tokio::select! {
+                            // Query the operand program for the next motion step. The
+                            // entire thread is dedicated to the program therefore steps
+                            // can take as long as they require.
+                            p = program.step(&mut ctx) => {
+                                if let Some(motion) = p {
+                                    motion_chain.request(motion).await; // TOOD: Handle result
+                                }
+                            }
+                            _ = runtime.shutdown.1.recv() => {
+                                // Stop all motion for safety.
+                                motion_chain.request(Motion::StopAll).await; // TOOD: Handle result
+
+                                warn!("Program ({}) terminated by external signal", id);
+
+                                return Ok(());
+                            }
+                        };
 
                         ctx.step_count += 1;
                         ctx.last_step = start_step_execute;
-
-                        if !runtime.shutdown.1.is_empty() {
-                            // Stop all motion for safety.
-                            motion_chain.request(Motion::StopAll).await; // TOOD: Handle result
-
-                            warn!("Program ({}) terminated by external signal", id);
-
-                            return Ok(());
-                        }
                     }
 
                     // Execute an optional last action before program termination.
