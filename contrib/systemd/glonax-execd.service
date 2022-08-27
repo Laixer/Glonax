@@ -10,7 +10,7 @@ WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
 ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can0 -o carrier
-ExecStart=/usr/local/bin/glonaxd --daemon --workers 8 can0
+ExecStart=/usr/local/bin/glonax-execd --daemon --workers 8 can0
 PrivateTmp=true
 
 [Install]
