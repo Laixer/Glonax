@@ -22,6 +22,15 @@ struct ProgramTrace {
     id: i32,
 }
 
+impl ProgramTrace {
+    fn now(id: i32) -> Self {
+        Self {
+            timestamp: crate::core::time::now().as_millis(),
+            id,
+        }
+    }
+}
+
 pub struct RuntimeProgram {
     queue: (
         mpsc::Sender<(i32, Parameter)>,
@@ -91,10 +100,7 @@ impl RuntimeProgram {
 
                     info!("Start program ({})", id);
 
-                    program_tracer.write_record(ProgramTrace {
-                        timestamp: crate::core::time::now().as_millis(),
-                        id,
-                    });
+                    program_tracer.write_record(ProgramTrace::now(id));
 
                     motion_chain.request(Motion::ResumeAll).await; // TOOD: Handle result
 
