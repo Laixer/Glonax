@@ -106,7 +106,7 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    glonax::runtime_network(&config)?;
+    glonax::runtime_ecu(&config)?;
 
     Ok(())
 }

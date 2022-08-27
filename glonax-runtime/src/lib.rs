@@ -37,8 +37,8 @@ type ExcavatorService = LaunchStub<Excavator>;
 ///
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
-pub fn runtime_program(config: &config::ProgramConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_program(config)?)
+pub fn runtime_exec(config: &config::ProgramConfig) -> runtime::Result {
+    Ok(ExcavatorService::exec_exec(config)?)
 }
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -57,8 +57,8 @@ pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
 ///
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
-pub fn runtime_network(config: &config::EcuConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_network(config)?)
+pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
+    Ok(ExcavatorService::exec_ecu(config)?)
 }
 
 struct LaunchStub<K> {
@@ -91,7 +91,7 @@ where
     }
 
     /// Start the runtime service.
-    pub fn exec_program(config: &config::ProgramConfig) -> runtime::Result {
+    pub fn exec_exec(config: &config::ProgramConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::RuntimeProgram::new(config)
                 .await
@@ -106,7 +106,7 @@ where
     }
 
     /// Start the runtime service.
-    pub fn exec_network(config: &config::EcuConfig) -> runtime::Result {
+    pub fn exec_ecu(config: &config::EcuConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::ecu::exec_service(
                 config,

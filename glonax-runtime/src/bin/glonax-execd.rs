@@ -9,7 +9,7 @@ use clap::Parser;
 #[derive(Parser)]
 #[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[clap(version)]
-#[clap(about, long_about = None)]
+#[clap(about = "Program Executor Daemon", long_about = None)]
 struct Args {
     /// CAN network interface.
     interface: String,
@@ -110,7 +110,7 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    glonax::runtime_program(&config)?;
+    glonax::runtime_exec(&config)?;
 
     Ok(())
 }

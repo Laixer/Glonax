@@ -10,10 +10,6 @@ Heavy equipment controller daemon
 categories = ["hardware", "machine", "controller"]
 keywords = ["hardware", "machine", "controller"]
 
-[[bin]]
-name = "glonaxd"
-path = "src/main.rs"
-
 [dependencies]
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 glonax-gamepad = { version = "1.0", path = "../glonax-gamepad" }
