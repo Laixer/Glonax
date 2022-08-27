@@ -32,48 +32,24 @@ impl KinematicProgram {
         }
     }
 
-    fn decode_signal(&mut self, reader: &crate::signal::SignalReader) {
-        if let Some(guard) = reader.try_lock() {
-            if let Some(signal) = guard.most_recent_by_source(super::BodyPart::Boom.into()) {
-                if let MetricValue::Angle(value) = signal.value {
-                    let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
+    async fn decode_signal(&mut self, reader: &mut crate::signal::SignalReader) {
+        if let Ok((source, signal)) = reader.recv().await {
+            match source.try_into().unwrap() {
+                super::BodyPart::Boom => {
+                    if let MetricValue::Angle(value) = signal.value {
+                        let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
 
-                    let angle = encoder.scale(value.x as f32);
-                    let percentage = encoder.scale_to(100.0, value.x as f32);
+                        let angle = encoder.scale(value.x as f32);
+                        let percentage = encoder.scale_to(100.0, value.x as f32);
 
-                    let angle_offset = core::deg_to_rad(5.3);
-                    let angle_at_datum = angle - angle_offset;
+                        let angle_offset = core::deg_to_rad(5.3);
+                        let angle_at_datum = angle - angle_offset;
 
-                    self.normal.update_boom_angle(angle_at_datum);
-                    self.normal.update_slew_angle(0.0);
-
-                    debug!(
-                        "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum {:>+5.2}rad {:>+5.2}°",
-                        value.x,
-                        angle,
-                        core::rad_to_deg(angle),
-                        percentage,
-                        angle_at_datum,
-                        core::rad_to_deg(angle_at_datum)
-                    );
-                }
-            }
-            if let Some(signal) = guard.most_recent_by_source(super::BodyPart::Arm.into()) {
-                if let MetricValue::Angle(value) = signal.value {
-                    let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
-
-                    let angle = encoder.scale(value.x as f32);
-                    let percentage = encoder.scale_to(100.0, value.x as f32);
-
-                    let angle_offset = core::deg_to_rad(36.8);
-
-                    if let Some(angle_boom) = self.normal.angle_boom {
-                        let angle_at_datum = angle_boom - angle_offset - (2.1 - angle);
-
-                        self.normal.update_arm_angle(angle_at_datum);
+                        self.normal.update_boom_angle(angle_at_datum);
+                        self.normal.update_slew_angle(0.0);
 
                         debug!(
-                            "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum {:>+5.2}rad {:>+5.2}°",
+                            "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum {:>+5.2}rad {:>+5.2}°",
                             value.x,
                             angle,
                             core::rad_to_deg(angle),
@@ -83,16 +59,43 @@ impl KinematicProgram {
                         );
                     }
                 }
+                super::BodyPart::Arm => {
+                    if let MetricValue::Angle(value) = signal.value {
+                        let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
+
+                        let angle = encoder.scale(value.x as f32);
+                        let percentage = encoder.scale_to(100.0, value.x as f32);
+
+                        let angle_offset = core::deg_to_rad(36.8);
+
+                        if let Some(angle_boom) = self.normal.angle_boom {
+                            let angle_at_datum = angle_boom - angle_offset - (2.1 - angle);
+
+                            self.normal.update_arm_angle(angle_at_datum);
+
+                            debug!(
+                                "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum {:>+5.2}rad {:>+5.2}°",
+                                value.x,
+                                angle,
+                                core::rad_to_deg(angle),
+                                percentage,
+                                angle_at_datum,
+                                core::rad_to_deg(angle_at_datum)
+                            );
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+#[async_trait::async_trait]
 impl Program for KinematicProgram {
     type MotionPlan = HydraulicMotion;
 
-    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
-        self.decode_signal(&context.reader);
+    async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
+        self.decode_signal(&mut context.reader).await;
 
         if let Some(effector_point) = self.normal.effector_point() {
             debug!(

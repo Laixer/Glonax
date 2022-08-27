@@ -22,10 +22,17 @@ impl SleepProgram {
     }
 }
 
+#[async_trait::async_trait]
 impl Program for SleepProgram {
     type MotionPlan = HydraulicMotion;
 
-    fn step(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
+    fn boot(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::StopAll)
+    }
+
+    async fn step(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
+        tokio::time::sleep(self.time).await;
+
         None
     }
 

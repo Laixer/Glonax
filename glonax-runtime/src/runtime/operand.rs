@@ -62,6 +62,7 @@ pub type Parameter = Vec<f32>;
 /// sources and returns an optional motion instruction. A program
 /// is run to completion. The completion condition is polled on
 /// every cycle.
+#[async_trait::async_trait]
 pub trait Program {
     type MotionPlan: ToMotion;
 
@@ -69,12 +70,14 @@ pub trait Program {
     ///
     /// This method is called when the runtime accepted
     /// this progam and started its routine.
-    fn boot(&mut self, _context: &mut Context) {}
+    fn boot(&mut self, _context: &mut Context) -> Option<Self::MotionPlan> {
+        None
+    }
 
     /// Propagate the program forwards.
     ///
     /// This method returns an optional motion instruction.
-    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan>;
+    async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan>;
 
     /// Program termination condition.
     ///

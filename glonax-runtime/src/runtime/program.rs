@@ -33,7 +33,7 @@ impl RuntimeProgram {
     pub async fn new(config: &crate::config::ProgramConfig) -> Self {
         let queue = mpsc::channel(config.program_queue);
 
-        queue.0.send((902, vec![])).await.ok();
+        queue.0.send((901, vec![0.5])).await.ok();
 
         if let Some(id) = config.program_id {
             queue.0.send((id, vec![])).await.ok();
@@ -99,7 +99,9 @@ impl RuntimeProgram {
                     motion_chain.request(Motion::ResumeAll).await; // TOOD: Handle result
 
                     let mut ctx = operand::Context::new(runtime.signal_manager.reader());
-                    program.boot(&mut ctx);
+                    if let Some(motion) = program.boot(&mut ctx) {
+                        motion_chain.request(motion).await; // TOOD: Handle result
+                    };
 
                     // Loop until this program reaches its termination condition. If
                     // the program does not terminate we'll run forever.
@@ -115,7 +117,7 @@ impl RuntimeProgram {
                         // Query the operand program for the next motion step. The
                         // entire thread is dedicated to the program therefore steps
                         // can take as long as they require.
-                        if let Some(motion) = program.step(&mut ctx) {
+                        if let Some(motion) = program.step(&mut ctx).await {
                             motion_chain.request(motion).await; // TOOD: Handle result
                         }
 

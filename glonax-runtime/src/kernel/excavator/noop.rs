@@ -10,16 +10,15 @@ impl NoopProgram {
     }
 }
 
+#[async_trait::async_trait]
 impl Program for NoopProgram {
     type MotionPlan = HydraulicMotion;
 
-    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
+    async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         trace!("Last step: {:?}", context.last_step.elapsed());
 
-        if let Some(guard) = context.reader.try_lock() {
-            if let Some((source, signal)) = guard.most_recent() {
-                debug!("Source {} ⇨ {}", source, signal.value);
-            }
+        if let Ok((source, signal)) = context.reader.recv().await {
+            debug!("Source {} ⇨ {}", source, signal.value);
         }
 
         None

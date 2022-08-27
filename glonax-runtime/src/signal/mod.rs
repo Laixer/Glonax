@@ -1,17 +1,11 @@
-use std::{collections::VecDeque, sync::Arc};
-
-use tokio::sync::RwLock;
-
 use crate::core::metric::{Signal, SignalSource, SignalTuple};
-
-const HISTORIC_ITEM_COUNT: usize = 32;
 
 mod encoder;
 pub(crate) use encoder::Encoder;
+use tokio::sync::broadcast;
 
 pub struct SignalPusher {
-    queue: Arc<RwLock<VecDeque<SignalTuple>>>,
-    // queue2: tokio::sync::mpsc::Sender<SignalTuple>,
+    queue: broadcast::Sender<SignalTuple>,
 }
 
 impl SignalPusher {
@@ -26,79 +20,42 @@ impl SignalPusher {
             signal.value
         );
 
-        let mut queue = self.queue.write().await;
-        queue.push_front((source, signal));
-
-        if queue.len() > HISTORIC_ITEM_COUNT {
-            queue.pop_back();
-        }
-
-        // self.queue2.send((source, signal)).await.ok();
+        self.queue.send((source, signal)).unwrap();
     }
 }
 
-#[derive(Clone)]
-pub struct SignalReader(Arc<RwLock<VecDeque<SignalTuple>>>);
+pub struct SignalReader(broadcast::Receiver<SignalTuple>);
 
 impl SignalReader {
-    pub fn try_lock(&self) -> Option<SignalReaderGuard> {
-        match self.0.try_read() {
-            Ok(guard) => Some(SignalReaderGuard(guard)),
-            Err(_) => None,
-        }
-    }
-}
-
-pub struct SignalReaderGuard<'a>(tokio::sync::RwLockReadGuard<'a, VecDeque<SignalTuple>>);
-
-impl SignalReaderGuard<'_> {
-    /// Return the most recent item.
     #[inline]
-    pub fn most_recent(&self) -> Option<&SignalTuple> {
-        self.0.front()
+    pub async fn recv(&mut self) -> Result<(u32, Signal), broadcast::error::RecvError> {
+        self.0.recv().await
     }
-
-    /// Return the most recent item.
-    pub fn most_recent_by_source(&self, source_input: SignalSource) -> Option<&Signal> {
-        self.0
-            .iter()
-            .find(|(source, _)| source == &source_input)
-            .map(|(_, signal)| signal)
-    }
-
-    // / Returns a front-to-back iterator.
-    // #[inline]
-    // pub fn iter(&self) -> vec_deque::Iter<SignalTuple> {
-    //     self.0.iter()
-    // }
 }
 
 pub struct SignalManager {
-    queue: Arc<RwLock<VecDeque<SignalTuple>>>,
-    // queue2: (
-    //     tokio::sync::mpsc::Sender<SignalTuple>,
-    //     tokio::sync::mpsc::Receiver<SignalTuple>,
-    // ),
+    queue: (
+        broadcast::Sender<SignalTuple>,
+        broadcast::Receiver<SignalTuple>,
+    ),
 }
 
 impl SignalManager {
     /// Construct new signal manager.
     pub fn new() -> Self {
         Self {
-            queue: Arc::new(RwLock::new(VecDeque::new())),
-            // queue2: tokio::sync::mpsc::channel(128),
+            queue: broadcast::channel(128),
         }
     }
 
     pub fn pusher(&self) -> SignalPusher {
         SignalPusher {
-            queue: self.queue.clone(),
-            // queue2: self.queue2.0.clone(),
+            queue: self.queue.0.clone(),
         }
     }
 
     #[inline]
     pub fn reader(&self) -> SignalReader {
-        SignalReader(self.queue.clone())
+        SignalReader(self.queue.0.subscribe())
     }
 }

@@ -120,10 +120,11 @@ impl DriveProgram {
     }
 }
 
+#[async_trait::async_trait]
 impl Program for DriveProgram {
     type MotionPlan = HydraulicMotion;
 
-    fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
+    async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         let (phase, power, distance) = self.profile.phase_frame(&context.start.elapsed());
 
         debug!(

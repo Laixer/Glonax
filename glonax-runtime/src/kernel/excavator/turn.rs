@@ -28,10 +28,11 @@ impl TurnProgram {
     }
 }
 
+#[async_trait::async_trait]
 impl Program for TurnProgram {
     type MotionPlan = HydraulicMotion;
 
-    fn step(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
+    async fn step(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
         Some(HydraulicMotion::Change(vec![(Actuator::Slew, DRIVE_POWER)]))
     }
 
