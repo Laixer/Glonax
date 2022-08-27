@@ -23,9 +23,6 @@ pub enum Motion {
     Change(Vec<(u32, i16)>),
 }
 
-unsafe impl Sync for Motion {}
-unsafe impl Send for Motion {}
-
 pub trait ToMotion: Sync + Send {
     fn to_motion(self) -> Motion;
 }

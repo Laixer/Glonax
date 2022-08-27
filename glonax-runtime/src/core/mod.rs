@@ -1,4 +1,3 @@
-// pub mod algorithm;
 pub mod input;
 pub mod metric;
 pub mod motion;
@@ -37,12 +36,12 @@ pub mod time {
     }
 }
 
-// TODO: TMP
+/// Convert degree to radian
 pub fn deg_to_rad(input: f32) -> f32 {
     input * (PI / 180.0)
 }
 
-// TODO: TMP
+/// Convert radian to degree
 pub fn rad_to_deg(input: f32) -> f32 {
     input * (180.0 / PI)
 }

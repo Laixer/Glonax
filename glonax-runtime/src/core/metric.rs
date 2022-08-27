@@ -29,8 +29,7 @@ unsafe impl Send for Signal {}
 
 #[derive(Debug, Clone, Copy)]
 pub enum MetricValue {
-    // TODO: replace i16 with nalgebra::Vector1<f32>
-    Temperature(i16),
+    Temperature(na::Vector1<f32>),
     Acceleration(na::Vector3<f32>),
     Stroke(na::Vector1<u16>),
     Angle(na::Vector1<u16>),

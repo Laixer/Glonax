@@ -19,10 +19,7 @@ use super::Operand;
 /// The runtime builder *must* be used to construct a runtime.
 pub(crate) struct Builder<K>(RuntimeContext<K>);
 
-impl<K> Builder<K>
-where
-    K: Operand + Identity,
-{
+impl<K: Operand + Identity> Builder<K> {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.

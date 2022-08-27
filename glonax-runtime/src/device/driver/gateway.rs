@@ -63,8 +63,6 @@ impl Gateway {
     }
 }
 
-unsafe impl Send for Gateway {}
-
 impl Device for Gateway {
     fn name(&self) -> String {
         DEVICE_NAME.to_owned()

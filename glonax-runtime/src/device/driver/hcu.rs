@@ -15,8 +15,6 @@ pub struct Hcu {
     service: ActuatorService,
 }
 
-unsafe impl Send for Hcu {}
-
 impl Device for Hcu {
     fn name(&self) -> String {
         DEVICE_NAME.to_owned()
