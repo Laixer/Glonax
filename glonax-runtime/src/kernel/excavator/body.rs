@@ -68,8 +68,8 @@ impl DynamicBody {
 
     pub fn effector_point_flat(&self) -> Option<nalgebra::Point2<f32>> {
         if let (Some(boom_point), Some(angle_arm)) = (self.boom_point(), self.angle_arm) {
-            let x = boom_point.x + (self.rigid.length_arm * angle_arm.cos());
-            let y = boom_point.y + (self.rigid.length_arm * angle_arm.sin());
+            let x = boom_point.x + (self.rigid.length_arm * (angle_arm+self.angle_boom.unwrap()).cos());
+            let y = boom_point.y + (self.rigid.length_arm * (angle_arm+self.angle_boom.unwrap()).sin());
 
             Some(nalgebra::Point2::new(x, y))
         } else {

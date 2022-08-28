@@ -49,7 +49,7 @@ impl KinematicProgram {
                         self.normal.update_slew_angle(0.0);
 
                         debug!(
-                            "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum {:>+5.2}rad {:>+5.2}°",
+                            "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
                             value.x,
                             angle,
                             core::rad_to_deg(angle),
@@ -67,14 +67,12 @@ impl KinematicProgram {
                         let percentage = encoder.scale_to(100.0, value.x as f32);
 
                         let angle_offset = core::deg_to_rad(36.8);
+                        let angle_at_datum = -angle_offset - (2.1 - angle);
 
-                        if let Some(angle_boom) = self.normal.angle_boom {
-                            let angle_at_datum = angle_boom - angle_offset - (2.1 - angle);
+                        self.normal.update_arm_angle(angle_at_datum);
 
-                            self.normal.update_arm_angle(angle_at_datum);
-
-                            debug!(
-                                "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum {:>+5.2}rad {:>+5.2}°",
+                        debug!(
+                                "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
                                 value.x,
                                 angle,
                                 core::rad_to_deg(angle),
@@ -82,7 +80,6 @@ impl KinematicProgram {
                                 angle_at_datum,
                                 core::rad_to_deg(angle_at_datum)
                             );
-                        }
                     }
                 }
             }
@@ -131,17 +128,23 @@ impl Program for KinematicProgram {
             };
 
             debug!(
-                "Boom Angle:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad  Power: {:>+5.2}",
+                "Normal Boom:\t {:>+5.2}rad {:>+5.2}°  Target Boom:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
                 self.normal.angle_boom.unwrap(),
                 core::rad_to_deg(self.normal.angle_boom.unwrap()),
+                self.target.angle_boom.unwrap(),
+                core::rad_to_deg(self.target.angle_boom.unwrap()),
                 angle_boom_error,
+                core::rad_to_deg(angle_boom_error),
                 power_boom
             );
             debug!(
-                "Arm Angle:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad  Power: {:>+5.2}",
+                "Normal Arm:\t\t {:>+5.2}rad {:>+5.2}°  Target Arm:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
                 self.normal.angle_arm.unwrap(),
                 core::rad_to_deg(self.normal.angle_arm.unwrap()),
+                self.target.angle_arm.unwrap(),
+                core::rad_to_deg(self.target.angle_arm.unwrap()),
                 angle_arm_error,
+                core::rad_to_deg(angle_arm_error),
                 power_arm
             );
 

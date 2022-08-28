@@ -21,7 +21,7 @@ impl InverseKinematics {
         let theta_2 =
             ((self.l1.powi(2) + self.l2.powi(2) - l5.powi(2)) / (2.0 * self.l1 * self.l2)).acos();
 
-        let theta_2 = std::f32::consts::PI - theta_1 - theta_2;
+        let theta_2 = std::f32::consts::PI - theta_2;
 
         if l5 >= self.l1 + self.l2 {
             None
