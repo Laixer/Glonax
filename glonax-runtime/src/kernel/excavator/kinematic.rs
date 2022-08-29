@@ -34,8 +34,8 @@ impl KinematicProgram {
 
     async fn decode_signal(&mut self, reader: &mut crate::signal::SignalReader) {
         if let Ok((source, signal)) = reader.recv().await {
-            match source.try_into().unwrap() {
-                super::BodyPart::Boom => {
+            match source {
+                super::BODY_PART_BOOM => {
                     if let MetricValue::Angle(value) = signal.value {
                         let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
 
@@ -59,7 +59,7 @@ impl KinematicProgram {
                         );
                     }
                 }
-                super::BodyPart::Arm => {
+                super::BODY_PART_ARM => {
                     if let MetricValue::Angle(value) = signal.value {
                         let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
 
@@ -82,7 +82,8 @@ impl KinematicProgram {
                         );
                     }
                 }
-                super::BodyPart::Bucket => todo!(),
+                super::BODY_PART_BUCKET => todo!(),
+                _ => {}
             }
         }
     }

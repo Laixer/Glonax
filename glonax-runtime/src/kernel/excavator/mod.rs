@@ -33,29 +33,9 @@ impl From<Actuator> for u32 {
     }
 }
 
-enum BodyPart {
-    Boom = 0x6a0,
-    Arm = 0x6c0,
-    Bucket = 0x6ca,
-}
-
-impl From<BodyPart> for crate::core::metric::SignalSource {
-    fn from(value: BodyPart) -> Self {
-        value as crate::core::metric::SignalSource
-    }
-}
-
-impl TryFrom<u32> for BodyPart {
-    type Error = ();
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        match value {
-            0x6b0 => Ok(BodyPart::Boom),
-            0x6c0 => Ok(BodyPart::Arm),
-            _ => Err(()),
-        }
-    }
-}
+const BODY_PART_BOOM: u32 = 0x6a0;
+const BODY_PART_ARM: u32 = 0x6c0;
+const BODY_PART_BUCKET: u32 = 0x6b0;
 
 #[derive(Clone, Copy)]
 pub struct Excavator {
