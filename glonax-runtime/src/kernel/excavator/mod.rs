@@ -36,6 +36,7 @@ impl From<Actuator> for u32 {
 enum BodyPart {
     Boom = 0x6a0,
     Arm = 0x6c0,
+    Bucket = 0x6ca,
 }
 
 impl From<BodyPart> for crate::core::metric::SignalSource {

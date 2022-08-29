@@ -72,16 +72,17 @@ impl KinematicProgram {
                         self.normal.update_arm_angle(angle_at_datum);
 
                         debug!(
-                                "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
-                                value.x,
-                                angle,
-                                core::rad_to_deg(angle),
-                                percentage,
-                                angle_at_datum,
-                                core::rad_to_deg(angle_at_datum)
-                            );
+                            "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
+                            value.x,
+                            angle,
+                            core::rad_to_deg(angle),
+                            percentage,
+                            angle_at_datum,
+                            core::rad_to_deg(angle_at_datum)
+                        );
                     }
                 }
+                super::BodyPart::Bucket => todo!(),
             }
         }
     }
