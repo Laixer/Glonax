@@ -24,9 +24,6 @@ impl Signal {
     }
 }
 
-unsafe impl Sync for Signal {}
-unsafe impl Send for Signal {}
-
 #[derive(Debug, Clone, Copy)]
 pub enum MetricValue {
     Temperature(na::Vector1<f32>),
