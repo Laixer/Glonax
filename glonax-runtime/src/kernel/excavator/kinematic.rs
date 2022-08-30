@@ -82,7 +82,25 @@ impl KinematicProgram {
                         );
                     }
                 }
-                super::BODY_PART_BUCKET => todo!(),
+                super::BODY_PART_BUCKET => {
+                    if let MetricValue::Angle(value) = signal.value {
+                        let encoder = Encoder::new(BUCKET_ENCODER_RANGE, BUCKET_ANGLE_RANGE);
+
+                        let angle = encoder.scale(value.x as f32);
+                        let percentage = encoder.scale_to(100.0, value.x as f32);
+
+                        // TODO: Offset is negative.
+                        // let angle_offset = core::deg_to_rad(36.8);
+
+                        debug!(
+                            "Bucket Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
+                            value.x,
+                            angle,
+                            core::rad_to_deg(angle),
+                            percentage,
+                        );
+                    }
+                }
                 _ => {}
             }
         }
@@ -98,9 +116,20 @@ impl Program for KinematicProgram {
 
         if let Some(effector_point) = self.normal.effector_point() {
             debug!(
-                "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
+                "Effector point: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
                 effector_point.x, effector_point.y, effector_point.z,
             );
+
+            let ag_effector = effector_point.y + FRAME_HEIGHT;
+
+            debug!(
+                "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
+                effector_point.x, ag_effector, effector_point.z,
+            );
+
+            if ag_effector < 0.20 {
+                debug!("GROUND GROUND GROUND GROUND GROUND");
+            }
         };
 
         if let Some((angle_boom_error, angle_arm_error)) = self.target.erorr_diff(&self.normal) {
