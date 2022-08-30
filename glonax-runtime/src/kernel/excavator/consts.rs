@@ -9,7 +9,7 @@ pub const BOOM_LENGTH: f32 = 6.0;
 /// Arm length in meters.
 pub const ARM_LENGTH: f32 = 2.97;
 /// Bucket length in meters.
-pub const BUCKET_LENGTH: f32 = 1.50;
+pub const BUCKET_LENGTH: f32 = 1.493;
 
 // TODO: Rename. This is not an height but an transformation.
 /// Frame height in meters.
@@ -28,7 +28,7 @@ pub const ARM_ENCODER_RANGE: Range<f32> = 246.0..511.0;
 /// Arm angle range.
 pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 /// Bucket encoder range.
-pub const BUCKET_ENCODER_RANGE: Range<f32> = 246.0..511.0;
+pub const BUCKET_ENCODER_RANGE: Range<f32> = 424.0..697.0;
 /// Bucket angle range.
 pub const BUCKET_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 
