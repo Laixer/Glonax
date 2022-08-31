@@ -6,9 +6,13 @@ use crate::signal::Encoder;
 use super::consts::*;
 use super::HydraulicMotion;
 
+static mut AGENT: super::body::Body = super::body::Body::new(super::body::RigidBody {
+    length_boom: BOOM_LENGTH,
+    length_arm: ARM_LENGTH,
+});
+
 pub(super) struct KinematicProgram {
-    normal: super::body::DynamicBody,
-    target: super::body::DynamicBody,
+    projection: super::body::Projection<'static>,
     terminate: bool,
 }
 
@@ -18,16 +22,10 @@ impl KinematicProgram {
             panic!("Expected 2 parameter, got {}", params.len());
         }
 
-        let effector_point = nalgebra::Point3::new(params[0], params[1], 0.0);
-
-        let rigid_body = super::body::RigidBody {
-            length_boom: BOOM_LENGTH,
-            length_arm: ARM_LENGTH,
-        };
+        let target = nalgebra::Point3::new(params[0], params[1], 0.0);
 
         Self {
-            normal: super::body::DynamicBody::with_rigid_body(rigid_body),
-            target: super::body::DynamicBody::from_effector_point(rigid_body, effector_point),
+            projection: unsafe { AGENT.project(target) },
             terminate: false,
         }
     }
@@ -45,8 +43,12 @@ impl KinematicProgram {
                         let angle_offset = core::deg_to_rad(5.3);
                         let angle_at_datum = angle - angle_offset;
 
-                        self.normal.update_boom_angle(angle_at_datum);
-                        self.normal.update_slew_angle(0.0);
+                        unsafe {
+                            AGENT.update_boom_angle(angle_at_datum);
+                            AGENT.update_slew_angle(0.0);
+                        }
+                        // self.normal.update_boom_angle(angle_at_datum);
+                        // self.normal.update_slew_angle(0.0);
 
                         debug!(
                             "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
@@ -69,7 +71,10 @@ impl KinematicProgram {
                         let angle_offset = core::deg_to_rad(36.8);
                         let angle_at_datum = -angle_offset - (2.1 - angle);
 
-                        self.normal.update_arm_angle(angle_at_datum);
+                        unsafe {
+                            AGENT.update_arm_angle(angle_at_datum);
+                        }
+                        // self.normal.update_arm_angle(angle_at_datum);
 
                         debug!(
                             "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
@@ -91,6 +96,13 @@ impl KinematicProgram {
 
                         // TODO: Offset is negative.
                         // let angle_offset = core::deg_to_rad(36.8);
+
+                        // TODO: REMOVE MOVE MOVE MOVE MOVE
+                        unsafe {
+                            AGENT.update_boom_angle(core::deg_to_rad(60.0));
+                            AGENT.update_arm_angle(core::deg_to_rad(-40.0));
+                            AGENT.update_slew_angle(0.0);
+                        }
 
                         debug!(
                             "Bucket Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
@@ -114,25 +126,27 @@ impl Program for KinematicProgram {
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         self.decode_signal(&mut context.reader).await;
 
-        if let Some(effector_point) = self.normal.effector_point() {
+        if let Some(effector_point) = unsafe { AGENT.effector_point() } {
             debug!(
                 "Effector point: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
                 effector_point.x, effector_point.y, effector_point.z,
             );
 
-            let ag_effector = effector_point.y + FRAME_HEIGHT;
+            let effector_point = unsafe { AGENT.effector_point_abs() }.unwrap();
 
             debug!(
                 "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
-                effector_point.x, ag_effector, effector_point.z,
+                effector_point.x, effector_point.y, effector_point.z,
             );
 
-            if ag_effector < 0.20 {
+            if effector_point.y < 0.20 {
                 debug!("GROUND GROUND GROUND GROUND GROUND");
             }
         };
 
-        if let Some((angle_boom_error, angle_arm_error)) = self.target.erorr_diff(&self.normal) {
+        // None
+
+        if let Some((angle_boom_error, angle_arm_error)) = self.projection.erorr_diff() {
             let power_boom = (angle_boom_error * 10.0 * 1_500.0) as i16;
             let power_boom = if angle_boom_error.is_sign_positive() {
                 (-power_boom).max(-20_000) - 12_000
@@ -158,26 +172,26 @@ impl Program for KinematicProgram {
                 power_boom
             };
 
-            debug!(
-                "Normal Boom:\t {:>+5.2}rad {:>+5.2}°  Target Boom:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
-                self.normal.angle_boom.unwrap(),
-                core::rad_to_deg(self.normal.angle_boom.unwrap()),
-                self.target.angle_boom.unwrap(),
-                core::rad_to_deg(self.target.angle_boom.unwrap()),
-                angle_boom_error,
-                core::rad_to_deg(angle_boom_error),
-                power_boom
-            );
-            debug!(
-                "Normal Arm:\t\t {:>+5.2}rad {:>+5.2}°  Target Arm:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
-                self.normal.angle_arm.unwrap(),
-                core::rad_to_deg(self.normal.angle_arm.unwrap()),
-                self.target.angle_arm.unwrap(),
-                core::rad_to_deg(self.target.angle_arm.unwrap()),
-                angle_arm_error,
-                core::rad_to_deg(angle_arm_error),
-                power_arm
-            );
+            // debug!(
+            //     "Normal Boom:\t {:>+5.2}rad {:>+5.2}°  Target Boom:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
+            //     self.normal.angle_boom.unwrap(),
+            //     core::rad_to_deg(self.normal.angle_boom.unwrap()),
+            //     self.target.angle_boom.unwrap(),
+            //     core::rad_to_deg(self.target.angle_boom.unwrap()),
+            //     angle_boom_error,
+            //     core::rad_to_deg(angle_boom_error),
+            //     power_boom
+            // );
+            // debug!(
+            //     "Normal Arm:\t\t {:>+5.2}rad {:>+5.2}°  Target Arm:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
+            //     self.normal.angle_arm.unwrap(),
+            //     core::rad_to_deg(self.normal.angle_arm.unwrap()),
+            //     self.target.angle_arm.unwrap(),
+            //     core::rad_to_deg(self.target.angle_arm.unwrap()),
+            //     angle_arm_error,
+            //     core::rad_to_deg(angle_arm_error),
+            //     power_arm
+            // );
 
             if angle_arm_error.abs() < 0.02 && angle_boom_error.abs() < 0.02 {
                 self.terminate = true;

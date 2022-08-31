@@ -106,12 +106,12 @@ impl Default for Excavator {
 }
 
 impl Operand for Excavator {
+    type MotionPlan = HydraulicMotion;
+
     /// Construct operand from configuration.
     fn from_config<C: crate::config::Configurable>(_config: &C) -> Self {
         Self { drive_lock: false }
     }
-
-    type MotionPlan = HydraulicMotion;
 
     /// Try to convert input scancode to motion.
     ///
