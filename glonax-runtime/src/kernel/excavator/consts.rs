@@ -30,21 +30,22 @@ pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 /// Bucket encoder range.
 pub const BUCKET_ENCODER_RANGE: Range<f32> = 424.0..697.0;
 /// Bucket angle range.
-pub const BUCKET_ANGLE_RANGE: Range<f32> = 0.0..2.1;
+pub const BUCKET_ANGLE_RANGE: Range<f32> = 0.0..3.0;
 
 /// Frame dimensions in (L)x(W)x(H)
 #[allow(dead_code)]
-const FRAME_DIMENSIONS: (f32, f32, f32) = (3.88, 2.89, 1.91);
+pub const FRAME_DIMENSIONS: (f32, f32, f32) = (3.88, 2.89, 1.91);
 // TODO: track hight.
 /// Track dimensions in (L)x(W)x(H)
 #[allow(dead_code)]
-const TRACK_DIMENSIONS: (f32, f32, f32) = (4.65, 0.9, 0.0);
+pub const TRACK_DIMENSIONS: (f32, f32, f32) = (4.65, 0.9, 0.0);
 
+/// Place the bucket on the ground in front of the machine.
 #[allow(dead_code)]
-const SERVICE_POSITION_A: (f32, f32) = (0.0, 0.0);
+pub const SERVICE_POSITION_A: (f32, f32) = (6.29, -0.49);
+/// Strech the boom and arm with the bucket on the ground.
 #[allow(dead_code)]
-const SERVICE_POSITION_B: (f32, f32) = (0.0, 0.0);
+pub const SERVICE_POSITION_B: (f32, f32) = (8.52, -0.830);
+/// Fold the bucket and arm in front of the machine.
 #[allow(dead_code)]
-const SERVICE_POSITION_C: (f32, f32) = (0.0, 0.0);
-#[allow(dead_code)]
-const SERVICE_POSITION_D: (f32, f32) = (0.0, 0.0);
+pub const SERVICE_POSITION_C: (f32, f32) = (3.14, -1.45);
