@@ -2,8 +2,8 @@
 Description=Glonax Heavy Machinery Controller
 StartLimitIntervalSec=5
 StartLimitBurst=5
-Wants=network-online.target sys-subsystem-net-devices-can0.device
-After=network-online.target sys-subsystem-net-devices-can0.device
+Wants=sys-subsystem-net-devices-can0.device
+After=sys-subsystem-net-devices-can0.device
 
 [Service]
 WorkingDirectory=/var/lib/glonax
