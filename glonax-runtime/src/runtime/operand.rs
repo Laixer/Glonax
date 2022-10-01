@@ -5,7 +5,7 @@ use crate::{
     signal::SignalReader,
 };
 
-pub trait Operand: Clone + Send + Sync {
+pub trait Operand: Send + Sync {
     type MotionPlan: ToMotion;
 
     /// Construct operand from configuration.

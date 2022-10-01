@@ -40,7 +40,7 @@ impl ControlNet {
         let patch: u8 = PKG_VERSION_PATCH.parse().unwrap();
 
         let frame = FrameBuilder::new(IdBuilder::from_pgn(65_282).build())
-            .from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
+            .copy_from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
             .build();
 
         self.stream.write(&frame).await.unwrap();
@@ -48,7 +48,7 @@ impl ControlNet {
 
     pub async fn set_led(&self, node: u8, led_on: bool) {
         let frame = FrameBuilder::new(IdBuilder::from_pgn(45_312).da(node).build())
-            .from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
+            .copy_from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
             .build();
 
         self.stream.write(&frame).await.unwrap();
@@ -56,7 +56,7 @@ impl ControlNet {
 
     pub async fn set_address(&self, node: u8, address: u8) {
         let frame = FrameBuilder::new(IdBuilder::from_pgn(45_568).da(node).build())
-            .from_slice(&[b'Z', b'C', address])
+            .copy_from_slice(&[b'Z', b'C', address])
             .build();
 
         self.stream.write(&frame).await.unwrap();
@@ -64,7 +64,7 @@ impl ControlNet {
 
     pub async fn reset(&self, node: u8) {
         let frame = FrameBuilder::new(IdBuilder::from_pgn(45_312).da(node).build())
-            .from_slice(&[b'Z', b'C', 0xff, 0x69])
+            .copy_from_slice(&[b'Z', b'C', 0xff, 0x69])
             .build();
 
         self.stream.write(&frame).await.unwrap();
@@ -80,7 +80,7 @@ impl ControlNet {
         };
 
         let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
-            .from_slice(&[b'Z', b'C', state])
+            .copy_from_slice(&[b'Z', b'C', state])
             .build();
 
         self.stream.write(&frame).await.unwrap();
@@ -88,7 +88,7 @@ impl ControlNet {
 
     pub async fn set_motion_lock(&self, node: u8, locked: bool) {
         let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
-            .from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
+            .copy_from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
             .build();
 
         self.stream.write(&frame).await.unwrap();
@@ -96,7 +96,7 @@ impl ControlNet {
 
     pub async fn request(&self, node: u8, _pgn: u32) {
         let frame = FrameBuilder::new(IdBuilder::from_pgn(59_904).da(node).build())
-            .from_slice(&[0xfe, 0x18, 0xda])
+            .copy_from_slice(&[0xfe, 0x18, 0xda])
             .build();
 
         self.stream.write(&frame).await.unwrap();

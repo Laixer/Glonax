@@ -40,7 +40,7 @@ impl J1939Stream {
     pub async fn read(&self) -> io::Result<Frame> {
         let mut frame = FrameBuilder::default();
 
-        let (_, peer_addr) = self.0.recv_from(frame.pdu_mut_ref()).await?;
+        let (_, peer_addr) = self.0.recv_from(frame.as_mut()).await?;
 
         Ok(frame.id(peer_addr.into()).build())
     }
