@@ -232,6 +232,16 @@ async fn analyze_frames(
                     last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
                 );
             }
+            ParameterGroupNumber::Other(64_252) => {
+                let turn_count = frame.pdu()[0];
+
+                info!(
+                    "{} {} Turn: {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    turn_count,
+                );
+            }
             ParameterGroupNumber::Other(64_258) => {
                 // if frame.pdu()[..4] != [0xff; 4] {
                 let data_x = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
