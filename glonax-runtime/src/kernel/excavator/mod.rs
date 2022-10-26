@@ -36,8 +36,8 @@ impl From<Actuator> for u32 {
 const BODY_PART_BOOM: u32 = 0x6a0;
 const BODY_PART_ARM: u32 = 0x6c0;
 const BODY_PART_BUCKET: u32 = 0x6b0;
+const BODY_PART_FRAME: u32 = 0x6e0;
 
-#[derive(Clone, Copy)]
 pub struct Excavator {
     drive_lock: bool,
 }
