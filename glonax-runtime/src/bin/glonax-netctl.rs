@@ -375,24 +375,24 @@ async fn print_frames(ctrl_srv: &ControlService) -> anyhow::Result<()> {
 }
 
 #[derive(Parser)]
-#[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
-#[clap(version)]
-#[clap(about = "Network diagnosis and system analyzer", long_about = None)]
+#[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
+#[command(version, propagate_version = true)]
+#[command(about = "Network diagnosis and system analyzer", long_about = None)]
 struct Args {
     /// CAN network interface.
-    #[clap(short, long, default_value = "can0")]
+    #[arg(short, long, default_value = "can0")]
     interface: String,
 
     /// Local network address.
-    #[clap(long, default_value_t = 0x9e)]
+    #[arg(long, default_value_t = 0x9e)]
     address: u8,
 
     /// Level of verbosity.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: usize,
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 
     /// Node commands.
-    #[clap(subcommand)]
+    #[command(subcommand)]
     command: Command,
 }
 
@@ -403,7 +403,7 @@ enum Command {
         /// Target node address.
         address: String,
 
-        #[clap(subcommand)]
+        #[command(subcommand)]
         command: NodeCommand,
     },
     /// Show raw frames on screen.
@@ -411,11 +411,11 @@ enum Command {
     /// Analyze network frames.
     Analyze {
         /// Filter on PGN.
-        #[clap(long)]
+        #[arg(long)]
         pgn: Option<u16>,
 
         /// Filter on node.
-        #[clap(long)]
+        #[arg(long)]
         node: Option<String>,
     },
 }

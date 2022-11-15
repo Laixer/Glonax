@@ -7,40 +7,40 @@
 use clap::Parser;
 
 #[derive(Parser)]
-#[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
-#[clap(version)]
-#[clap(about = "ECU Daemon", long_about = None)]
+#[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
+#[command(version, propagate_version = true)]
+#[command(about = "ECU Daemon", long_about = None)]
 struct Args {
     /// CAN network interface.
     interface: String,
 
     /// ECU network bind address.
-    #[clap(short, long, default_value = "0.0.0.0:54910")]
+    #[arg(short, long, default_value = "0.0.0.0:54910")]
     address: String,
 
     /// Disable machine motion (frozen mode).
-    #[clap(long)]
+    #[arg(long)]
     disable_motion: bool,
 
     /// Run motion requests slow.
-    #[clap(long)]
+    #[arg(long)]
     slow_motion: bool,
 
     /// Record telemetrics to disk.
-    #[clap(long)]
+    #[arg(long)]
     trace: bool,
 
     /// Daemonize the service.
-    #[clap(long)]
+    #[arg(long)]
     daemon: bool,
 
     /// Number of runtime workers.
-    #[clap(long)]
+    #[arg(long)]
     workers: Option<usize>,
 
     /// Level of verbosity.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: usize,
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
 fn main() -> anyhow::Result<()> {
