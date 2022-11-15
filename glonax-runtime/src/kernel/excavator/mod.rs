@@ -39,6 +39,7 @@ const BODY_PART_BUCKET: u32 = 0x6b0;
 const BODY_PART_FRAME: u32 = 0x6e0;
 
 pub struct Excavator {
+    object_model: std::sync::Arc<tokio::sync::RwLock<body::Body>>,
     drive_lock: bool,
 }
 
@@ -101,7 +102,15 @@ impl ToMotion for HydraulicMotion {
 
 impl Default for Excavator {
     fn default() -> Self {
-        Self { drive_lock: false }
+        Self {
+            object_model: std::sync::Arc::new(tokio::sync::RwLock::new(body::Body::new(
+                body::RigidBody {
+                    length_boom: consts::BOOM_LENGTH,
+                    length_arm: consts::ARM_LENGTH,
+                },
+            ))),
+            drive_lock: false,
+        }
     }
 }
 
@@ -110,7 +119,9 @@ impl Operand for Excavator {
 
     /// Construct operand from configuration.
     fn from_config<C: crate::config::Configurable>(_config: &C) -> Self {
-        Self { drive_lock: false }
+        Self {
+            ..Default::default()
+        }
     }
 
     /// Try to convert input scancode to motion.
@@ -185,8 +196,11 @@ impl ProgramFactory for Excavator {
         params: Parameter,
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()> {
         match id {
-            // Arm chain programs.
-            603 => Ok(Box::new(kinematic::KinematicProgram::new(params))),
+            // Default kinematic program.
+            603 => Ok(Box::new(kinematic::KinematicProgram::new(
+                self.object_model.clone(),
+                params,
+            ))),
 
             // Movement programs.
             700 => Ok(Box::new(drive::DriveProgram::new(params))),
