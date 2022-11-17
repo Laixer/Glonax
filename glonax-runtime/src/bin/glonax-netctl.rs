@@ -280,6 +280,29 @@ async fn analyze_frames(
                 // );
                 // }
             }
+            ParameterGroupNumber::Other(61_184) => {
+                info!("Encoder config");
+            }
+            ParameterGroupNumber::Other(65_450) => {
+                let encoder_position = i32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
+                let encoder_speed = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+                // let encoder_diag_status = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
+
+                // let state = match encoder_diag_status {
+                //     0xee00 => Some("general error in sensor"),
+                //     0x16 => Some("ident"),
+                //     0xfa => Some("faulty"),
+                //     _ => None,
+                // };
+
+                info!(
+                    "{} {} Position: {}; Speed {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    encoder_position,
+                    encoder_speed,
+                );
+            }
             // 65_505 => {
             // if frame.pdu()[..6] != [0xff; 6] {
             //     let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
@@ -365,7 +388,7 @@ async fn analyze_frames(
 
 /// Print frames to screen.
 async fn print_frames(ctrl_srv: &ControlService) -> anyhow::Result<()> {
-    debug!("Print incoming frames on screen");
+    debug!("Print incoming frames to screen");
 
     loop {
         let frame = ctrl_srv.accept_raw().await?;
