@@ -92,9 +92,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "clap"
-version = "4.0.24"
+version = "4.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60494cedb60cb47462c0ff7be53de32c0e42a6fc2c772184554fa12bd9489c03"
+checksum = "2148adefda54e14492fb9bddcc600b4344c5d1a3123bd666dcb939c6f0e0e57e"
 dependencies = [
  "atty",
  "bitflags",
@@ -234,8 +234,8 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 
 [[package]]
 name = "j1939"
-version = "0.1.4"
-source = "git+https://github.com/Laixer/J1939#03f2261d22db85ee1a68ec2b027951bb1e53282e"
+version = "0.1.9"
+source = "git+https://github.com/Laixer/J1939#f0b058190d739986fa190990f9a409d560959449"
 
 [[package]]
 name = "lazy_static"
