@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red};
 use clap::Parser;
 use glonax::net::{ControlNet, ControlService};
-use glonax_j1939::decode;
+use glonax_j1939::{decode, PGN};
 use log::{debug, info};
 
 fn style_node(address: u8) -> String {
@@ -32,29 +32,6 @@ fn string_to_bool(str: &String) -> Result<bool, ()> {
     }
 }
 
-/// Parameter group number.
-pub enum ParameterGroupNumber {
-    /// Electronic Engine Controller 1.
-    EEC1,
-    /// Electronic Engine Controller 2.
-    EEC2,
-    /// Software Identification.
-    SOFT,
-    /// Other PGN.
-    Other(u16),
-}
-
-impl From<u16> for ParameterGroupNumber {
-    fn from(value: u16) -> Self {
-        match value {
-            61_443 => ParameterGroupNumber::EEC2,
-            61_444 => ParameterGroupNumber::EEC1,
-            65_242 => ParameterGroupNumber::SOFT,
-            _ => ParameterGroupNumber::Other(value),
-        }
-    }
-}
-
 async fn analyze_frames(
     ctrl_srv: &mut ControlService,
     pgn_filter: Option<u16>,
@@ -79,7 +56,7 @@ async fn analyze_frames(
         }
 
         match pgn.into() {
-            ParameterGroupNumber::EEC1 => {
+            PGN::ElectronicEngineController1 => {
                 if let Some(engine_torque_mode) = decode::spn899(frame.pdu()[0]) {
                     info!("Torque mode: {:?}", engine_torque_mode);
                 }
@@ -99,7 +76,7 @@ async fn analyze_frames(
                     info!("Starter mode: {:?}", starter_mode);
                 }
             }
-            ParameterGroupNumber::SOFT => {
+            PGN::SoftwareIdentification => {
                 let mut major = 0;
                 let mut minor = 0;
                 let mut patch = 0;
@@ -123,7 +100,17 @@ async fn analyze_frames(
                     patch
                 );
             }
-            ParameterGroupNumber::Other(60_928) => {
+            PGN::RequestMessage => {
+                let pgn = u32::from_be_bytes([0x0, frame.pdu()[2], frame.pdu()[1], frame.pdu()[0]]);
+
+                info!(
+                    "{} {} Request for PNG: {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    pgn
+                );
+            }
+            PGN::Other(60_928) => {
                 let function = frame.pdu()[5];
                 let arbitrary_address = frame.pdu()[7] >> 7;
 
@@ -135,7 +122,7 @@ async fn analyze_frames(
                     arbitrary_address
                 );
             }
-            ParameterGroupNumber::Other(40_960) => {
+            PGN::Other(40_960) => {
                 if frame.pdu()[0..2] != [0xff, 0xff] {
                     let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
 
@@ -177,7 +164,7 @@ async fn analyze_frames(
                     );
                 }
             }
-            ParameterGroupNumber::Other(41_216) => {
+            PGN::Other(41_216) => {
                 if frame.pdu()[0..2] != [0xff, 0xff] {
                     let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
 
@@ -219,7 +206,7 @@ async fn analyze_frames(
                     );
                 }
             }
-            ParameterGroupNumber::Other(65_282) => {
+            PGN::Other(65_282) => {
                 let state = match frame.pdu()[1] {
                     0x14 => Some("nominal"),
                     0x16 => Some("ident"),
@@ -244,7 +231,7 @@ async fn analyze_frames(
                     last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
                 );
             }
-            ParameterGroupNumber::Other(64_252) => {
+            PGN::Other(64_252) => {
                 let turn_count = frame.pdu()[0];
 
                 info!(
@@ -254,48 +241,20 @@ async fn analyze_frames(
                     turn_count,
                 );
             }
-            ParameterGroupNumber::Other(64_258) => {
-                // if frame.pdu()[..4] != [0xff; 4] {
-                let data_x = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
-                // let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-                // let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+            PGN::Other(64_258) => {
+                let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
 
                 info!(
                     "{} {} Encoder: {}",
                     style_node(frame.id().sa()),
                     Cyan.paint(pgn.to_string()),
-                    data_x
+                    data
                 );
-
-                // let vec_x = data_x as f32;
-                // let vec_y = data_y as f32;
-                // let vec_z = data_z as f32;
-                // info!("data: {}", data_x);
-                // let signal_angle = vec_x.atan2(-vec_y);
-                // debug!("XY Angle: {:>+5.2}", signal_angle);
-
-                // let fk_x = (6.0 * 0.349066_f32.cos()) + (2.97 * signal_angle.cos());
-                // let fk_y = (6.0 * 0.349066_f32.sin()) + (2.97 * signal_angle.sin()); // + super::FRAME_HEIGHT;
-
-                // let fk_x = 2.97 * signal_angle.cos();
-                // let fk_y = 2.97 * signal_angle.sin();
-
-                // info!(
-                //     "{} X: {:>+5} Y: {:>+5} Z: {:>+5}    Angle: {:>+5.2}    {:>+5.2} {:>+5.2}",
-                //     style_node(frame.id().sa()),
-                //     data_x,
-                //     data_y,
-                //     data_z,
-                //     signal_angle,
-                //     fk_x,
-                //     fk_y,
-                // );
-                // }
             }
-            ParameterGroupNumber::Other(61_184) => {
+            PGN::Other(61_184) => {
                 info!("Encoder config");
             }
-            ParameterGroupNumber::Other(65_450) => {
+            PGN::Other(65_450) => {
                 let encoder_position = i32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
                 let encoder_speed = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
                 // let encoder_diag_status = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());

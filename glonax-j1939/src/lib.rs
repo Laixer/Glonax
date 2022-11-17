@@ -1,6 +1,6 @@
 use std::io;
 
-pub use j1939::{decode, Frame, FrameBuilder, IdBuilder};
+pub use j1939::{decode, Frame, FrameBuilder, IdBuilder, PGN};
 pub use socket::J1939Socket;
 
 mod socket;
