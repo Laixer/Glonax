@@ -123,6 +123,18 @@ async fn analyze_frames(
                     patch
                 );
             }
+            ParameterGroupNumber::Other(60_928) => {
+                let function = frame.pdu()[5];
+                let arbitrary_address = frame.pdu()[7] >> 7;
+
+                info!(
+                    "{} {} Address claimed; Function {}; Arbitrary address: {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    function,
+                    arbitrary_address
+                );
+            }
             ParameterGroupNumber::Other(40_960) => {
                 if frame.pdu()[0..2] != [0xff, 0xff] {
                     let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
