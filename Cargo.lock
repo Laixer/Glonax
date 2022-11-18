@@ -235,7 +235,7 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 [[package]]
 name = "j1939"
 version = "0.1.9"
-source = "git+https://github.com/Laixer/J1939#f0b058190d739986fa190990f9a409d560959449"
+source = "git+https://github.com/Laixer/J1939#6b2a97defbf6ed0fe97d8ab4dfe64eb595789d0b"
 
 [[package]]
 name = "lazy_static"

@@ -100,7 +100,7 @@ async fn analyze_frames(
                     patch
                 );
             }
-            PGN::RequestMessage => {
+            PGN::Request => {
                 let pgn = u32::from_be_bytes([0x0, frame.pdu()[2], frame.pdu()[1], frame.pdu()[0]]);
 
                 info!(
@@ -110,7 +110,7 @@ async fn analyze_frames(
                     pgn
                 );
             }
-            PGN::Other(60_928) => {
+            PGN::AddressClaimed => {
                 let function = frame.pdu()[5];
                 let arbitrary_address = frame.pdu()[7] >> 7;
 
@@ -122,6 +122,7 @@ async fn analyze_frames(
                     arbitrary_address
                 );
             }
+            // TODO: Reserved PGN
             PGN::Other(40_960) => {
                 if frame.pdu()[0..2] != [0xff, 0xff] {
                     let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
@@ -164,6 +165,7 @@ async fn analyze_frames(
                     );
                 }
             }
+            // TODO: Reserved PGN
             PGN::Other(41_216) => {
                 if frame.pdu()[0..2] != [0xff, 0xff] {
                     let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
@@ -206,7 +208,32 @@ async fn analyze_frames(
                     );
                 }
             }
-            PGN::Other(65_282) => {
+            // TODO: Reserved PGN
+            PGN::Other(64_252) => {
+                let turn_count = frame.pdu()[0];
+
+                info!(
+                    "{} {} Turn: {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    turn_count,
+                );
+            }
+            // TODO: Reserved PGN
+            PGN::Other(64_258) => {
+                let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
+
+                info!(
+                    "{} {} Encoder: {}",
+                    style_node(frame.id().sa()),
+                    Cyan.paint(pgn.to_string()),
+                    data
+                );
+            }
+            PGN::ProprietaryA => {
+                info!("Encoder config");
+            }
+            PGN::ProprietaryB(65_282) => {
                 let state = match frame.pdu()[1] {
                     0x14 => Some("nominal"),
                     0x16 => Some("ident"),
@@ -231,33 +258,11 @@ async fn analyze_frames(
                     last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
                 );
             }
-            PGN::Other(64_252) => {
-                let turn_count = frame.pdu()[0];
-
-                info!(
-                    "{} {} Turn: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
-                    turn_count,
-                );
-            }
-            PGN::Other(64_258) => {
-                let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
-
-                info!(
-                    "{} {} Encoder: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
-                    data
-                );
-            }
-            PGN::Other(61_184) => {
-                info!("Encoder config");
-            }
-            PGN::Other(65_450) => {
-                let encoder_position = i32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
-                let encoder_speed = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-                // let encoder_diag_status = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
+            // M3668 encoder.
+            PGN::ProprietaryB(65_450) => {
+                let encoder_position = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
+                let encoder_speed = u16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+                // let encoder_diag_status = u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
 
                 // let state = match encoder_diag_status {
                 //     0xee00 => Some("general error in sensor"),
