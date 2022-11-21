@@ -116,10 +116,16 @@ impl KinematicProgram {
                 }
                 super::BODY_PART_FRAME => {
                     if let MetricValue::Angle(value) = signal.value {
-                        let encoder = Encoder::new(0.0..85.0, 0.0..6.28);
+                        let encoder = Encoder::new(0.0..2899.0, 0.0..6.28);
 
                         let angle = encoder.scale(value.x as f32);
                         let percentage = encoder.scale_to(100.0, value.x as f32);
+
+                        let angle_at_datum = angle;
+
+                        if let Ok(mut model) = self.model.try_write() {
+                            model.update_slew_angle(angle_at_datum);
+                        };
 
                         debug!(
                             "Turn Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
