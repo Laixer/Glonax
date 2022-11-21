@@ -262,21 +262,22 @@ async fn analyze_frames(
             PGN::ProprietaryB(65_450) => {
                 let encoder_position = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
                 let encoder_speed = u16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-                // let encoder_diag_status = u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
+                let encoder_diag_status = u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
 
-                // let state = match encoder_diag_status {
-                //     0xee00 => Some("general error in sensor"),
-                //     0x16 => Some("ident"),
-                //     0xfa => Some("faulty"),
-                //     _ => None,
-                // };
+                let state = match encoder_diag_status {
+                    0xee00 => Some("general error in sensor"),
+                    0x16 => Some("ident"),
+                    0xfa => Some("faulty"),
+                    _ => None,
+                };
 
                 info!(
-                    "{} {} Position: {}; Speed {}",
+                    "{} {} Position: {}; Speed {}; State: {:?}",
                     style_node(frame.id().sa()),
                     Cyan.paint(pgn.to_string()),
                     encoder_position,
                     encoder_speed,
+                    state,
                 );
             }
             // 65_505 => {
