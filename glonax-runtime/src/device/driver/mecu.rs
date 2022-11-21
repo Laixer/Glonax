@@ -100,6 +100,19 @@ impl super::gateway::GatewayClient for Mecu {
                     ))),
                 )
                 .await;
+        } else if frame.id().pgn() == 65_450 {
+            let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
+
+            let data = (data / 100) as u16;
+
+            self.pusher
+                .push(
+                    Self::map_source(frame.id().sa(), 0),
+                    Signal::new(MetricValue::Angle(nalgebra::Vector1::new(
+                        data.try_into().unwrap(),
+                    ))),
+                )
+                .await;
         }
     }
 }
