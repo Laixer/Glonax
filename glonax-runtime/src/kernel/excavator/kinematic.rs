@@ -17,7 +17,7 @@ impl KinematicProgram {
         params: Parameter,
     ) -> Self {
         if params.len() != 3 {
-            panic!("Expected 2 parameter, got {}", params.len());
+            panic!("Expected 3 parameter, got {}", params.len());
         }
 
         Self {

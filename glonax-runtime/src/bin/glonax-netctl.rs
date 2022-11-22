@@ -277,7 +277,7 @@ async fn analyze_frames(
                     Cyan.paint(pgn.to_string()),
                     encoder_position,
                     encoder_speed,
-                    state,
+                    state.unwrap_or("-"),
                 );
             }
             // 65_505 => {

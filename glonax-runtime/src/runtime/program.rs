@@ -47,13 +47,15 @@ impl RuntimeProgram {
         if let Some(id) = config.program_id {
             queue.0.send((id, vec![])).await.ok();
         } else {
-            queue.0.send((603, vec![-1.73, 1.01])).await.ok();
-            queue.0.send((603, vec![-1.31, 0.87])).await.ok();
-            queue.0.send((603, vec![-0.56, 0.74])).await.ok();
-            queue.0.send((603, vec![-0.19, 0.46])).await.ok();
-            queue.0.send((603, vec![-0.82, 0.40])).await.ok();
-            queue.0.send((603, vec![-1.77, 0.36])).await.ok();
-            queue.0.send((603, vec![-2.09, 0.63])).await.ok();
+            queue.0.send((603, [2.71, 2.34, 0.0].into())).await.ok();
+            // queue.0.send((701, [200.0].into())).await.ok();
+
+            // queue.0.send((603, vec![-1.31, 0.87, 0.0])).await.ok();
+            // queue.0.send((603, vec![-0.56, 0.74, 0.0])).await.ok();
+            // queue.0.send((603, vec![-0.19, 0.46, 0.0])).await.ok();
+            // queue.0.send((603, vec![-0.82, 0.40, 0.0])).await.ok();
+            // queue.0.send((603, vec![-1.77, 0.36, 0.0])).await.ok();
+            // queue.0.send((603, vec![-2.09, 0.63, 0.0])).await.ok();
         }
 
         Self { queue }
