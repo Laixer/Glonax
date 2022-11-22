@@ -96,6 +96,7 @@ where
             runtime::exec::RuntimeProgram::new(config)
                 .await
                 .exec_service(
+                    config,
                     self::runtime::Builder::<K>::from_config(config)
                         .await?
                         .enable_term_shutdown()

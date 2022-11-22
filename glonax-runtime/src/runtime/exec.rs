@@ -6,7 +6,7 @@ use crate::{
     core::{motion::Motion, TraceWriter, Tracer},
     device::{Hcu, Mecu},
     runtime::{self, operand},
-    RuntimeContext,
+    ProgramConfig, RuntimeContext,
 };
 
 use super::{
@@ -39,7 +39,7 @@ pub struct RuntimeProgram {
 }
 
 impl RuntimeProgram {
-    pub async fn new(config: &crate::config::ProgramConfig) -> Self {
+    pub async fn new(config: &ProgramConfig) -> Self {
         let queue = mpsc::channel(config.program_queue);
 
         use crate::kernel::excavator::ProgramSegment as Program;
@@ -69,6 +69,7 @@ impl RuntimeProgram {
 
     pub async fn exec_service<K: Operand + ProgramFactory>(
         mut self,
+        config: &ProgramConfig,
         mut runtime: RuntimeContext<K>,
     ) -> runtime::Result {
         use crate::device::CoreDevice;
@@ -78,11 +79,12 @@ impl RuntimeProgram {
 
         let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
 
-        tokio::task::spawn(async move { while runtime.core_device.next().await.is_ok() {} });
-
-        let mut motion_chain = MotionChain::new(&mut motion_device, &runtime.tracer);
+        let mut motion_chain = MotionChain::new(&mut motion_device, &runtime.tracer)
+            .enable(config.global.enable_motion);
 
         let mut program_tracer = runtime.tracer.instance("program");
+
+        tokio::task::spawn(async move { while runtime.core_device.next().await.is_ok() {} });
 
         info!("Execute programs on queue");
 

@@ -18,8 +18,8 @@ pub(crate) use self::builder::Builder;
 use self::operand::Operand;
 
 pub mod ecu;
-pub mod input;
 pub mod exec;
+pub mod input;
 
 pub(super) struct MotionChain<'a, R, M>
 where
@@ -27,8 +27,12 @@ where
     R::Instance: TraceWriter + Send + 'static,
     M: MotionDevice,
 {
+    /// Motion trace instance.
     trace: R::Instance,
+    /// Motion device.
     motion_device: &'a mut M,
+    /// Whether or not to enable the motion device.
+    motion_enabled: bool,
 }
 
 impl<'a, R, M> MotionChain<'a, R, M>
@@ -41,14 +45,24 @@ where
         Self {
             motion_device,
             trace: tracer.instance("motion"),
+            motion_enabled: true,
         }
+    }
+
+    pub fn enable(mut self, is_enabled: bool) -> Self {
+        self.motion_enabled = is_enabled;
+        self
     }
 
     pub async fn request<T: ToMotion>(&mut self, motion: T) {
         let motion = motion.to_motion();
         motion.record(&mut self.trace, time::now());
 
-        self.motion_device.actuate(motion).await;
+        if self.motion_enabled {
+            self.motion_device.actuate(motion).await;
+        } else {
+            debug!("Motion device is disabled: no motion commands will be issued");
+        }
     }
 }
 

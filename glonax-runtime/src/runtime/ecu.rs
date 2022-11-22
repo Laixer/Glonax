@@ -13,12 +13,14 @@ pub(crate) async fn exec_service<K: Operand>(
     use crate::device::CoreDevice;
 
     runtime.core_device.new_gateway_device::<Vecu>();
-    let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
-
-    let mut motion_chain = runtime::MotionChain::new(&mut motion_device, &runtime.tracer);
 
     let signal_device = Mecu::new(runtime.signal_manager.pusher());
     runtime.core_device.subscribe(signal_device);
+
+    let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
+
+    let mut motion_chain = runtime::MotionChain::new(&mut motion_device, &runtime.tracer)
+        .enable(config.global.enable_motion);
 
     tokio::task::spawn(async move { while runtime.core_device.next().await.is_ok() {} });
 
