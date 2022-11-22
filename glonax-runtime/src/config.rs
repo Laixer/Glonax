@@ -6,13 +6,10 @@ pub trait Configurable: Clone {
 pub struct ProgramConfig {
     /// Whether autopilot is enabled.
     pub enable_autopilot: bool,
-
     /// Number of programs to queue.
     pub program_queue: usize,
-
     /// Number of programs to queue.
     pub program_id: Option<i32>,
-
     /// Global configuration.
     pub global: GlobalConfig,
 }

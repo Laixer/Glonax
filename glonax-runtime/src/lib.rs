@@ -93,7 +93,7 @@ where
     /// Start the runtime service.
     pub fn exec_exec(config: &config::ProgramConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            runtime::RuntimeProgram::new(config)
+            runtime::exec::RuntimeProgram::new(config)
                 .await
                 .exec_service(
                     self::runtime::Builder::<K>::from_config(config)

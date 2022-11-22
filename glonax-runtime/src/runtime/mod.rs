@@ -17,11 +17,9 @@ mod builder;
 pub(crate) use self::builder::Builder;
 use self::operand::Operand;
 
-mod program;
-pub use program::RuntimeProgram;
-
 pub mod ecu;
 pub mod input;
+pub mod exec;
 
 pub(super) struct MotionChain<'a, R, M>
 where
