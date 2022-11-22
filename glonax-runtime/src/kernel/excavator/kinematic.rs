@@ -22,14 +22,15 @@ impl KinematicProgram {
 
         Self {
             model: model.clone(),
-            objective: super::body::Objective::new(
+            objective: super::body::Objective::from_point(
                 model,
                 nalgebra::Point3::new(params[0], params[1], params[2]),
             ),
         }
     }
 
-    async fn decode_signal(&mut self, reader: &mut crate::signal::SignalReader) {
+    // TODO: add timeout
+    async fn _decode_signal(&mut self, reader: &mut crate::signal::SignalReader) {
         if let Ok((source, signal)) = reader.recv().await {
             match source {
                 super::BODY_PART_BOOM => {
@@ -43,8 +44,7 @@ impl KinematicProgram {
                         let angle_at_datum = angle - angle_offset;
 
                         if let Ok(mut model) = self.model.try_write() {
-                            model.update_boom_angle(angle_at_datum);
-                            model.update_slew_angle(0.0);
+                            model._update_boom_angle(angle_at_datum);
                         };
 
                         debug!(
@@ -69,7 +69,7 @@ impl KinematicProgram {
                         let angle_at_datum = -angle_offset - (2.1 - angle);
 
                         if let Ok(mut model) = self.model.try_write() {
-                            model.update_arm_angle(angle_at_datum);
+                            model._update_arm_angle(angle_at_datum);
                         };
 
                         debug!(
@@ -80,6 +80,28 @@ impl KinematicProgram {
                             percentage,
                             angle_at_datum,
                             core::rad_to_deg(angle_at_datum)
+                        );
+                    }
+                }
+                super::BODY_PART_FRAME => {
+                    if let MetricValue::Angle(value) = signal.value {
+                        let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
+
+                        let angle = encoder.scale(value.x as f32);
+                        let percentage = encoder.scale_to(100.0, value.x as f32);
+
+                        let angle_at_datum = angle;
+
+                        if let Ok(mut model) = self.model.try_write() {
+                            model._update_slew_angle(angle_at_datum);
+                        };
+
+                        debug!(
+                            "Turn Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
+                            value.x,
+                            angle,
+                            core::rad_to_deg(angle),
+                            percentage,
                         );
                     }
                 }
@@ -99,36 +121,14 @@ impl KinematicProgram {
                         //     AGENT.update_arm_angle(core::deg_to_rad(-40.0));
                         //     AGENT.update_slew_angle(0.0);
                         // }
-                        if let Ok(mut model) = self.model.try_write() {
-                            model.update_boom_angle(core::deg_to_rad(60.0));
-                            model.update_arm_angle(core::deg_to_rad(-40.0));
-                            model.update_slew_angle(0.0);
-                        };
+                        // if let Ok(mut model) = self.model.try_write() {
+                        //     model.update_boom_angle(core::deg_to_rad(60.0));
+                        //     model.update_arm_angle(core::deg_to_rad(-40.0));
+                        //     model.update_slew_angle(0.0);
+                        // };
 
                         debug!(
                             "Bucket Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
-                            value.x,
-                            angle,
-                            core::rad_to_deg(angle),
-                            percentage,
-                        );
-                    }
-                }
-                super::BODY_PART_FRAME => {
-                    if let MetricValue::Angle(value) = signal.value {
-                        let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
-
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
-
-                        let angle_at_datum = angle;
-
-                        if let Ok(mut model) = self.model.try_write() {
-                            model.update_slew_angle(angle_at_datum);
-                        };
-
-                        debug!(
-                            "Turn Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
                             value.x,
                             angle,
                             core::rad_to_deg(angle),
@@ -147,17 +147,14 @@ impl Program for KinematicProgram {
     type MotionPlan = HydraulicMotion;
 
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
-        self.decode_signal(&mut context.reader).await;
+        // self.decode_signal(&mut context.reader).await;
+
+        if let Ok(mut model) = self.model.try_write() {
+            model.signal_update(&mut context.reader).await;
+        }
 
         if let Ok(model) = self.model.try_read() {
-            if let Some(effector_point) = model.effector_point() {
-                debug!(
-                    "Effector point: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
-                    effector_point.x, effector_point.y, effector_point.z,
-                );
-
-                let effector_point = model.effector_point_abs().unwrap();
-
+            if let Some(effector_point) = model.effector_point_abs() {
                 debug!(
                     "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
                     effector_point.x, effector_point.y, effector_point.z,
@@ -174,29 +171,75 @@ impl Program for KinematicProgram {
         let mut motion_vector = vec![];
 
         if let Some(angle_boom_error) = rig_error.angle_boom() {
-            let power_boom = (angle_boom_error * 15_000.0) as i16;
-            let power_boom = if angle_boom_error.is_sign_positive() {
-                (-power_boom).max(-20_000) - 12_000
-            } else {
-                (-power_boom).min(20_000) + 12_000
+            let boom_profile = super::body::MotionProfile {
+                scale: 15_000.0,
+                offset: 12_000,
+                limit: 20_000,
+                cutoff: 0.02,
             };
 
-            if angle_boom_error.abs() > 0.02 {
+            if let Some(power_boom) = boom_profile.power_setting_inverse(angle_boom_error) {
                 motion_vector.push((super::Actuator::Boom, power_boom));
             }
+
+            // let power_boom = (angle_boom_error * 15_000.0) as i16;
+            // let power_boom = if angle_boom_error.is_sign_positive() {
+            //     (-power_boom).max(-20_000) - 12_000
+            // } else {
+            //     (-power_boom).min(20_000) + 12_000
+            // };
+
+            // if angle_boom_error.abs() > 0.02 {
+            //     motion_vector.push((super::Actuator::Boom, power_boom));
+            // }
         }
 
         if let Some(angle_arm_error) = rig_error.angle_arm() {
-            let power_arm = (angle_arm_error * 15_000.0) as i16;
-            let power_arm = if angle_arm_error.is_sign_positive() {
-                power_arm.min(20_000) + 12_000
-            } else {
-                power_arm.max(-20_000) - 12_000
+            let arm_profile = super::body::MotionProfile {
+                scale: 15_000.0,
+                offset: 12_000,
+                limit: 20_000,
+                cutoff: 0.02,
             };
 
-            if angle_arm_error.abs() > 0.02 {
+            if let Some(power_arm) = arm_profile.power_setting(angle_arm_error) {
                 motion_vector.push((super::Actuator::Arm, power_arm));
             }
+
+            // let power_arm = (angle_arm_error * 15_000.0) as i16;
+            // let power_arm = if angle_arm_error.is_sign_positive() {
+            //     power_arm.min(20_000) + 12_000
+            // } else {
+            //     power_arm.max(-20_000) - 12_000
+            // };
+
+            // if angle_arm_error.abs() > 0.02 {
+            //     motion_vector.push((super::Actuator::Arm, power_arm));
+            // }
+        }
+
+        if let Some(angle_slew_error) = rig_error.angle_slew() {
+            let arm_profile = super::body::MotionProfile {
+                scale: 10_000.0,
+                offset: 10_000,
+                limit: 20_000,
+                cutoff: 0.02,
+            };
+
+            if let Some(power_slew) = arm_profile.power_setting(angle_slew_error) {
+                motion_vector.push((super::Actuator::Slew, power_slew));
+            }
+
+            // let power_arm = (angle_arm_error * 15_000.0) as i16;
+            // let power_arm = if angle_arm_error.is_sign_positive() {
+            //     power_arm.min(20_000) + 12_000
+            // } else {
+            //     power_arm.max(-20_000) - 12_000
+            // };
+
+            // if angle_arm_error.abs() > 0.02 {
+            //     motion_vector.push((super::Actuator::Arm, power_arm));
+            // }
         }
 
         if !motion_vector.is_empty() {
