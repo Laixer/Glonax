@@ -4,8 +4,6 @@ use crate::runtime::operand::*;
 
 use super::{Actuator, HydraulicMotion};
 
-const DRIVE_POWER: i16 = -20_096;
-
 /// Turn strait forward.
 ///
 /// This program is part of the excavator kernel. It drives both tracks then

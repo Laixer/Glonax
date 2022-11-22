@@ -11,6 +11,7 @@ pub struct Rig {
     angle_slew: Option<f32>,
     angle_boom: Option<f32>,
     angle_arm: Option<f32>,
+    #[allow(dead_code)]
     angle_attachment: Option<f32>,
 }
 

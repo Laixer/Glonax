@@ -116,7 +116,7 @@ impl KinematicProgram {
                 }
                 super::BODY_PART_FRAME => {
                     if let MetricValue::Angle(value) = signal.value {
-                        let encoder = Encoder::new(0.0..2899.0, 0.0..6.28);
+                        let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
 
                         let angle = encoder.scale(value.x as f32);
                         let percentage = encoder.scale_to(100.0, value.x as f32);

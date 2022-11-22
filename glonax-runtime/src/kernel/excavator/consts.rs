@@ -9,6 +9,7 @@ pub const BOOM_LENGTH: f32 = 6.0;
 /// Arm length in meters.
 pub const ARM_LENGTH: f32 = 2.97;
 /// Bucket length in meters.
+#[allow(dead_code)]
 pub const BUCKET_LENGTH: f32 = 1.493;
 
 // TODO: Rename. This is not an height but an transformation.
@@ -31,6 +32,10 @@ pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 pub const BUCKET_ENCODER_RANGE: Range<f32> = 424.0..697.0;
 /// Bucket angle range.
 pub const BUCKET_ANGLE_RANGE: Range<f32> = 0.0..3.0;
+/// Slew encoder range.
+pub const SLEW_ENCODER_RANGE: Range<f32> = 0.0..2899.0;
+/// Slew angle range.
+pub const SLEW_ANGLE_RANGE: Range<f32> = 0.0..core::f32::consts::PI * 2.0;
 
 /// Frame dimensions in (L)x(W)x(H)
 #[allow(dead_code)]
