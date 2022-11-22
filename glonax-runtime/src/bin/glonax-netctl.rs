@@ -235,10 +235,10 @@ async fn analyze_frames(
             }
             PGN::ProprietaryB(65_282) => {
                 let state = match frame.pdu()[1] {
-                    0x14 => Some("nominal"),
-                    0x16 => Some("ident"),
-                    0xfa => Some("faulty"),
-                    _ => None,
+                    0x14 => Green.paint("nominal").to_string(),
+                    0x16 => Blue.paint("ident").to_string(),
+                    0xfa => Red.paint("faulty").to_string(),
+                    _ => "-".to_string(),
                 };
 
                 let firmware_version =
@@ -250,7 +250,7 @@ async fn analyze_frames(
                     "{} {} State: {}; Version: {}; Last error: {}",
                     style_node(frame.id().sa()),
                     Cyan.paint(pgn.to_string()),
-                    state.map_or_else(|| "-".to_owned(), |f| { f.to_string() }),
+                    state,
                     firmware_version.map_or_else(
                         || "-".to_owned(),
                         |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
