@@ -88,8 +88,8 @@ impl RuntimeProgram {
 
         loop {
             let program = tokio::select! {
-                p = self.queue.1.recv() => {
-                    Ok(p)
+                program = self.queue.1.recv() => {
+                    Ok(program)
                 }
                 _ = runtime.shutdown.1.recv() => {
                     Err(())

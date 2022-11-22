@@ -9,7 +9,7 @@ use super::HydraulicMotion;
 /// This program is part of the excavator kernel. It drives both tracks then
 /// stops when the time limit is reached.
 pub(super) struct TurnProgram {
-    model: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
+    domain: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
     objective: super::body::Objective,
     _drive_time: Duration,
 }
@@ -26,7 +26,7 @@ impl TurnProgram {
         }
 
         Self {
-            model: model.clone(),
+            domain: model.clone(),
             objective: super::body::Objective::new(
                 model,
                 super::body::Rig {
@@ -46,15 +46,15 @@ impl Program for TurnProgram {
     type MotionPlan = HydraulicMotion;
 
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
-        if let Ok(mut model) = self.model.try_write() {
-            model.signal_update(&mut context.reader).await;
+        if let Ok(mut domain) = self.domain.try_write() {
+            domain.signal_update(&mut context.reader).await;
         }
 
         let rig_error = self.objective.erorr_diff();
 
         let mut motion_vector = vec![];
 
-        if let Some(angle_slew_error) = rig_error.angle_slew() {
+        if let Some(error) = rig_error.angle_slew() {
             let arm_profile = super::body::MotionProfile {
                 scale: 10_000.0,
                 offset: 10_000,
@@ -62,7 +62,7 @@ impl Program for TurnProgram {
                 cutoff: 0.02,
             };
 
-            if let Some(power_slew) = arm_profile.power_setting(angle_slew_error) {
+            if let Some(power_slew) = arm_profile.proportional_power(error) {
                 motion_vector.push((super::Actuator::Slew, power_slew));
             }
         }
@@ -77,8 +77,8 @@ impl Program for TurnProgram {
     fn can_terminate(&self, _context: &mut Context) -> bool {
         let rig_error = self.objective.erorr_diff();
 
-        if let Some(angle_slew_error) = rig_error.angle_slew() {
-            angle_slew_error < 0.02
+        if let Some(error) = rig_error.angle_slew() {
+            error < 0.02
         } else {
             false
         }

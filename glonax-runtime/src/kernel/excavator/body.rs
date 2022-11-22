@@ -9,7 +9,7 @@ pub struct MotionProfile {
 }
 
 impl MotionProfile {
-    pub fn power_setting(&self, value: f32) -> Option<i16> {
+    pub fn proportional_power(&self, value: f32) -> Option<i16> {
         let power = (value * self.scale) as i16;
         let power = if value.is_sign_positive() {
             power.min(self.limit) + self.offset
@@ -24,7 +24,7 @@ impl MotionProfile {
         }
     }
 
-    pub fn power_setting_inverse(&self, value: f32) -> Option<i16> {
+    pub fn proportional_power_inverse(&self, value: f32) -> Option<i16> {
         let power = (value * self.scale) as i16;
         let power = if value.is_sign_positive() {
             (-power).max(-self.limit) - self.offset
@@ -91,7 +91,6 @@ impl Body {
         }
     }
 
-    // TODO: timeout
     // TODO: const from const module
     pub async fn signal_update(&mut self, reader: &mut crate::signal::SignalReader) {
         use crate::core;
@@ -99,7 +98,9 @@ impl Body {
         use crate::kernel::excavator::consts::*;
         use crate::signal::Encoder;
 
-        if let Ok((source, signal)) = reader.recv().await {
+        if let Ok(Ok((source, signal))) =
+            tokio::time::timeout(std::time::Duration::from_millis(500), reader.recv()).await
+        {
             match source {
                 super::BODY_PART_BOOM => {
                     if let MetricValue::Angle(value) = signal.value {
