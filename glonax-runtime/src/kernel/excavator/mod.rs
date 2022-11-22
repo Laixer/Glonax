@@ -187,6 +187,22 @@ impl Operand for Excavator {
     }
 }
 
+#[allow(dead_code)]
+pub(crate) enum ProgramSegment {
+    Kinematic = 603,
+    Drive = 700,
+    Turn = 701,
+    Noop = 900,
+    Sleep = 901,
+    Test = 910,
+}
+
+impl From<ProgramSegment> for i32 {
+    fn from(value: ProgramSegment) -> Self {
+        value as i32
+    }
+}
+
 impl ProgramFactory for Excavator {
     type MotionPlan = HydraulicMotion;
 
@@ -204,7 +220,10 @@ impl ProgramFactory for Excavator {
 
             // Movement programs.
             700 => Ok(Box::new(drive::DriveProgram::new(params))),
-            701 => Ok(Box::new(turn::TurnProgram::new(params))),
+            701 => Ok(Box::new(turn::TurnProgram::new(
+                self.object_model.clone(),
+                params,
+            ))),
 
             // Miscellaneous programs.
             900 => Ok(Box::new(noop::NoopProgram::new())),
