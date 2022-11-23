@@ -1,17 +1,10 @@
-use std::time::Duration;
-
 use crate::runtime::operand::*;
 
 use super::HydraulicMotion;
 
-/// Turn strait forward.
-///
-/// This program is part of the excavator kernel. It drives both tracks then
-/// stops when the time limit is reached.
 pub(super) struct TurnProgram {
     domain: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
     objective: super::body::Objective,
-    _drive_time: Duration,
 }
 
 impl TurnProgram {
@@ -36,7 +29,6 @@ impl TurnProgram {
                     angle_attachment: None,
                 },
             ),
-            _drive_time: Duration::from_secs(params[0] as u64),
         }
     }
 }
@@ -45,6 +37,9 @@ impl TurnProgram {
 impl Program for TurnProgram {
     type MotionPlan = HydraulicMotion;
 
+    /// Propagate the program forwards.
+    ///
+    /// This method returns an optional motion instruction.
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         if let Ok(mut domain) = self.domain.try_write() {
             domain.signal_update(&mut context.reader).await;
@@ -55,16 +50,8 @@ impl Program for TurnProgram {
         let mut motion_vector = vec![];
 
         if let Some(error) = rig_error.angle_slew() {
-            let arm_profile = super::body::MotionProfile {
-                scale: 10_000.0,
-                offset: 10_000,
-                limit: 20_000,
-                cutoff: 0.02,
-            };
-
-            if let Some(power_slew) = arm_profile.proportional_power(error) {
-                motion_vector.push((super::Actuator::Slew, power_slew));
-            }
+            let power = super::consts::MOTION_PROFILE_SLEW.proportional_power(error);
+            motion_vector.push((super::Actuator::Slew, power));
         }
 
         if !motion_vector.is_empty() {
@@ -74,6 +61,9 @@ impl Program for TurnProgram {
         }
     }
 
+    /// Program termination condition.
+    ///
+    /// Check if program is finished.
     fn can_terminate(&self, _context: &mut Context) -> bool {
         let rig_error = self.objective.erorr_diff();
 
@@ -82,7 +72,14 @@ impl Program for TurnProgram {
         } else {
             false
         }
+    }
 
-        // context.start.elapsed() >= self.drive_time
+    /// Program termination action.
+    ///
+    /// This is an optional method to send a last motion
+    /// instruction. This method is called after `can_terminate`
+    /// returns true and before the program is terminated.
+    fn term_action(&self, _context: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Stop(vec![super::Actuator::Slew]))
     }
 }

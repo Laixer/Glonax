@@ -51,6 +51,11 @@ where
 
     pub fn enable(mut self, is_enabled: bool) -> Self {
         self.motion_enabled = is_enabled;
+
+        if !self.motion_enabled {
+            debug!("Motion device is disabled: no motion commands will be issued");
+        }
+
         self
     }
 
@@ -60,8 +65,6 @@ where
 
         if self.motion_enabled {
             self.motion_device.actuate(motion).await;
-        } else {
-            debug!("Motion device is disabled: no motion commands will be issued");
         }
     }
 }

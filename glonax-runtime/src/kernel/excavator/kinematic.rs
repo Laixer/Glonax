@@ -30,6 +30,9 @@ impl KinematicProgram {
 impl Program for KinematicProgram {
     type MotionPlan = HydraulicMotion;
 
+    /// Propagate the program forwards.
+    ///
+    /// This method returns an optional motion instruction.
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         if let Ok(mut domain) = self.domain.try_write() {
             domain.signal_update(&mut context.reader).await;
@@ -41,10 +44,6 @@ impl Program for KinematicProgram {
                     "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
                     effector_point.x, effector_point.y, effector_point.z,
                 );
-
-                if effector_point.y < 0.20 {
-                    debug!("GROUND GROUND GROUND GROUND GROUND");
-                }
             }
         }
 
@@ -53,42 +52,18 @@ impl Program for KinematicProgram {
         let mut motion_vector = vec![];
 
         if let Some(error) = rig_error.angle_boom() {
-            let boom_profile = super::body::MotionProfile {
-                scale: 15_000.0,
-                offset: 12_000,
-                limit: 20_000,
-                cutoff: 0.02,
-            };
-
-            if let Some(power_boom) = boom_profile.proportional_power_inverse(error) {
-                motion_vector.push((super::Actuator::Boom, power_boom));
-            }
+            let power = super::consts::MOTION_PROFILE_BOOM.proportional_power_inverse(error);
+            motion_vector.push((super::Actuator::Boom, power));
         }
 
         if let Some(error) = rig_error.angle_arm() {
-            let arm_profile = super::body::MotionProfile {
-                scale: 15_000.0,
-                offset: 12_000,
-                limit: 20_000,
-                cutoff: 0.02,
-            };
-
-            if let Some(power_arm) = arm_profile.proportional_power(error) {
-                motion_vector.push((super::Actuator::Arm, power_arm));
-            }
+            let power = super::consts::MOTION_PROFILE_ARM.proportional_power(error);
+            motion_vector.push((super::Actuator::Arm, power));
         }
 
         if let Some(error) = rig_error.angle_slew() {
-            let arm_profile = super::body::MotionProfile {
-                scale: 10_000.0,
-                offset: 10_000,
-                limit: 20_000,
-                cutoff: 0.02,
-            };
-
-            if let Some(power_slew) = arm_profile.proportional_power(error) {
-                motion_vector.push((super::Actuator::Slew, power_slew));
-            }
+            let power = super::consts::MOTION_PROFILE_SLEW.proportional_power(error);
+            motion_vector.push((super::Actuator::Slew, power));
         }
 
         if !motion_vector.is_empty() {
@@ -98,15 +73,35 @@ impl Program for KinematicProgram {
         }
     }
 
+    /// Program termination condition.
+    ///
+    /// Check if program is finished.
     fn can_terminate(&self, _: &mut Context) -> bool {
         let rig_error = self.objective.erorr_diff();
 
-        if let (Some(angle_boom_error), Some(angle_arm_error)) =
-            (rig_error.angle_boom(), rig_error.angle_arm())
-        {
-            angle_arm_error.abs() < 0.02 && angle_boom_error.abs() < 0.02
+        if let (Some(angle_boom_error), Some(angle_arm_error), Some(angle_slew_error)) = (
+            rig_error.angle_boom(),
+            rig_error.angle_arm(),
+            rig_error.angle_slew(),
+        ) {
+            angle_arm_error.abs() < 0.02
+                && angle_boom_error.abs() < 0.02
+                && angle_slew_error.abs() < 0.02
         } else {
             false
         }
+    }
+
+    /// Program termination action.
+    ///
+    /// This is an optional method to send a last motion
+    /// instruction. This method is called after `can_terminate`
+    /// returns true and before the program is terminated.
+    fn term_action(&self, _context: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Stop(vec![
+            super::Actuator::Boom,
+            super::Actuator::Arm,
+            super::Actuator::Slew,
+        ]))
     }
 }

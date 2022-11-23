@@ -9,7 +9,7 @@ pub struct MotionProfile {
 }
 
 impl MotionProfile {
-    pub fn proportional_power(&self, value: f32) -> Option<i16> {
+    pub fn proportional_power(&self, value: f32) -> i16 {
         let power = (value * self.scale) as i16;
         let power = if value.is_sign_positive() {
             power.min(self.limit) + self.offset
@@ -18,13 +18,13 @@ impl MotionProfile {
         };
 
         if value.abs() > self.cutoff {
-            Some(power)
+            power
         } else {
-            None
+            0
         }
     }
 
-    pub fn proportional_power_inverse(&self, value: f32) -> Option<i16> {
+    pub fn proportional_power_inverse(&self, value: f32) -> i16 {
         let power = (value * self.scale) as i16;
         let power = if value.is_sign_positive() {
             (-power).max(-self.limit) - self.offset
@@ -33,9 +33,9 @@ impl MotionProfile {
         };
 
         if value.abs() > self.cutoff {
-            Some(power)
+            power
         } else {
-            None
+            0
         }
     }
 }

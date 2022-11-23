@@ -120,14 +120,14 @@ impl RuntimeProgram {
                     };
 
                     // Loop until this program reaches its termination condition. If
-                    // the program does not terminate we'll run forever.
+                    // the program does not terminate we'll run until the application is killed.
                     while !program.can_terminate(&mut ctx) {
                         let start_step_execute = Instant::now();
 
                         tokio::select! {
                             // Query the operand program for the next motion step. The
                             // entire thread is dedicated to the program therefore steps
-                            // can take as long as they require.
+                            // can claim an unlimited time slice.
                             p = program.step(&mut ctx) => {
                                 if let Some(motion) = p {
                                     motion_chain.request(motion).await; // TOOD: Handle result

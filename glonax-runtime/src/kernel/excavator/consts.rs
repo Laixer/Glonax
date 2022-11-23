@@ -54,3 +54,24 @@ pub const SERVICE_POSITION_B: (f32, f32) = (8.52, -0.830);
 /// Fold the bucket and arm in front of the machine.
 #[allow(dead_code)]
 pub const SERVICE_POSITION_C: (f32, f32) = (3.14, -1.45);
+
+pub(super) const MOTION_PROFILE_SLEW: super::body::MotionProfile = super::body::MotionProfile {
+    scale: 10_000.0,
+    offset: 10_000,
+    limit: 20_000,
+    cutoff: 0.02,
+};
+
+pub(super) const MOTION_PROFILE_BOOM: super::body::MotionProfile = super::body::MotionProfile {
+    scale: 15_000.0,
+    offset: 12_000,
+    limit: 20_000,
+    cutoff: 0.02,
+};
+
+pub(super) const MOTION_PROFILE_ARM: super::body::MotionProfile = super::body::MotionProfile {
+    scale: 15_000.0,
+    offset: 12_000,
+    limit: 20_000,
+    cutoff: 0.02,
+};
