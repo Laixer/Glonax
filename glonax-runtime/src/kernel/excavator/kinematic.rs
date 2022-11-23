@@ -63,17 +63,6 @@ impl Program for KinematicProgram {
             if let Some(power_boom) = boom_profile.proportional_power_inverse(error) {
                 motion_vector.push((super::Actuator::Boom, power_boom));
             }
-
-            // let power_boom = (angle_boom_error * 15_000.0) as i16;
-            // let power_boom = if angle_boom_error.is_sign_positive() {
-            //     (-power_boom).max(-20_000) - 12_000
-            // } else {
-            //     (-power_boom).min(20_000) + 12_000
-            // };
-
-            // if angle_boom_error.abs() > 0.02 {
-            //     motion_vector.push((super::Actuator::Boom, power_boom));
-            // }
         }
 
         if let Some(error) = rig_error.angle_arm() {
@@ -87,17 +76,6 @@ impl Program for KinematicProgram {
             if let Some(power_arm) = arm_profile.proportional_power(error) {
                 motion_vector.push((super::Actuator::Arm, power_arm));
             }
-
-            // let power_arm = (angle_arm_error * 15_000.0) as i16;
-            // let power_arm = if angle_arm_error.is_sign_positive() {
-            //     power_arm.min(20_000) + 12_000
-            // } else {
-            //     power_arm.max(-20_000) - 12_000
-            // };
-
-            // if angle_arm_error.abs() > 0.02 {
-            //     motion_vector.push((super::Actuator::Arm, power_arm));
-            // }
         }
 
         if let Some(error) = rig_error.angle_slew() {
@@ -111,17 +89,6 @@ impl Program for KinematicProgram {
             if let Some(power_slew) = arm_profile.proportional_power(error) {
                 motion_vector.push((super::Actuator::Slew, power_slew));
             }
-
-            // let power_arm = (angle_arm_error * 15_000.0) as i16;
-            // let power_arm = if angle_arm_error.is_sign_positive() {
-            //     power_arm.min(20_000) + 12_000
-            // } else {
-            //     power_arm.max(-20_000) - 12_000
-            // };
-
-            // if angle_arm_error.abs() > 0.02 {
-            //     motion_vector.push((super::Actuator::Arm, power_arm));
-            // }
         }
 
         if !motion_vector.is_empty() {

@@ -266,7 +266,7 @@ impl Objective {
 
         if let Some(angle_boom_error) = rig_error.angle_boom {
             debug!(
-                "Physical Boom:\t {:>+5.2}rad {:>+5.2}°  Target Boom:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
+                "Physical Boom:  {:>+5.2}rad {:>+5.2}°  Target Boom:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
                 physical_pose.rig.angle_boom.unwrap(),
                 crate::core::rad_to_deg(physical_pose.rig.angle_boom.unwrap()),
                 self.chain.rig.angle_boom.unwrap(),
@@ -278,7 +278,7 @@ impl Objective {
 
         if let Some(angle_arm_error) = rig_error.angle_arm {
             debug!(
-                "Physical Arm:\t\t {:>+5.2}rad {:>+5.2}°  Target Arm:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
+                "Physical Arm:   {:>+5.2}rad {:>+5.2}°  Target Arm:   {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
                 physical_pose.rig.angle_arm.unwrap(),
                 crate::core::rad_to_deg(physical_pose.rig.angle_arm.unwrap()),
                 self.chain.rig.angle_arm.unwrap(),
@@ -290,7 +290,7 @@ impl Objective {
 
         if let Some(angle_slew_error) = rig_error.angle_slew {
             debug!(
-                "Physical Slew:\t\t {:>+5.2}rad {:>+5.2}°  Target Slew:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
+                "Physical Slew:  {:>+5.2}rad {:>+5.2}°  Target Slew:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
                 physical_pose.rig.angle_slew.unwrap(),
                 crate::core::rad_to_deg(physical_pose.rig.angle_slew.unwrap()),
                 self.chain.rig.angle_slew.unwrap(),
