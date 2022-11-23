@@ -50,6 +50,7 @@ impl Program for TurnProgram {
         let mut motion_vector = vec![];
 
         if let Some(error) = rig_error.angle_slew() {
+            // Optimal error path.
             let error = if error.abs() > std::f32::consts::PI {
                 error - (2.0 * std::f32::consts::PI)
             } else {
