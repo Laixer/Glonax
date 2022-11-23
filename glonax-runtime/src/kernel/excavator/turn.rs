@@ -50,6 +50,12 @@ impl Program for TurnProgram {
         let mut motion_vector = vec![];
 
         if let Some(error) = rig_error.angle_slew() {
+            let error = if error.abs() > std::f32::consts::PI {
+                error - (2.0 * std::f32::consts::PI)
+            } else {
+                error
+            };
+
             let power = super::consts::MOTION_PROFILE_SLEW.proportional_power(error);
             motion_vector.push((super::Actuator::Slew, power));
         }
