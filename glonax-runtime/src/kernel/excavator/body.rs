@@ -4,52 +4,20 @@ use crate::algorithm::ik::InverseKinematics;
 pub struct MotionProfile {
     pub scale: f32,
     pub offset: i16,
-    // TODO: Should be removed
-    pub limit: i16,
-    // TODO: Rename to lower_bound
-    pub cutoff: f32,
+    pub lower_bound: f32,
+    pub inverse: bool,
 }
 
 impl MotionProfile {
     pub fn proportional_power(&self, value: f32) -> i16 {
-        let power = (value * self.scale) as i16;
-        let power = if value.is_sign_positive() {
-            power.min(self.limit) + self.offset
-        } else {
-            power.max(-self.limit) - self.offset
-        };
-
-        if value.abs() > self.cutoff {
-            power
-        } else {
-            0
-        }
-    }
-
-    pub fn proportional_power2(&self, value: f32) -> i16 {
-        let power = self.offset + ((value.abs() * self.scale) as i16).min(i16::MAX - self.offset);
-
-        if value.abs() > self.cutoff {
-            if value.is_sign_negative() {
+        if value.abs() > self.lower_bound {
+            let power =
+                self.offset + ((value.abs() * self.scale) as i16).min(i16::MAX - self.offset);
+            if !self.inverse && value.is_sign_negative() {
                 -power
             } else {
                 power
             }
-        } else {
-            0
-        }
-    }
-
-    pub fn proportional_power_inverse(&self, value: f32) -> i16 {
-        let power = (value * self.scale) as i16;
-        let power = if value.is_sign_positive() {
-            (-power).max(-self.limit) - self.offset
-        } else {
-            (-power).min(self.limit) + self.offset
-        };
-
-        if value.abs() > self.cutoff {
-            power
         } else {
             0
         }

@@ -52,7 +52,7 @@ impl Program for KinematicProgram {
         let mut motion_vector = vec![];
 
         if let Some(error) = rig_error.angle_boom() {
-            let power = super::consts::MOTION_PROFILE_BOOM.proportional_power_inverse(error);
+            let power = super::consts::MOTION_PROFILE_BOOM.proportional_power(error);
             motion_vector.push((super::Actuator::Boom, power));
         }
 

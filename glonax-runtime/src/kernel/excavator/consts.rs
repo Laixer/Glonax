@@ -57,21 +57,21 @@ pub const SERVICE_POSITION_C: (f32, f32) = (3.14, -1.45);
 
 pub(super) const MOTION_PROFILE_SLEW: super::body::MotionProfile = super::body::MotionProfile {
     scale: 10_000.0,
-    offset: 10_000,
-    limit: 20_000,
+    offset: 12_000,
     lower_bound: 0.02,
+    inverse: false,
 };
 
 pub(super) const MOTION_PROFILE_BOOM: super::body::MotionProfile = super::body::MotionProfile {
     scale: 15_000.0,
     offset: 12_000,
-    limit: 20_000,
     lower_bound: 0.02,
+    inverse: true,
 };
 
 pub(super) const MOTION_PROFILE_ARM: super::body::MotionProfile = super::body::MotionProfile {
     scale: 15_000.0,
     offset: 12_000,
-    limit: 20_000,
     lower_bound: 0.02,
+    inverse: false,
 };
