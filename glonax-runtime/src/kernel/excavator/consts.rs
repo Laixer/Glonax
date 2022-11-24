@@ -21,11 +21,11 @@ pub const FRAME_HEIGHT: f32 = 1.885;
 pub const BOOM_ORIGIN_OFFSET: (f32, f32) = (-0.784, 0.420);
 
 /// Boom encoder range.
-pub const BOOM_ENCODER_RANGE: Range<f32> = 523.0..667.0;
+pub const BOOM_ENCODER_RANGE: Range<f32> = 790.0..1017.0;
 /// Boom angle range.
 pub const BOOM_ANGLE_RANGE: Range<f32> = 0.0..1.178;
 /// Arm encoder range.
-pub const ARM_ENCODER_RANGE: Range<f32> = 246.0..511.0;
+pub const ARM_ENCODER_RANGE: Range<f32> = 247.0..511.0;
 /// Arm angle range.
 pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 /// Bucket encoder range.
@@ -59,19 +59,19 @@ pub(super) const MOTION_PROFILE_SLEW: super::body::MotionProfile = super::body::
     scale: 10_000.0,
     offset: 10_000,
     limit: 20_000,
-    cutoff: 0.02,
+    lower_bound: 0.02,
 };
 
 pub(super) const MOTION_PROFILE_BOOM: super::body::MotionProfile = super::body::MotionProfile {
     scale: 15_000.0,
     offset: 12_000,
     limit: 20_000,
-    cutoff: 0.02,
+    lower_bound: 0.02,
 };
 
 pub(super) const MOTION_PROFILE_ARM: super::body::MotionProfile = super::body::MotionProfile {
     scale: 15_000.0,
     offset: 12_000,
     limit: 20_000,
-    cutoff: 0.02,
+    lower_bound: 0.02,
 };
