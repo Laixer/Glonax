@@ -49,12 +49,16 @@ impl RuntimeProgram {
         if let Some(id) = config.program_id {
             queue.0.send((id, vec![])).await.ok();
         } else {
+            // queue
+            //     .0
+            //     .send((Program::Kinematic.into(), [2.71, 2.34, 0.0].into()))
+            //     .await
+            //     .ok();
             queue
                 .0
-                .send((Program::Kinematic.into(), [2.71, 2.34, 0.0].into()))
+                .send((Program::Turn.into(), [1.57].into()))
                 .await
                 .ok();
-            // queue.0.send((Program::Turn.into(), [200.0].into())).await.ok();
 
             // queue.0.send((Program::Kinematic.into(), vec![-1.31, 0.87, 0.0])).await.ok();
             // queue.0.send((Program::Kinematic.into(), vec![-0.56, 0.74, 0.0])).await.ok();

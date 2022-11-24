@@ -14,8 +14,6 @@ impl TurnProgram {
     ) -> Self {
         if params.len() != 1 {
             panic!("Expected 1 parameter, got {}", params.len());
-        } else if params[0] == 0.0 {
-            panic!("Duration cannot be zero");
         }
 
         Self {
@@ -23,7 +21,7 @@ impl TurnProgram {
             objective: super::body::Objective::new(
                 model,
                 super::body::Rig {
-                    angle_slew: Some(1.57),
+                    angle_slew: Some(params[0]),
                     angle_boom: None,
                     angle_arm: None,
                     angle_attachment: None,
