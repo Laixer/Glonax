@@ -73,7 +73,7 @@ impl Program for TurnProgram {
         let rig_error = self.objective.erorr_diff();
 
         if let Some(error) = rig_error.angle_slew() {
-            error < 0.02
+            error.abs() < 0.02
         } else {
             false
         }
