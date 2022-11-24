@@ -27,5 +27,5 @@ jobs:
     - name: Publish artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: glonax.deb
+        name: glonax-${{ github.ref_name }}.deb
         path: ./target/**.deb
