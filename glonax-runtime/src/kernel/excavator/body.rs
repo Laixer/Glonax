@@ -13,10 +13,24 @@ impl MotionProfile {
         if value.abs() > self.lower_bound {
             let power =
                 self.offset + ((value.abs() * self.scale) as i16).min(i16::MAX - self.offset);
-            if !self.inverse && value.is_sign_negative() {
+            if value.is_sign_negative() {
                 -power
             } else {
                 power
+            }
+        } else {
+            0
+        }
+    }
+
+    pub fn proportional_power_inverse(&self, value: f32) -> i16 {
+        if value.abs() > self.lower_bound {
+            let power = (value * self.scale) as i16;
+
+            if value.is_sign_positive() {
+                (-power).max(-(i16::MAX - self.offset)) - self.offset
+            } else {
+                (-power).min(i16::MAX - self.offset) + self.offset
             }
         } else {
             0
