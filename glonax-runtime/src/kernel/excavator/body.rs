@@ -214,7 +214,10 @@ impl Body {
         self.chain.rig.angle_arm = Some(angle)
     }
 
-    #[allow(dead_code)]
+    pub fn boom_point(&self) -> Option<nalgebra::Point2<f32>> {
+        self.chain.boom_point()
+    }
+
     pub fn effector_point(&self) -> Option<nalgebra::Point3<f32>> {
         self.chain.effector_point()
     }

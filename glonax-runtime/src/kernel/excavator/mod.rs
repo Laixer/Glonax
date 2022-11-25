@@ -226,7 +226,7 @@ impl ProgramFactory for Excavator {
             ))),
 
             // Miscellaneous programs.
-            900 => Ok(Box::new(noop::NoopProgram::new())),
+            900 => Ok(Box::new(noop::NoopProgram::new(self.object_model.clone()))),
             901 => Ok(Box::new(sleep::SleepProgram::new(params))),
             910 => Ok(Box::new(test::TestProgram::new())),
 
