@@ -48,17 +48,7 @@ impl Program for TurnProgram {
         let mut motion_vector = vec![];
 
         if let Some(error) = rig_error.angle_slew() {
-            let error_opt = crate::algorithm::turn::shortest_rotation(error);
-
-            debug!(
-                "Error:  {:>+5.2}rad {:>+5.2}  Optimal: {:>+5.2}rad {:>+5.2}",
-                error,
-                crate::core::rad_to_deg(error),
-                error_opt,
-                crate::core::rad_to_deg(error_opt)
-            );
-
-            let power = super::consts::MOTION_PROFILE_SLEW.proportional_power(error_opt);
+            let power = super::consts::MOTION_PROFILE_SLEW.proportional_power(error);
             motion_vector.push((super::Actuator::Slew, power));
         }
 

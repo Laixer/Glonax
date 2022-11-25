@@ -246,7 +246,7 @@ impl Objective {
     pub fn erorr_diff(&self) -> Rig {
         let physical_pose = &self.body.try_read().unwrap().chain;
 
-        let rig_error = self.chain.erorr_diff(physical_pose);
+        let mut rig_error = self.chain.erorr_diff(physical_pose);
 
         if let Some(angle_boom_error) = rig_error.angle_boom {
             debug!(
@@ -273,6 +273,9 @@ impl Objective {
         }
 
         if let Some(angle_slew_error) = rig_error.angle_slew {
+            let angle_slew_error = crate::algorithm::turn::shortest_rotation(angle_slew_error);
+            rig_error.angle_slew = Some(angle_slew_error);
+
             debug!(
                 "Physical Slew:  {:>+5.2}rad {:>+5.2}°  Target Slew:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°",
                 physical_pose.rig.angle_slew.unwrap(),
