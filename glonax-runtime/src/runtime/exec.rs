@@ -102,65 +102,60 @@ impl RuntimeProgram {
                 }
             };
 
-            if let Ok(program) = program {
-                if let Some((id, params)) = program {
-                    let mut program = match runtime.operand.fetch_program(id, params) {
-                        Ok(program) => program,
-                        Err(_) => {
-                            warn!("Program ({}) was not registered with the operand", id);
-                            continue;
+            if let Ok(Some((id, params))) = program {
+                let mut program = match runtime.operand.fetch_program(id, params) {
+                    Ok(program) => program,
+                    Err(_) => {
+                        warn!("Program ({}) was not registered with the operand", id);
+                        continue;
+                    }
+                };
+
+                info!("Start program ({})", id);
+
+                program_tracer.write_record(ProgramTrace::now(id));
+
+                motion_chain.request(Motion::ResumeAll).await; // TOOD: Handle result
+
+                let mut ctx = operand::Context::new(runtime.signal_manager.reader());
+                if let Some(motion) = program.boot(&mut ctx) {
+                    motion_chain.request(motion).await; // TOOD: Handle result
+                };
+
+                // Loop until this program reaches its termination condition. If
+                // the program does not terminate we'll run until the application is killed.
+                while !program.can_terminate(&mut ctx) {
+                    let start_step_execute = Instant::now();
+
+                    tokio::select! {
+                        // Query the operand program for the next motion step. The
+                        // entire thread is dedicated to the program therefore steps
+                        // can claim an unlimited time slice.
+                        p = program.step(&mut ctx) => {
+                            if let Some(motion) = p {
+                                motion_chain.request(motion).await; // TOOD: Handle result
+                            }
+                        }
+                        _ = runtime.shutdown.1.recv() => {
+                            // Stop all motion for safety.
+                            motion_chain.request(Motion::StopAll).await; // TOOD: Handle result
+
+                            warn!("Program ({}) terminated by external signal", id);
+
+                            return Ok(());
                         }
                     };
 
-                    info!("Start program ({})", id);
-
-                    program_tracer.write_record(ProgramTrace::now(id));
-
-                    motion_chain.request(Motion::ResumeAll).await; // TOOD: Handle result
-
-                    let mut ctx = operand::Context::new(runtime.signal_manager.reader());
-                    if let Some(motion) = program.boot(&mut ctx) {
-                        motion_chain.request(motion).await; // TOOD: Handle result
-                    };
-
-                    // Loop until this program reaches its termination condition. If
-                    // the program does not terminate we'll run until the application is killed.
-                    while !program.can_terminate(&mut ctx) {
-                        let start_step_execute = Instant::now();
-
-                        tokio::select! {
-                            // Query the operand program for the next motion step. The
-                            // entire thread is dedicated to the program therefore steps
-                            // can claim an unlimited time slice.
-                            p = program.step(&mut ctx) => {
-                                if let Some(motion) = p {
-                                    motion_chain.request(motion).await; // TOOD: Handle result
-                                }
-                            }
-                            _ = runtime.shutdown.1.recv() => {
-                                // Stop all motion for safety.
-                                motion_chain.request(Motion::StopAll).await; // TOOD: Handle result
-
-                                warn!("Program ({}) terminated by external signal", id);
-
-                                return Ok(());
-                            }
-                        };
-
-                        ctx.step_count += 1;
-                        ctx.last_step = start_step_execute;
-                    }
-
-                    // Execute an optional last action before program termination.
-                    if let Some(motion) = program.term_action(&mut ctx) {
-                        motion_chain.request(motion).await; // TOOD: Handle result
-                    }
-
-                    // Stop all motion for safety.
-                    motion_chain.request(Motion::StopAll).await; // TOOD: Handle result
-
-                    info!("Program ({}) terminated with success", id);
+                    ctx.step_count += 1;
+                    ctx.last_step = start_step_execute;
                 }
+
+                // Execute an optional last action before program termination.
+                if let Some(motion) = program.term_action(&mut ctx) {
+                    motion_chain.request(motion).await; // TOOD: Handle result
+                }
+
+                info!("Program ({}) terminated with success", id);
             } else {
                 // Stop all motion for safety.
                 motion_chain.request(Motion::StopAll).await; // TOOD: Handle result
