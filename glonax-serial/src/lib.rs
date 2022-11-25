@@ -45,7 +45,7 @@ pub enum BaudRate {
     /// desired baud rate.
     ///
     /// ```no_run
-    /// glonax_serial::BaudOther(4_000_000); // 4,000,000 baud
+    /// BaudRate::BaudOther(4_000_000); // 4,000,000 baud
     /// ```
     ///
     /// Non-standard baud rates may not be supported on all systems.
