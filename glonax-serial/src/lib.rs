@@ -15,6 +15,7 @@ pub use future::Uart;
 /// that are widely-supported on many systems. While non-standard baud rates can be set with
 /// `BaudOther`, their behavior is system-dependent. Some systems may not support arbitrary baud
 /// rates. Using the standard baud rates is more likely to result in portable applications.
+#[derive(PartialEq, Eq, Debug)]
 pub enum BaudRate {
     /// 110 baud.
     Baud110,
