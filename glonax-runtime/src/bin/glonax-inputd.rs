@@ -11,24 +11,13 @@ use clap::{Parser, ValueHint};
 #[command(version, propagate_version = true)]
 #[command(about = "Input device dispatcher", long_about = None)]
 struct Args {
-    /// CAN network interface.
-    interface: String,
-
-    /// Input device.
+    /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
 
-    /// Disable machine motion (frozen mode).
-    #[arg(long)]
-    disable_motion: bool,
-
-    /// Run motion requests slow.
-    #[arg(long)]
-    slow_motion: bool,
-
-    /// Record telemetrics to disk.
-    #[arg(long)]
-    trace: bool,
+    /// ECU network connect address.
+    #[arg(short = 'c', long = "connect", default_value = "0.0.0.0:54910")]
+    address: String,
 
     /// Daemonize the service.
     #[arg(long)]
@@ -48,13 +37,10 @@ fn main() -> anyhow::Result<()> {
 
     let mut config = glonax::InputConfig {
         device: args.device,
+        address: args.address,
         global: glonax::GlobalConfig::default(),
     };
 
-    config.global.interface = args.interface;
-    config.global.enable_motion = !args.disable_motion;
-    config.global.enable_trace = args.trace;
-    config.global.slow_motion = args.slow_motion;
     config.global.daemon = args.daemon;
 
     if let Some(workers) = args.workers {

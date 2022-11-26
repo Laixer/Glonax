@@ -36,6 +36,9 @@ pub struct InputConfig {
     /// Input device.
     pub device: String,
 
+    /// ECU network connect address.
+    pub address: String,
+
     /// Global configuration.
     pub global: GlobalConfig,
 }

@@ -15,7 +15,7 @@ struct Args {
     interface: String,
 
     /// ECU network bind address.
-    #[arg(short, long, default_value = "0.0.0.0:54910")]
+    #[arg(short = 'b', long = "bind", default_value = "0.0.0.0:54910")]
     address: String,
 
     /// Disable machine motion (frozen mode).
