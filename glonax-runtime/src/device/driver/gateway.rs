@@ -26,11 +26,11 @@ pub struct Gateway {
 
 impl Gateway {
     /// Construct a new gateway device.
-    pub fn new(name: &str) -> Self {
-        Self {
-            net: Arc::new(ControlNet::new(name, DEVICE_NET_LOCAL_ADDR).unwrap()),
+    pub fn new(name: &str) -> std::io::Result<Self> {
+        Ok(Self {
+            net: Arc::new(ControlNet::new(name, DEVICE_NET_LOCAL_ADDR)?),
             client_devices: vec![],
-        }
+        })
     }
 
     /// Wait until the network comes online.

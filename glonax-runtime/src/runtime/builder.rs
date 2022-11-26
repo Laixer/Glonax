@@ -30,14 +30,12 @@ impl<K: Operand + Identity> Builder<K> {
 
         debug!("Bind to interface {}", config.global().interface);
 
-        let gateway_device = Gateway::new(&config.global().interface);
+        let gateway_device = Gateway::new(&config.global().interface)
+            .map_err(|_| super::Error::CoreDeviceNotFound)?;
 
-        if tokio::time::timeout(Duration::from_secs(1), gateway_device.wait_online())
+        tokio::time::timeout(Duration::from_secs(1), gateway_device.wait_online())
             .await
-            .is_err()
-        {
-            return Err(super::Error::NetworkTimeout);
-        }
+            .map_err(|_| super::Error::NetworkTimeout)?;
 
         info!("Control network is online");
 
