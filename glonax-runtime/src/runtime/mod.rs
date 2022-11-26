@@ -86,7 +86,7 @@ pub struct RuntimeContext<K> {
 }
 
 impl<K> RuntimeContext<K> {
-    pub fn subscribe_gateway_device<T>(&mut self, device: T)
+    pub fn subscribe_core_device<T>(&mut self, device: T)
     where
         T: crate::device::Device + crate::device::GatewayClient + 'static,
     {
@@ -95,7 +95,7 @@ impl<K> RuntimeContext<K> {
 }
 
 impl<K> RuntimeContext<K> {
-    pub fn new_gateway_device<T>(&mut self) -> T
+    pub fn new_core_device<T>(&mut self) -> T
     where
         T: crate::device::Device + crate::device::GatewayClient + 'static,
     {
