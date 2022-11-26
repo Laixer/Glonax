@@ -44,7 +44,7 @@ pub enum BaudRate {
     /// `BaudOther` can be used to set non-standard baud rates by setting its member to be the
     /// desired baud rate.
     ///
-    /// ```no_run
+    /// ```ignore
     /// BaudRate::BaudOther(4_000_000); // 4,000,000 baud
     /// ```
     ///
