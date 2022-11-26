@@ -79,16 +79,18 @@ impl RuntimeProgram {
         use crate::device::CoreDevice;
 
         let signal_device = Mecu::new(runtime.signal_manager.pusher());
-        runtime.core_device.subscribe(signal_device);
+        runtime.subscribe_gateway_device(signal_device);
 
-        let mut motion_device = runtime.core_device.new_gateway_device::<Hcu>();
+        let mut motion_device = runtime.new_gateway_device::<Hcu>();
 
         let mut motion_chain = MotionChain::new(&mut motion_device, &runtime.tracer)
             .enable(config.global.enable_motion);
 
         let mut program_tracer = runtime.tracer.instance("program");
 
-        tokio::task::spawn(async move { while runtime.core_device.next().await.is_ok() {} });
+        tokio::task::spawn(async move {
+            while runtime.core_device.as_mut().unwrap().next().await.is_ok() {}
+        });
 
         info!("Execute programs on queue");
 

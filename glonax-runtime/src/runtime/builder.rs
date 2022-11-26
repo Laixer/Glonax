@@ -23,15 +23,33 @@ impl<K: Operand + Identity> Builder<K> {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub(crate) async fn from_config(config: &impl Configurable) -> super::Result<Builder<K>> {
+    pub(crate) fn from_config(config: &impl Configurable) -> super::Result<Builder<K>> {
         use tokio::sync::broadcast;
 
         info!("{}", K::intro());
 
+        Ok(Self(RuntimeContext {
+            operand: K::from_config(config),
+            core_device: None,
+            shutdown: broadcast::channel(1),
+            signal_manager: crate::signal::SignalManager::new(),
+            tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
+        }))
+    }
+
+    pub(crate) fn enable_network(mut self, config: &impl Configurable) -> super::Result<Self> {
         debug!("Bind to interface {}", config.global().interface);
 
-        let gateway_device = Gateway::new(&config.global().interface)
-            .map_err(|_| super::Error::CoreDeviceNotFound)?;
+        self.0.core_device = Some(
+            Gateway::new(&config.global().interface)
+                .map_err(|_| super::Error::CoreDeviceNotFound)?,
+        );
+
+        Ok(self)
+    }
+
+    pub(crate) async fn wait_for_network(self) -> super::Result<Self> {
+        let gateway_device = self.0.core_device.as_ref().unwrap();
 
         tokio::time::timeout(Duration::from_secs(1), gateway_device.wait_online())
             .await
@@ -39,13 +57,7 @@ impl<K: Operand + Identity> Builder<K> {
 
         info!("Control network is online");
 
-        Ok(Self(RuntimeContext {
-            operand: K::from_config(config),
-            core_device: gateway_device,
-            shutdown: broadcast::channel(1),
-            signal_manager: crate::signal::SignalManager::new(),
-            tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
-        }))
+        Ok(self)
     }
 
     pub(crate) fn enable_term_shutdown(self) -> Self {

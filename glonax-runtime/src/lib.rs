@@ -97,7 +97,9 @@ where
                 .await
                 .exec_service(
                     config,
-                    self::runtime::Builder::<K>::from_config(config)
+                    self::runtime::Builder::<K>::from_config(config)?
+                        .enable_network(config)?
+                        .wait_for_network()
                         .await?
                         .enable_term_shutdown()
                         .build(),
@@ -111,7 +113,9 @@ where
         Self::runtime_reactor(config).block_on(async {
             runtime::ecu::exec_service(
                 config,
-                self::runtime::Builder::<K>::from_config(config)
+                self::runtime::Builder::<K>::from_config(config)?
+                    .enable_network(config)?
+                    .wait_for_network()
                     .await?
                     .build(),
             )
@@ -124,9 +128,7 @@ where
         Self::runtime_reactor(config).block_on(async {
             runtime::input::exec_service(
                 config,
-                self::runtime::Builder::<K>::from_config(config)
-                    .await?
-                    .build(),
+                self::runtime::Builder::<K>::from_config(config)?.build(),
             )
             .await
         })

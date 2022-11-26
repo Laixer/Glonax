@@ -73,7 +73,7 @@ pub struct RuntimeContext<K> {
     /// Runtime operand.
     pub(super) operand: K,
     /// Core device.
-    pub(super) core_device: crate::device::Gateway,
+    pub(super) core_device: Option<crate::device::Gateway>,
     /// Runtime event bus.
     pub(super) shutdown: (
         tokio::sync::broadcast::Sender<()>,
@@ -83,4 +83,22 @@ pub struct RuntimeContext<K> {
     pub(super) signal_manager: crate::signal::SignalManager,
     /// Tracer used to record telemetrics.
     pub(super) tracer: CsvTracer,
+}
+
+impl<K> RuntimeContext<K> {
+    pub fn subscribe_gateway_device<T>(&mut self, device: T)
+    where
+        T: crate::device::Device + crate::device::GatewayClient + 'static,
+    {
+        self.core_device.as_mut().unwrap().subscribe(device)
+    }
+}
+
+impl<K> RuntimeContext<K> {
+    pub fn new_gateway_device<T>(&mut self) -> T
+    where
+        T: crate::device::Device + crate::device::GatewayClient + 'static,
+    {
+        self.core_device.as_mut().unwrap().new_gateway_device::<T>()
+    }
 }
