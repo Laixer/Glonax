@@ -54,13 +54,17 @@ impl RuntimeProgram {
             //     .send((Program::Kinematic.into(), [2.71, 2.34, 0.0].into()))
             //     .await
             //     .ok();
+            // queue
+            //     .0
+            //     .send((Program::Turn.into(), [0.174533].into()))
+            //     .await
+            //     .ok();
+
             queue
                 .0
-                .send((Program::Turn.into(), [1.57].into()))
+                .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
                 .await
                 .ok();
-
-            // queue.0.send((Program::Kinematic.into(), vec![-1.31, 0.87, 0.0])).await.ok();
             // queue.0.send((Program::Kinematic.into(), vec![-0.56, 0.74, 0.0])).await.ok();
             // queue.0.send((Program::Kinematic.into(), vec![-0.19, 0.46, 0.0])).await.ok();
             // queue.0.send((Program::Kinematic.into(), vec![-0.82, 0.40, 0.0])).await.ok();

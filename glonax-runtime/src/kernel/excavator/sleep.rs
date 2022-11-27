@@ -26,16 +26,26 @@ impl SleepProgram {
 impl Program for SleepProgram {
     type MotionPlan = HydraulicMotion;
 
+    /// Boot the program.
+    ///
+    /// This method is called when the runtime accepted
+    /// this progam and started its routine.
     fn boot(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
         Some(HydraulicMotion::StopAll)
     }
 
+    /// Propagate the program forwards.
+    ///
+    /// This method returns an optional motion instruction.
     async fn step(&mut self, _: &mut Context) -> Option<Self::MotionPlan> {
         tokio::time::sleep(self.time).await;
 
         None
     }
 
+    /// Program termination condition.
+    ///
+    /// Check if program is finished.
     fn can_terminate(&self, context: &mut Context) -> bool {
         context.start.elapsed() >= self.time
     }
