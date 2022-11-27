@@ -3,26 +3,59 @@ use std::{
     time::{Duration, Instant},
 };
 
-use glonax_j1939::{Frame, FrameBuilder, IdBuilder};
+use glonax_j1939::*;
 
 use super::ControlNet;
 
 pub struct StatusService {
     net: Arc<ControlNet>,
+    node: u8,
     last_interval: Instant,
 }
 
 impl StatusService {
-    pub fn new(net: Arc<ControlNet>) -> Self {
+    pub fn new(net: Arc<ControlNet>, node: u8) -> Self {
         Self {
             net,
+            node,
             last_interval: Instant::now(),
         }
     }
 
+    async fn announce_status(&self) {
+        let state = 0xff;
+
+        const PKG_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
+        const PKG_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
+        const PKG_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
+
+        let major: u8 = PKG_VERSION_MAJOR.parse().unwrap();
+        let minor: u8 = PKG_VERSION_MINOR.parse().unwrap();
+        let patch: u8 = PKG_VERSION_PATCH.parse().unwrap();
+
+        let frame =
+            FrameBuilder::new(IdBuilder::from_pgn(PGN::ProprietaryB(65_282).into()).build())
+                .copy_from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
+                .build();
+
+        self.net.send(&frame).await.unwrap();
+    }
+
+    pub async fn set_led(&self, led_on: bool) {
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1.into())
+                .da(self.node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
+        .build();
+
+        self.net.send(&frame).await.unwrap();
+    }
+
     pub async fn interval(&mut self) {
         if self.last_interval.elapsed() >= Duration::from_secs(1) {
-            self.net.announce_status().await;
+            self.announce_status().await;
 
             trace!("Announce host on network");
 
@@ -63,9 +96,13 @@ impl ActuatorService {
     }
 
     async fn set_motion_lock(&self, node: u8, locked: bool) {
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
-            .copy_from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
-            .build();
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3.into())
+                .da(node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
+        .build();
 
         self.net.send(&frame).await.unwrap();
     }
@@ -84,7 +121,6 @@ impl ActuatorService {
         trace!("Enable motion");
     }
 
-    /// Control actuators.
     async fn set_actuator_control(&self, node: u8, actuators: std::collections::HashMap<u8, i16>) {
         const BANK_PGN_LIST: [u16; 2] = [40_960, 41_216];
         const BANK_SLOTS: u8 = 4;

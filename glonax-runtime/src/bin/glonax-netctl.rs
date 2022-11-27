@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red};
 use clap::Parser;
-use glonax::net::{ActuatorService, ControlNet};
+use glonax::net::{ActuatorService, ControlNet, StatusService};
 use glonax_j1939::{decode, PGN};
 use log::{debug, info};
 
@@ -42,6 +42,7 @@ async fn analyze_frames(
     loop {
         let frame = net.accept().await?;
 
+        // TODO: Move to J1939Stream
         let pgn = frame.id().pgn();
         if let Some(pgn_filter) = pgn_filter {
             if pgn_filter != pgn {
@@ -49,6 +50,7 @@ async fn analyze_frames(
             }
         }
 
+        // TODO: Move to J1939Stream
         if let Some(node_filter) = node_filter {
             if node_filter != frame.id().sa() {
                 continue;
@@ -122,7 +124,7 @@ async fn analyze_frames(
                     arbitrary_address
                 );
             }
-            // TODO: Reserved PGN
+            // TODO: This is a reserved PGN, reassign.
             PGN::Other(40_960) => {
                 if frame.pdu()[0..2] != [0xff, 0xff] {
                     let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
@@ -462,12 +464,13 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     let net = ControlNet::new(args.interface.as_str(), args.address)?;
-    // let mut ctrl_srv = ControlService::from_net(std::sync::Arc::new(net));
 
     match args.command {
         Command::Node { address, command } => match command {
             NodeCommand::Led { toggle } => {
                 let node = node_address(address)?;
+
+                let service = StatusService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Turn identification LED {}",
@@ -479,7 +482,7 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                net.set_led(node, string_to_bool(&toggle).unwrap()).await;
+                service.set_led(string_to_bool(&toggle).unwrap()).await;
             }
             NodeCommand::Assign { address_new } => {
                 let node = node_address(address)?;

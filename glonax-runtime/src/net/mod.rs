@@ -8,6 +8,8 @@ pub use service::StatusService;
 pub mod motion;
 mod service;
 
+// TODO: Implement connection management.
+// TODO: Implement broadcast message.
 pub struct ControlNet {
     stream: J1939Stream,
 }
@@ -19,41 +21,12 @@ impl ControlNet {
         Ok(Self { stream })
     }
 
+    #[inline]
     pub async fn accept(&self) -> io::Result<Frame> {
         self.stream.read().await
     }
 
-    pub async fn announce_status(&self) {
-        let state = 0xff;
-
-        const PKG_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
-        const PKG_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
-        const PKG_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
-
-        let major: u8 = PKG_VERSION_MAJOR.parse().unwrap();
-        let minor: u8 = PKG_VERSION_MINOR.parse().unwrap();
-        let patch: u8 = PKG_VERSION_PATCH.parse().unwrap();
-
-        let frame =
-            FrameBuilder::new(IdBuilder::from_pgn(PGN::ProprietaryB(65_282).into()).build())
-                .copy_from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
-                .build();
-
-        self.stream.write(&frame).await.unwrap();
-    }
-
-    pub async fn set_led(&self, node: u8, led_on: bool) {
-        let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1.into())
-                .da(node)
-                .build(),
-        )
-        .copy_from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
-        .build();
-
-        self.stream.write(&frame).await.unwrap();
-    }
-
+    // TODO: Change to Commanded Address
     pub async fn set_address(&self, node: u8, address: u8) {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2.into())
@@ -78,6 +51,7 @@ impl ControlNet {
         self.stream.write(&frame).await.unwrap();
     }
 
+    // TODO: Maybe remove.
     pub async fn enable_encoder(&self, node: u8, encoder: u8, encoder_on: bool) {
         let state = match (encoder, encoder_on) {
             (0, true) => 0b1101,
@@ -98,6 +72,7 @@ impl ControlNet {
         self.stream.write(&frame).await.unwrap();
     }
 
+    /// Request a PGN message.
     pub async fn request(&self, node: u8, pgn: u16) {
         let byte_array = u32::to_be_bytes(pgn as u32);
 
@@ -108,6 +83,7 @@ impl ControlNet {
         self.stream.write(&frame).await.unwrap();
     }
 
+    #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
         self.stream.write(&frame).await
     }

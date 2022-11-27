@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "glonax"
-version = "1.2.13"
+version = "1.2.17"
 dependencies = [
  "ansi_term",
  "anyhow",

@@ -24,7 +24,7 @@ impl Device for Vecu {
 impl super::gateway::GatewayClient for Vecu {
     fn from_net(net: Arc<ControlNet>) -> Self {
         Self {
-            status_serivce: StatusService::new(net),
+            status_serivce: StatusService::new(net, 0x0), // TODO: Find an address.
             node_list: HashMap::new(),
         }
     }
