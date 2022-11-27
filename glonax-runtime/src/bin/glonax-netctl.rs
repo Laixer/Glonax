@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red};
 use clap::Parser;
-use glonax::net::ControlNet;
+use glonax::net::{ActuatorService, ControlNet};
 use glonax_j1939::{decode, PGN};
 use log::{debug, info};
 
@@ -499,6 +499,8 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
 
+                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
+
                 info!(
                     "{} Turn motion {}",
                     style_node(node),
@@ -509,8 +511,11 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                net.set_motion_lock(node, string_to_bool(&toggle).unwrap())
-                    .await;
+                if string_to_bool(&toggle).unwrap() {
+                    service.lock().await;
+                } else {
+                    service.unlock().await;
+                }
             }
             NodeCommand::Encoder {
                 encoder,
@@ -534,7 +539,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
 
-                let mut service = glonax::net::ActuatorService::new(std::sync::Arc::new(net), node);
+                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Set actuator {} to {}",

@@ -1,35 +1,10 @@
 use glonax::net::ControlNet;
-use glonax_j1939::{Frame, FrameBuilder, IdBuilder};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let net = ControlNet::new("can0", 0x9b)?;
 
-    let stream = net.stream();
-
-    // {
-    //     let frame = FrameBuilder::new(IdBuilder::from_pgn(59_904).da(0x20).sa(0x9b).build())
-    //         .copy_from_slice(&[0x00, 0xee, 0x00])
-    //         .build();
-
-    //     stream.write(&frame).await.unwrap();
-    //     println!("{}", frame);
-    // }
-
-    pub fn request_for_message(pgn: u16, da: u8, sa: u8) -> Frame {
-        let byte_array = u32::to_be_bytes(pgn as u32);
-
-        FrameBuilder::new(IdBuilder::from_pgn(59_904).da(da).sa(sa).build())
-            .copy_from_slice(&[byte_array[3], byte_array[2], byte_array[1]])
-            .build()
-    }
-
-    {
-        let frame = request_for_message(0xee00, 0x20, 0x9b);
-
-        stream.write(&frame).await.unwrap();
-        println!("{}", frame);
-    }
+    net.request(0x20, 0xee00).await;
 
     // let frame = FrameBuilder::new(IdBuilder::from_pgn(61184).da(0x20).sa(0x9b).build())
     //     .copy_from_slice(&[0x00, 0xee, 0xff])
@@ -89,14 +64,13 @@ async fn main() -> anyhow::Result<()> {
     // cansend can0 18EC2010#110301FFFF00EF00
     // sleep 0.1
     // cansend can0 18EC2010#13150003FF00EF00
-    
+
     // TX
     // cansend can0 18EC2010#10150003FF00EF00
     // sleep 0.1
     // cansend can0 18EB2010#0104000040000000
     // cansend can0 18EB2010#0200001032000000
     // cansend can0 18EB2010#03000000000000FF
-    
 
     Ok(())
 }

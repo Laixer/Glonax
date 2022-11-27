@@ -1,6 +1,6 @@
-use std::{collections::HashMap, io};
+use std::io;
 
-use glonax_j1939::{Frame, FrameBuilder, IdBuilder, J1939Stream};
+use glonax_j1939::*;
 
 pub use service::ActuatorService;
 pub use service::StatusService;
@@ -19,10 +19,6 @@ impl ControlNet {
         Ok(Self { stream })
     }
 
-    pub fn stream(&self) -> &J1939Stream {
-        &self.stream
-    }
-
     pub async fn accept(&self) -> io::Result<Frame> {
         self.stream.read().await
     }
@@ -38,33 +34,46 @@ impl ControlNet {
         let minor: u8 = PKG_VERSION_MINOR.parse().unwrap();
         let patch: u8 = PKG_VERSION_PATCH.parse().unwrap();
 
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(65_282).build())
-            .copy_from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
-            .build();
+        let frame =
+            FrameBuilder::new(IdBuilder::from_pgn(PGN::ProprietaryB(65_282).into()).build())
+                .copy_from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
+                .build();
 
         self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn set_led(&self, node: u8, led_on: bool) {
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_312).da(node).build())
-            .copy_from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
-            .build();
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1.into())
+                .da(node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
+        .build();
 
         self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn set_address(&self, node: u8, address: u8) {
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_568).da(node).build())
-            .copy_from_slice(&[b'Z', b'C', address])
-            .build();
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2.into())
+                .da(node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', address])
+        .build();
 
         self.stream.write(&frame).await.unwrap();
     }
 
     pub async fn reset(&self, node: u8) {
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_312).da(node).build())
-            .copy_from_slice(&[b'Z', b'C', 0xff, 0x69])
-            .build();
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1.into())
+                .da(node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', 0xff, 0x69])
+        .build();
 
         self.stream.write(&frame).await.unwrap();
     }
@@ -78,56 +87,29 @@ impl ControlNet {
             _ => panic!(),
         };
 
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
-            .copy_from_slice(&[b'Z', b'C', state])
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3.into())
+                .da(node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', state])
+        .build();
+
+        self.stream.write(&frame).await.unwrap();
+    }
+
+    pub async fn request(&self, node: u8, pgn: u16) {
+        let byte_array = u32::to_be_bytes(pgn as u32);
+
+        let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::Request.into()).da(node).build())
+            .copy_from_slice(&[byte_array[3], byte_array[2], byte_array[1]])
             .build();
 
         self.stream.write(&frame).await.unwrap();
     }
 
-    pub async fn set_motion_lock(&self, node: u8, locked: bool) {
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(45_824).da(node).build())
-            .copy_from_slice(&[b'Z', b'C', 0xff, if locked { 0x0 } else { 0x1 }])
-            .build();
-
-        self.stream.write(&frame).await.unwrap();
-    }
-
-    pub async fn request(&self, node: u8, _pgn: u32) {
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(59_904).da(node).build())
-            .copy_from_slice(&[0xfe, 0x18, 0xda])
-            .build();
-
-        self.stream.write(&frame).await.unwrap();
-    }
-
-    /// Control actuators.
-    pub async fn actuator_control(&self, node: u8, actuators: HashMap<u8, i16>) {
-        const BANK_PGN_LIST: [u16; 2] = [40_960, 41_216];
-        const BANK_SLOTS: u8 = 4;
-
-        for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
-            let mut actuator_list_filled: Vec<Option<i16>> = vec![];
-
-            for slot in 0..BANK_SLOTS {
-                let offset = (idx as u8 * 4) + slot;
-
-                actuator_list_filled.push(actuators.get(&offset).map_or(None, |a| Some(*a)));
-            }
-
-            if actuator_list_filled.iter().any(|f| f.is_some()) {
-                let pdu = actuator_list_filled
-                    .iter()
-                    .flat_map(|p| p.map_or([0xff, 0xff], |v| v.to_le_bytes()))
-                    .collect::<Vec<u8>>()
-                    .as_slice()[..8]
-                    .try_into()
-                    .unwrap();
-
-                let frame = Frame::new(IdBuilder::from_pgn(bank).da(node).build(), pdu);
-                self.stream.write(&frame).await.unwrap();
-            }
-        }
+    pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
+        self.stream.write(&frame).await
     }
 }
 
