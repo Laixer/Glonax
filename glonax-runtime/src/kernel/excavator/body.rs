@@ -214,6 +214,10 @@ impl Body {
         self.chain.rig.angle_arm = Some(angle)
     }
 
+    pub fn rig(&self) -> Rig {
+        self.chain.rig
+    }
+
     pub fn boom_point(&self) -> Option<nalgebra::Point2<f32>> {
         self.chain.boom_point()
     }

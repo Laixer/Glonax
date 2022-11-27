@@ -31,6 +31,28 @@ impl Program for NoopProgram {
         }
 
         if let Ok(domain) = self.domain.try_read() {
+            if let Some(angle_slew) = domain.rig().angle_slew() {
+                debug!(
+                    "Slew angle: {:>+5.2}rad {:>+5.2}°",
+                    angle_slew,
+                    crate::core::rad_to_deg(angle_slew)
+                );
+            }
+            if let Some(angle_boom) = domain.rig().angle_boom() {
+                debug!(
+                    "Boom angle: {:>+5.2}rad {:>+5.2}°",
+                    angle_boom,
+                    crate::core::rad_to_deg(angle_boom)
+                );
+            }
+            if let Some(angle_arm) = domain.rig().angle_arm() {
+                debug!(
+                    "Arm angle: {:>+5.2}rad {:>+5.2}°",
+                    angle_arm,
+                    crate::core::rad_to_deg(angle_arm)
+                );
+            }
+
             if let Some(effector_point_agl) = domain.effector_point_abs() {
                 let boom_point = domain.boom_point().unwrap();
                 let effector_point = domain.effector_point().unwrap();
