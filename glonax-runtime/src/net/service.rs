@@ -1,76 +1,9 @@
 use std::{
-    io,
     sync::Arc,
     time::{Duration, Instant},
 };
 
-use glonax_j1939::Frame;
-
 use super::ControlNet;
-
-pub struct ControlService {
-    net: Arc<ControlNet>,
-    last_actuator_ival: Instant,
-    actuator_set: Option<(u8, std::collections::HashMap<u8, i16>)>,
-}
-
-impl ControlService {
-    // TODO: rename
-    pub fn from_net(net: Arc<ControlNet>) -> Self {
-        Self {
-            net,
-            last_actuator_ival: Instant::now(),
-            actuator_set: None,
-        }
-    }
-
-    pub async fn interval(&mut self) {
-        if self.last_actuator_ival.elapsed() >= Duration::from_millis(100) {
-            if let Some((node, actuators)) = &self.actuator_set {
-                trace!("Send actuator keepalive");
-
-                self.net
-                    .actuator_control(node.clone(), actuators.clone())
-                    .await;
-            }
-            self.last_actuator_ival = Instant::now();
-        }
-    }
-
-    pub async fn accept(&mut self) -> io::Result<Frame> {
-        loop {
-            if let Ok(frame) =
-                tokio::time::timeout(Duration::from_millis(100), self.net.accept()).await
-            {
-                break frame;
-            };
-
-            self.interval().await
-        }
-    }
-
-    #[inline]
-    pub async fn accept_raw(&self) -> io::Result<Frame> {
-        self.net.accept().await
-    }
-
-    /// Return a reference to the underlaying control net.
-    pub fn net(&self) -> &ControlNet {
-        &self.net
-    }
-
-    pub async fn actuator_control(
-        &mut self,
-        node: u8,
-        actuators: std::collections::HashMap<u8, i16>,
-    ) {
-        self.net
-            .actuator_control(node.clone(), actuators.clone())
-            .await;
-
-        self.actuator_set = Some((node, actuators))
-    }
-}
 
 pub struct StatusService {
     net: Arc<ControlNet>,

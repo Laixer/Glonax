@@ -3,7 +3,6 @@ use std::{collections::HashMap, io};
 use glonax_j1939::{Frame, FrameBuilder, IdBuilder, J1939Stream};
 
 pub use service::ActuatorService;
-pub use service::ControlService;
 pub use service::StatusService;
 
 pub mod motion;

@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red};
 use clap::Parser;
-use glonax::net::{ControlNet, ControlService};
+use glonax::net::ControlNet;
 use glonax_j1939::{decode, PGN};
 use log::{debug, info};
 
@@ -33,14 +33,14 @@ fn string_to_bool(str: &String) -> Result<bool, ()> {
 }
 
 async fn analyze_frames(
-    ctrl_srv: &mut ControlService,
+    net: ControlNet,
     pgn_filter: Option<u16>,
     node_filter: Option<u8>,
 ) -> anyhow::Result<()> {
     debug!("Print incoming frames on screen");
 
     loop {
-        let frame = ctrl_srv.accept().await?;
+        let frame = net.accept().await?;
 
         let pgn = frame.id().pgn();
         if let Some(pgn_filter) = pgn_filter {
@@ -364,11 +364,11 @@ async fn analyze_frames(
 }
 
 /// Print frames to screen.
-async fn print_frames(ctrl_srv: &ControlService) -> anyhow::Result<()> {
+async fn print_frames(net: ControlNet) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     loop {
-        let frame = ctrl_srv.accept_raw().await?;
+        let frame = net.accept().await?;
 
         info!("{}", frame);
     }
@@ -462,7 +462,7 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     let net = ControlNet::new(args.interface.as_str(), args.address)?;
-    let mut ctrl_srv = ControlService::from_net(std::sync::Arc::new(net));
+    // let mut ctrl_srv = ControlService::from_net(std::sync::Arc::new(net));
 
     match args.command {
         Command::Node { address, command } => match command {
@@ -479,10 +479,7 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                ctrl_srv
-                    .net()
-                    .set_led(node, string_to_bool(&toggle).unwrap())
-                    .await;
+                net.set_led(node, string_to_bool(&toggle).unwrap()).await;
             }
             NodeCommand::Assign { address_new } => {
                 let node = node_address(address)?;
@@ -490,14 +487,14 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
-                ctrl_srv.net().set_address(node, node_new).await;
+                net.set_address(node, node_new).await;
             }
             NodeCommand::Reset => {
                 let node = node_address(address)?;
 
                 info!("{} Reset", style_node(node));
 
-                ctrl_srv.net().reset(node).await;
+                net.reset(node).await;
             }
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
@@ -512,9 +509,7 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                ctrl_srv
-                    .net()
-                    .set_motion_lock(node, string_to_bool(&toggle).unwrap())
+                net.set_motion_lock(node, string_to_bool(&toggle).unwrap())
                     .await;
             }
             NodeCommand::Encoder {
@@ -534,13 +529,12 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                ctrl_srv
-                    .net()
-                    .enable_encoder(node, encoder, encoder_on == 1)
-                    .await;
+                net.enable_encoder(node, encoder, encoder_on == 1).await;
             }
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
+
+                let mut service = glonax::net::ActuatorService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Set actuator {} to {}",
@@ -553,17 +547,17 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                ctrl_srv
-                    .actuator_control(node, [(actuator.clone(), value.clone())].into())
+                service
+                    .actuator_control([(actuator.clone(), value.clone())].into())
                     .await;
             }
         },
         Command::Dump => {
-            print_frames(&ctrl_srv).await?;
+            print_frames(net).await?;
         }
         Command::Analyze { pgn, node } => {
             let node = node.map(|s| node_address(s).unwrap());
-            analyze_frames(&mut ctrl_srv, pgn, node).await?;
+            analyze_frames(net, pgn, node).await?;
         }
     }
 
