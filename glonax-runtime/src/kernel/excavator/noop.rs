@@ -26,10 +26,6 @@ impl Program for NoopProgram {
             domain.signal_update(&mut context.reader).await;
         }
 
-        if let Ok((source, signal)) = context.reader.recv().await {
-            debug!("Source {} ⇨ {}", source, signal.value);
-        }
-
         if let Ok(domain) = self.domain.try_read() {
             if let Some(angle_slew) = domain.rig().angle_slew() {
                 debug!(
@@ -53,14 +49,16 @@ impl Program for NoopProgram {
                 );
             }
 
-            if let Some(effector_point_agl) = domain.effector_point_abs() {
-                let boom_point = domain.boom_point().unwrap();
-                let effector_point = domain.effector_point().unwrap();
-
+            if let Some(boom_point) = domain.boom_point() {
                 debug!(
                     "Boom point: X {:>+5.2} Y {:>+5.2}",
                     boom_point.x, boom_point.y,
                 );
+            }
+
+            if let Some(effector_point_agl) = domain.effector_point_abs() {
+                let effector_point = domain.effector_point().unwrap();
+
                 debug!(
                     "Effector point: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
                     effector_point.x, effector_point.y, effector_point.z,

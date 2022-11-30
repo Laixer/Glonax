@@ -149,7 +149,7 @@ impl Routable for LaixerEncoderService {
             }
 
             true
-        } else if pgn == PGN::ProprietaryB(64_258) {
+        } else if pgn == PGN::Other(64_258) {
             self.position = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
 
             true
