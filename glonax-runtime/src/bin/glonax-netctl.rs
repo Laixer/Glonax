@@ -1,9 +1,7 @@
-use std::convert::TryInto;
-
-use ansi_term::Colour::{Blue, Cyan, Green, Purple, Red};
+use ansi_term::Colour::{Blue, Green, Purple, Red, Yellow};
 use clap::Parser;
-use glonax::net::{ActuatorService, ControlNet, StatusService};
-use glonax_j1939::{decode, PGN};
+use glonax::net::*;
+
 use log::{debug, info};
 
 fn style_node(address: u8) -> String {
@@ -32,347 +30,107 @@ fn string_to_bool(str: &String) -> Result<bool, ()> {
     }
 }
 
-async fn analyze_frames(
-    net: ControlNet,
-    pgn_filter: Option<u16>,
-    node_filter: Option<u8>,
-) -> anyhow::Result<()> {
-    debug!("Print incoming frames on screen");
+async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> anyhow::Result<()> {
+    debug!("Print incoming frames to screen");
+
+    let mut engine_service = EngineService::new(0x0);
+    let mut arm_encoder = ActuatorService::new(net.clone(), 0x6C);
+    let mut boom_encoder = ActuatorService::new(net.clone(), 0x6A);
+    let mut turn_encoder = KueblerEncoderService::new(net.clone(), 0x20);
+    let mut actuator = ActuatorService::new(net.clone(), 0x4A);
+
+    let mut app_inspector = J1939ApplicationInspector::new();
 
     loop {
-        let frame = net.accept().await?;
+        router.accept().await?;
 
-        // TODO: Move to J1939Stream
-        let pgn = frame.id().pgn();
-        if let Some(pgn_filter) = pgn_filter {
-            if pgn_filter != pgn {
-                continue;
-            }
+        if router.try_accept(&mut engine_service) {
+            info!(
+                "{} {} » {}",
+                style_node(router.frame_source().unwrap()),
+                Yellow.bold().paint("Engine"),
+                engine_service
+            );
         }
 
-        // TODO: Move to J1939Stream
-        if let Some(node_filter) = node_filter {
-            if node_filter != frame.id().sa() {
-                continue;
-            }
+        if router.try_accept(&mut arm_encoder) {
+            info!(
+                "{} {} » {}",
+                style_node(router.frame_source().unwrap()),
+                Yellow.bold().paint("Arm"),
+                arm_encoder
+            );
         }
 
-        match pgn.into() {
-            PGN::ElectronicEngineController1 => {
-                if let Some(engine_torque_mode) = decode::spn899(frame.pdu()[0]) {
-                    info!("Torque mode: {:?}", engine_torque_mode);
-                }
-                if let Some(driver_demand) = decode::spn512(frame.pdu()[1]) {
-                    info!("Drivers Demand: {}%", driver_demand);
-                }
-                if let Some(actual_engine) = decode::spn513(frame.pdu()[2]) {
-                    info!("Actual Engine: {}%", actual_engine);
-                }
-                if let Some(rpm) = decode::spn190(&frame.pdu()[3..5].try_into().unwrap()) {
-                    info!("RPM: {}", rpm)
-                }
-                if let Some(source_addr) = decode::spn1483(frame.pdu()[5]) {
-                    info!("Source Address: {:?}", source_addr);
-                }
-                if let Some(starter_mode) = decode::spn1675(frame.pdu()[6]) {
-                    info!("Starter mode: {:?}", starter_mode);
-                }
-            }
-            PGN::SoftwareIdentification => {
-                let mut major = 0;
-                let mut minor = 0;
-                let mut patch = 0;
+        if router.try_accept(&mut boom_encoder) {
+            info!(
+                "{} {} » {}",
+                style_node(router.frame_source().unwrap()),
+                Yellow.bold().paint("Boom"),
+                boom_encoder
+            );
+        }
 
-                if frame.pdu()[3] != 0xff {
-                    major = frame.pdu()[3];
-                }
-                if frame.pdu()[4] != 0xff {
-                    minor = frame.pdu()[4];
-                }
-                if frame.pdu()[5] != 0xff {
-                    patch = frame.pdu()[5];
-                }
+        if router.try_accept(&mut turn_encoder) {
+            info!(
+                "{} {} » {}",
+                style_node(router.frame_source().unwrap()),
+                Yellow.bold().paint("Turn"),
+                turn_encoder
+            );
+        }
 
+        if router.try_accept(&mut actuator) {
+            info!(
+                "{} {} » {}",
+                style_node(router.frame_source().unwrap()),
+                Yellow.bold().paint("Hydraulic"),
+                actuator
+            );
+        }
+
+        if router.try_accept(&mut app_inspector) {
+            if let Some((major, minor, patch)) = app_inspector.software_identification() {
                 info!(
-                    "{} {} Software identification: {}.{}.{}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
+                    "{} {} » Software identification: {}.{}.{}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("Inspector"),
                     major,
                     minor,
                     patch
                 );
             }
-            PGN::Request => {
-                let pgn = u32::from_be_bytes([0x0, frame.pdu()[2], frame.pdu()[1], frame.pdu()[0]]);
-
+            if let Some(pgn) = app_inspector.request() {
                 info!(
-                    "{} {} Request for PNG: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
+                    "{} {} » Request for PGN: {}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("Inspector"),
                     pgn
                 );
             }
-            PGN::AddressClaimed => {
-                let function = frame.pdu()[5];
-                let arbitrary_address = frame.pdu()[7] >> 7;
-
+            if let Some((function, arbitrary_address)) = app_inspector.address_claimed() {
                 info!(
-                    "{} {} Address claimed; Function {}; Arbitrary address: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
+                    "{} {} » Adress claimed; Function {}; Arbitrary address: {}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("Inspector"),
                     function,
                     arbitrary_address
                 );
             }
-            // TODO: This is a reserved PGN, reassign.
-            PGN::Other(40_960) => {
-                if frame.pdu()[0..2] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 0: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-                if frame.pdu()[2..4] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 1: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-                if frame.pdu()[4..6] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 2: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-                if frame.pdu()[6..8] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 3: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-            }
-            // TODO: Reserved PGN
-            PGN::Other(41_216) => {
-                if frame.pdu()[0..2] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 4: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-                if frame.pdu()[2..4] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 5: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-                if frame.pdu()[4..6] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 6: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-                if frame.pdu()[6..8] != [0xff, 0xff] {
-                    let gate_value = i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
-
-                    info!(
-                        "{} {} Set gate 7: {}",
-                        style_node(frame.id().sa()),
-                        Cyan.paint(pgn.to_string()),
-                        gate_value
-                    );
-                }
-            }
-            // TODO: Reserved PGN
-            PGN::Other(64_252) => {
-                let turn_count = frame.pdu()[0];
-
-                info!(
-                    "{} {} Turn: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
-                    turn_count,
-                );
-            }
-            // TODO: Reserved PGN
-            PGN::Other(64_258) => {
-                let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
-
-                info!(
-                    "{} {} Encoder: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
-                    data
-                );
-            }
-            PGN::ProprietaryA => {
-                info!("Encoder config");
-            }
-            PGN::ProprietaryB(65_282) => {
-                let state = match frame.pdu()[1] {
-                    0x14 => Green.paint("nominal").to_string(),
-                    0x16 => Blue.paint("ident").to_string(),
-                    0xfa => Red.paint("faulty").to_string(),
-                    _ => "-".to_string(),
-                };
-
-                let firmware_version =
-                    glonax::net::spn_firmware_version(frame.pdu()[2..5].try_into().unwrap());
-
-                let last_error = glonax::net::spn_last_error(frame.pdu()[6..8].try_into().unwrap());
-
-                info!(
-                    "{} {} State: {}; Version: {}; Last error: {}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
-                    state,
-                    firmware_version.map_or_else(
-                        || "-".to_owned(),
-                        |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
-                    ),
-                    last_error.map_or_else(|| "-".to_owned(), |f| { f.to_string() })
-                );
-            }
-            // M3668 encoder.
-            PGN::ProprietaryB(65_450) => {
-                let encoder_position = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
-                let encoder_speed = u16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-                let encoder_diag_status = u16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap());
-
-                let state = match encoder_diag_status {
-                    0xee00 => Some("general error in sensor"),
-                    0x16 => Some("ident"),
-                    0xfa => Some("faulty"),
-                    _ => None,
-                };
-
-                info!(
-                    "{} {} Position: {}; Speed {}; State: {:?}",
-                    style_node(frame.id().sa()),
-                    Cyan.paint(pgn.to_string()),
-                    encoder_position,
-                    encoder_speed,
-                    state.unwrap_or("-"),
-                );
-            }
-            // 65_505 => {
-            // if frame.pdu()[..6] != [0xff; 6] {
-            //     let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
-            //     let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-            //     let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-
-            //     let vec_x = data_x as f32;
-            //     let vec_y = data_y as f32;
-            //     let vec_z = data_z as f32;
-
-            //     let signal_angle = vec_x.atan2(-vec_y);
-            //     debug!("XY Angle: {:>+5.2}", signal_angle);
-
-            //     let fk_x = (6.0 * 0.349066_f32.cos()) + (2.97 * signal_angle.cos());
-            //     let fk_y = (6.0 * 0.349066_f32.sin()) + (2.97 * signal_angle.sin());
-            // + super::FRAME_HEIGHT;
-
-            // let fk_x = 2.97 * signal_angle.cos();
-            // let fk_y = 2.97 * signal_angle.sin();
-
-            // info!(
-            //     "{} X: {:>+5} Y: {:>+5} Z: {:>+5}    Angle: {:>+5.2}    {:>+5.2} {:>+5.2}",
-            //     style_node(frame.id().sa()),
-            //     data_x,
-            //     data_y,
-            //     data_z,
-            //     signal_angle,
-            //     fk_x,
-            //     fk_y,
-            // );
-            //     }
-            // }
-            // 65_515 => {
-            // if frame.pdu()[..6] != [0xff; 6] {
-            // let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
-            // let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-            // let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-
-            // let vec_x = data_x as f32;
-            // let vec_y = data_y as f32;
-            // let vec_z = data_z as f32;
-
-            // let signal_angle = vec_x.atan2(vec_y);
-
-            // debug!("XY Angle: {:>+5.2}", signal_angle);
-            // let heading = signal_angle * 180.0 / std::f32::consts::PI;
-
-            // let heading = if heading < 0.0 {
-            //     heading + 360.0
-            // } else {
-            //     heading - 360.0
-            // };
-            // // if (heading > 360) heading -= 360;
-            // let heading = -heading;
-
-            // info!(
-            //     "{} X: {:>+5} Y: {:>+5} Z: {:>+5}    Angle: {:>+5.2}  Heading: {:>+5.2}",
-            //     style_node(frame.id().sa()),
-            //     data_x,
-            //     data_y,
-            //     data_z,
-            //     signal_angle,
-            //     heading
-            // );
-            //     }
-            // }
-            // 65_535 => {
-            //     if frame.pdu()[..2] != [0xff, 0xff] {
-            //         let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
-
-            //         info!("{} Encoder 0: {}", style_node(frame.id().sa()), data,);
-            //     }
-            //     if frame.pdu()[2..4] != [0xff, 0xff] {
-            //         let data = u16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-
-            //         info!("{} Encoder 1: {}", style_node(frame.id().sa()), data,);
-            //     }
-            // }
-            _ => {}
         }
     }
 }
 
 /// Print frames to screen.
-async fn print_frames(net: ControlNet) -> anyhow::Result<()> {
+async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     loop {
-        let frame = net.accept().await?;
+        router.accept().await?;
 
-        info!("{}", frame);
+        if let Some(frame) = router.take() {
+            info!("{}", frame);
+        };
     }
 }
 
@@ -409,7 +167,15 @@ enum Command {
         command: NodeCommand,
     },
     /// Show raw frames on screen.
-    Dump,
+    Dump {
+        /// Filter on PGN.
+        #[arg(long)]
+        pgn: Option<u16>,
+
+        /// Filter on node.
+        #[arg(long)]
+        node: Option<String>,
+    },
     /// Analyze network frames.
     Analyze {
         /// Filter on PGN.
@@ -560,12 +326,31 @@ async fn main() -> anyhow::Result<()> {
                     .await;
             }
         },
-        Command::Dump => {
-            print_frames(net).await?;
+        Command::Dump { pgn, node } => {
+            let mut router = Router::new(std::sync::Arc::new(net));
+
+            if let Some(pgn) = pgn {
+                router.add_pgn_filter(pgn);
+            }
+            if let Some(node) = node.map(|s| node_address(s).unwrap()) {
+                router.add_node_filter(node);
+            }
+
+            print_frames(router).await?;
         }
         Command::Analyze { pgn, node } => {
-            let node = node.map(|s| node_address(s).unwrap());
-            analyze_frames(net, pgn, node).await?;
+            let net = std::sync::Arc::new(net);
+
+            let mut router = Router::new(net.clone());
+
+            if let Some(pgn) = pgn {
+                router.add_pgn_filter(pgn);
+            }
+            if let Some(node) = node.map(|s| node_address(s).unwrap()) {
+                router.add_node_filter(node);
+            }
+
+            analyze_frames(net, router).await?;
         }
     }
 

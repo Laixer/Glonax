@@ -29,10 +29,7 @@ impl super::gateway::GatewayClient for Hcu {
         }
     }
 
-    async fn incoming(&mut self, _frame: &Frame) {
-        // TODO: Need an external trigger.
-        // self.service.interval().await;
-    }
+    async fn incoming(&mut self, _frame: &Frame) {}
 }
 
 #[async_trait::async_trait]

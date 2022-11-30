@@ -2,9 +2,14 @@ use std::io;
 
 use glonax_j1939::*;
 
-pub use service::ActuatorService;
-pub use service::StatusService;
+pub use actuator::*;
+pub use encoder::*;
+pub use engine::*;
+pub use service::*;
 
+mod actuator;
+mod encoder;
+mod engine;
 pub mod motion;
 mod service;
 
@@ -83,41 +88,146 @@ impl ControlNet {
         self.stream.write(&frame).await.unwrap();
     }
 
+    /// Broadcast Announce Message.
+    pub async fn broadcast(&self, pgn: u16, data: &[u8]) {
+        // Byte D1 Total message size, number of
+        // bytes (low byte)
+        // Byte D2 Total message size, number of
+        // bytes (high byte)
+
+        let tt = (data.len() as u16).to_le_bytes();
+
+        // Byte D3 Total number of packets
+        let packets = (data.len() as f32 / 8.0).ceil() as u8;
+
+        // Byte D5 PGN of the packeted message
+        // (low byte)
+        // Byte D6 PGN of the packeted message
+        // (mid byte)
+        // Byte D7 PGN of the packeted message
+        // (high byte)
+
+        let byte_array = u32::to_be_bytes(pgn as u32);
+
+        let connection_frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement.into())
+                .priority(7)
+                .da(0xff)
+                .build(),
+        )
+        .copy_from_slice(&[
+            0x20,
+            tt[0],
+            tt[1],
+            packets,
+            0xff,
+            byte_array[3],
+            byte_array[2],
+            byte_array[1],
+        ])
+        .build();
+
+        println!("Conn: {}", connection_frame);
+
+        let data_frame0 = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer.into())
+                .priority(7)
+                .da(0xff)
+                .build(),
+        )
+        .copy_from_slice(&[0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
+        .build();
+
+        println!("Data0: {}", data_frame0);
+
+        let data_frame1 = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer.into())
+                .priority(7)
+                .da(0xff)
+                .build(),
+        )
+        .copy_from_slice(&[0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
+        .build();
+
+        println!("Data1: {}", data_frame1);
+    }
+
     #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
         self.stream.write(&frame).await
     }
 }
 
-pub enum State {
-    Nominal,
-    Ident,
-    Faulty,
+pub trait Routable: Send + Sync {
+    fn node(&self) -> u8;
+
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool;
 }
 
-pub fn spn_state(value: u8) -> Option<State> {
-    match value {
-        0x14 => Some(State::Nominal),
-        0x16 => Some(State::Ident),
-        0xfa => Some(State::Faulty),
-        _ => None,
+pub struct Router {
+    net: std::sync::Arc<ControlNet>,
+    frame: Option<Frame>,
+    filter_pgn: Vec<u16>,
+    filter_node: Vec<u8>,
+}
+
+impl Router {
+    pub fn new(net: std::sync::Arc<ControlNet>) -> Self {
+        Self {
+            net,
+            frame: None,
+            filter_pgn: vec![],
+            filter_node: vec![],
+        }
     }
-}
 
-// TODO: Maybe move?
-pub fn spn_firmware_version(value: &[u8; 3]) -> Option<(u8, u8, u8)> {
-    if value != &[0xff; 3] {
-        Some((value[0], value[1], value[2]))
-    } else {
-        None
+    pub fn add_pgn_filter(&mut self, pgn: u16) {
+        self.filter_pgn.push(pgn);
     }
-}
 
-// TODO: Maybe move?
-pub fn spn_last_error(value: &[u8; 2]) -> Option<u16> {
-    if value != &[0xff; 2] {
-        Some(u16::from_le_bytes(value[..2].try_into().unwrap()))
-    } else {
-        None
+    pub fn add_node_filter(&mut self, node: u8) {
+        self.filter_node.push(node);
+    }
+
+    pub fn frame_source(&self) -> Option<u8> {
+        self.frame.map(|f| f.id().sa())
+    }
+
+    pub fn take(&mut self) -> Option<Frame> {
+        self.frame.take()
+    }
+
+    pub async fn accept(&mut self) -> io::Result<()> {
+        loop {
+            let frame = self.net.accept().await?;
+
+            if !self.filter_pgn.is_empty() {
+                let pgn = frame.id().pgn();
+                if !self.filter_pgn.contains(&pgn) {
+                    continue;
+                }
+            }
+
+            if !self.filter_node.is_empty() {
+                let node = frame.id().sa();
+                if !self.filter_node.contains(&node) {
+                    continue;
+                }
+            }
+
+            self.frame = Some(frame);
+            break;
+        }
+
+        Ok(())
+    }
+
+    pub fn try_accept(&self, service: &mut impl Routable) -> bool {
+        if let Some(frame) = self.frame {
+            (service.node() == frame.id().sa() || service.node() == 0xff)
+                && service.ingress(frame.id().pgn().into(), &frame)
+        } else {
+            false
+        }
     }
 }
