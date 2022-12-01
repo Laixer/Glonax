@@ -35,7 +35,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
 
     let mut engine_service = EngineService::new(0x0);
     let mut arm_encoder = LaixerEncoderService::new(net.clone(), 0x6C);
-    let mut boom_encoder = LaixerEncoderService::new(net.clone(), 0x6A);
+    let mut boom_encoder = KueblerEncoderService::new(net.clone(), 0x6A);
     let mut turn_encoder = KueblerEncoderService::new(net.clone(), 0x20);
     let mut actuator = ActuatorService::new(net.clone(), 0x4A);
 
