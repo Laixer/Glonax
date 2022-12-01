@@ -4,14 +4,14 @@ use glonax::net::ControlNet;
 async fn main() -> anyhow::Result<()> {
     let net = ControlNet::new("can0", 0x9b)?;
 
-    net.request(0x20, 0xee00).await;
+    net.request(0x20, PGN::AddressClaimed).await;
 
     // let frame = FrameBuilder::new(IdBuilder::from_pgn(61184).da(0x20).sa(0x9b).build())
     //     .copy_from_slice(&[0x00, 0xee, 0xff])
     //     .build();
 
     let op = u16::to_le_bytes(0x04);
-    println!("op {:X?}", op);
+    println!("op {:02X?}", op);
 
     let mur = u32::to_le_bytes(0x4001);
     println!("mur {:X?}", mur);
