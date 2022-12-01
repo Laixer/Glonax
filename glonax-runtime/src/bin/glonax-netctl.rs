@@ -207,8 +207,6 @@ enum NodeCommand {
     Reset,
     /// Enable or disable motion lock.
     Motion { toggle: String },
-    /// Enable or disable encoders.
-    Encoder { encoder: u8, encoder_on: u8 },
     /// Actuator motion.
     Actuator { actuator: u8, value: i16 },
 }
@@ -294,25 +292,6 @@ async fn main() -> anyhow::Result<()> {
                 } else {
                     service.unlock().await;
                 }
-            }
-            NodeCommand::Encoder {
-                encoder,
-                encoder_on,
-            } => {
-                let node = node_address(address)?;
-
-                info!(
-                    "{} Turn encoder {} {}",
-                    style_node(node),
-                    encoder,
-                    if encoder_on == 0 {
-                        Red.paint("off")
-                    } else {
-                        Green.paint("on")
-                    },
-                );
-
-                net.enable_encoder(node, encoder, encoder_on == 1).await;
             }
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;

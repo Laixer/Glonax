@@ -56,27 +56,6 @@ impl ControlNet {
         self.stream.write(&frame).await.unwrap();
     }
 
-    // TODO: Maybe remove.
-    pub async fn enable_encoder(&self, node: u8, encoder: u8, encoder_on: bool) {
-        let state = match (encoder, encoder_on) {
-            (0, true) => 0b1101,
-            (0, false) => 0b1100,
-            (1, true) => 0b0111,
-            (1, false) => 0b0011,
-            _ => panic!(),
-        };
-
-        let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3.into())
-                .da(node)
-                .build(),
-        )
-        .copy_from_slice(&[b'Z', b'C', state])
-        .build();
-
-        self.stream.write(&frame).await.unwrap();
-    }
-
     /// Request a PGN message.
     pub async fn request(&self, node: u8, pgn: PGN) {
         self.stream
