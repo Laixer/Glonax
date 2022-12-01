@@ -68,7 +68,7 @@ impl EngineService {
 fn engine_service_engine_on() {
     let mut engine_service = EngineService::new(0x0);
 
-    let frame = FrameBuilder::new(IdBuilder::from_pgn(61_444).build())
+    let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
         .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
         .build();
     assert_eq!(
@@ -93,7 +93,7 @@ fn engine_service_engine_on() {
 fn engine_service_engine_off() {
     let mut engine_service = EngineService::new(0x0);
 
-    let frame = FrameBuilder::new(IdBuilder::from_pgn(61_444).build())
+    let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
         .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
         .build();
 

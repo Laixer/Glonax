@@ -1,4 +1,7 @@
-use std::{sync::Arc, time::{Duration, Instant}};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use glonax_j1939::*;
 
@@ -135,7 +138,7 @@ impl ActuatorService {
     }
 
     async fn set_actuator_control(&self, node: u8, actuators: std::collections::HashMap<u8, i16>) {
-        const BANK_PGN_LIST: [u16; 2] = [40_960, 41_216];
+        const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
         const BANK_SLOTS: u8 = 4;
 
         for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {

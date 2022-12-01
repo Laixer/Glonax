@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glonax_j1939::Frame;
+use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::metric::{MetricValue, Signal},
@@ -39,7 +39,7 @@ impl super::gateway::GatewayClient for Mecu {
     }
 
     async fn incoming(&mut self, frame: &Frame) {
-        if frame.id().pgn() == 65_535 {
+        if frame.id().pgn() == PGN::ProprietaryB(65_535) {
             if frame.pdu()[..2] != [0xff, 0xff] {
                 let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
 
@@ -60,7 +60,7 @@ impl super::gateway::GatewayClient for Mecu {
                     )
                     .await;
             }
-        } else if frame.id().pgn() == 65_505 {
+        } else if frame.id().pgn() == PGN::ProprietaryB(65_505) {
             if frame.pdu()[..6] != [0xff; 6] {
                 let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
                 let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
@@ -77,7 +77,7 @@ impl super::gateway::GatewayClient for Mecu {
                     )
                     .await;
             }
-        } else if frame.id().pgn() == 64_258 {
+        } else if frame.id().pgn() == PGN::Other(64_258) {
             // TODO: Value may not be a u32
             let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
 
@@ -89,7 +89,7 @@ impl super::gateway::GatewayClient for Mecu {
                     ))),
                 )
                 .await;
-        } else if frame.id().pgn() == 64_252 {
+        } else if frame.id().pgn() == PGN::Other(64_252) {
             let data = frame.pdu()[0];
 
             self.pusher
@@ -100,7 +100,7 @@ impl super::gateway::GatewayClient for Mecu {
                     ))),
                 )
                 .await;
-        } else if frame.id().pgn() == 65_450 {
+        } else if frame.id().pgn() == PGN::ProprietaryB(65_450) {
             let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
 
             let data = (data / 100) as u16;

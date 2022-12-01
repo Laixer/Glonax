@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use glonax_j1939::Frame;
+use glonax_j1939::{Frame, PGN};
 
 use crate::{
     device::Device,
@@ -33,7 +33,7 @@ impl super::gateway::GatewayClient for Vecu {
         // TODO: Need an external trigger.
         self.status_serivce.interval().await;
 
-        if frame.id().pgn() == 65_282 {
+        if frame.id().pgn() == PGN::ProprietaryB(65_282) {
             // let state = match crate::net::spn_state(frame.pdu()[1]) {
             //     Some(crate::net::State::Nominal) => Some("nominal"),
             //     Some(crate::net::State::Ident) => Some("ident"),

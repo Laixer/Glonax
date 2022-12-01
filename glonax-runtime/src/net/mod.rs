@@ -78,12 +78,8 @@ impl ControlNet {
     }
 
     /// Request a PGN message.
-    pub async fn request(&self, node: u8, pgn: u16) {
-        let byte_array = u32::to_be_bytes(pgn as u32);
-
-        let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::Request.into()).da(node).build())
-            .copy_from_slice(&[byte_array[3], byte_array[2], byte_array[1]])
-            .build();
+    pub async fn request(&self, node: u8, pgn: PGN) {
+        let frame = protocol::request(node, pgn);
 
         self.stream.write(&frame).await.unwrap();
     }
@@ -202,7 +198,7 @@ impl Router {
             let frame = self.net.accept().await?;
 
             if !self.filter_pgn.is_empty() {
-                let pgn = frame.id().pgn();
+                let pgn = frame.id().pgn_raw();
                 if !self.filter_pgn.contains(&pgn) {
                     continue;
                 }
