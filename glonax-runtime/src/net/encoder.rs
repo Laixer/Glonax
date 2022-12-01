@@ -108,6 +108,7 @@ impl KueblerEncoderService {
 
 ////////////
 
+#[deprecated]
 pub enum LaixerEncoderState {
     Nominal,
     Ident,
@@ -124,6 +125,7 @@ impl std::fmt::Display for LaixerEncoderState {
     }
 }
 
+#[deprecated]
 pub struct LaixerEncoderService {
     _net: Arc<ControlNet>,
     node: u8,

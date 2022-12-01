@@ -79,9 +79,10 @@ impl ControlNet {
 
     /// Request a PGN message.
     pub async fn request(&self, node: u8, pgn: PGN) {
-        let frame = protocol::request(node, pgn);
-
-        self.stream.write(&frame).await.unwrap();
+        self.stream
+            .write(&protocol::request(node, pgn))
+            .await
+            .unwrap();
     }
 
     /// Broadcast Announce Message.
