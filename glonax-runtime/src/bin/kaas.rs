@@ -1,10 +1,13 @@
 use glonax::net::ControlNet;
+use glonax_j1939::PGN;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let net = ControlNet::new("can0", 0x9b)?;
 
     net.request(0x20, PGN::AddressClaimed).await;
+
+    // net.broadcast(65_240, &[0xff; 9]).await;
 
     // let frame = FrameBuilder::new(IdBuilder::from_pgn(61184).da(0x20).sa(0x9b).build())
     //     .copy_from_slice(&[0x00, 0xee, 0xff])
