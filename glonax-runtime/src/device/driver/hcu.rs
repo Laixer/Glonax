@@ -44,7 +44,7 @@ impl MotionDevice for Hcu {
             }
             Motion::Stop(actuators) => {
                 self.service
-                    .actuator_stop(actuators.into_iter().map(|k| k as u8).collect())
+                    .actuator_control(actuators.into_iter().map(|k| (k as u8, 0)).collect())
                     .await;
             }
             Motion::Change(actuators) => {

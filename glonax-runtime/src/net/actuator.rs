@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
 
 use glonax_j1939::*;
 
@@ -26,7 +23,6 @@ impl std::fmt::Display for ActuatorState {
 pub struct ActuatorService {
     net: Arc<ControlNet>,
     node: u8,
-    last_interval: Instant,
     actuator_set: Option<std::collections::HashMap<u8, i16>>,
     firmware_version: Option<(u8, u8, u8)>,
     state: Option<ActuatorState>,
@@ -89,7 +85,6 @@ impl ActuatorService {
         Self {
             net,
             node,
-            last_interval: Instant::now(),
             actuator_set: None,
             firmware_version: None,
             state: None,
@@ -97,23 +92,9 @@ impl ActuatorService {
         }
     }
 
-    pub async fn interval(&mut self) {
-        if self.last_interval.elapsed() >= Duration::from_millis(50) {
-            if let Some(actuators) = &self.actuator_set {
-                for (actuator, value) in actuators {
-                    trace!("Keepalive: Change actuator {} to value {}", actuator, value);
-                }
-
-                self.set_actuator_control(self.node, actuators.clone())
-                    .await;
-            }
-            self.last_interval = Instant::now();
-        }
-    }
-
     async fn set_motion_lock(&self, node: u8, locked: bool) {
         let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3.into())
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
                 .da(node)
                 .build(),
         )
@@ -137,7 +118,7 @@ impl ActuatorService {
         trace!("Enable motion");
     }
 
-    async fn set_actuator_control(&self, node: u8, actuators: std::collections::HashMap<u8, i16>) {
+    pub async fn actuator_control(&mut self, actuators: std::collections::HashMap<u8, i16>) {
         const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
         const BANK_SLOTS: u8 = 4;
 
@@ -159,34 +140,13 @@ impl ActuatorService {
                     .try_into()
                     .unwrap();
 
-                let frame = Frame::new(IdBuilder::from_pgn(bank).da(node).build(), pdu);
+                let frame = Frame::new(IdBuilder::from_pgn(bank).da(self.node).build(), pdu);
                 self.net.send(&frame).await.unwrap();
             }
         }
-    }
 
-    pub async fn actuator_stop(&mut self, actuators: Vec<u8>) {
-        // TODO: Log after await
-        for actuator in &actuators {
-            trace!("Stop actuator {}", actuator);
-        }
-
-        self.set_actuator_control(
-            self.node,
-            actuators.into_iter().map(|k| (k as u8, 0)).collect(),
-        )
-        .await;
-    }
-
-    pub async fn actuator_control(&mut self, actuators: std::collections::HashMap<u8, i16>) {
-        // TODO: Log after await
         for (actuator, value) in &actuators {
             trace!("Change actuator {} to value {}", actuator, value);
         }
-
-        self.set_actuator_control(self.node, actuators.clone())
-            .await;
-
-        // self.actuator_set = Some(actuators)
     }
 }
