@@ -34,8 +34,8 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
     debug!("Print incoming frames to screen");
 
     let mut engine_service = EngineService::new(0x0);
-    let mut arm_encoder = ActuatorService::new(net.clone(), 0x6C);
-    let mut boom_encoder = ActuatorService::new(net.clone(), 0x6A);
+    let mut arm_encoder = LaixerEncoderService::new(net.clone(), 0x6C);
+    let mut boom_encoder = LaixerEncoderService::new(net.clone(), 0x6A);
     let mut turn_encoder = KueblerEncoderService::new(net.clone(), 0x20);
     let mut actuator = ActuatorService::new(net.clone(), 0x4A);
 
@@ -110,11 +110,20 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             }
             if let Some((function, arbitrary_address)) = app_inspector.address_claimed() {
                 info!(
-                    "{} {} » Adress claimed; Function {}; Arbitrary address: {}",
+                    "{} {} » Adress claimed; Function: {}; Arbitrary address: {}",
                     style_node(router.frame_source().unwrap()),
                     Yellow.bold().paint("Inspector"),
                     function,
                     arbitrary_address
+                );
+            }
+
+            if let Some(acknowledged) = app_inspector.acknowledged() {
+                info!(
+                    "{} {} » Acknowledged: {}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("Inspector"),
+                    acknowledged
                 );
             }
         }

@@ -282,7 +282,7 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 [[package]]
 name = "j1939"
 version = "0.1.11"
-source = "git+https://github.com/Laixer/J1939#a613cecb8d7366d28205d8249760ae3d83928cc5"
+source = "git+https://github.com/Laixer/J1939#a803903de84364fd54f721c5fde0e7b6449c6c51"
 
 [[package]]
 name = "lazy_static"
@@ -733,9 +733,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-macros"
-version = "1.8.0"
+version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9724f9a975fb987ef7a3cd9be0350edcbe130698af5b8f7a631e23d42d052484"
+checksum = "d266c00fde287f55d3f1c3e96c500c362a2b8c695076ec180f27918820bc6df8"
 dependencies = [
  "proc-macro2",
  "quote",

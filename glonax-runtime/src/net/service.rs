@@ -11,6 +11,7 @@ pub struct J1939ApplicationInspector {
     software_indent: Option<(u8, u8, u8)>,
     request_pgn: Option<u32>,
     address_claim: Option<(u8, u8)>,
+    acknowledged: Option<u8>,
 }
 
 impl Routable for J1939ApplicationInspector {
@@ -19,6 +20,11 @@ impl Routable for J1939ApplicationInspector {
     }
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        self.software_indent = None;
+        self.request_pgn = None;
+        self.address_claim = None;
+        self.acknowledged = None;
+
         match pgn {
             PGN::SoftwareIdentification => {
                 let mut major = 0;
@@ -57,6 +63,11 @@ impl Routable for J1939ApplicationInspector {
 
                 true
             }
+            PGN::AcknowledgmentMessage => {
+                self.acknowledged = Some(frame.pdu()[0]);
+
+                true
+            }
             _ => false,
         }
     }
@@ -68,6 +79,7 @@ impl J1939ApplicationInspector {
             software_indent: None,
             request_pgn: None,
             address_claim: None,
+            acknowledged: None,
         }
     }
 
@@ -84,6 +96,11 @@ impl J1939ApplicationInspector {
     #[inline]
     pub fn address_claimed(&self) -> Option<(u8, u8)> {
         self.address_claim
+    }
+
+    #[inline]
+    pub fn acknowledged(&self) -> Option<u8> {
+        self.acknowledged
     }
 }
 
