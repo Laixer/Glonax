@@ -150,13 +150,13 @@ impl StatusService {
         self.net.send(&frame).await.unwrap();
     }
 
-    pub async fn interval(&mut self) {
-        if self.last_interval.elapsed() >= Duration::from_secs(1) {
-            // self.announce_status().await;
+    // pub async fn interval(&mut self) {
+    //     if self.last_interval.elapsed() >= Duration::from_secs(1) {
+    //         // self.announce_status().await;
 
-            trace!("Announce host on network");
+    //         trace!("Announce host on network");
 
-            self.last_interval = Instant::now();
-        }
-    }
+    //         self.last_interval = Instant::now();
+    //     }
+    // }
 }

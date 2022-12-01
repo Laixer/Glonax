@@ -39,30 +39,9 @@ impl super::gateway::GatewayClient for Mecu {
     }
 
     async fn incoming(&mut self, frame: &Frame) {
-        if frame.id().pgn() == PGN::ProprietaryB(65_535) {
-            if frame.pdu()[..2] != [0xff, 0xff] {
-                let data = u16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
-
-                self.pusher
-                    .push(
-                        Self::map_source(frame.id().sa(), 0),
-                        Signal::new(MetricValue::Stroke(nalgebra::Vector1::new(data))),
-                    )
-                    .await;
-            }
-            if frame.pdu()[2..4] != [0xff, 0xff] {
-                let data = u16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-
-                self.pusher
-                    .push(
-                        Self::map_source(frame.id().sa(), 1),
-                        Signal::new(MetricValue::Stroke(nalgebra::Vector1::new(data))),
-                    )
-                    .await;
-            }
-        } else if frame.id().pgn() == PGN::ProprietaryB(65_505) {
+        if frame.id().pgn() == PGN::ProprietaryB(65_505) {
             if frame.pdu()[..6] != [0xff; 6] {
-                let data_x = i16::from_le_bytes(frame.pdu()[..2].try_into().unwrap());
+                let data_x = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
                 let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
                 let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
 
@@ -79,7 +58,7 @@ impl super::gateway::GatewayClient for Mecu {
             }
         } else if frame.id().pgn() == PGN::Other(64_258) {
             // TODO: Value may not be a u32
-            let data = u32::from_le_bytes(frame.pdu()[..4].try_into().unwrap());
+            let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
 
             self.pusher
                 .push(
