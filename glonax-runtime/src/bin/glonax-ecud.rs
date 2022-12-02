@@ -65,7 +65,6 @@ fn main() -> anyhow::Result<()> {
     if args.daemon {
         log_config.set_time_level(log::LevelFilter::Off);
         log_config.set_thread_level(log::LevelFilter::Off);
-        log_config.set_target_level(log::LevelFilter::Off);
     } else {
         log_config.set_time_offset_to_local().ok();
         log_config.set_time_format_rfc2822();

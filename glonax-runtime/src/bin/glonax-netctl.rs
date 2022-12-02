@@ -217,8 +217,11 @@ async fn main() -> anyhow::Result<()> {
 
     let log_config = simplelog::ConfigBuilder::new()
         .set_time_level(log::LevelFilter::Off)
-        .set_target_level(log::LevelFilter::Off)
         .set_thread_level(log::LevelFilter::Off)
+        .set_target_level(log::LevelFilter::Off)
+        .set_location_level(log::LevelFilter::Off)
+        .add_filter_ignore_str("sled")
+        .add_filter_ignore_str("mio")
         .build();
 
     let log_level = match args.verbose {
