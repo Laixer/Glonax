@@ -60,16 +60,58 @@ impl RuntimeProgram {
             //     .await
             //     .ok();
 
+            // ------------------------------------------------ //
+
+            // Standard position
             queue
                 .0
                 .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
                 .await
                 .ok();
-            // queue.0.send((Program::Kinematic.into(), vec![-0.56, 0.74, 0.0])).await.ok();
-            // queue.0.send((Program::Kinematic.into(), vec![-0.19, 0.46, 0.0])).await.ok();
-            // queue.0.send((Program::Kinematic.into(), vec![-0.82, 0.40, 0.0])).await.ok();
-            // queue.0.send((Program::Kinematic.into(), vec![-1.77, 0.36, 0.0])).await.ok();
-            // queue.0.send((Program::Kinematic.into(), vec![-2.09, 0.63, 0.0])).await.ok();
+
+            // Step: 2
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![3.77, 1.10, 4.07]))
+                .await
+                .ok();
+            // Step: 3
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![5.28, 1.32, 5.70]))
+                .await
+                .ok();
+            // Step: 4
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![3.16, -0.45, 3.41]))
+                .await
+                .ok();
+            // Step: 5
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![3.16, 0.55, 3.41]))
+                .await
+                .ok();
+            // Step: 6
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![4.45, 0.55, -0.33]))
+                .await
+                .ok();
+            // Step: 7
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![6.73, 2.35, -4.27]))
+                .await
+                .ok();
+
+            // Standard position
+            queue
+                .0
+                .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
+                .await
+                .ok();
         }
 
         Self { queue }
