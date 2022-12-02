@@ -130,6 +130,24 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
     }
 }
 
+async fn scan_nodes(mut router: Router) -> anyhow::Result<()> {
+    loop {
+        router.accept().await?;
+
+        print!("{}c", 27 as char);
+
+        for (node, last_seen) in router.node_table() {
+            let x = if last_seen.elapsed().as_secs() < 1 {
+                "now".to_owned()
+            } else {
+                format!("{} seconds ago", last_seen.elapsed().as_secs())
+            };
+
+            println!("Node: 0x{:X?} Last seen: {}", node, x);
+        }
+    }
+}
+
 /// Print frames to screen.
 async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
@@ -138,7 +156,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
         router.accept().await?;
 
         if let Some(frame) = router.take() {
-            info!("{}", frame);
+            println!("{}", frame);
         };
     }
 }
@@ -175,6 +193,8 @@ enum Command {
         #[command(subcommand)]
         command: NodeCommand,
     },
+    /// Continuously scan for network nodes.
+    Scan,
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -317,6 +337,11 @@ async fn main() -> anyhow::Result<()> {
                     .await;
             }
         },
+        Command::Scan => {
+            let router = Router::new(std::sync::Arc::new(net));
+
+            scan_nodes(router).await?;
+        }
         Command::Dump { pgn, node } => {
             let mut router = Router::new(std::sync::Arc::new(net));
 
