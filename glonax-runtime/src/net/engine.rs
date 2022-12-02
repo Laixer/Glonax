@@ -62,6 +62,10 @@ impl EngineService {
             starter_mode: None,
         }
     }
+
+    pub fn rpm(&self) -> Option<u16> {
+        self.rpm
+    }
 }
 
 #[test]

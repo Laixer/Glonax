@@ -35,7 +35,7 @@ impl Device for Mecu {
 #[async_trait::async_trait]
 impl super::gateway::GatewayClient for Mecu {
     fn from_net(_net: Arc<ControlNet>) -> Self {
-        todo!()
+        unimplemented!()
     }
 
     async fn incoming(&mut self, frame: &Frame) {
