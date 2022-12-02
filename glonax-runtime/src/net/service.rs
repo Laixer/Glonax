@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
 
 use glonax_j1939::*;
 
@@ -107,36 +104,12 @@ impl J1939ApplicationInspector {
 pub struct StatusService {
     net: Arc<ControlNet>,
     node: u8,
-    last_interval: Instant,
 }
 
 impl StatusService {
     pub fn new(net: Arc<ControlNet>, node: u8) -> Self {
-        Self {
-            net,
-            node,
-            last_interval: Instant::now(),
-        }
+        Self { net, node }
     }
-
-    // async fn announce_status(&self) {
-    //     let state = 0xff;
-
-    //     const PKG_VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
-    //     const PKG_VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
-    //     const PKG_VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
-
-    //     let major: u8 = PKG_VERSION_MAJOR.parse().unwrap();
-    //     let minor: u8 = PKG_VERSION_MINOR.parse().unwrap();
-    //     let patch: u8 = PKG_VERSION_PATCH.parse().unwrap();
-
-    //     let frame =
-    //         FrameBuilder::new(IdBuilder::from_pgn(PGN::ProprietaryB(65_282).into()).build())
-    //             .copy_from_slice(&[0xff, state, major, minor, patch, 0xff, 0xff, 0xff])
-    //             .build();
-
-    //     self.net.send(&frame).await.unwrap();
-    // }
 
     pub async fn set_led(&self, led_on: bool) {
         let frame = FrameBuilder::new(
@@ -149,14 +122,4 @@ impl StatusService {
 
         self.net.send(&frame).await.unwrap();
     }
-
-    // pub async fn interval(&mut self) {
-    //     if self.last_interval.elapsed() >= Duration::from_secs(1) {
-    //         // self.announce_status().await;
-
-    //         trace!("Announce host on network");
-
-    //         self.last_interval = Instant::now();
-    //     }
-    // }
 }

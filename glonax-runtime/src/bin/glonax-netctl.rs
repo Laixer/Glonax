@@ -179,7 +179,7 @@ enum Command {
     Dump {
         /// Filter on PGN.
         #[arg(long)]
-        pgn: Option<u16>,
+        pgn: Option<u32>,
 
         /// Filter on node.
         #[arg(long)]
@@ -189,7 +189,7 @@ enum Command {
     Analyze {
         /// Filter on PGN.
         #[arg(long)]
-        pgn: Option<u16>,
+        pgn: Option<u32>,
 
         /// Filter on node.
         #[arg(long)]

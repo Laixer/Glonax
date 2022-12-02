@@ -1,6 +1,6 @@
 use std::io;
 
-pub use j1939::{decode, Frame, FrameBuilder, IdBuilder, PGN, protocol};
+pub use j1939::{decode, protocol, Frame, FrameBuilder, IdBuilder, PGN};
 pub use socket::J1939Socket;
 
 mod socket;
@@ -17,16 +17,14 @@ impl From<&j1939::Id> for socket::SockAddrJ1939 {
     fn from(value: &j1939::Id) -> Self {
         socket::SockAddrJ1939::send(
             value.destination_address().unwrap_or(libc::J1939_NO_ADDR),
-            value.pgn_raw() as u32,
+            value.pgn_raw(),
         )
     }
 }
 
 impl From<socket::SockAddrJ1939> for j1939::Id {
     fn from(value: socket::SockAddrJ1939) -> Self {
-        IdBuilder::from_pgn((value.pgn as u16).into())
-            .sa(value.addr)
-            .build()
+        IdBuilder::from_pgn(value.pgn.into()).sa(value.addr).build()
     }
 }
 

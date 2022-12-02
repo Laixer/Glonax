@@ -143,7 +143,7 @@ pub trait Routable: Send + Sync {
 pub struct Router {
     net: std::sync::Arc<ControlNet>,
     frame: Option<Frame>,
-    filter_pgn: Vec<u16>,
+    filter_pgn: Vec<u32>,
     filter_node: Vec<u8>,
 }
 
@@ -157,7 +157,7 @@ impl Router {
         }
     }
 
-    pub fn add_pgn_filter(&mut self, pgn: u16) {
+    pub fn add_pgn_filter(&mut self, pgn: u32) {
         self.filter_pgn.push(pgn);
     }
 

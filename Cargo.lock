@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "glonax"
-version = "1.3.2"
+version = "1.3.5"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -282,7 +282,7 @@ checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 [[package]]
 name = "j1939"
 version = "0.1.11"
-source = "git+https://github.com/Laixer/J1939#878a2ce50adf1cf7531b58f47e1ebe439439e0f6"
+source = "git+https://github.com/Laixer/J1939#1ae868f631afa06fdfc2eaf508c87527343f12fe"
 
 [[package]]
 name = "lazy_static"
