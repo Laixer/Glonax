@@ -1,4 +1,4 @@
-use std::io;
+use std::{collections::HashMap, io, time};
 
 use glonax_j1939::*;
 
@@ -145,6 +145,7 @@ pub struct Router {
     frame: Option<Frame>,
     filter_pgn: Vec<u32>,
     filter_node: Vec<u8>,
+    node_table: HashMap<u8, std::time::Instant>,
 }
 
 impl Router {
@@ -154,6 +155,7 @@ impl Router {
             frame: None,
             filter_pgn: vec![],
             filter_node: vec![],
+            node_table: HashMap::new(),
         }
     }
 
@@ -173,9 +175,23 @@ impl Router {
         self.frame.take()
     }
 
+    pub fn node_table(&self) -> &HashMap<u8, std::time::Instant> {
+        &self.node_table
+    }
+
     pub async fn accept(&mut self) -> io::Result<()> {
         loop {
             let frame = self.net.accept().await?;
+
+            let node_address = frame.id().sa();
+
+            if self
+                .node_table
+                .insert(node_address, time::Instant::now())
+                .is_none()
+            {
+                debug!("New node on network: 0x{:X?}", node_address);
+            }
 
             if !self.filter_pgn.is_empty() {
                 let pgn = frame.id().pgn_raw();
@@ -185,8 +201,7 @@ impl Router {
             }
 
             if !self.filter_node.is_empty() {
-                let node = frame.id().sa();
-                if !self.filter_node.contains(&node) {
+                if !self.filter_node.contains(&node_address) {
                     continue;
                 }
             }
