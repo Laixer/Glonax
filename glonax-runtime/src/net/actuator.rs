@@ -23,7 +23,6 @@ impl std::fmt::Display for ActuatorState {
 pub struct ActuatorService {
     net: Arc<ControlNet>,
     node: u8,
-    actuator_set: Option<std::collections::HashMap<u8, i16>>,
     firmware_version: Option<(u8, u8, u8)>,
     state: Option<ActuatorState>,
     last_error: Option<u16>,
@@ -85,7 +84,6 @@ impl ActuatorService {
         Self {
             net,
             node,
-            actuator_set: None,
             firmware_version: None,
             state: None,
             last_error: None,
@@ -104,21 +102,19 @@ impl ActuatorService {
         self.net.send(&frame).await.unwrap();
     }
 
-    pub async fn lock(&mut self) {
-        self.actuator_set = None;
+    pub async fn lock(&self) {
         self.set_motion_lock(self.node, true).await;
 
         trace!("Disable motion");
     }
 
-    pub async fn unlock(&mut self) {
-        self.actuator_set = None;
+    pub async fn unlock(&self) {
         self.set_motion_lock(self.node, false).await;
 
         trace!("Enable motion");
     }
 
-    pub async fn actuator_control(&mut self, actuators: std::collections::HashMap<u8, i16>) {
+    pub async fn actuator_control(&self, actuators: std::collections::HashMap<u8, i16>) {
         const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
         const BANK_SLOTS: u8 = 4;
 
