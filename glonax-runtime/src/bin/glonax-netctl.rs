@@ -298,7 +298,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
 
-                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
+                let service = ActuatorService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Turn motion {}",
@@ -319,7 +319,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
 
-                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
+                let service = ActuatorService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Set actuator {} to {}",
