@@ -8,6 +8,16 @@ pub struct Signal {
     pub value: MetricValue,
 }
 
+impl Signal {
+    pub fn heartbeat(address: u8, subaddress: u8) -> Self {
+        Self {
+            address,
+            subaddress,
+            value: MetricValue::Heartbeat,
+        }
+    }
+}
+
 impl std::fmt::Display for Signal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -23,6 +33,7 @@ pub enum MetricValue {
     Temperature(f32),
     Acceleration((f32, f32, f32)),
     Angle(u32),
+    Heartbeat,
 }
 
 impl std::fmt::Display for MetricValue {
@@ -37,6 +48,7 @@ impl std::fmt::Display for MetricValue {
                 )
             }
             MetricValue::Angle(value) => write!(f, "Angle: {:>+5}", value),
+            MetricValue::Heartbeat => write!(f, "Heartbeat"),
         }
     }
 }
