@@ -1,4 +1,4 @@
-use crate::runtime::operand::*;
+use crate::runtime::program::*;
 
 use super::{consts::DRIVE_SPEED_MAX, Actuator, HydraulicMotion};
 
@@ -107,7 +107,7 @@ impl TrapezoidalDistanceProfile {
 }
 
 impl DriveProgram {
-    pub fn new(params: Parameter) -> Self {
+    pub fn new(params: &Vec<f32>) -> Self {
         if params.len() != 1 {
             panic!("Expected 1 parameter, got {}", params.len());
         } else if params[0] == 0.0 {

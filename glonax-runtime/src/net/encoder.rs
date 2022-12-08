@@ -34,6 +34,7 @@ pub struct KueblerEncoderService {
     state: Option<EncoderState>,
 }
 
+#[async_trait::async_trait]
 impl Routable for KueblerEncoderService {
     fn node(&self) -> u8 {
         self.node
@@ -97,10 +98,12 @@ impl KueblerEncoderService {
         }
     }
 
+    #[inline]
     pub fn position(&self) -> u32 {
         self.position
     }
 
+    #[inline]
     pub fn speed(&self) -> u16 {
         self.speed
     }

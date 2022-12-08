@@ -1,50 +1,42 @@
-use std::time::SystemTime;
-
-// TODO: Maybe not?
-use nalgebra as na;
-
-pub type SignalSource = u32;
-pub type SignalTuple = (SignalSource, Signal);
-
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Signal {
-    /// Timestamp when this signal was received.
-    pub timestamp: SystemTime,
+    /// Node address.
+    pub address: u8,
+    /// Node address.
+    pub subaddress: u8,
     /// Signal value.
     pub value: MetricValue,
 }
 
-impl Signal {
-    /// Construct new signal.
-    pub fn new(value: MetricValue) -> Self {
-        Self {
-            timestamp: SystemTime::now(),
-            value,
-        }
+impl std::fmt::Display for Signal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Address: 0x{:X?}:{} {}",
+            self.address, self.subaddress, self.value
+        )
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum MetricValue {
-    Temperature(na::Vector1<f32>),
-    Acceleration(na::Vector3<f32>),
-    Stroke(na::Vector1<u16>),
-    Angle(na::Vector1<u16>),
+    Temperature(f32),
+    Acceleration((f32, f32, f32)),
+    Angle(u32),
 }
 
 impl std::fmt::Display for MetricValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             MetricValue::Temperature(scalar) => write!(f, "Temperature: {:>+3}", scalar),
-            MetricValue::Acceleration(vector) => {
+            MetricValue::Acceleration((x, y, z)) => {
                 write!(
                     f,
                     "Acceleration (mg): X: {:>+5} Y: {:>+5} Z: {:>+5}",
-                    vector.x, vector.y, vector.z,
+                    x, y, z,
                 )
             }
-            MetricValue::Stroke(vector) => write!(f, "Stroke: {:>+5}", vector.x),
-            MetricValue::Angle(vector) => write!(f, "Angle: {:>+5}", vector.x),
+            MetricValue::Angle(value) => write!(f, "Angle: {:>+5}", value),
         }
     }
 }

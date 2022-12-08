@@ -1,14 +1,12 @@
-use crate::{
-    core::{motion::ToMotion, time, Trace, TraceWriter, Tracer},
-    device::MotionDevice,
-};
-
-pub mod operand;
-mod trace;
-pub use trace::CsvTracer;
-pub use trace::NullTracer;
+mod motion;
+pub(super) mod operand; // TODO: Why public
+pub(super) mod program; // TODO: Why public
 
 mod error;
+use std::time::Duration;
+
+use crate::signal;
+
 pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
@@ -21,50 +19,62 @@ pub mod ecu;
 pub mod exec;
 pub mod input;
 
-pub(super) struct MotionChain<'a, R, M>
-where
-    R: Tracer,
-    R::Instance: TraceWriter + Send + 'static,
-    M: MotionDevice,
-{
-    /// Motion trace instance.
-    trace: R::Instance,
-    /// Motion device.
-    motion_device: &'a mut M,
-    /// Whether or not to enable the motion device.
-    motion_enabled: bool,
+#[async_trait::async_trait]
+pub trait QueueAdapter: Send + Sync {
+    fn topic(&self) -> &str;
+
+    async fn parse(&mut self, event: &rumqttc::Publish);
 }
 
-impl<'a, R, M> MotionChain<'a, R, M>
-where
-    R: Tracer,
-    R::Instance: TraceWriter + Send + 'static,
-    M: MotionDevice,
-{
-    pub fn new(motion_device: &'a mut M, tracer: &R) -> Self {
+pub struct EventHub {
+    client: std::sync::Arc<rumqttc::AsyncClient>,
+    /// Local MQTT eventloop.
+    eventloop: rumqttc::EventLoop,
+    adapters: Vec<Box<dyn QueueAdapter>>,
+}
+
+impl EventHub {
+    pub fn new(config: &crate::GlobalConfig) -> Self {
+        use rumqttc::{AsyncClient, MqttOptions};
+
+        let mut mqttoptions =
+            MqttOptions::new(&config.bin_name, &config.mqtt_host, config.mqtt_port);
+        mqttoptions
+            .set_keep_alive(Duration::from_secs(5))
+            .set_connection_timeout(1);
+
+        if let (Some(username), Some(password)) = (&config.mqtt_username, &config.mqtt_password) {
+            mqttoptions.set_credentials(username, password);
+        }
+
+        let (client, eventloop) = AsyncClient::new(mqttoptions, 100);
+        let client = std::sync::Arc::new(client);
+
         Self {
-            motion_device,
-            trace: tracer.instance("motion"),
-            motion_enabled: true,
+            client,
+            eventloop,
+            adapters: vec![],
         }
     }
 
-    pub fn enable(mut self, is_enabled: bool) -> Self {
-        self.motion_enabled = is_enabled;
+    pub fn subscribe<T: QueueAdapter + 'static>(&mut self, adapter: T) {
+        self.client
+            .try_subscribe(adapter.topic(), rumqttc::QoS::AtMostOnce)
+            .unwrap();
 
-        if !self.motion_enabled {
-            debug!("Motion device is disabled: no motion commands will be issued");
-        }
-
-        self
+        self.adapters.push(Box::new(adapter));
     }
 
-    pub async fn request<T: ToMotion>(&mut self, motion: T) {
-        let motion = motion.to_motion();
-        motion.record(&mut self.trace, time::now());
-
-        if self.motion_enabled {
-            self.motion_device.actuate(motion).await;
+    pub async fn next(&mut self) {
+        loop {
+            let event = self.eventloop.poll().await.unwrap();
+            if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(event)) = event {
+                for adapter in self.adapters.iter_mut() {
+                    if event.topic == adapter.topic() {
+                        adapter.parse(&event).await;
+                    }
+                }
+            }
         }
     }
 }
@@ -72,33 +82,45 @@ where
 pub struct RuntimeContext<K> {
     /// Runtime operand.
     pub(super) operand: K,
-    /// Core device.
-    pub(super) core_device: Option<crate::device::Gateway>,
     /// Runtime event bus.
     pub(super) shutdown: (
         tokio::sync::broadcast::Sender<()>,
         tokio::sync::broadcast::Receiver<()>,
     ),
-    /// Signal manager.
-    pub(super) signal_manager: crate::signal::SignalManager,
-    /// Tracer used to record telemetrics.
-    pub(super) tracer: CsvTracer,
+    /// Event hub.
+    pub(super) eventhub: EventHub,
 }
 
 impl<K> RuntimeContext<K> {
-    pub fn subscribe_core_device<T>(&mut self, device: T)
-    where
-        T: crate::device::Device + crate::device::GatewayClient + 'static,
-    {
-        self.core_device.as_mut().unwrap().subscribe(device)
+    pub(crate) async fn new_network_gateway(
+        &self,
+        interface: &str,
+        signal_manager: &crate::signal::SignalManager,
+    ) -> self::Result<crate::device::Gateway> {
+        debug!("Bind to interface {}", interface);
+
+        let gateway_device = crate::device::Gateway::new(interface, signal_manager)
+            .map_err(|_| Error::CoreDeviceNotFound)?;
+
+        tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            gateway_device.wait_online(),
+        )
+        .await
+        .map_err(|_| Error::NetworkTimeout)?;
+
+        Ok(gateway_device)
     }
-}
 
-impl<K> RuntimeContext<K> {
-    pub fn new_core_device<T>(&mut self) -> T
-    where
-        T: crate::device::Device + crate::device::GatewayClient + 'static,
-    {
-        self.core_device.as_mut().unwrap().new_gateway_device::<T>()
+    pub(super) fn new_signal_manager(&self) -> signal::SignalManager {
+        signal::SignalManager::new(self.eventhub.client.clone())
+    }
+
+    pub(super) fn new_program_manager(&self) -> program::ProgramManager {
+        program::ProgramManager::new(self.eventhub.client.clone())
+    }
+
+    pub(super) fn new_motion_manager(&self) -> motion::MotionManager {
+        motion::MotionManager::new(self.eventhub.client.clone(), true)
     }
 }

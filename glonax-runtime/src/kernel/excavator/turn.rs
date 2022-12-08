@@ -1,4 +1,4 @@
-use crate::runtime::operand::*;
+use crate::runtime::program::*;
 
 use super::HydraulicMotion;
 
@@ -10,7 +10,7 @@ pub(super) struct TurnProgram {
 impl TurnProgram {
     pub fn new(
         model: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
-        params: Parameter,
+        params: &Vec<f32>,
     ) -> Self {
         if params.len() != 1 {
             panic!("Expected 1 parameter, got {}", params.len());
@@ -40,7 +40,7 @@ impl Program for TurnProgram {
     /// This method returns an optional motion instruction.
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         if let Ok(mut domain) = self.domain.try_write() {
-            domain.signal_update(&mut context.reader).await;
+            domain.signal_update(context.reader).await;
         }
 
         let rig_error = self.objective.erorr_diff();

@@ -23,6 +23,7 @@ impl ControlNet {
     pub fn new(ifname: &str, addr: u8) -> io::Result<Self> {
         let stream = glonax_j1939::J1939Stream::bind(ifname, addr)?;
         stream.set_broadcast(true)?;
+
         Ok(Self { stream })
     }
 
@@ -134,10 +135,13 @@ impl ControlNet {
     }
 }
 
+#[async_trait::async_trait]
 pub trait Routable: Send + Sync {
     fn node(&self) -> u8;
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool;
+
+    async fn postroute(&mut self) {}
 }
 
 pub struct Router {
@@ -213,10 +217,14 @@ impl Router {
         Ok(())
     }
 
-    pub fn try_accept(&self, service: &mut impl Routable) -> bool {
+    pub async fn try_accept(&self, service: &mut impl Routable) -> bool {
         if let Some(frame) = self.frame {
-            (service.node() == frame.id().sa() || service.node() == 0xff)
-                && service.ingress(frame.id().pgn().into(), &frame)
+            let claimed = (service.node() == frame.id().sa() || service.node() == 0xff)
+                && service.ingress(frame.id().pgn().into(), &frame);
+            if claimed {
+                service.postroute().await;
+            }
+            claimed
         } else {
             false
         }

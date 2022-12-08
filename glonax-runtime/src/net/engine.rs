@@ -15,6 +15,7 @@ pub struct EngineService {
     starter_mode: Option<EngineStarterMode>,
 }
 
+#[async_trait::async_trait]
 impl Routable for EngineService {
     fn node(&self) -> u8 {
         self.node

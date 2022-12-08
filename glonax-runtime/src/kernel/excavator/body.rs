@@ -90,22 +90,22 @@ impl Body {
     }
 
     // TODO: const from const module
-    pub async fn signal_update(&mut self, reader: &mut crate::signal::SignalReader) {
+    pub async fn signal_update(&mut self, reader: &mut crate::signal::SignalManager) {
         use crate::core;
         use crate::core::metric::MetricValue;
         use crate::kernel::excavator::consts::*;
         use crate::signal::Encoder;
 
-        if let Ok(Ok((source, signal))) =
+        if let Ok(Some(signal)) =
             tokio::time::timeout(std::time::Duration::from_millis(500), reader.recv()).await
         {
-            match source {
+            match signal.address {
                 super::BODY_PART_BOOM => {
                     if let MetricValue::Angle(value) = signal.value {
                         let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
 
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
+                        let angle = encoder.scale(value as f32);
+                        let percentage = encoder.scale_to(100.0, value as f32);
 
                         let angle_offset = core::deg_to_rad(5.3);
                         let angle_at_datum = angle - angle_offset;
@@ -114,7 +114,7 @@ impl Body {
 
                         debug!(
                             "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
-                            value.x,
+                            value,
                             angle,
                             core::rad_to_deg(angle),
                             percentage,
@@ -127,8 +127,8 @@ impl Body {
                     if let MetricValue::Angle(value) = signal.value {
                         let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
 
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
+                        let angle = encoder.scale(value as f32);
+                        let percentage = encoder.scale_to(100.0, value as f32);
 
                         let angle_offset = core::deg_to_rad(36.8);
                         let angle_at_datum = -angle_offset - (2.1 - angle);
@@ -137,7 +137,7 @@ impl Body {
 
                         debug!(
                             "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
-                            value.x,
+                            value,
                             angle,
                             core::rad_to_deg(angle),
                             percentage,
@@ -150,8 +150,8 @@ impl Body {
                     if let MetricValue::Angle(value) = signal.value {
                         let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
 
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
+                        let angle = encoder.scale(value as f32);
+                        let percentage = encoder.scale_to(100.0, value as f32);
 
                         let angle_at_datum = angle;
 
@@ -159,7 +159,7 @@ impl Body {
 
                         debug!(
                             "Turn Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
-                            value.x,
+                            value,
                             angle,
                             core::rad_to_deg(angle),
                             percentage,
@@ -170,8 +170,8 @@ impl Body {
                     if let MetricValue::Angle(value) = signal.value {
                         let encoder = Encoder::new(BUCKET_ENCODER_RANGE, BUCKET_ANGLE_RANGE);
 
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
+                        let angle = encoder.scale(value as f32);
+                        let percentage = encoder.scale_to(100.0, value as f32);
 
                         // TODO: Offset is negative.
                         // let angle_offset = core::deg_to_rad(36.8);
@@ -190,7 +190,7 @@ impl Body {
 
                         debug!(
                             "Bucket Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
-                            value.x,
+                            value,
                             angle,
                             core::rad_to_deg(angle),
                             percentage,

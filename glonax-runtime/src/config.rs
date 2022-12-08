@@ -4,12 +4,6 @@ pub trait Configurable: Clone {
 
 #[derive(Clone, Debug)]
 pub struct ProgramConfig {
-    /// Whether autopilot is enabled.
-    pub enable_autopilot: bool,
-    /// Number of programs to queue.
-    pub program_queue: usize,
-    /// Number of programs to queue.
-    pub program_id: Option<i32>,
     /// Global configuration.
     pub global: GlobalConfig,
 }
@@ -23,9 +17,6 @@ impl Configurable for ProgramConfig {
 impl Default for ProgramConfig {
     fn default() -> Self {
         Self {
-            enable_autopilot: true,
-            program_queue: 1024,
-            program_id: None,
             global: Default::default(),
         }
     }
@@ -35,9 +26,6 @@ impl Default for ProgramConfig {
 pub struct InputConfig {
     /// Input device.
     pub device: String,
-
-    /// ECU network connect address.
-    pub address: String,
 
     /// Global configuration.
     pub global: GlobalConfig,
@@ -51,8 +39,8 @@ impl Configurable for InputConfig {
 
 #[derive(Clone, Debug)]
 pub struct EcuConfig {
-    /// ECU network bind address.
-    pub address: String,
+    /// CAN network interface.
+    pub interface: String,
 
     /// Global configuration.
     pub global: GlobalConfig,
@@ -67,11 +55,20 @@ impl Configurable for EcuConfig {
 /// Glonax global configuration.
 #[derive(Clone, Debug)]
 pub struct GlobalConfig {
-    /// CAN network interface.
-    pub interface: String,
+    /// Name of the binary.
+    pub bin_name: String,
 
-    /// Whether tracing is enabled.
-    pub enable_trace: bool,
+    /// MQTT broker hostname or ip address.
+    pub mqtt_host: String,
+
+    /// MQTT broker port.
+    pub mqtt_port: u16,
+
+    /// MQTT broker username.
+    pub mqtt_username: Option<String>,
+
+    /// MQTT broker username.
+    pub mqtt_password: Option<String>,
 
     /// Whether motion is enabled.
     pub enable_motion: bool,
@@ -95,10 +92,13 @@ impl Configurable for GlobalConfig {
 impl Default for GlobalConfig {
     fn default() -> Self {
         Self {
-            interface: String::new(),
+            bin_name: String::new(),
+            mqtt_host: "localhost".to_string(),
+            mqtt_port: 1883,
+            mqtt_username: None,
+            mqtt_password: None,
             enable_motion: true,
             slow_motion: false,
-            enable_trace: false,
             daemon: false,
             runtime_workers: 4,
         }

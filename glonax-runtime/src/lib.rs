@@ -93,18 +93,13 @@ where
     /// Start the runtime service.
     pub fn exec_exec(config: &config::ProgramConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            runtime::exec::RuntimeProgram::new(config)
-                .await
-                .exec_service(
-                    config,
-                    self::runtime::Builder::<K>::from_config(config)?
-                        .enable_network(config)?
-                        .wait_for_network()
-                        .await?
-                        .enable_term_shutdown()
-                        .build(),
-                )
-                .await
+            runtime::exec::exec_service(
+                config,
+                self::runtime::Builder::<K>::from_config(config)?
+                    .enable_term_shutdown()
+                    .build(),
+            )
+            .await
         })
     }
 
@@ -114,9 +109,7 @@ where
             runtime::ecu::exec_service(
                 config,
                 self::runtime::Builder::<K>::from_config(config)?
-                    .enable_network(config)?
-                    .wait_for_network()
-                    .await?
+                    .enable_term_shutdown()
                     .build(),
             )
             .await

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glonax_j1939::Frame;
+use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::motion::Motion,
@@ -21,20 +21,32 @@ impl Device for Hcu {
     }
 }
 
-#[async_trait::async_trait]
-impl super::gateway::GatewayClient for Hcu {
-    fn from_net(net: Arc<ControlNet>) -> Self {
+impl Hcu {
+    pub fn new(net: Arc<ControlNet>) -> Self {
         Self {
             service: ActuatorService::new(net, DEVICE_NET_HCU_ADDR),
         }
     }
+}
 
-    async fn incoming(&mut self, _frame: &Frame) {}
+#[async_trait::async_trait]
+impl crate::net::Routable for Hcu {
+    fn node(&self) -> u8 {
+        DEVICE_NET_HCU_ADDR
+    }
+
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        if self.service.ingress(pgn, frame) {
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[async_trait::async_trait]
 impl MotionDevice for Hcu {
-    async fn actuate(&mut self, motion: Motion) {
+    async fn actuate(&self, motion: Motion) {
         match motion {
             Motion::StopAll => {
                 self.service.lock().await;

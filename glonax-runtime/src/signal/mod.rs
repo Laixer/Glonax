@@ -1,61 +1,86 @@
-use crate::core::metric::{Signal, SignalSource, SignalTuple};
+use crate::core::metric::Signal;
 
 mod encoder;
 pub(crate) use encoder::Encoder;
-use tokio::sync::broadcast;
+use tokio::sync::mpsc;
 
-pub struct SignalPusher {
-    queue: broadcast::Sender<SignalTuple>,
-}
-
-impl SignalPusher {
-    pub async fn push(&mut self, source: SignalSource, signal: Signal) {
-        let subaddress = source & 0b00001111;
-        let address = source >> 4;
-
-        trace!(
-            "Push new signal: 0x{:X?}:{} ⇨ {}",
-            address,
-            subaddress,
-            signal.value
-        );
-
-        self.queue.send((source, signal)).unwrap();
-    }
-}
-
-pub struct SignalReader(broadcast::Receiver<SignalTuple>);
-
-impl SignalReader {
-    #[inline]
-    pub async fn recv(&mut self) -> Result<(u32, Signal), broadcast::error::RecvError> {
-        self.0.recv().await
-    }
-}
+const TOPIC: &str = "net/signal";
 
 pub struct SignalManager {
+    client: std::sync::Arc<rumqttc::AsyncClient>,
     queue: (
-        broadcast::Sender<SignalTuple>,
-        broadcast::Receiver<SignalTuple>,
+        mpsc::Sender<crate::core::metric::Signal>,
+        mpsc::Receiver<crate::core::metric::Signal>,
     ),
 }
 
 impl SignalManager {
     /// Construct new signal manager.
-    pub fn new() -> Self {
+    pub fn new(client: std::sync::Arc<rumqttc::AsyncClient>) -> Self {
         Self {
-            queue: broadcast::channel(128),
+            client,
+            queue: mpsc::channel(128),
         }
     }
 
-    pub fn pusher(&self) -> SignalPusher {
-        SignalPusher {
+    pub fn adapter(&self) -> SignalQueueAdapter {
+        SignalQueueAdapter {
             queue: self.queue.0.clone(),
         }
     }
 
-    #[inline]
-    pub fn reader(&self) -> SignalReader {
-        SignalReader(self.queue.0.subscribe())
+    pub fn publisher(&self) -> SignalPublisher {
+        SignalPublisher {
+            client: self.client.clone(),
+        }
+    }
+
+    pub async fn recv(&mut self) -> Option<Signal> {
+        self.queue.1.recv().await
+    }
+}
+
+pub struct SignalQueueAdapter {
+    queue: mpsc::Sender<crate::core::metric::Signal>,
+}
+
+#[async_trait::async_trait]
+impl crate::runtime::QueueAdapter for SignalQueueAdapter {
+    fn topic(&self) -> &str {
+        self::TOPIC
+    }
+
+    async fn parse(&mut self, event: &rumqttc::Publish) {
+        if let Ok(str_payload) = std::str::from_utf8(&event.payload) {
+            if let Ok(signal) = serde_json::from_str::<crate::core::metric::Signal>(str_payload) {
+                if let Err(_) = self.queue.try_send(signal) {
+                    warn!("Signal queue reached maximum capacity");
+                }
+            }
+        }
+    }
+}
+
+pub struct SignalPublisher {
+    client: std::sync::Arc<rumqttc::AsyncClient>,
+}
+
+impl SignalPublisher {
+    pub async fn publish(&mut self, signal: Signal) {
+        if let Ok(str_payload) = serde_json::to_string(&signal) {
+            match self
+                .client
+                .publish(
+                    TOPIC,
+                    rumqttc::QoS::AtLeastOnce,
+                    false,
+                    str_payload.as_bytes(),
+                )
+                .await
+            {
+                Ok(_) => trace!("Published signal: {}", signal),
+                Err(_) => warn!("Failed to publish signal"),
+            }
+        }
     }
 }

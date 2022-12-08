@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::runtime::operand::*;
+use crate::runtime::program::*;
 
 use super::HydraulicMotion;
 
@@ -9,7 +9,7 @@ pub(super) struct SleepProgram {
 }
 
 impl SleepProgram {
-    pub fn new(params: Parameter) -> Self {
+    pub fn new(params: &Vec<f32>) -> Self {
         if params.len() != 1 {
             panic!("Expected 1 parameter, got {}", params.len());
         } else if params[0] == 0.0 {

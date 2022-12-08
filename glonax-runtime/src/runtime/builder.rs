@@ -1,11 +1,4 @@
-use std::time::Duration;
-
-use crate::{
-    config::Configurable,
-    core::{Identity, Tracer},
-    device::Gateway,
-    runtime, RuntimeContext,
-};
+use crate::{config::Configurable, core::Identity, runtime::EventHub, RuntimeContext};
 
 use super::Operand;
 
@@ -30,34 +23,10 @@ impl<K: Operand + Identity> Builder<K> {
 
         Ok(Self(RuntimeContext {
             operand: K::from_config(config),
-            core_device: None,
             shutdown: broadcast::channel(1),
-            signal_manager: crate::signal::SignalManager::new(),
-            tracer: runtime::CsvTracer::from_path(std::path::Path::new("/tmp/")),
+            // signal_manager: crate::signal::SignalManager::new(client.clone()),
+            eventhub: EventHub::new(config.global()),
         }))
-    }
-
-    pub(crate) fn enable_network(mut self, config: &impl Configurable) -> super::Result<Self> {
-        debug!("Bind to interface {}", config.global().interface);
-
-        self.0.core_device = Some(
-            Gateway::new(&config.global().interface)
-                .map_err(|_| super::Error::CoreDeviceNotFound)?,
-        );
-
-        Ok(self)
-    }
-
-    pub(crate) async fn wait_for_network(self) -> super::Result<Self> {
-        let gateway_device = self.0.core_device.as_ref().unwrap();
-
-        tokio::time::timeout(Duration::from_secs(1), gateway_device.wait_online())
-            .await
-            .map_err(|_| super::Error::NetworkTimeout)?;
-
-        info!("Control network is online");
-
-        Ok(self)
     }
 
     pub(crate) fn enable_term_shutdown(self) -> Self {

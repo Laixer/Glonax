@@ -15,9 +15,21 @@ struct Args {
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
 
-    /// ECU network connect address.
-    #[arg(short = 'c', long = "connect", default_value = "0.0.0.0:54910")]
+    /// MQTT broker address.
+    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
     address: String,
+
+    /// MQTT broker port.
+    #[arg(short, long, default_value_t = 1883)]
+    port: u16,
+
+    /// MQTT broker username.
+    #[arg(short = 'U', long)]
+    username: Option<String>,
+
+    /// MQTT broker password.
+    #[arg(short = 'P', long)]
+    password: Option<String>,
 
     /// Daemonize the service.
     #[arg(long)]
@@ -37,10 +49,14 @@ fn main() -> anyhow::Result<()> {
 
     let mut config = glonax::InputConfig {
         device: args.device,
-        address: args.address,
         global: glonax::GlobalConfig::default(),
     };
 
+    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
+    config.global.mqtt_host = args.address;
+    config.global.mqtt_port = args.port;
+    config.global.mqtt_username = args.username;
+    config.global.mqtt_password = args.password;
     config.global.daemon = args.daemon;
 
     if let Some(workers) = args.workers {

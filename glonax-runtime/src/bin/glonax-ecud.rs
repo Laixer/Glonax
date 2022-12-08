@@ -14,9 +14,21 @@ struct Args {
     /// CAN network interface.
     interface: String,
 
-    /// ECU network bind address.
-    #[arg(short = 'b', long = "bind", default_value = "0.0.0.0:54910")]
+    /// MQTT broker address.
+    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
     address: String,
+
+    /// MQTT broker port.
+    #[arg(short, long, default_value_t = 1883)]
+    port: u16,
+
+    /// MQTT broker username.
+    #[arg(short = 'U', long)]
+    username: Option<String>,
+
+    /// MQTT broker password.
+    #[arg(short = 'P', long)]
+    password: Option<String>,
 
     /// Disable machine motion (frozen mode).
     #[arg(long)]
@@ -25,10 +37,6 @@ struct Args {
     /// Run motion requests slow.
     #[arg(long)]
     slow_motion: bool,
-
-    /// Record telemetrics to disk.
-    #[arg(long)]
-    trace: bool,
 
     /// Daemonize the service.
     #[arg(long)]
@@ -47,13 +55,16 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let mut config = glonax::EcuConfig {
-        address: args.address,
+        interface: args.interface,
         global: glonax::GlobalConfig::default(),
     };
 
-    config.global.interface = args.interface;
+    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
+    config.global.mqtt_host = args.address;
+    config.global.mqtt_port = args.port;
+    config.global.mqtt_username = args.username;
+    config.global.mqtt_password = args.password;
     config.global.enable_motion = !args.disable_motion;
-    config.global.enable_trace = args.trace;
     config.global.slow_motion = args.slow_motion;
     config.global.daemon = args.daemon;
 

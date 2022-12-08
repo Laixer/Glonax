@@ -2,9 +2,13 @@ use crate::{
     core::{
         input::{ButtonState, Scancode},
         motion::{Motion, ToMotion},
+        program::ProgramArgument,
         Identity, Level,
     },
-    runtime::operand::{Operand, Parameter, Program, ProgramFactory},
+    runtime::{
+        operand::{Operand, ProgramFactory},
+        program::Program,
+    },
 };
 
 mod body;
@@ -33,10 +37,10 @@ impl From<Actuator> for u32 {
     }
 }
 
-const BODY_PART_BOOM: u32 = 0x6a0;
-const BODY_PART_ARM: u32 = 0x6c0;
-const BODY_PART_BUCKET: u32 = 0x6b0;
-const BODY_PART_FRAME: u32 = 0x200;
+const BODY_PART_BOOM: u8 = 0x6a;
+const BODY_PART_ARM: u8 = 0x6c;
+const BODY_PART_BUCKET: u8 = 0x6b;
+const BODY_PART_FRAME: u8 = 0x20;
 
 pub struct Excavator {
     object_model: std::sync::Arc<tokio::sync::RwLock<body::Body>>,
@@ -208,26 +212,25 @@ impl ProgramFactory for Excavator {
 
     fn fetch_program(
         &self,
-        id: i32,
-        params: Parameter,
+        program: &ProgramArgument,
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()> {
-        match id {
+        match program.id {
             // Default kinematic program.
             603 => Ok(Box::new(kinematic::KinematicProgram::new(
                 self.object_model.clone(),
-                params,
+                &program.parameters,
             ))),
 
             // Movement programs.
-            700 => Ok(Box::new(drive::DriveProgram::new(params))),
+            700 => Ok(Box::new(drive::DriveProgram::new(&program.parameters))),
             701 => Ok(Box::new(turn::TurnProgram::new(
                 self.object_model.clone(),
-                params,
+                &program.parameters,
             ))),
 
             // Miscellaneous programs.
             900 => Ok(Box::new(noop::NoopProgram::new(self.object_model.clone()))),
-            901 => Ok(Box::new(sleep::SleepProgram::new(params))),
+            901 => Ok(Box::new(sleep::SleepProgram::new(&program.parameters))),
             910 => Ok(Box::new(test::TestProgram::new())),
 
             _ => Err(()),

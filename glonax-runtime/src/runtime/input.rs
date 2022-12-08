@@ -1,6 +1,5 @@
 use crate::{
     device::{Gamepad, InputDevice},
-    net::motion::SchematicMotion,
     runtime, InputConfig, RuntimeContext,
 };
 
@@ -10,25 +9,19 @@ pub(crate) async fn exec_service<K: Operand>(
     config: &InputConfig,
     mut runtime: RuntimeContext<K>,
 ) -> runtime::Result {
-    let mut input_device = Gamepad::new(std::path::Path::new(&config.device));
+    let mut input_device = Gamepad::new(std::path::Path::new(&config.device)).await;
 
-    let address = if config.address.is_empty() {
-        "0.0.0.0:54910".to_owned()
-    } else {
-        config.address.clone()
-    };
+    let motion_publisher = runtime.new_motion_manager().publisher();
 
-    let sock = tokio::net::UdpSocket::bind("0.0.0.0:0").await.unwrap();
+    tokio::task::spawn(async move {
+        loop {
+            runtime.eventhub.next().await
+        }
+    });
 
-    info!("Listen for input events");
-
-    while let Ok(input) = input_device.next() {
+    while let Ok(input) = input_device.next().await {
         if let Ok(motion) = runtime.operand.try_from_input_device(input) {
-            let schematic_motion = SchematicMotion::from_motion(motion);
-
-            sock.send_to(schematic_motion.as_ref(), address.clone())
-                .await
-                .unwrap();
+            motion_publisher.publish(motion).await;
         }
     }
 
