@@ -54,6 +54,10 @@ impl QueueAdapter for MotionQueueAdapter {
         self::TOPIC
     }
 
+    fn qos(&self) -> rumqttc::QoS {
+        rumqttc::QoS::AtLeastOnce
+    }
+
     async fn parse(&mut self, event: &rumqttc::Publish) {
         use crate::device::MotionDevice;
 
@@ -79,7 +83,7 @@ impl MotionPublisher {
     pub async fn publish<T: crate::core::motion::ToMotion>(&mut self, motion: T) {
         let motion = motion.to_motion();
 
-        if self.motion_enabled && self.last_publish.elapsed() > Duration::from_millis(50) {
+        if self.motion_enabled && self.last_publish.elapsed() > Duration::from_millis(1) {
             if let Ok(str_payload) = serde_json::to_string(&motion) {
                 match self
                     .client
@@ -92,7 +96,7 @@ impl MotionPublisher {
                     .await
                 {
                     Ok(_) => trace!("Published motion: {}", motion),
-                    Err(_) => warn!("Failed to published motkion"),
+                    Err(_) => warn!("Failed to published motion"),
                 }
                 self.last_publish = Instant::now();
             }

@@ -10,69 +10,28 @@ use super::operand::{Operand, ProgramFactory};
 
 // queue.0.send((Program::Sleep.into(), vec![0.5])).await.ok();
 
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), [2.71, 2.34, 0.0].into()))
-//     .await
-//     .ok();
-// queue
-//     .0
 //     .send((Program::Turn.into(), [0.174533].into()))
-//     .await
-//     .ok();
 
 // ------------------------------------------------ //
 
 // Standard position
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
-//     .await
-//     .ok();
-
 // // Step: 2
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![3.77, 1.10, 4.07]))
-//     .await
-//     .ok();
 // // Step: 3
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![5.28, 1.32, 5.70]))
-//     .await
-//     .ok();
 // // Step: 4
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![3.16, -0.45, 3.41]))
-//     .await
-//     .ok();
 // // Step: 5
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![3.16, 0.55, 3.41]))
-//     .await
-//     .ok();
 // // Step: 6
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![4.45, 0.55, -0.33]))
-//     .await
-//     .ok();
 // // Step: 7
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![6.73, 2.35, -4.27]))
-//     .await
-//     .ok();
 
 // // Standard position
-// queue
-//     .0
 //     .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
-//     .await
-//     .ok();
 
 pub async fn exec_service<K: Operand + ProgramFactory>(
     _config: &ProgramConfig,

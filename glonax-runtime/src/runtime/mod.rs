@@ -23,13 +23,17 @@ pub mod input;
 pub trait QueueAdapter: Send + Sync {
     fn topic(&self) -> &str;
 
+    fn qos(&self) -> rumqttc::QoS;
+
     async fn parse(&mut self, event: &rumqttc::Publish);
 }
 
 pub struct EventHub {
+    /// Broker client interface.
     client: std::sync::Arc<rumqttc::AsyncClient>,
     /// Local MQTT eventloop.
     eventloop: rumqttc::EventLoop,
+    /// List of subscribed adapters.
     adapters: Vec<Box<dyn QueueAdapter>>,
 }
 
@@ -59,7 +63,7 @@ impl EventHub {
 
     pub fn subscribe<T: QueueAdapter + 'static>(&mut self, adapter: T) {
         self.client
-            .try_subscribe(adapter.topic(), rumqttc::QoS::AtMostOnce)
+            .try_subscribe(adapter.topic(), adapter.qos())
             .unwrap();
 
         self.adapters.push(Box::new(adapter));

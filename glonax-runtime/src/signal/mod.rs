@@ -17,16 +17,12 @@ pub struct SignalManager {
 impl SignalManager {
     /// Construct new signal manager.
     pub fn new(client: Arc<rumqttc::AsyncClient>) -> Self {
-        let (tx, rx) = watch::channel(Signal {
-            address: 0x0,
-            subaddress: 0,
-            value: crate::core::metric::MetricValue::Angle(0),
-        });
+        let (sender, receiver) = watch::channel(Signal::heartbeat(0xff, 0));
 
         Self {
             client,
-            sender: Some(tx),
-            receiver: rx,
+            sender: Some(sender),
+            receiver,
         }
     }
 
@@ -56,6 +52,10 @@ pub struct SignalQueueAdapter {
 impl crate::runtime::QueueAdapter for SignalQueueAdapter {
     fn topic(&self) -> &str {
         self::TOPIC
+    }
+
+    fn qos(&self) -> rumqttc::QoS {
+        rumqttc::QoS::AtMostOnce
     }
 
     async fn parse(&mut self, event: &rumqttc::Publish) {

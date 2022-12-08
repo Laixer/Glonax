@@ -96,7 +96,7 @@ impl ProgramManager {
 
         match self
             .client
-            .publish(self::TOPIC, rumqttc::QoS::AtLeastOnce, false, q)
+            .publish(self::TOPIC, rumqttc::QoS::ExactlyOnce, false, q)
             .await
         {
             Ok(_) => trace!("Published program: {:?}", program),
@@ -117,6 +117,10 @@ pub(super) struct ProgramQueueAdapter {
 impl super::QueueAdapter for ProgramQueueAdapter {
     fn topic(&self) -> &str {
         self::TOPIC
+    }
+
+    fn qos(&self) -> rumqttc::QoS {
+        rumqttc::QoS::ExactlyOnce
     }
 
     async fn parse(&mut self, event: &rumqttc::Publish) {
