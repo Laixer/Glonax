@@ -1,31 +1,38 @@
+use std::sync::Arc;
+
 use crate::core::metric::Signal;
 
 mod encoder;
 pub(crate) use encoder::Encoder;
-use tokio::sync::mpsc;
+use tokio::sync::watch;
 
 const TOPIC: &str = "net/signal";
 
 pub struct SignalManager {
-    client: std::sync::Arc<rumqttc::AsyncClient>,
-    queue: (
-        mpsc::Sender<crate::core::metric::Signal>,
-        mpsc::Receiver<crate::core::metric::Signal>,
-    ),
+    client: Arc<rumqttc::AsyncClient>,
+    sender: Option<watch::Sender<Signal>>,
+    receiver: watch::Receiver<Signal>,
 }
 
 impl SignalManager {
     /// Construct new signal manager.
-    pub fn new(client: std::sync::Arc<rumqttc::AsyncClient>) -> Self {
+    pub fn new(client: Arc<rumqttc::AsyncClient>) -> Self {
+        let (tx, rx) = watch::channel(Signal {
+            address: 0x0,
+            subaddress: 0,
+            value: crate::core::metric::MetricValue::Angle(0),
+        });
+
         Self {
             client,
-            queue: mpsc::channel(128),
+            sender: Some(tx),
+            receiver: rx,
         }
     }
 
-    pub fn adapter(&self) -> SignalQueueAdapter {
+    pub fn adapter(&mut self) -> SignalQueueAdapter {
         SignalQueueAdapter {
-            queue: self.queue.0.clone(),
+            sender: self.sender.take().unwrap(),
         }
     }
 
@@ -35,13 +42,14 @@ impl SignalManager {
         }
     }
 
-    pub async fn recv(&mut self) -> Option<Signal> {
-        self.queue.1.recv().await
+    pub async fn recv(&mut self) -> Signal {
+        self.receiver.changed().await.unwrap();
+        *self.receiver.borrow()
     }
 }
 
 pub struct SignalQueueAdapter {
-    queue: mpsc::Sender<crate::core::metric::Signal>,
+    sender: watch::Sender<Signal>,
 }
 
 #[async_trait::async_trait]
@@ -52,17 +60,15 @@ impl crate::runtime::QueueAdapter for SignalQueueAdapter {
 
     async fn parse(&mut self, event: &rumqttc::Publish) {
         if let Ok(str_payload) = std::str::from_utf8(&event.payload) {
-            if let Ok(signal) = serde_json::from_str::<crate::core::metric::Signal>(str_payload) {
-                if let Err(_) = self.queue.try_send(signal) {
-                    trace!("Signal queue reached maximum capacity");
-                }
+            if let Ok(signal) = serde_json::from_str::<Signal>(str_payload) {
+                self.sender.send(signal).unwrap();
             }
         }
     }
 }
 
 pub struct SignalPublisher {
-    client: std::sync::Arc<rumqttc::AsyncClient>,
+    client: Arc<rumqttc::AsyncClient>,
 }
 
 impl SignalPublisher {

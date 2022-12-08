@@ -96,7 +96,7 @@ impl Body {
         use crate::kernel::excavator::consts::*;
         use crate::signal::Encoder;
 
-        if let Ok(Some(signal)) =
+        if let Ok(signal) =
             tokio::time::timeout(std::time::Duration::from_millis(500), reader.recv()).await
         {
             match signal.address {
