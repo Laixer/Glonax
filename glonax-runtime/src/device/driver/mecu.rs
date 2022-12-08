@@ -27,7 +27,7 @@ impl Mecu {
             publisher,
             arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
             boom_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
-            turn_encoder: KueblerEncoderService::new(net.clone(), 0x20),
+            turn_encoder: KueblerEncoderService::new(net, 0x20),
         }
     }
 }

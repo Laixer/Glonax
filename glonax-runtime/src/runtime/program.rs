@@ -128,7 +128,7 @@ impl super::QueueAdapter for ProgramQueueAdapter {
             if let Ok(program) =
                 serde_json::from_str::<crate::core::program::ProgramArgument>(str_payload)
             {
-                if let Err(_) = self.queue.try_send(program) {
+                if self.queue.try_send(program).is_err() {
                     warn!("Program queue reached maximum capacity");
                 }
             }

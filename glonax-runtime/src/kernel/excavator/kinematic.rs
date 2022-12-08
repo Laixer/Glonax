@@ -35,7 +35,7 @@ impl Program for KinematicProgram {
     /// This method returns an optional motion instruction.
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
         if let Ok(mut domain) = self.domain.try_write() {
-            domain.signal_update(&mut context.reader).await;
+            domain.signal_update(context.reader).await;
         }
 
         if let Ok(domain) = self.domain.try_read() {

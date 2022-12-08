@@ -16,7 +16,7 @@ fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
-fn string_to_bool(str: &String) -> Result<bool, ()> {
+fn string_to_bool(str: &str) -> Result<bool, ()> {
     match str.to_lowercase().trim() {
         "yes" => Ok(true),
         "true" => Ok(true),
@@ -247,7 +247,7 @@ async fn main() -> anyhow::Result<()> {
     let log_level = match args.verbose {
         0 => log::LevelFilter::Info,
         1 => log::LevelFilter::Debug,
-        2 | _ => log::LevelFilter::Trace,
+        _ => log::LevelFilter::Trace,
     };
 
     simplelog::TermLogger::init(
@@ -332,9 +332,7 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                service
-                    .actuator_control([(actuator.clone(), value.clone())].into())
-                    .await;
+                service.actuator_control([(actuator, value)].into()).await;
             }
         },
         Command::Scan => {

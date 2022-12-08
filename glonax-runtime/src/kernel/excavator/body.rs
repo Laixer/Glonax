@@ -227,15 +227,13 @@ impl Body {
     }
 
     pub fn effector_point_abs(&self) -> Option<nalgebra::Point3<f32>> {
-        if let Some(effector_point) = self.chain.effector_point() {
-            Some(nalgebra::Point3::new(
+        self.chain.effector_point().map(|effector_point| {
+            nalgebra::Point3::new(
                 effector_point.x,
                 effector_point.y + super::consts::FRAME_HEIGHT,
                 effector_point.z,
-            ))
-        } else {
-            None
-        }
+            )
+        })
     }
 }
 

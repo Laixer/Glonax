@@ -23,7 +23,7 @@ impl Program for NoopProgram {
         trace!("Last step: {:?}", context.last_step.elapsed());
 
         if let Ok(mut domain) = self.domain.try_write() {
-            domain.signal_update(&mut context.reader).await;
+            domain.signal_update(context.reader).await;
         }
 
         if let Ok(domain) = self.domain.try_read() {

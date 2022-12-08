@@ -29,11 +29,7 @@ impl crate::net::Routable for Hcu {
     }
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        if self.service.ingress(pgn, frame) {
-            true
-        } else {
-            false
-        }
+        self.service.ingress(pgn, frame)
     }
 }
 

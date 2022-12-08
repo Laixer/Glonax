@@ -38,7 +38,7 @@ type ExcavatorService = LaunchStub<Excavator>;
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn runtime_exec(config: &config::ProgramConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_exec(config)?)
+    ExcavatorService::exec_exec(config)
 }
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -48,7 +48,7 @@ pub fn runtime_exec(config: &config::ProgramConfig) -> runtime::Result {
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_input(config)?)
+    ExcavatorService::exec_input(config)
 }
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -58,7 +58,7 @@ pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_ecu(config)?)
+    ExcavatorService::exec_ecu(config)
 }
 
 struct LaunchStub<K> {

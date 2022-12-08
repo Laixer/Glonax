@@ -84,7 +84,7 @@ fn main() -> anyhow::Result<()> {
             0 => log::LevelFilter::Error,
             1 => log::LevelFilter::Info,
             2 => log::LevelFilter::Debug,
-            3 | _ => log::LevelFilter::Trace,
+            _ => log::LevelFilter::Trace,
         }
     };
 

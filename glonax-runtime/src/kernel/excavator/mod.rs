@@ -21,7 +21,7 @@ mod turn;
 
 pub(super) mod consts;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Actuator {
     Boom = 0,
     Arm = 4,

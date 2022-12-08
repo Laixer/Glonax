@@ -10,7 +10,6 @@ pub use service::*;
 mod actuator;
 mod encoder;
 mod engine;
-pub mod motion;
 mod service;
 
 // TODO: Implement connection management.
@@ -35,7 +34,7 @@ impl ControlNet {
     // TODO: Change to Commanded Address
     pub async fn set_address(&self, node: u8, address: u8) {
         let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2.into())
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2)
                 .da(node)
                 .build(),
         )
@@ -47,7 +46,7 @@ impl ControlNet {
 
     pub async fn reset(&self, node: u8) {
         let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1.into())
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
                 .da(node)
                 .build(),
         )
@@ -87,7 +86,7 @@ impl ControlNet {
         let byte_array = u32::to_be_bytes(pgn as u32);
 
         let connection_frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement.into())
+            IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
                 .priority(7)
                 .da(0xff)
                 .build(),
@@ -107,7 +106,7 @@ impl ControlNet {
         println!("Conn: {}", connection_frame);
 
         let data_frame0 = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer.into())
+            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
                 .priority(7)
                 .da(0xff)
                 .build(),
@@ -118,7 +117,7 @@ impl ControlNet {
         println!("Data0: {}", data_frame0);
 
         let data_frame1 = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer.into())
+            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
                 .priority(7)
                 .da(0xff)
                 .build(),
@@ -131,7 +130,7 @@ impl ControlNet {
 
     #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
-        self.stream.write(&frame).await
+        self.stream.write(frame).await
     }
 }
 
@@ -204,10 +203,8 @@ impl Router {
                 }
             }
 
-            if !self.filter_node.is_empty() {
-                if !self.filter_node.contains(&node_address) {
-                    continue;
-                }
+            if !self.filter_node.is_empty() && !self.filter_node.contains(&node_address) {
+                continue;
             }
 
             self.frame = Some(frame);
@@ -220,7 +217,7 @@ impl Router {
     pub async fn try_accept(&self, service: &mut impl Routable) -> bool {
         if let Some(frame) = self.frame {
             let claimed = (service.node() == frame.id().sa() || service.node() == 0xff)
-                && service.ingress(frame.id().pgn().into(), &frame);
+                && service.ingress(frame.id().pgn(), &frame);
             if claimed {
                 service.postroute().await;
             }

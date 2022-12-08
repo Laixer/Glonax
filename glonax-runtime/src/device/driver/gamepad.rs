@@ -56,13 +56,13 @@ impl InputDevice for Gamepad {
                         ty: EventType::Button(Button::LeftBumper),
                         ..
                     } => {
-                        self.reverse_left = if event.value == 1 { true } else { false };
+                        self.reverse_left = event.value == 1;
                     }
                     Event {
                         ty: EventType::Button(Button::RightBumper),
                         ..
                     } => {
-                        self.reverse_right = if event.value == 1 { true } else { false };
+                        self.reverse_right = event.value == 1;
                     }
                     Event {
                         ty: EventType::Axis(Axis::LeftTrigger),

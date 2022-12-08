@@ -2,7 +2,7 @@ pub trait Configurable: Clone {
     fn global(&self) -> &GlobalConfig;
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ProgramConfig {
     /// Global configuration.
     pub global: GlobalConfig,
@@ -11,14 +11,6 @@ pub struct ProgramConfig {
 impl Configurable for ProgramConfig {
     fn global(&self) -> &GlobalConfig {
         &self.global
-    }
-}
-
-impl Default for ProgramConfig {
-    fn default() -> Self {
-        Self {
-            global: Default::default(),
-        }
     }
 }
 

@@ -94,8 +94,8 @@ pub async fn exec_service<K: Operand + ProgramFactory>(
                     // Query the operand program for the next motion step. The
                     // entire thread is dedicated to the program therefore steps
                     // can claim an unlimited time slice.
-                    p = program.step(&mut ctx) => {
-                        if let Some(motion) = p {
+                    plan = program.step(&mut ctx) => {
+                        if let Some(motion) = plan {
                             motion_publisher.publish(motion).await; // TOOD: Handle result
                         }
                     }

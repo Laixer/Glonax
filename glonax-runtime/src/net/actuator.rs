@@ -44,13 +44,13 @@ impl Routable for ActuatorService {
 
             let version = &frame.pdu()[2..5];
 
-            if version != &[0xff; 3] {
+            if version != [0xff; 3] {
                 self.firmware_version = Some((version[0], version[1], version[2]))
             };
 
             let error = &frame.pdu()[6..8];
 
-            if error != &[0xff; 2] {
+            if error != [0xff; 2] {
                 self.last_error = Some(u16::from_le_bytes(error.try_into().unwrap()))
             }
 
@@ -124,7 +124,7 @@ impl ActuatorService {
             for slot in 0..BANK_SLOTS {
                 let offset = (idx as u8 * 4) + slot;
 
-                actuator_list_filled.push(actuators.get(&offset).map_or(None, |a| Some(*a)));
+                actuator_list_filled.push(actuators.get(&offset).copied());
             }
 
             if actuator_list_filled.iter().any(|f| f.is_some()) {

@@ -101,6 +101,12 @@ impl J1939ApplicationInspector {
     }
 }
 
+impl Default for J1939ApplicationInspector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct StatusService {
     net: Arc<ControlNet>,
     node: u8,
@@ -113,11 +119,11 @@ impl StatusService {
 
     pub async fn set_led(&self, led_on: bool) {
         let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1.into())
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
                 .da(self.node)
                 .build(),
         )
-        .copy_from_slice(&[b'Z', b'C', if led_on { 0x1 } else { 0x0 }])
+        .copy_from_slice(&[b'Z', b'C', u8::from(led_on)])
         .build();
 
         self.net.send(&frame).await.unwrap();
