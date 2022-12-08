@@ -33,6 +33,7 @@ pub enum MetricValue {
     Temperature(f32),
     Acceleration((f32, f32, f32)),
     Angle(u32),
+    RPM(u16),
     Heartbeat,
 }
 
@@ -48,6 +49,7 @@ impl std::fmt::Display for MetricValue {
                 )
             }
             MetricValue::Angle(value) => write!(f, "Angle: {:>+5}", value),
+            MetricValue::RPM(value) => write!(f, "RPM: {:>+5}", value),
             MetricValue::Heartbeat => write!(f, "Heartbeat"),
         }
     }
