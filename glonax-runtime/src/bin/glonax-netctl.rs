@@ -44,7 +44,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
     loop {
         router.accept().await?;
 
-        if router.try_accept(&mut engine_service) {
+        if router.try_accept(&mut engine_service).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -53,7 +53,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut arm_encoder) {
+        if router.try_accept(&mut arm_encoder).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -62,7 +62,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut boom_encoder) {
+        if router.try_accept(&mut boom_encoder).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -71,7 +71,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut turn_encoder) {
+        if router.try_accept(&mut turn_encoder).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -80,7 +80,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut actuator) {
+        if router.try_accept(&mut actuator).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -89,7 +89,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut app_inspector) {
+        if router.try_accept(&mut app_inspector).await {
             if let Some((major, minor, patch)) = app_inspector.software_identification() {
                 info!(
                     "{} {} » Software identification: {}.{}.{}",
