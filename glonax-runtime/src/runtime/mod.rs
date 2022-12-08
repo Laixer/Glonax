@@ -67,14 +67,18 @@ impl EventHub {
 
     pub async fn next(&mut self) {
         loop {
-            let event = self.eventloop.poll().await.unwrap();
-            if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(event)) = event {
-                for adapter in self.adapters.iter_mut() {
-                    if event.topic == adapter.topic() {
-                        adapter.parse(&event).await;
+            match self.eventloop.poll().await {
+                Ok(event) => {
+                    if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(event)) = event {
+                        for adapter in self.adapters.iter_mut() {
+                            if event.topic == adapter.topic() {
+                                adapter.parse(&event).await;
+                            }
+                        }
                     }
                 }
-            }
+                Err(e) => warn!("{}", e),
+            };
         }
     }
 }

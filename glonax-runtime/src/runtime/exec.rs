@@ -85,7 +85,7 @@ pub async fn exec_service<K: Operand + ProgramFactory>(
     runtime.eventhub.subscribe(program_manager.adapter());
     runtime.eventhub.subscribe(signal_manager.adapter());
 
-    let motion_publisher = motion_manager.publisher();
+    let mut motion_publisher = motion_manager.publisher();
 
     tokio::task::spawn(async move {
         loop {
