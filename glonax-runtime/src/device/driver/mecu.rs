@@ -19,9 +19,6 @@ pub struct Mecu {
     arm_encoder: KueblerEncoderService,
     boom_encoder: KueblerEncoderService,
     turn_encoder: KueblerEncoderService,
-    arm_encoder_data: Option<EncoderData>,
-    boom_encoder_data: Option<EncoderData>,
-    turn_encoder_data: Option<EncoderData>,
 }
 
 impl Mecu {
@@ -31,9 +28,6 @@ impl Mecu {
             arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
             boom_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
             turn_encoder: KueblerEncoderService::new(net.clone(), 0x20),
-            arm_encoder_data: None,
-            boom_encoder_data: None,
-            turn_encoder_data: None,
         }
     }
 }
@@ -46,70 +40,53 @@ impl crate::net::Routable for Mecu {
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
         if self.arm_encoder.node() == frame.id().sa() && self.arm_encoder.ingress(pgn, frame) {
-            self.arm_encoder_data = Some(EncoderData {
-                position: self.arm_encoder.position(),
-                speed: self.arm_encoder.speed(),
+            trace!(
+                "Arm Position: {}; Speed: {}",
+                self.arm_encoder.position(),
+                self.arm_encoder.speed()
+            );
+
+            self.publisher.try_publish(Signal {
+                address: self.arm_encoder.node(),
+                subaddress: 0,
+                value: MetricValue::Angle(self.arm_encoder.position()),
             });
 
             true
         } else if self.boom_encoder.node() == frame.id().sa()
             && self.boom_encoder.ingress(pgn, frame)
         {
-            self.boom_encoder_data = Some(EncoderData {
-                position: self.boom_encoder.position(),
-                speed: self.boom_encoder.speed(),
+            trace!(
+                "Boom Position: {}; Speed: {}",
+                self.boom_encoder.position(),
+                self.boom_encoder.speed()
+            );
+
+            self.publisher.try_publish(Signal {
+                address: self.boom_encoder.node(),
+                subaddress: 0,
+                value: MetricValue::Angle(self.boom_encoder.position()),
             });
 
             true
         } else if self.turn_encoder.node() == frame.id().sa()
             && self.turn_encoder.ingress(pgn, frame)
         {
-            self.turn_encoder_data = Some(EncoderData {
-                position: self.turn_encoder.position(),
-                speed: self.turn_encoder.speed(),
+            trace!(
+                "Turn Position: {}; Speed: {}",
+                self.turn_encoder.position(),
+                self.turn_encoder.speed()
+            );
+
+            self.publisher.try_publish(Signal {
+                address: self.turn_encoder.node(),
+                subaddress: 0,
+                value: MetricValue::Angle(self.turn_encoder.position()),
             });
 
             true
         } else {
             false
-        }
-    }
-
-    async fn postroute(&mut self) {
-        if let Some(data) = self.arm_encoder_data.take() {
-            trace!("Arm Position: {}; Speed: {}", data.position, data.speed);
-
-            self.publisher
-                .publish(Signal {
-                    address: self.arm_encoder.node(),
-                    subaddress: 0,
-                    value: MetricValue::Angle(data.position),
-                })
-                .await;
-        }
-
-        if let Some(data) = self.boom_encoder_data.take() {
-            trace!("Boom Position: {}; Speed: {}", data.position, data.speed);
-
-            self.publisher
-                .publish(Signal {
-                    address: self.boom_encoder.node(),
-                    subaddress: 0,
-                    value: MetricValue::Angle(data.position),
-                })
-                .await;
-        }
-
-        if let Some(data) = self.turn_encoder_data.take() {
-            trace!("Turn Position: {}; Speed: {}", data.position, data.speed);
-
-            self.publisher
-                .publish(Signal {
-                    address: self.turn_encoder.node(),
-                    subaddress: 0,
-                    value: MetricValue::Angle(data.position),
-                })
-                .await;
         }
     }
 }

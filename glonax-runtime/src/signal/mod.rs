@@ -72,6 +72,7 @@ pub struct SignalPublisher {
 }
 
 impl SignalPublisher {
+    #[allow(dead_code)]
     pub async fn publish(&mut self, signal: Signal) {
         if let Ok(str_payload) = serde_json::to_string(&signal) {
             match self
@@ -84,6 +85,20 @@ impl SignalPublisher {
                 )
                 .await
             {
+                Ok(_) => trace!("Published signal: {}", signal),
+                Err(_) => warn!("Failed to publish signal"),
+            }
+        }
+    }
+
+    pub fn try_publish(&mut self, signal: Signal) {
+        if let Ok(str_payload) = serde_json::to_string(&signal) {
+            match self.client.try_publish(
+                TOPIC,
+                rumqttc::QoS::AtMostOnce,
+                false,
+                str_payload.as_bytes(),
+            ) {
                 Ok(_) => trace!("Published signal: {}", signal),
                 Err(_) => warn!("Failed to publish signal"),
             }
