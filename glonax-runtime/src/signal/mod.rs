@@ -54,7 +54,7 @@ impl crate::runtime::QueueAdapter for SignalQueueAdapter {
         if let Ok(str_payload) = std::str::from_utf8(&event.payload) {
             if let Ok(signal) = serde_json::from_str::<crate::core::metric::Signal>(str_payload) {
                 if let Err(_) = self.queue.try_send(signal) {
-                    warn!("Signal queue reached maximum capacity");
+                    trace!("Signal queue reached maximum capacity");
                 }
             }
         }
@@ -72,7 +72,7 @@ impl SignalPublisher {
                 .client
                 .publish(
                     TOPIC,
-                    rumqttc::QoS::AtLeastOnce,
+                    rumqttc::QoS::AtMostOnce,
                     false,
                     str_payload.as_bytes(),
                 )
