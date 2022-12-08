@@ -22,12 +22,11 @@ pub trait Device: Send {
 #[async_trait::async_trait]
 pub trait MotionDevice: Device {
     /// Issue actuate command.
-    async fn actuate(&mut self, motion: Motion); // TODO: Return result.
-}
 
 /// Device which can read input events.
+#[async_trait::async_trait]
 pub trait InputDevice: Device {
-    fn next(&mut self) -> Result<Scancode>;
+    async fn next(&mut self) -> Result<Scancode>;
 }
 
 #[async_trait::async_trait]

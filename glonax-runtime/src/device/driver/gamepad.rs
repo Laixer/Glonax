@@ -10,16 +10,16 @@ use crate::{
 const DEVICE_NAME: &str = "gamepad";
 
 pub struct Gamepad {
-    driver: glonax_gamepad::Gamepad,
+    driver: glonax_gamepad::AsyncGamepad,
     node_path: PathBuf,
     reverse_left: bool,
     reverse_right: bool,
 }
 
 impl Gamepad {
-    pub fn new(path: &Path) -> Self {
+    pub async fn new(path: &Path) -> Self {
         Self {
-            driver: glonax_gamepad::Gamepad::new(path).unwrap(),
+            driver: glonax_gamepad::AsyncGamepad::new(path).await.unwrap(),
             node_path: path.to_path_buf(),
             reverse_left: false,
             reverse_right: false,
@@ -35,10 +35,11 @@ impl Device for Gamepad {
     }
 }
 
+#[async_trait::async_trait]
 impl InputDevice for Gamepad {
-    fn next(&mut self) -> device::Result<Scancode> {
+    async fn next(&mut self) -> device::Result<Scancode> {
         loop {
-            match self.driver.next_event() {
+            match self.driver.next_event().await {
                 Ok(event) => match event {
                     Event {
                         ty: EventType::Axis(Axis::LeftStickY),
