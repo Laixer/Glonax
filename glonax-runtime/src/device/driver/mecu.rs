@@ -4,11 +4,9 @@ use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::metric::{MetricValue, Signal},
-    device::Device,
     net::{ControlNet, KueblerEncoderService},
+    signal::SignalPublisher,
 };
-
-const DEVICE_NAME: &str = "m-ecu";
 
 #[derive(Debug, serde::Serialize)]
 struct EncoderData {
@@ -17,7 +15,7 @@ struct EncoderData {
 }
 
 pub struct Mecu {
-    publisher: crate::signal::SignalPublisher,
+    publisher: SignalPublisher,
     arm_encoder: KueblerEncoderService,
     boom_encoder: KueblerEncoderService,
     turn_encoder: KueblerEncoderService,
@@ -27,7 +25,7 @@ pub struct Mecu {
 }
 
 impl Mecu {
-    pub fn new(net: Arc<ControlNet>, publisher: crate::signal::SignalPublisher) -> Self {
+    pub fn new(net: Arc<ControlNet>, publisher: SignalPublisher) -> Self {
         Self {
             publisher,
             arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
@@ -37,14 +35,6 @@ impl Mecu {
             boom_encoder_data: None,
             turn_encoder_data: None,
         }
-    }
-}
-
-unsafe impl Send for Mecu {}
-
-impl Device for Mecu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
     }
 }
 
@@ -123,63 +113,3 @@ impl crate::net::Routable for Mecu {
         }
     }
 }
-
-// #[async_trait::async_trait]
-// impl super::gateway::GatewayClient for Mecu {
-//     fn from_net(_net: Arc<ControlNet>) -> Self {
-//         unimplemented!()
-//     }
-
-//     async fn incoming(&mut self, frame: &Frame) {
-//         if frame.id().pgn() == PGN::ProprietaryB(65_505) {
-//             if frame.pdu()[..6] != [0xff; 6] {
-//                 let data_x = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
-//                 let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-//                 let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
-
-//                 self.pusher
-//                     .push(Signal {
-//                         address: frame.id().sa(),
-//                         subaddress: 0,
-//                         value: MetricValue::Acceleration((
-//                             data_x as f32,
-//                             data_y as f32,
-//                             data_z as f32,
-//                         )),
-//                     })
-//                     .await;
-//             }
-//         } else if frame.id().pgn() == PGN::Other(64_258) {
-//             // TODO: Value may not be a u32
-//             let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
-
-//             self.pusher
-//                 .push(Signal {
-//                     address: frame.id().sa(),
-//                     subaddress: 0,
-//                     value: MetricValue::Angle(data),
-//                 })
-//                 .await;
-//         } else if frame.id().pgn() == PGN::Other(64_252) {
-//             let data = frame.pdu()[0];
-
-//             self.pusher
-//                 .push(Signal {
-//                     address: frame.id().sa(),
-//                     subaddress: 0,
-//                     value: MetricValue::Angle(data as u32),
-//                 })
-//                 .await;
-//         } else if frame.id().pgn() == PGN::ProprietaryB(65_450) {
-//             let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
-
-//             self.pusher
-//                 .push(Signal {
-//                     address: frame.id().sa(),
-//                     subaddress: 0,
-//                     value: MetricValue::Angle(data),
-//                 })
-//                 .await;
-//         }
-//     }
-// }

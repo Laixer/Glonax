@@ -2,12 +2,7 @@ use std::sync::Arc;
 
 use glonax_j1939::{Frame, PGN};
 
-use crate::{
-    device::Device,
-    net::{ControlNet, EngineService},
-};
-
-const DEVICE_NAME: &str = "v-ecu";
+use crate::net::{ControlNet, EngineService};
 
 pub struct Vecu {
     engine_service: EngineService,
@@ -18,12 +13,6 @@ impl Vecu {
         Self {
             engine_service: EngineService::new(0x0),
         }
-    }
-}
-
-impl Device for Vecu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
     }
 }
 

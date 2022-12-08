@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    device::{self, CoreDevice, Device},
+    device::{self, CoreDevice},
     net::{ControlNet, Router},
 };
 
-const DEVICE_NAME: &str = "gateway";
 const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 
 pub struct Gateway {
@@ -47,12 +46,6 @@ impl Gateway {
 
     pub fn hcu(&self) -> device::Hcu {
         device::Hcu::new(self.net.clone())
-    }
-}
-
-impl Device for Gateway {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
     }
 }
 

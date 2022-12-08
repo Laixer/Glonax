@@ -4,7 +4,7 @@ use glonax_gamepad::{Axis, Button, Event, EventType};
 
 use crate::{
     core::input::{ButtonState, Scancode},
-    device::{self, Device, InputDevice},
+    device::{self, InputDevice},
 };
 
 const DEVICE_NAME: &str = "gamepad";
@@ -28,12 +28,6 @@ impl Gamepad {
 }
 
 unsafe impl Send for Gamepad {}
-
-impl Device for Gamepad {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
-    }
-}
 
 #[async_trait::async_trait]
 impl InputDevice for Gamepad {
@@ -124,7 +118,7 @@ impl InputDevice for Gamepad {
                 },
                 Err(_) => {
                     break Err(device::DeviceError::no_such_device(
-                        self.name(),
+                        DEVICE_NAME.to_string(),
                         &self.node_path,
                     ))
                 }

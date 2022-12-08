@@ -4,21 +4,14 @@ use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::motion::Motion,
-    device::{Device, MotionDevice},
+    device::MotionDevice,
     net::{ActuatorService, ControlNet},
 };
 
-const DEVICE_NAME: &str = "hcu";
 const DEVICE_NET_HCU_ADDR: u8 = 0x4a;
 
 pub struct Hcu {
     service: ActuatorService,
-}
-
-impl Device for Hcu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
-    }
 }
 
 impl Hcu {
