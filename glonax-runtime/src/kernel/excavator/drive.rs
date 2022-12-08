@@ -62,7 +62,7 @@ impl TrapezoidalDistanceProfile {
             inner: TrapezoidalProfile {
                 ramp_time: Duration::from_secs(3),
                 motion_time: Duration::from_secs_f32(distance / max_speed),
-                power_range: (175.0, 255.0),
+                power_range: (5_000.0, 32_000.0),
             },
             max_speed,
         }
