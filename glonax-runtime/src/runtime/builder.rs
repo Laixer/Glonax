@@ -24,7 +24,6 @@ impl<K: Operand + Identity> Builder<K> {
         Ok(Self(RuntimeContext {
             operand: K::from_config(config),
             shutdown: broadcast::channel(1),
-            // signal_manager: crate::signal::SignalManager::new(client.clone()),
             eventhub: EventHub::new(config.global()),
         }))
     }

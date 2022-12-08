@@ -1,4 +1,6 @@
-#[derive(Copy, Clone, Debug, serde::Serialize, serde::Deserialize)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub struct Signal {
     /// Node address.
     pub address: u8,
@@ -28,7 +30,7 @@ impl std::fmt::Display for Signal {
     }
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum MetricValue {
     Temperature(f32),
     Acceleration((f32, f32, f32)),
