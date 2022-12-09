@@ -1,7 +1,4 @@
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
 
 use super::QueueAdapter;
 
@@ -36,7 +33,6 @@ impl MotionManager {
         MotionPublisher {
             client: self.client.clone(),
             motion_enabled: self.motion_enabled,
-            last_publish: Instant::now(),
         }
     }
 }
@@ -75,15 +71,13 @@ pub(super) struct MotionPublisher {
     client: std::sync::Arc<rumqttc::AsyncClient>,
     /// Whether or not to enable the motion device.
     motion_enabled: bool,
-    /// Time of last step.
-    last_publish: Instant,
 }
 
 impl MotionPublisher {
-    pub async fn publish<T: crate::core::motion::ToMotion>(&mut self, motion: T) {
+    pub async fn publish<T: crate::core::motion::ToMotion>(&self, motion: T) {
         let motion = motion.to_motion();
 
-        if self.motion_enabled && self.last_publish.elapsed() > Duration::from_millis(1) {
+        if self.motion_enabled {
             if let Ok(str_payload) = serde_json::to_string(&motion) {
                 match self
                     .client
@@ -98,7 +92,6 @@ impl MotionPublisher {
                     Ok(_) => trace!("Published motion: {}", motion),
                     Err(_) => warn!("Failed to published motion"),
                 }
-                self.last_publish = Instant::now();
             }
         }
     }

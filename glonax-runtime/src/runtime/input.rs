@@ -11,7 +11,7 @@ pub(crate) async fn exec_service<K: Operand>(
 ) -> runtime::Result {
     let mut input_device = Gamepad::new(std::path::Path::new(&config.device)).await;
 
-    let mut motion_publisher = runtime.new_motion_manager().publisher();
+    let motion_publisher = runtime.new_motion_manager().publisher();
 
     tokio::task::spawn(async move {
         loop {
