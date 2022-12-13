@@ -8,31 +8,6 @@ use crate::{
 
 use super::operand::{Operand, ProgramFactory};
 
-// queue.0.send((Program::Sleep.into(), vec![0.5])).await.ok();
-
-//     .send((Program::Kinematic.into(), [2.71, 2.34, 0.0].into()))
-//     .send((Program::Turn.into(), [0.174533].into()))
-
-// ------------------------------------------------ //
-
-// Standard position
-//     .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
-// // Step: 2
-//     .send((Program::Kinematic.into(), vec![3.77, 1.10, 4.07]))
-// // Step: 3
-//     .send((Program::Kinematic.into(), vec![5.28, 1.32, 5.70]))
-// // Step: 4
-//     .send((Program::Kinematic.into(), vec![3.16, -0.45, 3.41]))
-// // Step: 5
-//     .send((Program::Kinematic.into(), vec![3.16, 0.55, 3.41]))
-// // Step: 6
-//     .send((Program::Kinematic.into(), vec![4.45, 0.55, -0.33]))
-// // Step: 7
-//     .send((Program::Kinematic.into(), vec![6.73, 2.35, -4.27]))
-
-// // Standard position
-//     .send((Program::Kinematic.into(), vec![5.21, 0.0, 0.0]))
-
 pub async fn exec_service<K: Operand + ProgramFactory>(
     _config: &ProgramConfig,
     mut runtime: RuntimeContext<K>,

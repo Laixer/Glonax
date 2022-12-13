@@ -1,13 +1,17 @@
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
 use crate::runtime::program::*;
 
 use super::HydraulicMotion;
 
 pub(super) struct NoopProgram {
-    domain: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
+    domain: Arc<RwLock<super::body::Body>>,
 }
 
 impl NoopProgram {
-    pub fn new(model: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>) -> Self {
+    pub fn new(model: Arc<RwLock<super::body::Body>>) -> Self {
         Self { domain: model }
     }
 }
