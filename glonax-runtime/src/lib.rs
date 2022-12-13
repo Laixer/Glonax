@@ -61,6 +61,16 @@ pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
     ExcavatorService::exec_ecu(config)
 }
 
+/// Start the machine kernel from configuration. This is the recommended way to
+/// run a machine kernel from an dynamic external caller. Call this factory for
+/// the default machine behaviour.
+///
+/// This factory method obtains the service from the combination of configuration
+/// settings. This service is then run to completion.
+pub fn runtime_cli(config: &config::InputConfig) -> runtime::Result {
+    ExcavatorService::exec_cli(config)
+}
+
 struct LaunchStub<K> {
     _1: std::marker::PhantomData<K>,
 }
@@ -120,6 +130,17 @@ where
     pub fn exec_input(config: &config::InputConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::input::exec_service(
+                config,
+                self::runtime::Builder::<K>::from_config(config)?.build(),
+            )
+            .await
+        })
+    }
+
+    /// Start the runtime service.
+    pub fn exec_cli(config: &config::InputConfig) -> runtime::Result {
+        Self::runtime_reactor(config).block_on(async {
+            runtime::cli::exec_service(
                 config,
                 self::runtime::Builder::<K>::from_config(config)?.build(),
             )

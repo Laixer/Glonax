@@ -15,6 +15,7 @@ mod builder;
 pub(crate) use self::builder::Builder;
 use self::operand::Operand;
 
+pub mod cli;
 pub mod ecu;
 pub mod exec;
 pub mod input;
