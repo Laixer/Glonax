@@ -1,3 +1,9 @@
+// Copyright (C) 2022 Laixer Equipment B.V.
+// All rights reserved.
+//
+// This software may be modified and distributed under the terms
+// of the included license.  See the LICENSE file for details.
+
 use ansi_term::Colour::{Blue, Green, Purple, Red, Yellow};
 use clap::Parser;
 use glonax::net::*;
