@@ -21,11 +21,11 @@ pub const FRAME_HEIGHT: f32 = 1.885;
 pub const BOOM_ORIGIN_OFFSET: (f32, f32) = (-0.784, 0.420);
 
 /// Boom encoder range.
-pub const BOOM_ENCODER_RANGE: Range<f32> = 790.0..1017.0;
+pub const BOOM_ENCODER_RANGE: Range<f32> = 136100.0..195600.0;
 /// Boom angle range.
 pub const BOOM_ANGLE_RANGE: Range<f32> = 0.0..1.178;
 /// Arm encoder range.
-pub const ARM_ENCODER_RANGE: Range<f32> = 247.0..511.0;
+pub const ARM_ENCODER_RANGE: Range<f32> = 25000.0..51800.0;
 /// Arm angle range.
 pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 /// Bucket encoder range.
@@ -33,7 +33,7 @@ pub const BUCKET_ENCODER_RANGE: Range<f32> = 424.0..697.0;
 /// Bucket angle range.
 pub const BUCKET_ANGLE_RANGE: Range<f32> = 0.0..3.0;
 /// Slew encoder range.
-pub const SLEW_ENCODER_RANGE: Range<f32> = 0.0..2899.0;
+pub const SLEW_ENCODER_RANGE: Range<f32> = 0.0..290000.0;
 /// Slew angle range.
 pub const SLEW_ANGLE_RANGE: Range<f32> = 0.0..core::f32::consts::PI * 2.0;
 
