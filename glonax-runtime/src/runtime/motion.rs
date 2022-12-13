@@ -90,7 +90,7 @@ impl MotionPublisher {
                     .await
                 {
                     Ok(_) => trace!("Published motion: {}", motion),
-                    Err(_) => warn!("Failed to published motion"),
+                    Err(_) => warn!("Failed to publish motion"),
                 }
             }
         }

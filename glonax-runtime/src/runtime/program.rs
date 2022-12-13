@@ -89,18 +89,21 @@ impl ProgramManager {
         }
     }
 
-    #[allow(dead_code)]
     pub async fn publish(&mut self, program: crate::core::program::ProgramArgument) {
-        let data = serde_json::to_string(&program).unwrap();
-        let q = data.as_bytes();
-
-        match self
-            .client
-            .publish(self::TOPIC, rumqttc::QoS::ExactlyOnce, false, q)
-            .await
-        {
-            Ok(_) => trace!("Published program: {:?}", program),
-            Err(_) => warn!("Failed to publish program"),
+        if let Ok(str_payload) = serde_json::to_string(&program) {
+            match self
+                .client
+                .publish(
+                    TOPIC,
+                    rumqttc::QoS::ExactlyOnce,
+                    false,
+                    str_payload.as_bytes(),
+                )
+                .await
+            {
+                Ok(_) => trace!("Published program: {:?}", program),
+                Err(_) => warn!("Failed to publish program"),
+            }
         }
     }
 
