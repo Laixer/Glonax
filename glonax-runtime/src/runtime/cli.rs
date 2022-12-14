@@ -1,3 +1,5 @@
+use std::{fs::File, io::BufRead};
+
 use crate::{core::program::ProgramArgument, runtime, InputConfig, RuntimeContext};
 
 use super::operand::Operand;
@@ -14,81 +16,24 @@ pub(crate) async fn exec_service<K: Operand>(
         }
     });
 
-    let (models, _) = tobj::load_obj(
-        "/home/yorick/Projects/glonax/path.obj",
-        &tobj::LoadOptions::default(),
-    )
-    .expect("ouch");
+    let file = File::open("/home/yorick/Projects/glonax/unit1.lpf").expect("cannnot open file");
 
-    for model in &models {
-        let mesh = &model.mesh;
+    let reader = std::io::BufReader::new(file);
 
-        for v in 0..mesh.positions.len() / 3 {
-            let x = mesh.positions[3 * v];
-            let y = mesh.positions[3 * v + 1];
-            let z = mesh.positions[3 * v + 2];
+    for line in reader.lines() {
+        let line_ok = line.unwrap();
+        if !line_ok.starts_with('#') && line_ok.len() > 0 {
+            let row: Vec<&str> = line_ok.split_whitespace().collect();
 
-            let yy = ProgramArgument {
-                id: 603,
-                parameters: vec![x, y, z],
+            let argument = ProgramArgument {
+                id: row[0].parse().unwrap(),
+                parameters: row[1..].iter().map(|f| f.parse().unwrap()).collect(),
             };
 
-            program_manager.publish(yy).await;
+            program_manager.publish(argument).await;
+            // dbg!(argument);
         }
     }
-
-    // dbg!(models);
-
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![5.21, 0.0, 0.0],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![3.77, 1.10, 4.07],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![5.28, 1.32, 5.70],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![3.16, -0.45, 3.41],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![3.16, 0.55, 3.41],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![4.45, 0.55, -0.33],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![6.73, 2.35, -4.27],
-    //     })
-    //     .await;
-    // program_manager
-    //     .publish(ProgramArgument {
-    //         id: 603,
-    //         parameters: vec![5.21, 0.0, 0.0],
-    //     })
-    //     .await;
-
-    // info!("Program 901 submitted");
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
