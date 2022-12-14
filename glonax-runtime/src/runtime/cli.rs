@@ -16,7 +16,7 @@ pub(crate) async fn exec_service<K: Operand>(
         }
     });
 
-    let file = File::open("/home/yorick/Projects/glonax/unit1.lpf").expect("cannnot open file");
+    let file = File::open("/home/yorick/Projects/glonax/unit1.ini").expect("cannnot open file");
 
     let reader = std::io::BufReader::new(file);
 
