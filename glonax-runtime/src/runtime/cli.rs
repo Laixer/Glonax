@@ -1,11 +1,33 @@
-use std::{fs::File, io::BufRead};
+use std::fs::File;
 
-use crate::{core::program::ProgramArgument, runtime, InputConfig, RuntimeContext};
+use crate::{core::program::ProgramArgument, runtime, CliConfig, RuntimeContext};
 
 use super::operand::Operand;
 
+#[derive(Debug, serde::Deserialize)]
+struct Program {
+    name: String,
+    version: String,
+    commands: Vec<Command>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+struct Command {
+    command: String,
+    parameter: Option<Parameter>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum Parameter {
+    Vector((f32, f32, f32)),
+    Preset(String),
+    Duration(u32),
+    Distance(f32),
+}
+
 pub(crate) async fn exec_service<K: Operand>(
-    _config: &InputConfig,
+    config: &CliConfig,
     mut runtime: RuntimeContext<K>,
 ) -> runtime::Result {
     let mut program_manager = runtime.new_program_manager();
@@ -16,22 +38,75 @@ pub(crate) async fn exec_service<K: Operand>(
         }
     });
 
-    let file = File::open("/home/yorick/Projects/glonax/unit1.ini").expect("cannnot open file");
+    let mut file = File::open(&config.file).expect("cannnot open file");
 
-    let reader = std::io::BufReader::new(file);
+    use std::io::Read;
 
-    for line in reader.lines() {
-        let line_ok = line.unwrap();
-        if !line_ok.starts_with('#') && line_ok.len() > 0 {
-            let row: Vec<&str> = line_ok.split_whitespace().collect();
+    let mut data = String::new();
+    file.read_to_string(&mut data).unwrap();
 
-            let argument = ProgramArgument {
-                id: row[0].parse().unwrap(),
-                parameters: row[1..].iter().map(|f| f.parse().unwrap()).collect(),
-            };
+    let program: Program = serde_json::from_str(&data).expect("JSON was not well-formatted");
 
-            program_manager.publish(argument).await;
-            // dbg!(argument);
+    debug!("Parsing {} with version {}", program.name, program.version);
+
+    for cmd in program.commands {
+        match cmd.command.as_str() {
+            "noop" => {
+                program_manager
+                    .publish(ProgramArgument {
+                        id: 900,
+                        parameters: vec![],
+                    })
+                    .await;
+            }
+            "test" => {
+                program_manager
+                    .publish(ProgramArgument {
+                        id: 910,
+                        parameters: vec![],
+                    })
+                    .await;
+            }
+            "sleep" => {
+                if let Some(Parameter::Duration(duration)) = cmd.parameter {
+                    program_manager
+                        .publish(ProgramArgument {
+                            id: 901,
+                            parameters: vec![duration as f32],
+                        })
+                        .await;
+                }
+            }
+            "drive" => {
+                if let Some(Parameter::Distance(distance)) = cmd.parameter {
+                    program_manager
+                        .publish(ProgramArgument {
+                            id: 700,
+                            parameters: vec![distance],
+                        })
+                        .await;
+                }
+            }
+            "position" => {
+                if let Some(Parameter::Preset(name)) = cmd.parameter {
+                    if name == "default" {
+                        program_manager
+                            .publish(ProgramArgument {
+                                id: 603,
+                                parameters: vec![5.21, 0.0, 0.0],
+                            })
+                            .await;
+                    }
+                } else if let Some(Parameter::Vector((x, y, z))) = cmd.parameter {
+                    program_manager
+                        .publish(ProgramArgument {
+                            id: 603,
+                            parameters: vec![x, y, z],
+                        })
+                        .await;
+                }
+            }
+            _ => {}
         }
     }
 

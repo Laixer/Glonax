@@ -67,7 +67,7 @@ pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
 ///
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
-pub fn runtime_cli(config: &config::InputConfig) -> runtime::Result {
+pub fn runtime_cli(config: &config::CliConfig) -> runtime::Result {
     ExcavatorService::exec_cli(config)
 }
 
@@ -138,7 +138,7 @@ where
     }
 
     /// Start the runtime service.
-    pub fn exec_cli(config: &config::InputConfig) -> runtime::Result {
+    pub fn exec_cli(config: &config::CliConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::cli::exec_service(
                 config,

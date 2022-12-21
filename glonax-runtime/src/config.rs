@@ -29,6 +29,23 @@ impl Configurable for InputConfig {
     }
 }
 
+
+#[derive(Clone, Debug)]
+pub struct CliConfig {
+    /// Input file.
+    pub file: String,
+
+    /// Global configuration.
+    pub global: GlobalConfig,
+}
+
+impl Configurable for CliConfig {
+    fn global(&self) -> &GlobalConfig {
+        &self.global
+    }
+}
+
+
 #[derive(Clone, Debug)]
 pub struct EcuConfig {
     /// CAN network interface.
