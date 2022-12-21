@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::{fs::File, io::Read};
 
 use crate::{core::program::ProgramArgument, runtime, CliConfig, RuntimeContext};
 
@@ -39,8 +39,6 @@ pub(crate) async fn exec_service<K: Operand>(
     });
 
     let mut file = File::open(&config.file).expect("cannnot open file");
-
-    use std::io::Read;
 
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
