@@ -2,8 +2,6 @@
     "name": "program1",
     "version": "1.0",
     "commands": [
-        {"command": "sleep", "parameter": {"duration": 1}},
-        {"command": "noop"},
         {"command": "position", "parameter": {"preset": "default"}},
         {"command": "position", "parameter": {"vector": [3.77, 1.10, 4.07]}},
         {"command": "position", "parameter": {"vector": [5.28, 1.32, 5.70]}},

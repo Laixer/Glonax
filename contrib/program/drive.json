@@ -1,0 +1,8 @@
+{
+    "name": "drive",
+    "version": "1.0",
+    "commands": [
+        {"command": "position", "parameter": {"preset": "default"}},
+        {"command": "drive", "parameter": {"distance": 2.5}}
+    ]
+}
