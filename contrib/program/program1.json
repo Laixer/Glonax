@@ -1,0 +1,16 @@
+{
+    "name": "program1",
+    "version": "1.0",
+    "commands": [
+        {"command": "sleep", "parameter": {"duration": 1}},
+        {"command": "noop"},
+        {"command": "position", "parameter": {"preset": "default"}},
+        {"command": "position", "parameter": {"vector": [3.77, 1.10, 4.07]}},
+        {"command": "position", "parameter": {"vector": [5.28, 1.32, 5.70]}},
+        {"command": "position", "parameter": {"vector": [3.16, -0.45, 3.41]}},
+        {"command": "position", "parameter": {"vector": [3.16, 0.55, 3.41]}},
+        {"command": "position", "parameter": {"vector": [4.45, 0.55, -0.33]}},
+        {"command": "position", "parameter": {"vector": [6.73, 2.35, -4.27]}},
+        {"command": "position", "parameter": {"preset": "default"}}
+    ]
+}
