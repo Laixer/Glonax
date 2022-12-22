@@ -4,28 +4,9 @@ use glonax_j1939::*;
 
 use super::{ControlNet, Routable};
 
-pub enum ActuatorState {
-    Nominal,
-    Ident,
-    Faulty,
-}
-
-impl std::fmt::Display for ActuatorState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ActuatorState::Nominal => write!(f, "no error"),
-            ActuatorState::Ident => write!(f, "ident"),
-            ActuatorState::Faulty => write!(f, "faulty"),
-        }
-    }
-}
-
 pub struct ActuatorService {
     net: Arc<ControlNet>,
     node: u8,
-    firmware_version: Option<(u8, u8, u8)>,
-    state: Option<ActuatorState>,
-    last_error: Option<u16>,
     actuators: std::collections::HashMap<u8, i16>,
 }
 
@@ -34,49 +15,14 @@ impl Routable for ActuatorService {
         self.node
     }
 
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        if pgn == PGN::ProprietaryB(65_282) {
-            self.state = match frame.pdu()[1] {
-                0x14 => Some(ActuatorState::Nominal),
-                0x16 => Some(ActuatorState::Ident),
-                0xfa => Some(ActuatorState::Faulty),
-                _ => None,
-            };
-
-            let version = &frame.pdu()[2..5];
-
-            if version != [0xff; 3] {
-                self.firmware_version = Some((version[0], version[1], version[2]))
-            };
-
-            let error = &frame.pdu()[6..8];
-
-            if error != [0xff; 2] {
-                self.last_error = Some(u16::from_le_bytes(error.try_into().unwrap()))
-            }
-
-            true
-        } else {
-            false
-        }
+    fn ingress(&mut self, _: PGN, _: &Frame) -> bool {
+        false
     }
 }
 
 impl std::fmt::Display for ActuatorService {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "State: {}; Version: {}; Last error: {}",
-            self.state
-                .as_ref()
-                .map_or_else(|| "-".to_owned(), |f| f.to_string()),
-            self.firmware_version.map_or_else(
-                || "-".to_owned(),
-                |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
-            ),
-            self.last_error
-                .map_or_else(|| "-".to_owned(), |f| { f.to_string() })
-        )
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }
 
@@ -85,9 +31,6 @@ impl ActuatorService {
         Self {
             net,
             node,
-            firmware_version: None,
-            state: None,
-            last_error: None,
             actuators: std::collections::HashMap::new(),
         }
     }
