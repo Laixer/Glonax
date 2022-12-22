@@ -325,7 +325,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
 
-                let service = ActuatorService::new(std::sync::Arc::new(net), node);
+                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Set actuator {} to {}",

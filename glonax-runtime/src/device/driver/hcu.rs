@@ -35,7 +35,7 @@ impl crate::net::Routable for Hcu {
 
 #[async_trait::async_trait]
 impl MotionDevice for Hcu {
-    async fn actuate(&self, motion: Motion) {
+    async fn actuate(&mut self, motion: Motion) {
         match motion {
             Motion::StopAll => {
                 self.service.lock().await;

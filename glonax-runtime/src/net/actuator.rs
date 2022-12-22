@@ -26,6 +26,7 @@ pub struct ActuatorService {
     firmware_version: Option<(u8, u8, u8)>,
     state: Option<ActuatorState>,
     last_error: Option<u16>,
+    actuators: std::collections::HashMap<u8, i16>,
 }
 
 impl Routable for ActuatorService {
@@ -87,6 +88,7 @@ impl ActuatorService {
             firmware_version: None,
             state: None,
             last_error: None,
+            actuators: std::collections::HashMap::new(),
         }
     }
 
@@ -114,9 +116,15 @@ impl ActuatorService {
         trace!("Enable motion");
     }
 
-    pub async fn actuator_control(&self, actuators: std::collections::HashMap<u8, i16>) {
+    pub async fn actuator_control(&mut self, actuators: std::collections::HashMap<u8, i16>) {
         const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
         const BANK_SLOTS: u8 = 4;
+
+        for (act, val) in &actuators {
+            self.actuators.insert(*act, *val);
+        }
+
+        trace!("Actuator state {:?}", self.actuators);
 
         for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
             let mut actuator_list_filled: Vec<Option<i16>> = vec![];
@@ -124,7 +132,7 @@ impl ActuatorService {
             for slot in 0..BANK_SLOTS {
                 let offset = (idx as u8 * 4) + slot;
 
-                actuator_list_filled.push(actuators.get(&offset).copied());
+                actuator_list_filled.push(self.actuators.get(&offset).copied());
             }
 
             if actuator_list_filled.iter().any(|f| f.is_some()) {

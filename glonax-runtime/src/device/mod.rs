@@ -15,7 +15,7 @@ use crate::core::{input::Scancode, motion::Motion};
 #[async_trait::async_trait]
 pub trait MotionDevice {
     /// Issue actuate command.
-    async fn actuate(&self, motion: Motion); // TODO: Return result.
+    async fn actuate(&mut self, motion: Motion); // TODO: Return result.
 }
 
 /// Device which can read input events.
