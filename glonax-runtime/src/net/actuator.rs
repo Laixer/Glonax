@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use glonax_j1939::*;
 
@@ -7,7 +7,7 @@ use super::{ControlNet, Routable};
 pub struct ActuatorService {
     net: Arc<ControlNet>,
     node: u8,
-    actuators: std::collections::HashMap<u8, i16>,
+    actuators: [Option<i16>; 8],
 }
 
 impl Routable for ActuatorService {
@@ -31,7 +31,7 @@ impl ActuatorService {
         Self {
             net,
             node,
-            actuators: std::collections::HashMap::new(),
+            actuators: [None; 8],
         }
     }
 
@@ -59,41 +59,51 @@ impl ActuatorService {
         trace!("Enable motion");
     }
 
-    pub async fn actuator_control(&mut self, actuators: std::collections::HashMap<u8, i16>) {
+    pub async fn actuator_control(&mut self, actuators: HashMap<u8, i16>) {
         const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
-        const BANK_SLOTS: u8 = 4;
+        const BANK_SLOTS: usize = 4;
+
+        let mut bank_update = [false; 2];
 
         for (act, val) in &actuators {
-            self.actuators.insert(*act, *val);
+            self.actuators[*act as usize] = Some(*val);
+
+            bank_update[*act as usize / BANK_SLOTS] = true;
         }
 
-        trace!("Actuator state {:?}", self.actuators);
+        trace!(
+            "Actuator state {}",
+            self.actuators
+                .iter()
+                .enumerate()
+                .map(|(idx, act)| {
+                    format!(
+                        "{}: {}",
+                        idx,
+                        act.map_or("NaN".to_owned(), |f| f.to_string())
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
 
         for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
-            let mut actuator_list_filled: Vec<Option<i16>> = vec![];
-
-            for slot in 0..BANK_SLOTS {
-                let offset = (idx as u8 * 4) + slot;
-
-                actuator_list_filled.push(self.actuators.get(&offset).copied());
+            if !bank_update[idx] {
+                continue;
             }
 
-            if actuator_list_filled.iter().any(|f| f.is_some()) {
-                let pdu = actuator_list_filled
-                    .iter()
-                    .flat_map(|p| p.map_or([0xff, 0xff], |v| v.to_le_bytes()))
-                    .collect::<Vec<u8>>()
-                    .as_slice()[..8]
-                    .try_into()
-                    .unwrap();
+            let stride = idx * BANK_SLOTS;
 
-                let frame = Frame::new(IdBuilder::from_pgn(bank).da(self.node).build(), pdu);
-                self.net.send(&frame).await.unwrap();
-            }
-        }
+            let pdu: [u8; 8] = self.actuators[stride..stride + BANK_SLOTS]
+                .iter()
+                .flat_map(|p| p.map_or([0xff, 0xff], |v| v.to_le_bytes()))
+                .collect::<Vec<u8>>()
+                .as_slice()[..8]
+                .try_into()
+                .unwrap();
 
-        for (actuator, value) in &actuators {
-            trace!("Change actuator {} to value {}", actuator, value);
+            let frame = Frame::new(IdBuilder::from_pgn(bank).da(self.node).build(), pdu);
+            self.net.send(&frame).await.unwrap();
         }
     }
 }
