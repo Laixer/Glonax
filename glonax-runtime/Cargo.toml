@@ -25,3 +25,4 @@ async-trait = "0.1"
 nalgebra = "0.31"
 ansi_term = "0.12"
 rumqttc = "0.18.0"
+postcard ={ version = "1.0.2", features = ["use-std"]}
