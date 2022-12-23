@@ -1,23 +1,23 @@
 {
     "name": "program1",
     "version": "1.0",
-    "commands": [
-        {"command": "position", "parameter": {"preset": "default"}},
-        {"command": "position", "parameter": {"vector": [3.77, 1.10, 4.07]}},
-        {"command": "position", "parameter": {"vector": [5.28, 1.32, 5.70]}},
-        {"command": "position", "parameter": {"vector": [3.16, -0.45, 3.41]}},
-        {"command": "position", "parameter": {"vector": [3.16, 0.55, 3.41]}},
-        {"command": "position", "parameter": {"vector": [4.45, 0.55, -0.33]}},
-        {"command": "position", "parameter": {"vector": [6.73, 2.35, -4.27]}},
-        {"command": "position", "parameter": {"preset": "default"}},
-        {"command": "position", "parameter": {"vector": [7.41, 1.27, 0.0]}},
-        {"command": "position", "parameter": {"vector": [8.27, 1.56, 0.0]}},
-        {"command": "position", "parameter": {"vector": [3.45, 0.31, 0.0]}},
-        {"command": "position", "parameter": {"vector": [5.08, 2.60, -5.85]}},
-        {"command": "position", "parameter": {"vector": [4.20, 1.72,  7.22]}},
-        {"command": "position", "parameter": {"vector": [1.81, 0.60, 3.13]}},
-        {"command": "position", "parameter": {"vector": [2.37, 0.28, -3.77]}},
-        {"command": "position", "parameter": {"vector": [4.21, 3.26, -6.67]}},
-        {"command": "position", "parameter": {"preset": "default"}}
+    "steps": [
+        {"run": "kinematic", "parameters": [5.21, 0.0, 0.0]},
+        {"run": "kinematic", "parameters": [3.77, 1.10, 4.07]},
+        {"run": "kinematic", "parameters": [5.28, 1.32, 5.70]},
+        {"run": "kinematic", "parameters": [3.16, -0.45, 3.41]},
+        {"run": "kinematic", "parameters": [3.16, 0.55, 3.41]},
+        {"run": "kinematic", "parameters": [4.45, 0.55, -0.33]},
+        {"run": "kinematic", "parameters": [6.73, 2.35, -4.27]},
+        {"run": "kinematic", "parameters": [5.21, 0.0, 0.0]},
+        {"run": "kinematic", "parameters": [7.41, 1.27, 0.0]},
+        {"run": "kinematic", "parameters": [8.27, 1.56, 0.0]},
+        {"run": "kinematic", "parameters": [3.45, 0.31, 0.0]},
+        {"run": "kinematic", "parameters": [5.08, 2.60, -5.85]},
+        {"run": "kinematic", "parameters": [4.20, 1.72, 7.22]},
+        {"run": "kinematic", "parameters": [1.81, 0.60, 3.13]},
+        {"run": "kinematic", "parameters": [2.37, 0.28, -3.77]},
+        {"run": "kinematic", "parameters": [4.21, 3.26, -6.67]},
+        {"run": "kinematic", "parameters": [5.21, 0.0, 0.0]}
     ]
 }
