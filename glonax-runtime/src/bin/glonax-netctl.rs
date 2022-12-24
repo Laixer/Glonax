@@ -266,6 +266,7 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     let net = ControlNet::new(args.interface.as_str(), args.address)?;
+    net.set_promisc_mode(true)?;
 
     match args.command {
         Command::Node { address, command } => match command {
