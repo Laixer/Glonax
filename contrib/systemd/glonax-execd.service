@@ -9,10 +9,10 @@ After=sys-subsystem-net-devices-can0.device
 WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
-ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can0 -o carrier
-ExecStart=/usr/local/bin/glonax-execd --daemon --workers 8 can0
+Nice=-5
+ExecStart=/usr/local/bin/glonax-execd --daemon --workers 8
 PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
-Alias=glonaxd.service
+
