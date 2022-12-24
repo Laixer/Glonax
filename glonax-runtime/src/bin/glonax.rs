@@ -9,9 +9,9 @@ use clap::{Parser, ValueHint};
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Commandline interface", long_about = None)]
+#[command(about = "Glonax client interface", long_about = None)]
 struct Args {
-    /// Input file.
+    /// Program instruction file.
     #[arg(value_hint = ValueHint::FilePath)]
     file: String,
 

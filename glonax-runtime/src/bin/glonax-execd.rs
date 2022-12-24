@@ -9,7 +9,7 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Program Executor Daemon", long_about = None)]
+#[command(about = "Glonax program executor daemon", long_about = None)]
 struct Args {
     /// MQTT broker address.
     #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]

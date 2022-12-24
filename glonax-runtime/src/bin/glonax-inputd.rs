@@ -9,7 +9,7 @@ use clap::{Parser, ValueHint};
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Input device dispatcher", long_about = None)]
+#[command(about = "Glonax input command", long_about = None)]
 struct Args {
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]

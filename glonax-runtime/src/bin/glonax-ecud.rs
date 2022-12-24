@@ -9,7 +9,7 @@ use clap::Parser;
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "ECU Daemon", long_about = None)]
+#[command(about = "Glonax ECU daemon", long_about = None)]
 struct Args {
     /// CAN network interface.
     interface: String,

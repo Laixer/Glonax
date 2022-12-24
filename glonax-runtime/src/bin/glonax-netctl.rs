@@ -170,7 +170,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Network diagnosis and system analyzer", long_about = None)]
+#[command(about = "Glonax network diagnosis and system analyzer", long_about = None)]
 struct Args {
     /// CAN network interface.
     #[arg(short, long, default_value = "can0")]
