@@ -116,11 +116,12 @@ impl InputDevice for Gamepad {
                     }
                     _ => {}
                 },
-                Err(_) => {
+                Err(e) => {
+                    error!("{}", e);
                     break Err(device::DeviceError::no_such_device(
                         DEVICE_NAME.to_string(),
                         &self.node_path,
-                    ))
+                    ));
                 }
             }
         }

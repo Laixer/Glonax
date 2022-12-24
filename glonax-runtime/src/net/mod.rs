@@ -12,6 +12,7 @@ mod encoder;
 mod engine;
 mod service;
 
+// TODO: Rename to J1939Network.
 // TODO: Implement connection management.
 // TODO: Implement broadcast message.
 pub struct ControlNet {
@@ -24,6 +25,11 @@ impl ControlNet {
         stream.set_broadcast(true)?;
 
         Ok(Self { stream })
+    }
+
+    #[inline]
+    pub fn set_promisc_mode(&self, on: bool) -> io::Result<()> {
+        self.stream.set_promisc_mode(on)
     }
 
     #[inline]
@@ -162,27 +168,38 @@ impl Router {
         }
     }
 
+    /// Add a filter based on PGN.
+    #[inline]
     pub fn add_pgn_filter(&mut self, pgn: u32) {
         self.filter_pgn.push(pgn);
     }
 
+    /// Add a filter based on node id.
+    #[inline]
     pub fn add_node_filter(&mut self, node: u8) {
         self.filter_node.push(node);
     }
 
+    /// Return the current frame source.
+    #[inline]
     pub fn frame_source(&self) -> Option<u8> {
         self.frame.map(|f| f.id().sa())
     }
 
+    /// Take the frame from the router.
+    #[inline]
     pub fn take(&mut self) -> Option<Frame> {
         self.frame.take()
     }
 
+    /// Return the table of nodes found on the network.
+    #[inline]
     pub fn node_table(&self) -> &HashMap<u8, std::time::Instant> {
         &self.node_table
     }
 
-    pub async fn accept(&mut self) -> io::Result<()> {
+    /// Listen for incoming packets.
+    pub async fn listen(&mut self) -> io::Result<()> {
         loop {
             let frame = self.net.accept().await?;
 
@@ -193,7 +210,7 @@ impl Router {
                 .insert(node_address, time::Instant::now())
                 .is_none()
             {
-                debug!("New node on network: 0x{:X?}", node_address);
+                debug!("Detected new node on network: 0x{:X?}", node_address);
             }
 
             if !self.filter_pgn.is_empty() {
