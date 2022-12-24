@@ -108,17 +108,8 @@ impl<K> RuntimeContext<K> {
     ) -> self::Result<crate::device::Gateway> {
         debug!("Bind to interface {}", interface);
 
-        let gateway_device = crate::device::Gateway::new(interface, signal_manager)
-            .map_err(|_| Error::CoreDeviceNotFound)?;
-
-        tokio::time::timeout(
-            std::time::Duration::from_secs(1),
-            gateway_device.wait_online(),
-        )
-        .await
-        .map_err(|_| Error::NetworkTimeout)?;
-
-        Ok(gateway_device)
+        crate::device::Gateway::new(interface, signal_manager)
+            .map_err(|_| Error::CoreDeviceNotFound)
     }
 
     pub(super) fn new_signal_manager(&self) -> signal::SignalManager {

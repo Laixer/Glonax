@@ -1,7 +1,6 @@
 pub mod input;
 pub mod metric;
 pub mod motion;
-pub mod program;
 
 use std::f32::consts::PI;
 

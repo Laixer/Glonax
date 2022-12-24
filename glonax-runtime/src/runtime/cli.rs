@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use crate::{core::program::ProgramArgument, runtime, CliConfig, RuntimeContext};
+use crate::{runtime, CliConfig, RuntimeContext};
 
 use super::operand::Operand;
 

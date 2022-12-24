@@ -32,7 +32,6 @@ impl Mecu {
     }
 }
 
-#[async_trait::async_trait]
 impl crate::net::Routable for Mecu {
     fn node(&self) -> u8 {
         0xff

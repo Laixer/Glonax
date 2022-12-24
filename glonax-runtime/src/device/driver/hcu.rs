@@ -22,7 +22,6 @@ impl Hcu {
     }
 }
 
-#[async_trait::async_trait]
 impl crate::net::Routable for Hcu {
     fn node(&self) -> u8 {
         DEVICE_NET_HCU_ADDR

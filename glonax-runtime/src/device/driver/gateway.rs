@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use crate::{
     device::{self, CoreDevice},
@@ -20,7 +20,7 @@ impl Gateway {
     pub fn new(name: &str, signal_manager: &crate::signal::SignalManager) -> std::io::Result<Self> {
         let net = Arc::new(ControlNet::new(name, DEVICE_NET_LOCAL_ADDR)?);
 
-        let vecu = device::Vecu::new(net.clone(), signal_manager.publisher());
+        let vecu = device::Vecu::new(signal_manager.publisher());
         let mecu = device::Mecu::new(net.clone(), signal_manager.publisher());
         let hcu = device::Hcu::new(net.clone());
 
@@ -33,17 +33,6 @@ impl Gateway {
         })
     }
 
-    /// Wait until the network comes online.
-    ///
-    /// The controller accepts the first ingress frame as evidence of
-    /// an online and operational network. If the network does not connect
-    /// to any nodes the network can still be operational but is not
-    /// considered online.
-    #[inline]
-    pub async fn wait_online(&self) -> bool {
-        self.net.accept().await.is_ok()
-    }
-
     pub fn hcu(&self) -> device::Hcu {
         device::Hcu::new(self.net.clone())
     }
@@ -52,7 +41,12 @@ impl Gateway {
 #[async_trait::async_trait]
 impl CoreDevice for Gateway {
     async fn next(&mut self) -> device::Result<()> {
-        self.router.accept().await.unwrap(); // TODO: Handle err.
+        if tokio::time::timeout(Duration::from_secs(1), self.router.listen())
+            .await
+            .is_err()
+        {
+            warn!("Network timeout: no incoming packets in last 1 second(s)")
+        }
 
         self.router.try_accept(&mut self.vecu).await;
         self.router.try_accept(&mut self.mecu).await;

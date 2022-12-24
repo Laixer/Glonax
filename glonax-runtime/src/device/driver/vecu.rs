@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::metric::{MetricValue, Signal},
-    net::{ControlNet, EngineService},
+    net::EngineService,
     signal::SignalPublisher,
 };
 
@@ -14,7 +12,7 @@ pub struct Vecu {
 }
 
 impl Vecu {
-    pub fn new(_net: Arc<ControlNet>, publisher: SignalPublisher) -> Self {
+    pub fn new(publisher: SignalPublisher) -> Self {
         Self {
             publisher,
             engine_service: EngineService::new(0x0),
@@ -22,7 +20,6 @@ impl Vecu {
     }
 }
 
-#[async_trait::async_trait]
 impl crate::net::Routable for Vecu {
     fn node(&self) -> u8 {
         self.engine_service.node()
