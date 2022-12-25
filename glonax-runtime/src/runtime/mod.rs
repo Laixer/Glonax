@@ -15,7 +15,7 @@ mod builder;
 pub(crate) use self::builder::Builder;
 use self::operand::Operand;
 
-pub mod cli;
+pub mod client;
 pub mod ecu;
 pub mod exec;
 pub mod input;
@@ -116,11 +116,13 @@ impl<K> RuntimeContext<K> {
         signal::SignalManager::new(self.eventhub.client.clone())
     }
 
-    pub(super) fn new_program_manager(&self) -> program::ProgramManager {
-        program::ProgramManager::new(self.eventhub.client.clone())
-    }
-
     pub(super) fn new_motion_manager(&self) -> motion::MotionManager {
         motion::MotionManager::new(self.eventhub.client.clone(), true)
+    }
+}
+
+impl<K: operand::FunctionFactory> RuntimeContext<K> {
+    pub(super) fn new_program_manager(&self) -> program::ProgramManager<K::FunctionType> {
+        program::ProgramManager::new(self.eventhub.client.clone())
     }
 }

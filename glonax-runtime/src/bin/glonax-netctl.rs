@@ -48,7 +48,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
     let mut app_inspector = J1939ApplicationInspector::new();
 
     loop {
-        router.accept().await?;
+        router.listen().await?;
 
         if router.try_accept(&mut engine_service).await {
             info!(
@@ -138,7 +138,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
 
 async fn scan_nodes(mut router: Router) -> anyhow::Result<()> {
     loop {
-        router.accept().await?;
+        router.listen().await?;
 
         print!("{}c", 27 as char);
 
@@ -159,7 +159,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     loop {
-        router.accept().await?;
+        router.listen().await?;
 
         if let Some(frame) = router.take() {
             println!("{}", frame);

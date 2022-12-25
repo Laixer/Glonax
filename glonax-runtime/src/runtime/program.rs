@@ -67,15 +67,12 @@ pub trait Program {
 
 const TOPIC: &str = "command/program";
 
-pub struct ProgramManager {
+pub struct ProgramManager<T: crate::runtime::operand::FunctionTrait> {
     client: Arc<rumqttc::AsyncClient>,
-    queue: (
-        mpsc::Sender<crate::core::program::ProgramArgument>,
-        mpsc::Receiver<crate::core::program::ProgramArgument>,
-    ),
+    queue: (mpsc::Sender<T>, mpsc::Receiver<T>),
 }
 
-impl ProgramManager {
+impl<T: crate::runtime::operand::FunctionTrait> ProgramManager<T> {
     pub(super) fn new(client: Arc<rumqttc::AsyncClient>) -> Self {
         Self {
             client,
@@ -83,13 +80,13 @@ impl ProgramManager {
         }
     }
 
-    pub(super) fn adapter(&self) -> ProgramQueueAdapter {
-        ProgramQueueAdapter {
+    pub(super) fn adapter(&self) -> ProgramQueueAdapter<T> {
+        ProgramQueueAdapter::<T> {
             queue: self.queue.0.clone(),
         }
     }
 
-    pub async fn publish(&mut self, program: crate::core::program::ProgramArgument) {
+    pub async fn publish(&mut self, program: T) {
         if let Ok(str_payload) = serde_json::to_string(&program) {
             match self
                 .client
@@ -101,23 +98,24 @@ impl ProgramManager {
                 )
                 .await
             {
-                Ok(_) => trace!("Published program: {:?}", program),
+                // Ok(_) => trace!("Published program: {:?}", program),
+                Ok(_) => trace!("Published program"),
                 Err(_) => warn!("Failed to publish program"),
             }
         }
     }
 
-    pub(super) async fn recv(&mut self) -> Option<crate::core::program::ProgramArgument> {
+    pub(super) async fn recv(&mut self) -> Option<T> {
         self.queue.1.recv().await
     }
 }
 
-pub(super) struct ProgramQueueAdapter {
-    queue: mpsc::Sender<crate::core::program::ProgramArgument>,
+pub(super) struct ProgramQueueAdapter<T: crate::runtime::operand::FunctionTrait> {
+    queue: mpsc::Sender<T>,
 }
 
 #[async_trait::async_trait]
-impl super::QueueAdapter for ProgramQueueAdapter {
+impl<T: crate::runtime::operand::FunctionTrait> super::QueueAdapter for ProgramQueueAdapter<T> {
     fn topic(&self) -> &str {
         self::TOPIC
     }
@@ -128,9 +126,7 @@ impl super::QueueAdapter for ProgramQueueAdapter {
 
     async fn parse(&mut self, event: &rumqttc::Publish) {
         if let Ok(str_payload) = std::str::from_utf8(&event.payload) {
-            if let Ok(program) =
-                serde_json::from_str::<crate::core::program::ProgramArgument>(str_payload)
-            {
+            if let Ok(program) = serde_json::from_str::<T>(str_payload) {
                 if self.queue.try_send(program).is_err() {
                     warn!("Program queue reached maximum capacity");
                 }

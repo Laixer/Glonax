@@ -15,7 +15,7 @@ mod signal;
 extern crate log;
 
 mod config;
-use runtime::operand::{Operand, ProgramFactory};
+use runtime::operand::{Operand, FunctionFactory};
 
 pub use self::config::*;
 
@@ -77,7 +77,7 @@ struct LaunchStub<K> {
 
 impl<K> LaunchStub<K>
 where
-    K: Operand + core::Identity + ProgramFactory,
+    K: Operand + core::Identity + FunctionFactory + 'static,
 {
     /// Create the runtime reactor.
     ///
@@ -140,7 +140,7 @@ where
     /// Start the runtime service.
     pub fn exec_cli(config: &config::CliConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            runtime::cli::exec_service(
+            runtime::client::exec_service(
                 config,
                 self::runtime::Builder::<K>::from_config(config)?.build(),
             )

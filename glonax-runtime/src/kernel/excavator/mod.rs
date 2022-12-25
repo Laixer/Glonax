@@ -5,7 +5,7 @@ use crate::{
         Identity, Level,
     },
     runtime::{
-        operand::{Operand, ProgramFactory},
+        operand::{FunctionFactory, Operand},
         program::Program,
     },
 };
@@ -190,49 +190,93 @@ impl Operand for Excavator {
     }
 }
 
-#[allow(dead_code)]
-pub(crate) enum ProgramSegment {
-    Kinematic = 603,
-    Drive = 700,
-    Turn = 701,
-    Noop = 900,
-    Sleep = 901,
-    Test = 910,
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExcavatorProgram {
+    Kinematic,
+    Drive,
+    Turn,
+    Noop,
+    Sleep,
+    Test,
 }
 
-impl From<ProgramSegment> for i32 {
-    fn from(value: ProgramSegment) -> Self {
-        value as i32
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct ExcavatorArgument {
+    /// Program function.
+    pub function: ExcavatorProgram,
+    /// Function parameters.
+    pub parameters: Vec<f32>,
+}
+
+impl crate::runtime::operand::FunctionTrait for ExcavatorArgument {
+    fn name(&self) -> String {
+        format!("{:?}", self.function)
     }
 }
 
-impl ProgramFactory for Excavator {
-    type MotionPlan = HydraulicMotion;
+impl std::fmt::Display for ExcavatorArgument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use crate::runtime::operand::FunctionTrait;
 
-    fn fetch_program(
+        write!(
+            f,
+            "{}({})",
+            self.name(),
+            self.parameters
+                .iter()
+                .map(|f| f.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
+    }
+}
+
+impl FunctionFactory for Excavator {
+    type MotionPlan = HydraulicMotion;
+    type FunctionType = ExcavatorArgument;
+
+    fn parse_function(&self, ident: &str, parameters: Vec<f32>) -> Self::FunctionType {
+        let function = match ident.to_lowercase().trim() {
+            "kinematic" => ExcavatorProgram::Kinematic,
+            "drive" => ExcavatorProgram::Drive,
+            "turn" => ExcavatorProgram::Turn,
+            "noop" => ExcavatorProgram::Noop,
+            "sleep" => ExcavatorProgram::Sleep,
+            "test" => ExcavatorProgram::Test,
+            _ => panic!(),
+        };
+
+        crate::kernel::excavator::ExcavatorArgument {
+            function,
+            parameters,
+        }
+    }
+
+    fn fetch_function(
         &self,
-        program: &ProgramArgument,
+        argument: &Self::FunctionType,
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()> {
-        match program.id {
+        match argument.function {
             // Default kinematic program.
-            603 => Ok(Box::new(kinematic::KinematicProgram::new(
+            ExcavatorProgram::Kinematic => Ok(Box::new(kinematic::KinematicProgram::new(
                 self.object_model.clone(),
-                &program.parameters,
+                &argument.parameters,
             ))),
 
             // Movement programs.
-            700 => Ok(Box::new(drive::DriveProgram::new(&program.parameters))),
-            701 => Ok(Box::new(turn::TurnProgram::new(
+            ExcavatorProgram::Drive => Ok(Box::new(drive::DriveProgram::new(&argument.parameters))),
+            ExcavatorProgram::Turn => Ok(Box::new(turn::TurnProgram::new(
                 self.object_model.clone(),
-                &program.parameters,
+                &argument.parameters,
             ))),
 
             // Miscellaneous programs.
-            900 => Ok(Box::new(noop::NoopProgram::new(self.object_model.clone()))),
-            901 => Ok(Box::new(sleep::SleepProgram::new(&program.parameters))),
-            910 => Ok(Box::new(test::TestProgram::new())),
-
-            _ => Err(()),
+            ExcavatorProgram::Noop => {
+                Ok(Box::new(noop::NoopProgram::new(self.object_model.clone())))
+            }
+            ExcavatorProgram::Sleep => Ok(Box::new(sleep::SleepProgram::new(&argument.parameters))),
+            ExcavatorProgram::Test => Ok(Box::new(test::TestProgram::new())),
         }
     }
 }

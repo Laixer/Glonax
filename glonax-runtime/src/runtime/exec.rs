@@ -2,13 +2,13 @@ use std::time::Instant;
 
 use crate::{
     core::motion::Motion,
-    runtime::{self, program},
+    runtime::{self, operand::FunctionTrait, program},
     ProgramConfig, RuntimeContext,
 };
 
-use super::operand::{Operand, ProgramFactory};
+use super::operand::{FunctionFactory, Operand};
 
-pub async fn exec_service<K: Operand + ProgramFactory>(
+pub async fn exec_service<K: Operand + FunctionFactory + 'static>(
     _config: &ProgramConfig,
     mut runtime: RuntimeContext<K>,
 ) -> runtime::Result {
@@ -30,46 +30,46 @@ pub async fn exec_service<K: Operand + ProgramFactory>(
     info!("Execute programs on queue");
 
     loop {
-        let program = tokio::select! {
-            program = program_manager.recv() => {
-                Ok(program)
+        let function = tokio::select! {
+            function = program_manager.recv() => {
+                Ok(function)
             }
             _ = runtime.shutdown.1.recv() => {
                 Err(())
             }
         };
 
-        if let Ok(Some(program_argument)) = program {
-            let mut program = match runtime.operand.fetch_program(&program_argument) {
-                Ok(program) => program,
+        if let Ok(Some(function_argument)) = function {
+            let mut function = match runtime.operand.fetch_function(&function_argument) {
+                Ok(function) => function,
                 Err(_) => {
                     warn!(
-                        "Program ({}) was not registered with the operand",
-                        program_argument.id
+                        "Function {} was not registered with the operand",
+                        function_argument.name()
                     );
                     continue;
                 }
             };
 
-            info!("Start program ({})", program_argument.id);
+            info!("Execute function: {}", function_argument);
 
             motion_publisher.publish(Motion::ResumeAll).await; // TOOD: Handle result
 
             let mut ctx = program::Context::new(&mut signal_manager);
-            if let Some(motion) = program.boot(&mut ctx) {
+            if let Some(motion) = function.boot(&mut ctx) {
                 motion_publisher.publish(motion).await; // TOOD: Handle result
             };
 
-            // Loop until this program reaches its termination condition. If
-            // the program does not terminate we'll run until the application is killed.
-            while !program.can_terminate(&mut ctx) {
+            // Loop until this function reaches its termination condition. If
+            // the function does not terminate we'll run until the application is killed.
+            while !function.can_terminate(&mut ctx) {
                 let start_step_execute = Instant::now();
 
                 tokio::select! {
-                    // Query the operand program for the next motion step. The
-                    // entire thread is dedicated to the program therefore steps
+                    // Query the operand function for the next motion step. The
+                    // entire thread is dedicated to the function therefore steps
                     // can claim an unlimited time slice.
-                    plan = program.step(&mut ctx) => {
+                    plan = function.step(&mut ctx) => {
                         if let Some(motion) = plan {
                             motion_publisher.publish(motion).await; // TOOD: Handle result
                         }
@@ -78,7 +78,7 @@ pub async fn exec_service<K: Operand + ProgramFactory>(
                         // Stop all motion for safety.
                         motion_publisher.publish(Motion::StopAll).await; // TOOD: Handle result
 
-                        warn!("Program ({}) terminated by external signal", program_argument.id);
+                        warn!("Function {} terminated by external signal", function_argument.name());
 
                         return Ok(());
                     }
@@ -88,12 +88,15 @@ pub async fn exec_service<K: Operand + ProgramFactory>(
                 ctx.last_step = start_step_execute;
             }
 
-            // Execute an optional last action before program termination.
-            if let Some(motion) = program.term_action(&mut ctx) {
+            // Execute an optional last action before function termination.
+            if let Some(motion) = function.term_action(&mut ctx) {
                 motion_publisher.publish(motion).await; // TOOD: Handle result
             }
 
-            info!("Program ({}) terminated with success", program_argument.id);
+            info!(
+                "Function {} terminated with success",
+                function_argument.name()
+            );
         } else {
             // Stop all motion for safety.
             motion_publisher.publish(Motion::StopAll).await; // TOOD: Handle result
