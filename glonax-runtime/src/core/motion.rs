@@ -1,7 +1,3 @@
-use std::{time::Duration, u32};
-
-use super::{Trace, TraceWriter};
-
 /// Motion instruction.
 ///
 /// Whether or not the instruction has positive effect
@@ -11,7 +7,7 @@ use super::{Trace, TraceWriter};
 /// The motion value can communicate the full range of an i16.
 /// The signness of the value is often used as a forward/backward
 /// motion indicator. However this is left to the motion device.
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub enum Motion {
     /// Stop all motion until resumed.
     StopAll,
@@ -33,47 +29,31 @@ impl ToMotion for Motion {
     }
 }
 
-#[derive(serde::Serialize)]
-struct MotionTrace {
-    /// Timestamp of the trace.
-    timestamp: u128,
-    /// Respective actuator.
-    actuator: u32,
-    /// Motion value.
-    value: i16,
-}
-
-impl<T: TraceWriter> Trace<T> for Motion {
-    fn record(&self, writer: &mut T, timestamp: Duration) {
+impl std::fmt::Display for Motion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Motion::StopAll => writer.write_record(MotionTrace {
-                timestamp: timestamp.as_millis(),
-                actuator: u8::MAX as u32,
-                value: 0,
-            }),
-            // TODO: Maybe something else.
-            Motion::ResumeAll => writer.write_record(MotionTrace {
-                timestamp: timestamp.as_millis(),
-                actuator: u8::MAX as u32,
-                value: 0,
-            }),
+            Motion::StopAll => write!(f, "Stop all"),
+            Motion::ResumeAll => write!(f, "Resume all"),
+
             Motion::Stop(actuators) => {
-                for actuator in actuators {
-                    writer.write_record(MotionTrace {
-                        timestamp: timestamp.as_millis(),
-                        actuator: *actuator,
-                        value: 0,
-                    });
-                }
+                write!(
+                    f,
+                    "Stop: {}",
+                    actuators
+                        .iter()
+                        .map(|f| format!("Actuator: {}, ", f))
+                        .collect::<String>()
+                )
             }
             Motion::Change(actuators) => {
-                for (actuator, value) in actuators {
-                    writer.write_record(MotionTrace {
-                        timestamp: timestamp.as_millis(),
-                        actuator: *actuator,
-                        value: *value,
-                    });
-                }
+                write!(
+                    f,
+                    "Change: {}",
+                    actuators
+                        .iter()
+                        .map(|f| format!("Actuator: {}; Value: {}, ", f.0, f.1))
+                        .collect::<String>()
+                )
             }
         }
     }

@@ -56,6 +56,7 @@ impl J1939Stream {
     ///
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
+    #[inline]
     pub fn shutdown(&self, how: std::net::Shutdown) -> io::Result<()> {
         self.0.shutdown(how)
     }
@@ -65,6 +66,7 @@ impl J1939Stream {
     /// For more information about this option, see [`set_broadcast`].
     ///
     /// [`set_broadcast`]: method@Self::set_broadcast
+    #[inline]
     pub fn broadcast(&self) -> io::Result<bool> {
         self.0.broadcast()
     }
@@ -73,11 +75,23 @@ impl J1939Stream {
     ///
     /// When enabled, this socket is allowed to send packets to a broadcast
     /// address.
+    #[inline]
     pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
         self.0.set_broadcast(on)
     }
 
+    /// Sets the value of the `SO_J1939_PROMISC` option for this socket.
+    ///
+    /// When enabled, this socket clears all filters set by the bind and connect
+    /// methods. In promiscuous mode the socket receives all packets including
+    /// the packets sent from this socket.
+    #[inline]
+    pub fn set_promisc_mode(&self, on: bool) -> io::Result<()> {
+        self.0.set_promisc_mode(on)
+    }
+
     /// Returns the value of the `SO_ERROR` option.
+    #[inline]
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
         self.0.take_error()
     }

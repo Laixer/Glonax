@@ -34,6 +34,7 @@ pub struct KueblerEncoderService {
     state: Option<EncoderState>,
 }
 
+#[async_trait::async_trait]
 impl Routable for KueblerEncoderService {
     fn node(&self) -> u8 {
         self.node
@@ -42,17 +43,17 @@ impl Routable for KueblerEncoderService {
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
         if pgn == PGN::ProprietaryB(65_450) {
             let position_bytes = &frame.pdu()[0..4];
-            if position_bytes != &[0xff; 4] {
+            if position_bytes != [0xff; 4] {
                 self.position = u32::from_le_bytes(position_bytes.try_into().unwrap());
             };
 
             let speed_bytes = &frame.pdu()[4..6];
-            if speed_bytes != &[0xff; 2] {
+            if speed_bytes != [0xff; 2] {
                 self.speed = u16::from_le_bytes(speed_bytes.try_into().unwrap());
             };
 
             let state_bytes = &frame.pdu()[6..8];
-            if state_bytes != &[0xff; 2] {
+            if state_bytes != [0xff; 2] {
                 let state = u16::from_le_bytes(state_bytes.try_into().unwrap());
 
                 self.state = Some(match state {
@@ -97,10 +98,12 @@ impl KueblerEncoderService {
         }
     }
 
+    #[inline]
     pub fn position(&self) -> u32 {
         self.position
     }
 
+    #[inline]
     pub fn speed(&self) -> u16 {
         self.speed
     }

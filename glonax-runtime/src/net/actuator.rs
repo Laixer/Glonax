@@ -1,31 +1,13 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use glonax_j1939::*;
 
 use super::{ControlNet, Routable};
 
-pub enum ActuatorState {
-    Nominal,
-    Ident,
-    Faulty,
-}
-
-impl std::fmt::Display for ActuatorState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ActuatorState::Nominal => write!(f, "no error"),
-            ActuatorState::Ident => write!(f, "ident"),
-            ActuatorState::Faulty => write!(f, "faulty"),
-        }
-    }
-}
-
 pub struct ActuatorService {
     net: Arc<ControlNet>,
     node: u8,
-    firmware_version: Option<(u8, u8, u8)>,
-    state: Option<ActuatorState>,
-    last_error: Option<u16>,
+    actuators: [Option<i16>; 8],
 }
 
 impl Routable for ActuatorService {
@@ -33,49 +15,14 @@ impl Routable for ActuatorService {
         self.node
     }
 
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        if pgn == PGN::ProprietaryB(65_282) {
-            self.state = match frame.pdu()[1] {
-                0x14 => Some(ActuatorState::Nominal),
-                0x16 => Some(ActuatorState::Ident),
-                0xfa => Some(ActuatorState::Faulty),
-                _ => None,
-            };
-
-            let version = &frame.pdu()[2..5];
-
-            if version != &[0xff; 3] {
-                self.firmware_version = Some((version[0], version[1], version[2]))
-            };
-
-            let error = &frame.pdu()[6..8];
-
-            if error != &[0xff; 2] {
-                self.last_error = Some(u16::from_le_bytes(error.try_into().unwrap()))
-            }
-
-            true
-        } else {
-            false
-        }
+    fn ingress(&mut self, _: PGN, _: &Frame) -> bool {
+        false
     }
 }
 
 impl std::fmt::Display for ActuatorService {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "State: {}; Version: {}; Last error: {}",
-            self.state
-                .as_ref()
-                .map_or_else(|| "-".to_owned(), |f| f.to_string()),
-            self.firmware_version.map_or_else(
-                || "-".to_owned(),
-                |f| { format!("{}.{}.{}", f.0, f.1, f.2) }
-            ),
-            self.last_error
-                .map_or_else(|| "-".to_owned(), |f| { f.to_string() })
-        )
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }
 
@@ -84,9 +31,7 @@ impl ActuatorService {
         Self {
             net,
             node,
-            firmware_version: None,
-            state: None,
-            last_error: None,
+            actuators: [None; 8],
         }
     }
 
@@ -114,35 +59,51 @@ impl ActuatorService {
         trace!("Enable motion");
     }
 
-    pub async fn actuator_control(&self, actuators: std::collections::HashMap<u8, i16>) {
+    pub async fn actuator_control(&mut self, actuators: HashMap<u8, i16>) {
         const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
-        const BANK_SLOTS: u8 = 4;
+        const BANK_SLOTS: usize = 4;
 
-        for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
-            let mut actuator_list_filled: Vec<Option<i16>> = vec![];
+        let mut bank_update = [false; 2];
 
-            for slot in 0..BANK_SLOTS {
-                let offset = (idx as u8 * 4) + slot;
+        for (act, val) in &actuators {
+            self.actuators[*act as usize] = Some(*val);
 
-                actuator_list_filled.push(actuators.get(&offset).map_or(None, |a| Some(*a)));
-            }
-
-            if actuator_list_filled.iter().any(|f| f.is_some()) {
-                let pdu = actuator_list_filled
-                    .iter()
-                    .flat_map(|p| p.map_or([0xff, 0xff], |v| v.to_le_bytes()))
-                    .collect::<Vec<u8>>()
-                    .as_slice()[..8]
-                    .try_into()
-                    .unwrap();
-
-                let frame = Frame::new(IdBuilder::from_pgn(bank).da(self.node).build(), pdu);
-                self.net.send(&frame).await.unwrap();
-            }
+            bank_update[*act as usize / BANK_SLOTS] = true;
         }
 
-        for (actuator, value) in &actuators {
-            trace!("Change actuator {} to value {}", actuator, value);
+        trace!(
+            "Actuator state {}",
+            self.actuators
+                .iter()
+                .enumerate()
+                .map(|(idx, act)| {
+                    format!(
+                        "{}: {}",
+                        idx,
+                        act.map_or("NaN".to_owned(), |f| f.to_string())
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
+
+        for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
+            if !bank_update[idx] {
+                continue;
+            }
+
+            let stride = idx * BANK_SLOTS;
+
+            let pdu: [u8; 8] = self.actuators[stride..stride + BANK_SLOTS]
+                .iter()
+                .flat_map(|p| p.map_or([0xff, 0xff], |v| v.to_le_bytes()))
+                .collect::<Vec<u8>>()
+                .as_slice()[..8]
+                .try_into()
+                .unwrap();
+
+            let frame = Frame::new(IdBuilder::from_pgn(bank).da(self.node).build(), pdu);
+            self.net.send(&frame).await.unwrap();
         }
     }
 }

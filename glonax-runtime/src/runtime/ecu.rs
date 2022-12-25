@@ -1,7 +1,5 @@
 use crate::{
-    device::{Hcu, Mecu, Vecu},
-    net::motion::SchematicMotion,
-    runtime::{self, MotionChain},
+    runtime::{self},
     EcuConfig, RuntimeContext,
 };
 
@@ -13,36 +11,30 @@ pub(crate) async fn exec_service<K: Operand>(
 ) -> runtime::Result {
     use crate::device::CoreDevice;
 
-    runtime.new_core_device::<Vecu>();
+    let signal_manager = runtime.new_signal_manager();
 
-    let signal_device = Mecu::new(runtime.signal_manager.pusher());
-    runtime.subscribe_core_device(signal_device);
+    let mut gateway = runtime
+        .new_network_gateway(&config.interface, &signal_manager)
+        .await?;
+    let motion_manager = runtime.new_motion_manager();
 
-    let mut motion_device = runtime.new_core_device::<Hcu>();
-
-    let mut motion_chain =
-        MotionChain::new(&mut motion_device, &runtime.tracer).enable(config.global.enable_motion);
+    runtime
+        .eventhub
+        .subscribe(motion_manager.adapter(gateway.hcu()));
 
     tokio::task::spawn(async move {
-        while runtime.core_device.as_mut().unwrap().next().await.is_ok() {}
+        loop {
+            runtime.eventhub.next().await
+        }
     });
 
-    let address = if config.address.is_empty() {
-        "0.0.0.0:54910".to_owned()
-    } else {
-        config.address.clone()
-    };
+    tokio::task::spawn(async move {
+        loop {
+            gateway.next().await.unwrap();
+        }
+    });
 
-    let sock = tokio::net::UdpSocket::bind(&address).await.unwrap();
-    let mut buf = [0; 1024];
-
-    info!("Listen for network events on {}", address);
-
-    while let Ok((_size, _addr)) = sock.recv_from(&mut buf).await {
-        let schematic_motion = SchematicMotion::try_from(&buf[..]).unwrap();
-
-        motion_chain.request(schematic_motion).await; // TOOD: Handle result
-    }
+    runtime.shutdown.1.recv().await.unwrap();
 
     Ok(())
 }

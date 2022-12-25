@@ -1,35 +1,35 @@
 use std::sync::Arc;
 
-use glonax_j1939::Frame;
+use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::motion::Motion,
-    device::{Device, MotionDevice},
+    device::MotionDevice,
     net::{ActuatorService, ControlNet},
 };
 
-const DEVICE_NAME: &str = "hcu";
 const DEVICE_NET_HCU_ADDR: u8 = 0x4a;
 
 pub struct Hcu {
     service: ActuatorService,
 }
 
-impl Device for Hcu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
-    }
-}
-
-#[async_trait::async_trait]
-impl super::gateway::GatewayClient for Hcu {
-    fn from_net(net: Arc<ControlNet>) -> Self {
+impl Hcu {
+    pub fn new(net: Arc<ControlNet>) -> Self {
         Self {
             service: ActuatorService::new(net, DEVICE_NET_HCU_ADDR),
         }
     }
+}
 
-    async fn incoming(&mut self, _frame: &Frame) {}
+impl crate::net::Routable for Hcu {
+    fn node(&self) -> u8 {
+        DEVICE_NET_HCU_ADDR
+    }
+
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        self.service.ingress(pgn, frame)
+    }
 }
 
 #[async_trait::async_trait]

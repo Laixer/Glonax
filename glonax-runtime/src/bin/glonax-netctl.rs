@@ -1,3 +1,9 @@
+// Copyright (C) 2022 Laixer Equipment B.V.
+// All rights reserved.
+//
+// This software may be modified and distributed under the terms
+// of the included license.  See the LICENSE file for details.
+
 use ansi_term::Colour::{Blue, Green, Purple, Red, Yellow};
 use clap::Parser;
 use glonax::net::*;
@@ -16,7 +22,7 @@ fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
-fn string_to_bool(str: &String) -> Result<bool, ()> {
+fn string_to_bool(str: &str) -> Result<bool, ()> {
     match str.to_lowercase().trim() {
         "yes" => Ok(true),
         "true" => Ok(true),
@@ -42,9 +48,9 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
     let mut app_inspector = J1939ApplicationInspector::new();
 
     loop {
-        router.accept().await?;
+        router.listen().await?;
 
-        if router.try_accept(&mut engine_service) {
+        if router.try_accept(&mut engine_service).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -53,7 +59,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut arm_encoder) {
+        if router.try_accept(&mut arm_encoder).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -62,7 +68,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut boom_encoder) {
+        if router.try_accept(&mut boom_encoder).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -71,7 +77,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut turn_encoder) {
+        if router.try_accept(&mut turn_encoder).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -80,7 +86,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut actuator) {
+        if router.try_accept(&mut actuator).await {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -89,7 +95,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
             );
         }
 
-        if router.try_accept(&mut app_inspector) {
+        if router.try_accept(&mut app_inspector).await {
             if let Some((major, minor, patch)) = app_inspector.software_identification() {
                 info!(
                     "{} {} » Software identification: {}.{}.{}",
@@ -132,7 +138,7 @@ async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> 
 
 async fn scan_nodes(mut router: Router) -> anyhow::Result<()> {
     loop {
-        router.accept().await?;
+        router.listen().await?;
 
         print!("{}c", 27 as char);
 
@@ -153,7 +159,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     loop {
-        router.accept().await?;
+        router.listen().await?;
 
         if let Some(frame) = router.take() {
             println!("{}", frame);
@@ -164,7 +170,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Network diagnosis and system analyzer", long_about = None)]
+#[command(about = "Glonax network diagnosis and system analyzer", long_about = None)]
 struct Args {
     /// CAN network interface.
     #[arg(short, long, default_value = "can0")]
@@ -247,7 +253,7 @@ async fn main() -> anyhow::Result<()> {
     let log_level = match args.verbose {
         0 => log::LevelFilter::Info,
         1 => log::LevelFilter::Debug,
-        2 | _ => log::LevelFilter::Trace,
+        _ => log::LevelFilter::Trace,
     };
 
     simplelog::TermLogger::init(
@@ -260,6 +266,7 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     let net = ControlNet::new(args.interface.as_str(), args.address)?;
+    net.set_promisc_mode(true)?;
 
     match args.command {
         Command::Node { address, command } => match command {
@@ -319,7 +326,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
 
-                let service = ActuatorService::new(std::sync::Arc::new(net), node);
+                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Set actuator {} to {}",
@@ -332,9 +339,7 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                service
-                    .actuator_control([(actuator.clone(), value.clone())].into())
-                    .await;
+                service.actuator_control([(actuator, value)].into()).await;
             }
         },
         Command::Scan => {

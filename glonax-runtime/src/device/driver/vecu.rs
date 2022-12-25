@@ -1,36 +1,48 @@
-use std::{collections::HashMap, sync::Arc};
+use glonax_j1939::{Frame, PGN};
 
-use glonax_j1939::Frame;
-
-use crate::{device::Device, net::ControlNet};
-
-const DEVICE_NAME: &str = "v-ecu";
+use crate::{
+    core::metric::{MetricValue, Signal},
+    net::EngineService,
+    signal::SignalPublisher,
+};
 
 pub struct Vecu {
-    node_list: HashMap<u8, u8>,
+    publisher: SignalPublisher,
+    engine_service: EngineService,
 }
 
-impl Device for Vecu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
-    }
-}
-
-#[async_trait::async_trait]
-impl super::gateway::GatewayClient for Vecu {
-    fn from_net(_net: Arc<ControlNet>) -> Self {
+impl Vecu {
+    pub fn new(publisher: SignalPublisher) -> Self {
         Self {
-            node_list: HashMap::new(),
+            publisher,
+            engine_service: EngineService::new(0x0),
         }
     }
+}
 
-    async fn incoming(&mut self, frame: &Frame) {
-        if self
-            .node_list
-            .insert(frame.id().sa(), frame.pdu()[1])
-            .is_none()
-        {
-            debug!("New node on network: 0x{:X?}", frame.id().sa());
+impl crate::net::Routable for Vecu {
+    fn node(&self) -> u8 {
+        self.engine_service.node()
+    }
+
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        if pgn == glonax_j1939::PGN::ElectronicEngineController2 {
+            self.engine_service
+                .ingress(glonax_j1939::PGN::ElectronicEngineController2, frame);
+
+            if let Some(rpm) = self.engine_service.rpm() {
+                trace!("Engine RPM: {}", rpm);
+
+                self.publisher.try_publish(Signal {
+                    address: self.engine_service.node(),
+                    subaddress: 0,
+                    value: MetricValue::RPM(rpm),
+                });
+            }
+
+            true
+        } else {
+            false
         }
     }
 }

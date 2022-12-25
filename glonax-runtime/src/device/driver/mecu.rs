@@ -4,94 +4,88 @@ use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::metric::{MetricValue, Signal},
-    device::Device,
-    net::ControlNet,
+    net::{ControlNet, KueblerEncoderService},
+    signal::SignalPublisher,
 };
 
-const DEVICE_NAME: &str = "m-ecu";
+#[derive(Debug, serde::Serialize)]
+struct EncoderData {
+    position: u32,
+    speed: u16,
+}
 
 pub struct Mecu {
-    pusher: crate::signal::SignalPusher,
+    publisher: SignalPublisher,
+    arm_encoder: KueblerEncoderService,
+    boom_encoder: KueblerEncoderService,
+    turn_encoder: KueblerEncoderService,
 }
 
 impl Mecu {
-    pub fn new(pusher: crate::signal::SignalPusher) -> Self {
-        Self { pusher }
-    }
-
-    fn map_source(address: u8, subaddress: u8) -> u32 {
-        ((address as u32) << 4) + subaddress as u32
-    }
-}
-
-unsafe impl Send for Mecu {}
-
-impl Device for Mecu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
+    pub fn new(net: Arc<ControlNet>, publisher: SignalPublisher) -> Self {
+        Self {
+            publisher,
+            arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
+            boom_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
+            turn_encoder: KueblerEncoderService::new(net, 0x20),
+        }
     }
 }
 
-#[async_trait::async_trait]
-impl super::gateway::GatewayClient for Mecu {
-    fn from_net(_net: Arc<ControlNet>) -> Self {
-        unimplemented!()
+impl crate::net::Routable for Mecu {
+    fn node(&self) -> u8 {
+        0xff
     }
 
-    async fn incoming(&mut self, frame: &Frame) {
-        if frame.id().pgn() == PGN::ProprietaryB(65_505) {
-            if frame.pdu()[..6] != [0xff; 6] {
-                let data_x = i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap());
-                let data_y = i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap());
-                let data_z = i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap());
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        if self.arm_encoder.node() == frame.id().sa() && self.arm_encoder.ingress(pgn, frame) {
+            trace!(
+                "Arm Position: {}; Speed: {}",
+                self.arm_encoder.position(),
+                self.arm_encoder.speed()
+            );
 
-                self.pusher
-                    .push(
-                        Self::map_source(frame.id().sa(), 0),
-                        Signal::new(MetricValue::Acceleration(nalgebra::Vector3::new(
-                            data_x as f32,
-                            data_y as f32,
-                            data_z as f32,
-                        ))),
-                    )
-                    .await;
-            }
-        } else if frame.id().pgn() == PGN::Other(64_258) {
-            // TODO: Value may not be a u32
-            let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
+            self.publisher.try_publish(Signal {
+                address: self.arm_encoder.node(),
+                subaddress: 0,
+                value: MetricValue::Angle(self.arm_encoder.position()),
+            });
 
-            self.pusher
-                .push(
-                    Self::map_source(frame.id().sa(), 0),
-                    Signal::new(MetricValue::Angle(nalgebra::Vector1::new(
-                        data.try_into().unwrap(),
-                    ))),
-                )
-                .await;
-        } else if frame.id().pgn() == PGN::Other(64_252) {
-            let data = frame.pdu()[0];
+            true
+        } else if self.boom_encoder.node() == frame.id().sa()
+            && self.boom_encoder.ingress(pgn, frame)
+        {
+            trace!(
+                "Boom Position: {}; Speed: {}",
+                self.boom_encoder.position(),
+                self.boom_encoder.speed()
+            );
 
-            self.pusher
-                .push(
-                    Self::map_source(frame.id().sa(), 0),
-                    Signal::new(MetricValue::Angle(nalgebra::Vector1::new(
-                        data.try_into().unwrap(),
-                    ))),
-                )
-                .await;
-        } else if frame.id().pgn() == PGN::ProprietaryB(65_450) {
-            let data = u32::from_le_bytes(frame.pdu()[0..4].try_into().unwrap());
+            self.publisher.try_publish(Signal {
+                address: self.boom_encoder.node(),
+                subaddress: 0,
+                value: MetricValue::Angle(self.boom_encoder.position()),
+            });
 
-            let data = (data / 100) as u16;
+            true
+        } else if self.turn_encoder.node() == frame.id().sa()
+            && self.turn_encoder.ingress(pgn, frame)
+        {
+            trace!(
+                "Turn Position: {}; Speed: {}",
+                self.turn_encoder.position(),
+                self.turn_encoder.speed()
+            );
 
-            self.pusher
-                .push(
-                    Self::map_source(frame.id().sa(), 0),
-                    Signal::new(MetricValue::Angle(nalgebra::Vector1::new(
-                        data.try_into().unwrap(),
-                    ))),
-                )
-                .await;
+            self.publisher.try_publish(Signal {
+                address: self.turn_encoder.node(),
+                subaddress: 0,
+                value: MetricValue::Angle(self.turn_encoder.position()),
+            });
+
+            true
+        } else {
+            false
         }
     }
 }

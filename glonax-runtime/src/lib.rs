@@ -15,7 +15,7 @@ mod signal;
 extern crate log;
 
 mod config;
-use runtime::operand::{Operand, ProgramFactory};
+use runtime::operand::{Operand, FunctionFactory};
 
 pub use self::config::*;
 
@@ -38,7 +38,7 @@ type ExcavatorService = LaunchStub<Excavator>;
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn runtime_exec(config: &config::ProgramConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_exec(config)?)
+    ExcavatorService::exec_exec(config)
 }
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -48,7 +48,7 @@ pub fn runtime_exec(config: &config::ProgramConfig) -> runtime::Result {
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_input(config)?)
+    ExcavatorService::exec_input(config)
 }
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -58,7 +58,17 @@ pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
 pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
-    Ok(ExcavatorService::exec_ecu(config)?)
+    ExcavatorService::exec_ecu(config)
+}
+
+/// Start the machine kernel from configuration. This is the recommended way to
+/// run a machine kernel from an dynamic external caller. Call this factory for
+/// the default machine behaviour.
+///
+/// This factory method obtains the service from the combination of configuration
+/// settings. This service is then run to completion.
+pub fn runtime_cli(config: &config::CliConfig) -> runtime::Result {
+    ExcavatorService::exec_cli(config)
 }
 
 struct LaunchStub<K> {
@@ -67,7 +77,7 @@ struct LaunchStub<K> {
 
 impl<K> LaunchStub<K>
 where
-    K: Operand + core::Identity + ProgramFactory,
+    K: Operand + core::Identity + FunctionFactory + 'static,
 {
     /// Create the runtime reactor.
     ///
@@ -93,18 +103,13 @@ where
     /// Start the runtime service.
     pub fn exec_exec(config: &config::ProgramConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
-            runtime::exec::RuntimeProgram::new(config)
-                .await
-                .exec_service(
-                    config,
-                    self::runtime::Builder::<K>::from_config(config)?
-                        .enable_network(config)?
-                        .wait_for_network()
-                        .await?
-                        .enable_term_shutdown()
-                        .build(),
-                )
-                .await
+            runtime::exec::exec_service(
+                config,
+                self::runtime::Builder::<K>::from_config(config)?
+                    .enable_term_shutdown()
+                    .build(),
+            )
+            .await
         })
     }
 
@@ -114,9 +119,7 @@ where
             runtime::ecu::exec_service(
                 config,
                 self::runtime::Builder::<K>::from_config(config)?
-                    .enable_network(config)?
-                    .wait_for_network()
-                    .await?
+                    .enable_term_shutdown()
                     .build(),
             )
             .await
@@ -127,6 +130,17 @@ where
     pub fn exec_input(config: &config::InputConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::input::exec_service(
+                config,
+                self::runtime::Builder::<K>::from_config(config)?.build(),
+            )
+            .await
+        })
+    }
+
+    /// Start the runtime service.
+    pub fn exec_cli(config: &config::CliConfig) -> runtime::Result {
+        Self::runtime_reactor(config).block_on(async {
+            runtime::client::exec_service(
                 config,
                 self::runtime::Builder::<K>::from_config(config)?.build(),
             )

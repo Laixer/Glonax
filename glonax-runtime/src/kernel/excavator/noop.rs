@@ -1,13 +1,17 @@
-use crate::runtime::operand::*;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use crate::runtime::program::*;
 
 use super::HydraulicMotion;
 
 pub(super) struct NoopProgram {
-    domain: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
+    domain: Arc<RwLock<super::body::Body>>,
 }
 
 impl NoopProgram {
-    pub fn new(model: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>) -> Self {
+    pub fn new(model: Arc<RwLock<super::body::Body>>) -> Self {
         Self { domain: model }
     }
 }
@@ -23,7 +27,7 @@ impl Program for NoopProgram {
         trace!("Last step: {:?}", context.last_step.elapsed());
 
         if let Ok(mut domain) = self.domain.try_write() {
-            domain.signal_update(&mut context.reader).await;
+            domain.signal_update(context.reader).await;
         }
 
         if let Ok(domain) = self.domain.try_read() {
