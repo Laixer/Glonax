@@ -54,12 +54,14 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    let bin_name = format!("{}@{}", env!("CARGO_BIN_NAME").to_string(), args.interface);
+
     let mut config = glonax::EcuConfig {
         interface: args.interface,
         global: glonax::GlobalConfig::default(),
     };
 
-    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
+    config.global.bin_name = bin_name;
     config.global.mqtt_host = args.address;
     config.global.mqtt_port = args.port;
     config.global.mqtt_username = args.username;
