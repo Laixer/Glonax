@@ -222,7 +222,7 @@ impl Router {
         Ok(())
     }
 
-    pub async fn try_accept(&self, service: &mut impl Routable) -> bool {
+    pub fn try_accept(&self, service: &mut impl Routable) -> bool {
         if let Some(frame) = self.frame {
             (service.node() == frame.id().sa() || service.node() == 0xff)
                 && service.ingress(frame.id().pgn(), &frame)

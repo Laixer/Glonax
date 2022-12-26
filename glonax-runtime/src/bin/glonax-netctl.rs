@@ -36,7 +36,10 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
     }
 }
 
-async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -> anyhow::Result<()> {
+async fn analyze_frames(
+    net: std::sync::Arc<J1939Network>,
+    mut router: Router,
+) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut engine_service = EngineService::new(0x0);
@@ -50,7 +53,7 @@ async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -
     loop {
         router.listen().await?;
 
-        if router.try_accept(&mut engine_service).await {
+        if router.try_accept(&mut engine_service) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -59,7 +62,7 @@ async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -
             );
         }
 
-        if router.try_accept(&mut arm_encoder).await {
+        if router.try_accept(&mut arm_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -68,7 +71,7 @@ async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -
             );
         }
 
-        if router.try_accept(&mut boom_encoder).await {
+        if router.try_accept(&mut boom_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -77,7 +80,7 @@ async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -
             );
         }
 
-        if router.try_accept(&mut turn_encoder).await {
+        if router.try_accept(&mut turn_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -86,7 +89,7 @@ async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -
             );
         }
 
-        if router.try_accept(&mut actuator).await {
+        if router.try_accept(&mut actuator) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -95,7 +98,7 @@ async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -
             );
         }
 
-        if router.try_accept(&mut app_inspector).await {
+        if router.try_accept(&mut app_inspector) {
             if let Some((major, minor, patch)) = app_inspector.software_identification() {
                 info!(
                     "{} {} » Software identification: {}.{}.{}",

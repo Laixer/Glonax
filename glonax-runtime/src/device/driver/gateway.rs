@@ -48,9 +48,9 @@ impl CoreDevice for Gateway {
             warn!("Network timeout: no incoming packets in last 1 second(s)")
         }
 
-        self.router.try_accept(&mut self.vecu).await;
-        self.router.try_accept(&mut self.mecu).await;
-        self.router.try_accept(&mut self.hcu).await;
+        self.router.try_accept(&mut self.vecu);
+        self.router.try_accept(&mut self.mecu);
+        self.router.try_accept(&mut self.hcu);
 
         Ok(())
     }
