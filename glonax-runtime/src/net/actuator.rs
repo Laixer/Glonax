@@ -15,14 +15,59 @@ impl Routable for ActuatorService {
         self.node
     }
 
-    fn ingress(&mut self, _: PGN, _: &Frame) -> bool {
-        false
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        if pgn == PGN::Other(40_960) {
+            if frame.pdu()[0..2] != [0xff, 0xff] {
+                self.actuators[0] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
+            }
+            if frame.pdu()[2..4] != [0xff, 0xff] {
+                self.actuators[1] = Some(i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap()));
+            }
+            if frame.pdu()[4..6] != [0xff, 0xff] {
+                self.actuators[2] = Some(i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap()));
+            }
+            if frame.pdu()[6..8] != [0xff, 0xff] {
+                self.actuators[3] = Some(i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()));
+            }
+            true
+        } else if pgn == PGN::Other(41_216) {
+            if frame.pdu()[0..2] != [0xff, 0xff] {
+                self.actuators[4] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
+            }
+            if frame.pdu()[2..4] != [0xff, 0xff] {
+                self.actuators[5] = Some(i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap()));
+            }
+            if frame.pdu()[4..6] != [0xff, 0xff] {
+                self.actuators[6] = Some(i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap()));
+            }
+            if frame.pdu()[6..8] != [0xff, 0xff] {
+                self.actuators[7] = Some(i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()));
+            }
+            true
+        } else {
+            false
+        }
     }
 }
 
 impl std::fmt::Display for ActuatorService {
-    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Actuator state {}",
+            self.actuators
+                .iter()
+                .enumerate()
+                .map(|(idx, act)| {
+                    format!(
+                        "{}: {}",
+                        idx,
+                        act.map_or("NaN".to_owned(), |f| f.to_string())
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
     }
 }
 
@@ -71,21 +116,7 @@ impl ActuatorService {
             bank_update[*act as usize / BANK_SLOTS] = true;
         }
 
-        trace!(
-            "Actuator state {}",
-            self.actuators
-                .iter()
-                .enumerate()
-                .map(|(idx, act)| {
-                    format!(
-                        "{}: {}",
-                        idx,
-                        act.map_or("NaN".to_owned(), |f| f.to_string())
-                    )
-                })
-                .collect::<Vec<String>>()
-                .join(", ")
-        );
+        trace!("{}", self);
 
         for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
             if !bank_update[idx] {
