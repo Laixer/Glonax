@@ -2,13 +2,13 @@ use std::{sync::Arc, time::Duration};
 
 use crate::{
     device::{self, CoreDevice},
-    net::{ControlNet, Router},
+    net::{J1939Network, Router},
 };
 
 const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 
 pub struct Gateway {
-    net: Arc<ControlNet>,
+    net: Arc<J1939Network>,
     router: Router,
     vecu: device::Vecu,
     mecu: device::Mecu,
@@ -18,7 +18,7 @@ pub struct Gateway {
 impl Gateway {
     /// Construct a new gateway device.
     pub fn new(name: &str, signal_manager: &crate::signal::SignalManager) -> std::io::Result<Self> {
-        let net = Arc::new(ControlNet::new(name, DEVICE_NET_LOCAL_ADDR)?);
+        let net = Arc::new(J1939Network::new(name, DEVICE_NET_LOCAL_ADDR)?);
 
         let vecu = device::Vecu::new(signal_manager.publisher());
         let mecu = device::Mecu::new(net.clone(), signal_manager.publisher());

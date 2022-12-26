@@ -12,16 +12,15 @@ mod encoder;
 mod engine;
 mod service;
 
-// TODO: Rename to J1939Network.
 // TODO: Implement connection management.
 // TODO: Implement broadcast message.
-pub struct ControlNet {
+pub struct J1939Network {
     stream: J1939Stream,
 }
 
-impl ControlNet {
+impl J1939Network {
     pub fn new(ifname: &str, addr: u8) -> io::Result<Self> {
-        let stream = glonax_j1939::J1939Stream::bind(ifname, addr)?;
+        let stream = J1939Stream::bind(ifname, addr)?;
         stream.set_broadcast(true)?;
 
         Ok(Self { stream })
@@ -147,7 +146,7 @@ pub trait Routable: Send + Sync {
 }
 
 pub struct Router {
-    net: std::sync::Arc<ControlNet>,
+    net: std::sync::Arc<J1939Network>,
     frame: Option<Frame>,
     filter_pgn: Vec<u32>,
     filter_node: Vec<u8>,
@@ -155,7 +154,7 @@ pub struct Router {
 }
 
 impl Router {
-    pub fn new(net: std::sync::Arc<ControlNet>) -> Self {
+    pub fn new(net: std::sync::Arc<J1939Network>) -> Self {
         Self {
             net,
             frame: None,

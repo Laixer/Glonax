@@ -1,9 +1,9 @@
-use glonax::net::ControlNet;
+use glonax::net::J1939Network;
 use glonax_j1939::PGN;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let net = ControlNet::new("can0", 0x9b)?;
+    let net = J1939Network::new("can0", 0x9b)?;
 
     net.request(0x20, PGN::AddressClaimed).await;
 

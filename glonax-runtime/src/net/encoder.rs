@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use glonax_j1939::*;
 
-use super::{ControlNet, Routable};
+use super::{J1939Network, Routable};
 
 pub enum EncoderState {
     NoError,
@@ -27,7 +27,7 @@ impl std::fmt::Display for EncoderState {
 }
 
 pub struct KueblerEncoderService {
-    _net: Arc<ControlNet>,
+    _net: Arc<J1939Network>,
     node: u8,
     position: u32,
     speed: u16,
@@ -88,7 +88,7 @@ impl std::fmt::Display for KueblerEncoderService {
 }
 
 impl KueblerEncoderService {
-    pub fn new(net: std::sync::Arc<ControlNet>, node: u8) -> Self {
+    pub fn new(net: std::sync::Arc<J1939Network>, node: u8) -> Self {
         Self {
             _net: net,
             node,

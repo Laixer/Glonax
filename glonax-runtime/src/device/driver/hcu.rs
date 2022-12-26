@@ -5,7 +5,7 @@ use glonax_j1939::{Frame, PGN};
 use crate::{
     core::motion::Motion,
     device::MotionDevice,
-    net::{ActuatorService, ControlNet},
+    net::{ActuatorService, J1939Network},
 };
 
 const DEVICE_NET_HCU_ADDR: u8 = 0x4a;
@@ -15,7 +15,7 @@ pub struct Hcu {
 }
 
 impl Hcu {
-    pub fn new(net: Arc<ControlNet>) -> Self {
+    pub fn new(net: Arc<J1939Network>) -> Self {
         Self {
             service: ActuatorService::new(net, DEVICE_NET_HCU_ADDR),
         }

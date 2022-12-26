@@ -36,7 +36,7 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
     }
 }
 
-async fn analyze_frames(net: std::sync::Arc<ControlNet>, mut router: Router) -> anyhow::Result<()> {
+async fn analyze_frames(net: std::sync::Arc<J1939Network>, mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut engine_service = EngineService::new(0x0);
@@ -265,7 +265,7 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Bind to interface {}", args.interface);
 
-    let net = ControlNet::new(args.interface.as_str(), args.address)?;
+    let net = J1939Network::new(args.interface.as_str(), args.address)?;
     net.set_promisc_mode(true)?;
 
     match args.command {

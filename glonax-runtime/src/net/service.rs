@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use glonax_j1939::*;
 
-use super::{ControlNet, Routable};
+use super::{J1939Network, Routable};
 
 pub struct J1939ApplicationInspector {
     software_indent: Option<(u8, u8, u8)>,
@@ -108,12 +108,12 @@ impl Default for J1939ApplicationInspector {
 }
 
 pub struct StatusService {
-    net: Arc<ControlNet>,
+    net: Arc<J1939Network>,
     node: u8,
 }
 
 impl StatusService {
-    pub fn new(net: Arc<ControlNet>, node: u8) -> Self {
+    pub fn new(net: Arc<J1939Network>, node: u8) -> Self {
         Self { net, node }
     }
 

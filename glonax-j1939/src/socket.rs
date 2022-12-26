@@ -64,7 +64,7 @@ impl From<SockAddr> for SockAddrJ1939 {
                 addr: sockaddr_can.can_addr.j1939.addr,
                 pgn: sockaddr_can.can_addr.j1939.pgn,
                 name: sockaddr_can.can_addr.j1939.name,
-                ifindex: None,
+                ifindex: Some(sockaddr_can.can_ifindex),
             }
         }
     }

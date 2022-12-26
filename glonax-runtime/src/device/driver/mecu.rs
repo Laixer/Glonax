@@ -4,7 +4,7 @@ use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::metric::{MetricValue, Signal},
-    net::{ControlNet, KueblerEncoderService},
+    net::{J1939Network, KueblerEncoderService},
     signal::SignalPublisher,
 };
 
@@ -22,7 +22,7 @@ pub struct Mecu {
 }
 
 impl Mecu {
-    pub fn new(net: Arc<ControlNet>, publisher: SignalPublisher) -> Self {
+    pub fn new(net: Arc<J1939Network>, publisher: SignalPublisher) -> Self {
         Self {
             publisher,
             arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
