@@ -14,26 +14,24 @@ mod service;
 
 // TODO: Implement connection management.
 // TODO: Implement broadcast message.
-pub struct J1939Network {
-    stream: J1939Stream,
-}
+pub struct J1939Network(J1939Stream);
 
 impl J1939Network {
     pub fn new(ifname: &str, addr: u8) -> io::Result<Self> {
         let stream = J1939Stream::bind(ifname, addr)?;
         stream.set_broadcast(true)?;
 
-        Ok(Self { stream })
+        Ok(Self(stream))
     }
 
     #[inline]
     pub fn set_promisc_mode(&self, on: bool) -> io::Result<()> {
-        self.stream.set_promisc_mode(on)
+        self.0.set_promisc_mode(on)
     }
 
     #[inline]
     pub async fn accept(&self) -> io::Result<Frame> {
-        self.stream.read().await
+        self.0.read().await
     }
 
     // TODO: Change to Commanded Address
@@ -46,7 +44,7 @@ impl J1939Network {
         .copy_from_slice(&[b'Z', b'C', address])
         .build();
 
-        self.stream.write(&frame).await.unwrap();
+        self.0.write(&frame).await.unwrap();
     }
 
     pub async fn reset(&self, node: u8) {
@@ -58,15 +56,12 @@ impl J1939Network {
         .copy_from_slice(&[b'Z', b'C', 0xff, 0x69])
         .build();
 
-        self.stream.write(&frame).await.unwrap();
+        self.0.write(&frame).await.unwrap();
     }
 
     /// Request a PGN message.
     pub async fn request(&self, node: u8, pgn: PGN) {
-        self.stream
-            .write(&protocol::request(node, pgn))
-            .await
-            .unwrap();
+        self.0.write(&protocol::request(node, pgn)).await.unwrap();
     }
 
     /// Broadcast Announce Message.
@@ -135,7 +130,7 @@ impl J1939Network {
 
     #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
-        self.stream.write(frame).await
+        self.0.write(frame).await
     }
 }
 
