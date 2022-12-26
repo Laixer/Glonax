@@ -29,17 +29,20 @@ pub(crate) async fn exec_service<K: Operand + runtime::operand::FunctionFactory>
         }
     });
 
-    let mut file = File::open(&config.file).expect("cannnot open file");
+    let mut file = File::open(&config.file).map_err(|op| runtime::error::Error::Io(op))?;
 
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();
 
-    let program: Program = serde_json::from_str(&data).expect("JSON was not well-formatted");
+    let program: Program = serde_json::from_str(&data)
+        .map_err(|op| runtime::error::Error::Generic(format!("input file malformatted: {}", op)))?;
 
     debug!("Parsing {} with version {}", program.name, program.version);
 
     if program.version != "1.0" {
-        panic!("version incompatible"); // TODO: Return result
+        return Err(runtime::error::Error::Generic(format!(
+            "input file has incompatible version"
+        )));
     }
 
     for step in program.steps {
