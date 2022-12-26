@@ -9,8 +9,6 @@ pub struct Context<'a> {
     pub start: Instant,
     /// Time of last step.
     pub last_step: Instant,
-    /// Total step count.
-    pub step_count: usize,
     /// Signal reader.
     pub reader: &'a mut SignalManager,
 }
@@ -21,7 +19,6 @@ impl<'a> Context<'a> {
         Self {
             start: Instant::now(),
             last_step: Instant::now(),
-            step_count: 0,
             reader,
         }
     }

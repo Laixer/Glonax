@@ -84,7 +84,6 @@ pub async fn exec_service<K: Operand + FunctionFactory + 'static>(
                     }
                 };
 
-                ctx.step_count += 1;
                 ctx.last_step = start_step_execute;
             }
 
