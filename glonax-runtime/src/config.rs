@@ -29,9 +29,8 @@ impl Configurable for InputConfig {
     }
 }
 
-
 #[derive(Clone, Debug)]
-pub struct CliConfig {
+pub struct ClientConfig {
     /// Input file.
     pub file: String,
 
@@ -39,12 +38,11 @@ pub struct CliConfig {
     pub global: GlobalConfig,
 }
 
-impl Configurable for CliConfig {
+impl Configurable for ClientConfig {
     fn global(&self) -> &GlobalConfig {
         &self.global
     }
 }
-
 
 #[derive(Clone, Debug)]
 pub struct EcuConfig {

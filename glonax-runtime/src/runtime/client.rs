@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use crate::{runtime, CliConfig, RuntimeContext};
+use crate::{runtime, ClientConfig, RuntimeContext};
 
 use super::operand::Operand;
 
@@ -18,7 +18,7 @@ struct Step {
 }
 
 pub(crate) async fn exec_service<K: Operand + runtime::operand::FunctionFactory>(
-    config: &CliConfig,
+    config: &ClientConfig,
     mut runtime: RuntimeContext<K>,
 ) -> runtime::Result {
     let mut program_manager = runtime.new_program_manager();
@@ -29,7 +29,7 @@ pub(crate) async fn exec_service<K: Operand + runtime::operand::FunctionFactory>
         }
     });
 
-    let mut file = File::open(&config.file).map_err(|op| runtime::error::Error::Io(op))?;
+    let mut file = File::open(&config.file).map_err(runtime::error::Error::Io)?;
 
     let mut data = String::new();
     file.read_to_string(&mut data).unwrap();

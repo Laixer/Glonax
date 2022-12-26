@@ -15,7 +15,7 @@ mod signal;
 extern crate log;
 
 mod config;
-use runtime::operand::{Operand, FunctionFactory};
+use runtime::operand::{FunctionFactory, Operand};
 
 pub use self::config::*;
 
@@ -67,8 +67,8 @@ pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
 ///
 /// This factory method obtains the service from the combination of configuration
 /// settings. This service is then run to completion.
-pub fn runtime_cli(config: &config::CliConfig) -> runtime::Result {
-    ExcavatorService::exec_cli(config)
+pub fn runtime_client(config: &config::ClientConfig) -> runtime::Result {
+    ExcavatorService::exec_client(config)
 }
 
 struct LaunchStub<K> {
@@ -138,7 +138,7 @@ where
     }
 
     /// Start the runtime service.
-    pub fn exec_cli(config: &config::CliConfig) -> runtime::Result {
+    pub fn exec_client(config: &config::ClientConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::client::exec_service(
                 config,

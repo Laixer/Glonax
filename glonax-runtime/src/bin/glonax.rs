@@ -39,7 +39,7 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut config = glonax::CliConfig {
+    let mut config = glonax::ClientConfig {
         file: args.file,
         global: glonax::GlobalConfig::default(),
     };
@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    glonax::runtime_cli(&config)?;
+    glonax::runtime_client(&config)?;
 
     Ok(())
 }
