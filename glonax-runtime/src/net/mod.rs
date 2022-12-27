@@ -204,6 +204,14 @@ impl Router {
                 debug!("Detected new node on network: 0x{:X?}", node_address);
             }
 
+            self.node_table.retain(|node_address, last_seen| {
+                let active = last_seen.elapsed() < std::time::Duration::from_millis(500);
+                if !active {
+                    debug!("Node 0x{:X?} not seen, kicking...", node_address);
+                }
+                active
+            });
+
             if !self.filter_pgn.is_empty() {
                 let pgn = frame.id().pgn_raw();
                 if !self.filter_pgn.contains(&pgn) {
