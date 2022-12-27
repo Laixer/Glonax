@@ -12,7 +12,11 @@ impl TestProgram {
     }
 }
 
-const TIME_PER_STEP: u64 = 1;
+const TIME_PER_STEP: u64 = 0_100;
+
+async fn sleep_step() {
+    tokio::time::sleep(std::time::Duration::from_millis(TIME_PER_STEP)).await;
+}
 
 #[async_trait::async_trait]
 impl Program for TestProgram {
@@ -36,7 +40,7 @@ impl Program for TestProgram {
             1 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: boom down");
                 Some(HydraulicMotion::Change(vec![
@@ -51,7 +55,7 @@ impl Program for TestProgram {
             2 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: arm up");
                 Some(HydraulicMotion::Change(vec![
@@ -66,7 +70,7 @@ impl Program for TestProgram {
             3 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: arm down");
                 Some(HydraulicMotion::Change(vec![
@@ -81,7 +85,7 @@ impl Program for TestProgram {
             4 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: bucket up");
                 Some(HydraulicMotion::Change(vec![
@@ -96,7 +100,7 @@ impl Program for TestProgram {
             5 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: bucket down");
                 Some(HydraulicMotion::Change(vec![
@@ -111,7 +115,7 @@ impl Program for TestProgram {
             6 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: slew up");
                 Some(HydraulicMotion::Change(vec![
@@ -126,7 +130,7 @@ impl Program for TestProgram {
             7 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: slew down");
                 Some(HydraulicMotion::Change(vec![
@@ -141,7 +145,7 @@ impl Program for TestProgram {
             8 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: drive left up");
                 Some(HydraulicMotion::Change(vec![
@@ -156,7 +160,7 @@ impl Program for TestProgram {
             9 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: drive left down");
                 Some(HydraulicMotion::Change(vec![
@@ -171,7 +175,7 @@ impl Program for TestProgram {
             10 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: drive right up");
                 Some(HydraulicMotion::Change(vec![
@@ -186,7 +190,7 @@ impl Program for TestProgram {
             11 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: drive right down");
                 Some(HydraulicMotion::Change(vec![
@@ -201,7 +205,7 @@ impl Program for TestProgram {
             12 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: drive straight up");
                 Some(HydraulicMotion::StraightDrive(HydraulicMotion::POWER_MAX))
@@ -209,7 +213,7 @@ impl Program for TestProgram {
             13 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing actuator: drive straight down");
                 Some(HydraulicMotion::StraightDrive(HydraulicMotion::POWER_MIN))
@@ -217,7 +221,7 @@ impl Program for TestProgram {
             14 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing all actuators up");
                 Some(HydraulicMotion::Change(vec![
@@ -232,7 +236,7 @@ impl Program for TestProgram {
             15 => {
                 self.program += 1;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 debug!("Testing all actuators down");
                 Some(HydraulicMotion::Change(vec![
@@ -247,7 +251,7 @@ impl Program for TestProgram {
             _ => {
                 self.program = 0;
 
-                tokio::time::sleep(std::time::Duration::from_secs(TIME_PER_STEP)).await;
+                sleep_step().await;
 
                 None
             }
