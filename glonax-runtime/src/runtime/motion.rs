@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::QueueAdapter;
 
-const TOPIC: &str = "command/actuate";
+const TOPIC: &str = "area/hydraulic/command";
 
 pub struct MotionManager {
     client: Arc<rumqttc::AsyncClient>,
@@ -57,9 +57,16 @@ impl QueueAdapter for MotionQueueAdapter {
     async fn parse(&mut self, event: &rumqttc::Publish) {
         use crate::device::MotionDevice;
 
-        if let Ok(motion) = postcard::from_bytes::<crate::core::motion::Motion>(&event.payload) {
-            if self.motion_enabled {
-                self.motion_device.actuate(motion).await;
+        // if let Ok(motion) = postcard::from_bytes::<crate::core::motion::Motion>(&event.payload) {
+        //     if self.motion_enabled {
+        //         self.motion_device.actuate(motion).await;
+        //     }
+        // }
+        if let Ok(str_payload) = std::str::from_utf8(&event.payload) {
+            if let Ok(motion) = serde_json::from_str::<crate::core::motion::Motion>(str_payload) {
+                if self.motion_enabled {
+                    self.motion_device.actuate(motion).await;
+                }
             }
         }
     }
@@ -76,7 +83,8 @@ impl MotionPublisher {
         let motion = motion.to_motion();
 
         if self.motion_enabled {
-            if let Ok(payload) = postcard::to_stdvec(&motion) {
+            if let Ok(payload) = serde_json::to_string(&motion) {
+                // if let Ok(payload) = postcard::to_stdvec(&motion) {
                 match self
                     .client
                     .publish(TOPIC, rumqttc::QoS::AtLeastOnce, false, payload)
