@@ -101,17 +101,6 @@ pub struct RuntimeContext<K> {
 }
 
 impl<K> RuntimeContext<K> {
-    pub(crate) async fn new_network_gateway(
-        &self,
-        interface: &str,
-        signal_manager: &crate::signal::SignalManager,
-    ) -> self::Result<crate::device::Gateway> {
-        debug!("Bind to interface {}", interface);
-
-        crate::device::Gateway::new(interface, signal_manager)
-            .map_err(|_| Error::CoreDeviceNotFound)
-    }
-
     pub(super) fn new_signal_manager(&self) -> signal::SignalManager {
         signal::SignalManager::new(self.eventhub.client.clone())
     }

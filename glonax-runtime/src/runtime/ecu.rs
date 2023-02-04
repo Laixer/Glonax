@@ -1,7 +1,4 @@
-use crate::{
-    runtime::{self},
-    EcuConfig, RuntimeContext,
-};
+use crate::{runtime, EcuConfig, RuntimeContext};
 
 use runtime::operand::Operand;
 
@@ -9,14 +6,13 @@ pub(crate) async fn exec_service<K: Operand>(
     config: &EcuConfig,
     mut runtime: RuntimeContext<K>,
 ) -> runtime::Result {
-    use crate::device::CoreDevice;
+    use crate::device::{CoreDevice, Gateway};
 
     let signal_manager = runtime.new_signal_manager();
-
-    let mut gateway = runtime
-        .new_network_gateway(&config.interface, &signal_manager)
-        .await?;
     let motion_manager = runtime.new_motion_manager();
+
+    let mut gateway = Gateway::new(&config.interface, &signal_manager)
+        .map_err(|_| runtime::Error::CoreDeviceNotFound)?;
 
     runtime
         .eventhub
