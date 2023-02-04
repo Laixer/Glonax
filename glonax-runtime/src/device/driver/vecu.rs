@@ -33,11 +33,19 @@ impl crate::net::Routable for Vecu {
             if let Some(rpm) = self.engine_service.rpm() {
                 trace!("Engine RPM: {}", rpm);
 
-                self.publisher.try_publish(Signal {
-                    address: self.engine_service.node(),
-                    subaddress: 0,
-                    value: MetricValue::RPM(rpm),
-                });
+                self.publisher.try_publish(
+                    "signal",
+                    Signal {
+                        address: self.engine_service.node(),
+                        subaddress: 0,
+                        value: MetricValue::RPM(rpm),
+                    },
+                );
+            }
+
+            if let Some(electronic_control) = self.engine_service.electronic_control() {
+                self.publisher
+                    .try_publish("engine/power", electronic_control);
             }
 
             true

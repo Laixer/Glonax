@@ -6,7 +6,7 @@ mod encoder;
 pub(crate) use encoder::Encoder;
 use tokio::sync::watch;
 
-const TOPIC: &str = "net/signal";
+const TOPIC: &str = "area/";
 
 pub struct SignalManager {
     client: Arc<rumqttc::AsyncClient>,
@@ -91,15 +91,15 @@ impl SignalPublisher {
         }
     }
 
-    pub fn try_publish(&mut self, signal: Signal) {
-        if let Ok(str_payload) = serde_json::to_string(&signal) {
+    pub fn try_publish<T: serde::Serialize>(&mut self, subtopic: &str, message: T) {
+        if let Ok(str_payload) = serde_json::to_string(&message) {
             match self.client.try_publish(
-                TOPIC,
+                TOPIC.to_string() + subtopic,
                 rumqttc::QoS::AtMostOnce,
                 false,
                 str_payload.as_bytes(),
             ) {
-                Ok(_) => trace!("Published signal: {}", signal),
+                Ok(_) => trace!("Published signal"),
                 Err(_) => warn!("Failed to publish signal"),
             }
         }

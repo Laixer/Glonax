@@ -45,11 +45,17 @@ impl crate::net::Routable for Mecu {
                 self.arm_encoder.speed()
             );
 
-            self.publisher.try_publish(Signal {
-                address: self.arm_encoder.node(),
-                subaddress: 0,
-                value: MetricValue::Angle(self.arm_encoder.position()),
-            });
+            self.publisher.try_publish(
+                "signal",
+                Signal {
+                    address: self.arm_encoder.node(),
+                    subaddress: 0,
+                    value: MetricValue::Angle(self.arm_encoder.position()),
+                },
+            );
+
+            self.publisher
+                .try_publish("body/arm", self.arm_encoder.position());
 
             true
         } else if self.boom_encoder.node() == frame.id().sa()
@@ -61,11 +67,17 @@ impl crate::net::Routable for Mecu {
                 self.boom_encoder.speed()
             );
 
-            self.publisher.try_publish(Signal {
-                address: self.boom_encoder.node(),
-                subaddress: 0,
-                value: MetricValue::Angle(self.boom_encoder.position()),
-            });
+            self.publisher.try_publish(
+                "signal",
+                Signal {
+                    address: self.boom_encoder.node(),
+                    subaddress: 0,
+                    value: MetricValue::Angle(self.boom_encoder.position()),
+                },
+            );
+
+            self.publisher
+                .try_publish("body/boom", self.boom_encoder.position());
 
             true
         } else if self.turn_encoder.node() == frame.id().sa()
@@ -77,11 +89,17 @@ impl crate::net::Routable for Mecu {
                 self.turn_encoder.speed()
             );
 
-            self.publisher.try_publish(Signal {
-                address: self.turn_encoder.node(),
-                subaddress: 0,
-                value: MetricValue::Angle(self.turn_encoder.position()),
-            });
+            self.publisher.try_publish(
+                "signal",
+                Signal {
+                    address: self.turn_encoder.node(),
+                    subaddress: 0,
+                    value: MetricValue::Angle(self.turn_encoder.position()),
+                },
+            );
+
+            self.publisher
+                .try_publish("body/frame", self.turn_encoder.position());
 
             true
         } else {

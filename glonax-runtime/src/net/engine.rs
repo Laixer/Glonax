@@ -2,8 +2,18 @@ use glonax_j1939::{
     decode::{EngineStarterMode, EngineTorqueMode},
     *,
 };
+use serde::{Deserialize, Serialize};
 
 use super::Routable;
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+pub struct ElectrnoicControl {
+    // engine_torque_mode: EngineTorqueMode,
+    driver_demand: u8,
+    actual_engine: u8,
+    rpm: u16,
+    // starter_mode: EngineStarterMode,
+}
 
 pub struct EngineService {
     node: u8,
@@ -61,6 +71,18 @@ impl EngineService {
             rpm: None,
             source_addr: None,
             starter_mode: None,
+        }
+    }
+
+    pub fn electronic_control(&self) -> Option<ElectrnoicControl> {
+        if self.rpm.is_some() {
+            Some(ElectrnoicControl {
+                driver_demand: self.driver_demand.unwrap(),
+                actual_engine: self.actual_engine.unwrap(),
+                rpm: self.rpm.unwrap(),
+            })
+        } else {
+            None
         }
     }
 
