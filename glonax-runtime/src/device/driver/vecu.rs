@@ -1,10 +1,6 @@
 use glonax_j1939::{Frame, PGN};
 
-use crate::{
-    core::metric::{MetricValue, Signal},
-    net::EngineService,
-    signal::SignalPublisher,
-};
+use crate::{net::EngineService, signal::SignalPublisher};
 
 pub struct Vecu {
     publisher: SignalPublisher,
@@ -29,19 +25,6 @@ impl crate::net::Routable for Vecu {
         if pgn == glonax_j1939::PGN::ElectronicEngineController2 {
             self.engine_service
                 .ingress(glonax_j1939::PGN::ElectronicEngineController2, frame);
-
-            if let Some(rpm) = self.engine_service.rpm() {
-                trace!("Engine RPM: {}", rpm);
-
-                self.publisher.try_publish(
-                    "signal",
-                    Signal {
-                        address: self.engine_service.node(),
-                        subaddress: 0,
-                        value: MetricValue::RPM(rpm),
-                    },
-                );
-            }
 
             if let Some(electronic_control) = self.engine_service.electronic_control() {
                 self.publisher
