@@ -205,7 +205,7 @@ impl Router {
             }
 
             self.node_table.retain(|node_address, last_seen| {
-                let active = last_seen.elapsed() < std::time::Duration::from_millis(500);
+                let active = last_seen.elapsed() < std::time::Duration::from_millis(1_500);
                 if !active {
                     debug!("Node 0x{:X?} not seen, kicking...", node_address);
                 }
