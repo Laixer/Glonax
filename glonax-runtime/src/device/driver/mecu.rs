@@ -3,7 +3,6 @@ use std::sync::Arc;
 use glonax_j1939::{Frame, PGN};
 
 use crate::{
-    core::metric::{MetricValue, Signal},
     net::{J1939Network, KueblerEncoderService},
     signal::{Encoder, SignalPublisher},
 };
@@ -41,21 +40,6 @@ impl crate::net::Routable for Mecu {
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
         if self.arm_encoder.node() == frame.id().sa() && self.arm_encoder.ingress(pgn, frame) {
-            // trace!(
-            //     "Arm Position: {}; Speed: {}",
-            //     self.arm_encoder.position(),
-            //     self.arm_encoder.speed()
-            // );
-
-            self.publisher.try_publish(
-                "signal",
-                Signal {
-                    address: self.arm_encoder.node(),
-                    subaddress: 0,
-                    value: MetricValue::Angle(self.arm_encoder.position()),
-                },
-            );
-
             /// Arm encoder range.
             pub const ARM_ENCODER_RANGE: std::ops::Range<f32> = 25000.0..51800.0;
             /// Arm angle range.
@@ -74,10 +58,8 @@ impl crate::net::Routable for Mecu {
                 percentage,
             );
 
-            self.publisher
-                .try_publish("body/arm", self.arm_encoder.position());
             self.publisher.try_publish(
-                "body/arm2",
+                "body/arm",
                 EncoderSet {
                     position: self.arm_encoder.position(),
                     speed: self.arm_encoder.speed(),
@@ -90,21 +72,6 @@ impl crate::net::Routable for Mecu {
         } else if self.boom_encoder.node() == frame.id().sa()
             && self.boom_encoder.ingress(pgn, frame)
         {
-            // trace!(
-            //     "Boom Position: {}; Speed: {}",
-            //     self.boom_encoder.position(),
-            //     self.boom_encoder.speed()
-            // );
-
-            self.publisher.try_publish(
-                "signal",
-                Signal {
-                    address: self.boom_encoder.node(),
-                    subaddress: 0,
-                    value: MetricValue::Angle(self.boom_encoder.position()),
-                },
-            );
-
             /// Boom encoder range.
             pub const BOOM_ENCODER_RANGE: std::ops::Range<f32> = 136100.0..195600.0;
             /// Boom angle range.
@@ -123,10 +90,8 @@ impl crate::net::Routable for Mecu {
                 percentage,
             );
 
-            self.publisher
-                .try_publish("body/boom", self.boom_encoder.position());
             self.publisher.try_publish(
-                "body/boom2",
+                "body/boom",
                 EncoderSet {
                     position: self.boom_encoder.position(),
                     speed: self.boom_encoder.speed(),
@@ -139,12 +104,6 @@ impl crate::net::Routable for Mecu {
         } else if self.turn_encoder.node() == frame.id().sa()
             && self.turn_encoder.ingress(pgn, frame)
         {
-            // trace!(
-            //     "Turn Position: {}; Speed: {}",
-            //     self.turn_encoder.position(),
-            //     self.turn_encoder.speed()
-            // );
-
             /// Slew encoder range.
             pub const SLEW_ENCODER_RANGE: std::ops::Range<f32> = 0.0..290000.0;
             /// Slew angle range.
@@ -164,18 +123,7 @@ impl crate::net::Routable for Mecu {
             );
 
             self.publisher.try_publish(
-                "signal",
-                Signal {
-                    address: self.turn_encoder.node(),
-                    subaddress: 0,
-                    value: MetricValue::Angle(self.turn_encoder.position()),
-                },
-            );
-
-            self.publisher
-                .try_publish("body/frame", self.turn_encoder.position());
-            self.publisher.try_publish(
-                "body/frame2",
+                "body/frame",
                 EncoderSet {
                     position: self.turn_encoder.position(),
                     speed: self.turn_encoder.speed(),
