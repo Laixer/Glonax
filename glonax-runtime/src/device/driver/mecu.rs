@@ -41,7 +41,7 @@ impl crate::net::Routable for Mecu {
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
         if self.arm_encoder.node() == frame.id().sa() && self.arm_encoder.ingress(pgn, frame) {
             /// Arm encoder range.
-            pub const ARM_ENCODER_RANGE: std::ops::Range<f32> = 25000.0..51800.0;
+            pub const ARM_ENCODER_RANGE: std::ops::Range<f32> = 24900.0..51600.0;
             /// Arm angle range.
             pub const ARM_ANGLE_RANGE: std::ops::Range<f32> = 0.0..2.1;
 
@@ -73,7 +73,7 @@ impl crate::net::Routable for Mecu {
             && self.boom_encoder.ingress(pgn, frame)
         {
             /// Boom encoder range.
-            pub const BOOM_ENCODER_RANGE: std::ops::Range<f32> = 136100.0..195600.0;
+            pub const BOOM_ENCODER_RANGE: std::ops::Range<f32> = 108900.0..195600.0;
             /// Boom angle range.
             pub const BOOM_ANGLE_RANGE: std::ops::Range<f32> = 0.0..1.178;
 
