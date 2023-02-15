@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use crate::{
     device::{self, CoreDevice},
@@ -41,13 +41,6 @@ impl Gateway {
 #[async_trait::async_trait]
 impl CoreDevice for Gateway {
     async fn next(&mut self) -> device::Result<()> {
-        if tokio::time::timeout(Duration::from_secs(1), self.router.listen())
-            .await
-            .is_err()
-        {
-            warn!("Network timeout: no incoming packets in last 1 second(s)")
-        }
-
         self.router.try_accept(&mut self.vecu);
         self.router.try_accept(&mut self.mecu);
         self.router.try_accept(&mut self.hcu);
