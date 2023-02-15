@@ -43,9 +43,10 @@ async fn analyze_frames(
     debug!("Print incoming frames to screen");
 
     let mut engine_service = EngineService::new(0x0);
+    let mut frame_encoder = KueblerEncoderService::new(net.clone(), 0x6A);
+    let mut boom_encoder = KueblerEncoderService::new(net.clone(), 0x6B);
     let mut arm_encoder = KueblerEncoderService::new(net.clone(), 0x6C);
-    let mut boom_encoder = KueblerEncoderService::new(net.clone(), 0x6A);
-    let mut turn_encoder = KueblerEncoderService::new(net.clone(), 0x20);
+    let mut attachment_encoder = KueblerEncoderService::new(net.clone(), 0x6D);
     let mut actuator = ActuatorService::new(net.clone(), 0x4A);
 
     let mut app_inspector = J1939ApplicationInspector::new();
@@ -80,12 +81,21 @@ async fn analyze_frames(
             );
         }
 
-        if router.try_accept(&mut turn_encoder) {
+        if router.try_accept(&mut frame_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
-                Yellow.bold().paint("Turn"),
-                turn_encoder
+                Yellow.bold().paint("Frame"),
+                frame_encoder
+            );
+        }
+
+        if router.try_accept(&mut attachment_encoder) {
+            info!(
+                "{} {} » {}",
+                style_node(router.frame_source().unwrap()),
+                Yellow.bold().paint("Attachment"),
+                attachment_encoder
             );
         }
 
