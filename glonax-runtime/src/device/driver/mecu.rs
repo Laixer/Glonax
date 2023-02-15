@@ -17,18 +17,20 @@ struct EncoderSet {
 
 pub struct Mecu {
     publisher: SignalPublisher,
+    turn_encoder: KueblerEncoderService,
     arm_encoder: KueblerEncoderService,
     boom_encoder: KueblerEncoderService,
-    turn_encoder: KueblerEncoderService,
+    attachment_encoder: KueblerEncoderService,
 }
 
 impl Mecu {
     pub fn new(net: Arc<J1939Network>, publisher: SignalPublisher) -> Self {
         Self {
             publisher,
+            turn_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
+            boom_encoder: KueblerEncoderService::new(net.clone(), 0x6B),
             arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
-            boom_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
-            turn_encoder: KueblerEncoderService::new(net, 0x20),
+            attachment_encoder: KueblerEncoderService::new(net, 0x6D),
         }
     }
 }
@@ -129,6 +131,35 @@ impl crate::net::Routable for Mecu {
                     speed: self.turn_encoder.speed(),
                     angle,
                     percentage,
+                },
+            );
+
+            true
+        } else if self.attachment_encoder.node() == frame.id().sa()
+            && self.attachment_encoder.ingress(pgn, frame)
+        {
+            // /// Slew encoder range.
+            // pub const SLEW_ENCODER_RANGE: std::ops::Range<f32> = 0.0..290000.0;
+            // /// Slew angle range.
+            // pub const SLEW_ANGLE_RANGE: std::ops::Range<f32> = 0.0..core::f32::consts::PI * 2.0;
+
+            // let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
+
+            // let angle = encoder.scale(self.turn_encoder.position() as f32);
+            // let percentage = encoder.scale_to(100.0, self.turn_encoder.position() as f32);
+
+            debug!(
+                "Attachment Encoder: {:?}",
+                self.attachment_encoder.position()
+            );
+
+            self.publisher.try_publish(
+                "body/attachment",
+                EncoderSet {
+                    position: self.attachment_encoder.position(),
+                    speed: self.attachment_encoder.speed(),
+                    angle: 0.0,
+                    percentage: 0.0,
                 },
             );
 
