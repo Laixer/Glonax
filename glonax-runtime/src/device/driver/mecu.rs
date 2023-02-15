@@ -17,7 +17,7 @@ struct EncoderSet {
 
 pub struct Mecu {
     publisher: SignalPublisher,
-    turn_encoder: KueblerEncoderService,
+    frame_encoder: KueblerEncoderService,
     arm_encoder: KueblerEncoderService,
     boom_encoder: KueblerEncoderService,
     attachment_encoder: KueblerEncoderService,
@@ -27,7 +27,7 @@ impl Mecu {
     pub fn new(net: Arc<J1939Network>, publisher: SignalPublisher) -> Self {
         Self {
             publisher,
-            turn_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
+            frame_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
             boom_encoder: KueblerEncoderService::new(net.clone(), 0x6B),
             arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
             attachment_encoder: KueblerEncoderService::new(net, 0x6D),
@@ -103,8 +103,8 @@ impl crate::net::Routable for Mecu {
             );
 
             true
-        } else if self.turn_encoder.node() == frame.id().sa()
-            && self.turn_encoder.ingress(pgn, frame)
+        } else if self.frame_encoder.node() == frame.id().sa()
+            && self.frame_encoder.ingress(pgn, frame)
         {
             /// Slew encoder range.
             pub const SLEW_ENCODER_RANGE: std::ops::Range<f32> = 0.0..290000.0;
@@ -113,12 +113,12 @@ impl crate::net::Routable for Mecu {
 
             let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
 
-            let angle = encoder.scale(self.turn_encoder.position() as f32);
-            let percentage = encoder.scale_to(100.0, self.turn_encoder.position() as f32);
+            let angle = encoder.scale(self.frame_encoder.position() as f32);
+            let percentage = encoder.scale_to(100.0, self.frame_encoder.position() as f32);
 
             debug!(
-                "Turn Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
-                self.turn_encoder.position(),
+                "Frame Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
+                self.frame_encoder.position(),
                 angle,
                 crate::core::rad_to_deg(angle),
                 percentage,
@@ -127,8 +127,8 @@ impl crate::net::Routable for Mecu {
             self.publisher.try_publish(
                 "body/frame",
                 EncoderSet {
-                    position: self.turn_encoder.position(),
-                    speed: self.turn_encoder.speed(),
+                    position: self.frame_encoder.position(),
+                    speed: self.frame_encoder.speed(),
                     angle,
                     percentage,
                 },
