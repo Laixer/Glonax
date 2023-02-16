@@ -47,6 +47,7 @@ impl J1939Network {
         self.0.write(&frame).await.unwrap();
     }
 
+    // TODO: Remove from this layer.
     pub async fn reset(&self, node: u8) {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
@@ -60,6 +61,7 @@ impl J1939Network {
     }
 
     /// Request a PGN message.
+    #[inline]
     pub async fn request(&self, node: u8, pgn: PGN) {
         self.0.write(&protocol::request(node, pgn)).await.unwrap();
     }

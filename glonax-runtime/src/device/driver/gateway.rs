@@ -41,6 +41,10 @@ impl Gateway {
 #[async_trait::async_trait]
 impl CoreDevice for Gateway {
     async fn next(&mut self) -> device::Result<()> {
+        if let Err(e) = self.router.listen().await {
+            error!("{}", e);
+        }
+
         self.router.try_accept(&mut self.vecu);
         self.router.try_accept(&mut self.mecu);
         self.router.try_accept(&mut self.hcu);
