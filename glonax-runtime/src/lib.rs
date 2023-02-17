@@ -20,8 +20,8 @@ pub use runtime::operand::{FunctionFactory, Operand};
 pub use self::config::*;
 
 mod runtime;
-pub use self::runtime::RuntimeContext;
 pub use self::runtime::builder::Builder as RuntimeBuilder;
+pub use self::runtime::RuntimeContext;
 
 use kernel::excavator::Excavator;
 
@@ -40,16 +40,6 @@ type ExcavatorService = LaunchStub<Excavator>;
 /// settings. This service is then run to completion.
 pub fn runtime_exec(config: &config::ProgramConfig) -> runtime::Result {
     ExcavatorService::exec_exec(config)
-}
-
-/// Start the machine kernel from configuration. This is the recommended way to
-/// run a machine kernel from an dynamic external caller. Call this factory for
-/// the default machine behaviour.
-///
-/// This factory method obtains the service from the combination of configuration
-/// settings. This service is then run to completion.
-pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
-    ExcavatorService::exec_input(config)
 }
 
 /// Start the machine kernel from configuration. This is the recommended way to
@@ -112,17 +102,6 @@ where
                 self::runtime::Builder::<K>::from_config(config)?
                     .enable_term_shutdown()
                     .build(),
-            )
-            .await
-        })
-    }
-
-    /// Start the runtime service.
-    pub fn exec_input(config: &config::InputConfig) -> runtime::Result {
-        Self::runtime_reactor(config).block_on(async {
-            runtime::input::exec_service(
-                config,
-                self::runtime::Builder::<K>::from_config(config)?.build(),
             )
             .await
         })

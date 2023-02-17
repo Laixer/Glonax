@@ -17,7 +17,6 @@ use self::operand::Operand;
 
 pub mod ecu;
 pub mod exec;
-pub mod input;
 
 #[async_trait::async_trait]
 pub trait QueueAdapter: Send + Sync {

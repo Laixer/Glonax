@@ -1,6 +1,5 @@
 mod driver;
 
-pub use driver::gamepad::Gamepad;
 pub use driver::gateway::*;
 pub use driver::hcu::Hcu;
 pub use driver::mecu::Mecu;

@@ -15,21 +15,6 @@ impl Configurable for ProgramConfig {
 }
 
 #[derive(Clone, Debug)]
-pub struct InputConfig {
-    /// Input device.
-    pub device: String,
-
-    /// Global configuration.
-    pub global: GlobalConfig,
-}
-
-impl Configurable for InputConfig {
-    fn global(&self) -> &GlobalConfig {
-        &self.global
-    }
-}
-
-#[derive(Clone, Debug)]
 pub struct ClientConfig {
     /// Input file.
     pub file: String,
