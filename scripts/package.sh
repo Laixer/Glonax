@@ -19,7 +19,6 @@ cp ./target/release/glonax-ecud ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-execd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-inputd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-netctl ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax ./target/glonax_${VERSION}_amd64/usr/local/bin
 
 # Build the package
 dpkg-deb --build --root-owner-group ./target/glonax_${VERSION}_amd64
