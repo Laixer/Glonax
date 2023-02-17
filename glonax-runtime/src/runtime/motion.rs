@@ -22,7 +22,7 @@ impl MotionManager {
         }
     }
 
-    pub(super) fn adapter(&self, motion_device: crate::device::Hcu) -> MotionQueueAdapter {
+    pub fn adapter(&self, motion_device: crate::device::Hcu) -> MotionQueueAdapter {
         MotionQueueAdapter {
             motion_device,
             motion_enabled: self.motion_enabled,
@@ -37,7 +37,7 @@ impl MotionManager {
     }
 }
 
-pub(super) struct MotionQueueAdapter {
+pub struct MotionQueueAdapter {
     /// Motion device.
     motion_device: crate::device::Hcu,
     /// Whether or not to enable the motion device.

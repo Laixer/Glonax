@@ -28,7 +28,7 @@ impl<K: Operand + Identity> Builder<K> {
         }))
     }
 
-    pub(crate) fn enable_term_shutdown(self) -> Self {
+    pub fn enable_term_shutdown(self) -> Self {
         debug!("Enable signals shutdown");
 
         let sender = self.0.shutdown.0.clone();

@@ -90,20 +90,20 @@ pub struct RuntimeContext<K> {
     /// Runtime operand.
     pub operand: K,
     /// Runtime event bus.
-    pub(super) shutdown: (
+    pub shutdown: (
         tokio::sync::broadcast::Sender<()>,
         tokio::sync::broadcast::Receiver<()>,
     ),
     /// Event hub.
-    pub(super) eventhub: EventHub,
+    pub eventhub: EventHub,
 }
 
 impl<K> RuntimeContext<K> {
-    pub(super) fn new_signal_manager(&self) -> signal::SignalManager {
+    pub fn new_signal_manager(&self) -> signal::SignalManager {
         signal::SignalManager::new(self.eventhub.client.clone())
     }
 
-    pub(super) fn new_motion_manager(&self) -> motion::MotionManager {
+    pub fn new_motion_manager(&self) -> motion::MotionManager {
         motion::MotionManager::new(self.eventhub.client.clone(), true)
     }
 }

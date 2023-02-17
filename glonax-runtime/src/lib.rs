@@ -22,6 +22,7 @@ pub use self::config::*;
 mod runtime;
 pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::RuntimeContext;
+pub use self::runtime::Error;
 
 use kernel::excavator::Excavator;
 
