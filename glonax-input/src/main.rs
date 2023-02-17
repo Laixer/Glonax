@@ -9,6 +9,8 @@ use clap::{Parser, ValueHint};
 mod config;
 mod gamepad;
 
+const DEVICE_NET_LOCAL_ADDR: u8 = 0x9f;
+
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
@@ -100,7 +102,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
 
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
 
-    let net = std::sync::Arc::new(J1939Network::new(&config.interface, 0x9f)?);
+    let net = std::sync::Arc::new(J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?);
 
     let mut motion_device = Hcu::new(net);
 

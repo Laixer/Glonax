@@ -8,6 +8,8 @@ use clap::Parser;
 
 mod config;
 
+const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
+
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
@@ -125,9 +127,10 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
-    use glonax::device::CoreDevice;
-    use glonax::device::Gateway;
+    use glonax::device::{Hcu, Mecu, Vecu};
     use glonax::kernel::excavator::Excavator;
+    use glonax::net::J1939Network;
+    use glonax::net::Router;
 
     let mut runtime = glonax::RuntimeBuilder::<Excavator>::from_config(config)?
         .enable_term_shutdown()
@@ -136,12 +139,17 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let signal_manager = runtime.new_signal_manager();
     let motion_manager = runtime.new_motion_manager();
 
-    let mut gateway = Gateway::new(&config.interface, &signal_manager)
-        .map_err(|_| glonax::Error::CoreDeviceNotFound)?;
+    let net = std::sync::Arc::new(J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?);
+
+    let mut vecu = Vecu::new(signal_manager.publisher());
+    let mut mecu = Mecu::new(net.clone(), signal_manager.publisher());
+    let mut hcu = Hcu::new(net.clone());
+
+    let motion_device = Hcu::new(net.clone());
 
     runtime
         .eventhub
-        .subscribe(motion_manager.adapter(gateway.hcu()));
+        .subscribe(motion_manager.adapter(motion_device));
 
     tokio::task::spawn(async move {
         loop {
@@ -149,9 +157,17 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
         }
     });
 
+    let mut router = Router::new(net);
+
     tokio::task::spawn(async move {
         loop {
-            gateway.next().await.unwrap();
+            if let Err(e) = router.listen().await {
+                log::error!("{}", e);
+            }
+
+            router.try_accept(&mut vecu);
+            router.try_accept(&mut mecu);
+            router.try_accept(&mut hcu);
         }
     });
 

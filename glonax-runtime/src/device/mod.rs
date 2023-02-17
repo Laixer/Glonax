@@ -1,6 +1,5 @@
 mod driver;
 
-pub use driver::gateway::*;
 pub use driver::hcu::Hcu;
 pub use driver::mecu::Mecu;
 pub use driver::vecu::Vecu;
