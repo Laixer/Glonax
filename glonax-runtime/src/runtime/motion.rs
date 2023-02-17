@@ -5,6 +5,7 @@ use super::QueueAdapter;
 const TOPIC: &str = "area/hydraulic/command";
 
 pub struct MotionManager {
+    #[allow(dead_code)]
     client: Arc<rumqttc::AsyncClient>,
     /// Whether or not to enable the motion device.
     motion_enabled: bool,
@@ -29,6 +30,7 @@ impl MotionManager {
         }
     }
 
+    #[allow(dead_code)]
     pub(super) fn publisher(&self) -> MotionPublisher {
         MotionPublisher {
             client: self.client.clone(),
@@ -72,12 +74,14 @@ impl QueueAdapter for MotionQueueAdapter {
     }
 }
 
+#[allow(dead_code)]
 pub(super) struct MotionPublisher {
     client: Arc<rumqttc::AsyncClient>,
     /// Whether or not to enable the motion device.
     motion_enabled: bool,
 }
 
+#[allow(dead_code)]
 impl MotionPublisher {
     pub async fn publish<T: crate::core::motion::ToMotion>(&self, motion: T) {
         let motion = motion.to_motion();

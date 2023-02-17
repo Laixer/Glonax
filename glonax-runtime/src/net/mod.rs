@@ -16,6 +16,7 @@ mod service;
 // TODO: Implement broadcast message.
 pub struct J1939Network(J1939Stream);
 
+// TODO: Maybe rename to J1939Application?
 impl J1939Network {
     pub fn new(ifname: &str, addr: u8) -> io::Result<Self> {
         let stream = J1939Stream::bind(ifname, addr)?;
@@ -93,6 +94,7 @@ impl J1939Network {
         .build();
 
         println!("XConn: {}", connection_frame);
+        // self.0.write(&connection_frame).await.unwrap();
 
         for data_packet in 0..packets {
             let mut data_frame0_b = FrameBuilder::new(
@@ -117,6 +119,7 @@ impl J1939Network {
             let data_frame0 = data_frame0_b.set_len(8).build();
 
             println!("Data{}: {}", data_packet, data_frame0);
+            // self.0.write(&data_frame0).await.unwrap();
         }
     }
 

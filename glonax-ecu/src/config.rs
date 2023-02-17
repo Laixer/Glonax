@@ -4,7 +4,6 @@ use glonax::{Configurable, GlobalConfig};
 pub struct EcuConfig {
     /// CAN network interface.
     pub interface: String,
-
     /// Global configuration.
     pub global: GlobalConfig,
 }

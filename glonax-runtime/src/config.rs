@@ -1,4 +1,5 @@
 pub trait Configurable: Clone {
+    /// Get the global configuration
     fn global(&self) -> &GlobalConfig;
 }
 
@@ -7,25 +8,18 @@ pub trait Configurable: Clone {
 pub struct GlobalConfig {
     /// Name of the binary.
     pub bin_name: String,
-
     /// MQTT broker hostname or ip address.
     pub mqtt_host: String,
-
     /// MQTT broker port.
     pub mqtt_port: u16,
-
     /// MQTT broker username.
     pub mqtt_username: Option<String>,
-
     /// MQTT broker username.
     pub mqtt_password: Option<String>,
-
     /// Whether motion is enabled.
     pub enable_motion: bool,
-
     /// Whether motion is slowed down.
     pub slow_motion: bool,
-
     /// Whether the application runs as daemon.
     pub daemon: bool,
 }

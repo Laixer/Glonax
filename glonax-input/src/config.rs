@@ -4,10 +4,8 @@ use glonax::{Configurable, GlobalConfig};
 pub struct InputConfig {
     /// CAN network interface.
     pub interface: String,
-
     /// Input device.
     pub device: String,
-
     /// Global configuration.
     pub global: GlobalConfig,
 }

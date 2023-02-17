@@ -1,11 +1,11 @@
 [package]
 name = "glonax"
-version = "2.1.14"
+version = "2.3.1"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 description = """
-Heavy equipment controller daemon
+Heavy equipment controller library
 """
 categories = ["hardware", "machine", "controller"]
 keywords = ["hardware", "machine", "controller"]
