@@ -48,6 +48,7 @@ impl J1939Stream {
     }
 
     /// Write frame over the network stream.
+    #[inline]
     pub async fn write(&self, frame: &Frame) -> io::Result<usize> {
         self.0.send_to(frame.pdu(), &frame.id().into()).await
     }

@@ -6,7 +6,7 @@
 
 mod algorithm;
 pub mod core;
-mod device;
+pub mod device;
 pub mod kernel;
 pub mod net;
 mod signal;
@@ -15,12 +15,13 @@ mod signal;
 extern crate log;
 
 mod config;
-use runtime::operand::{FunctionFactory, Operand};
+pub use runtime::operand::{FunctionFactory, Operand};
 
 pub use self::config::*;
 
 mod runtime;
 pub use self::runtime::RuntimeContext;
+pub use self::runtime::builder::Builder as RuntimeBuilder;
 
 use kernel::excavator::Excavator;
 
@@ -59,16 +60,6 @@ pub fn runtime_input(config: &config::InputConfig) -> runtime::Result {
 /// settings. This service is then run to completion.
 pub fn runtime_ecu(config: &config::EcuConfig) -> runtime::Result {
     ExcavatorService::exec_ecu(config)
-}
-
-/// Start the machine kernel from configuration. This is the recommended way to
-/// run a machine kernel from an dynamic external caller. Call this factory for
-/// the default machine behaviour.
-///
-/// This factory method obtains the service from the combination of configuration
-/// settings. This service is then run to completion.
-pub fn runtime_client(config: &config::ClientConfig) -> runtime::Result {
-    ExcavatorService::exec_client(config)
 }
 
 struct LaunchStub<K> {
@@ -130,17 +121,6 @@ where
     pub fn exec_input(config: &config::InputConfig) -> runtime::Result {
         Self::runtime_reactor(config).block_on(async {
             runtime::input::exec_service(
-                config,
-                self::runtime::Builder::<K>::from_config(config)?.build(),
-            )
-            .await
-        })
-    }
-
-    /// Start the runtime service.
-    pub fn exec_client(config: &config::ClientConfig) -> runtime::Result {
-        Self::runtime_reactor(config).block_on(async {
-            runtime::client::exec_service(
                 config,
                 self::runtime::Builder::<K>::from_config(config)?.build(),
             )

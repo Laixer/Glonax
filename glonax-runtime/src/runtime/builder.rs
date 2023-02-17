@@ -10,13 +10,13 @@ use super::Operand;
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub(crate) struct Builder<K>(RuntimeContext<K>);
+pub struct Builder<K>(RuntimeContext<K>);
 
 impl<K: Operand + Identity> Builder<K> {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub(crate) fn from_config(config: &impl Configurable) -> super::Result<Builder<K>> {
+    pub fn from_config(config: &impl Configurable) -> super::Result<Builder<K>> {
         use tokio::sync::broadcast;
 
         info!("{}", K::intro());

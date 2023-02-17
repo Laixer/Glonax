@@ -11,11 +11,10 @@ pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-mod builder;
+pub mod builder;
 pub(crate) use self::builder::Builder;
 use self::operand::Operand;
 
-pub mod client;
 pub mod ecu;
 pub mod exec;
 pub mod input;
@@ -90,7 +89,7 @@ impl EventHub {
 
 pub struct RuntimeContext<K> {
     /// Runtime operand.
-    pub(super) operand: K,
+    pub operand: K,
     /// Runtime event bus.
     pub(super) shutdown: (
         tokio::sync::broadcast::Sender<()>,

@@ -3,21 +3,6 @@ use glonax_j1939::PGN;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // let net = J1939Network::new("can0", 0x9b)?;
-
-    // let frame = glonax_j1939::FrameBuilder::new(
-    //     glonax_j1939::IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage7)
-    //         .da(0x4E)
-    //         .sa(0x9b)
-    //         .build(),
-    // )
-    // .copy_from_slice(&[b'Z', b'C', 0x1])
-    // .build();
-
-    // net.send(&frame).await.unwrap();
-
-    // return Ok(());
-
     let net = J1939Network::new("can0", 0x9b)?;
 
     net.request(0x20, PGN::AddressClaimed).await;
