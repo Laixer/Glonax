@@ -14,36 +14,6 @@ impl Configurable for ProgramConfig {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct ClientConfig {
-    /// Input file.
-    pub file: String,
-
-    /// Global configuration.
-    pub global: GlobalConfig,
-}
-
-impl Configurable for ClientConfig {
-    fn global(&self) -> &GlobalConfig {
-        &self.global
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct EcuConfig {
-    /// CAN network interface.
-    pub interface: String,
-
-    /// Global configuration.
-    pub global: GlobalConfig,
-}
-
-impl Configurable for EcuConfig {
-    fn global(&self) -> &GlobalConfig {
-        &self.global
-    }
-}
-
 /// Glonax global configuration.
 #[derive(Clone, Debug)]
 pub struct GlobalConfig {

@@ -15,7 +15,6 @@ pub mod builder;
 pub(crate) use self::builder::Builder;
 use self::operand::Operand;
 
-pub mod ecu;
 pub mod exec;
 
 #[async_trait::async_trait]

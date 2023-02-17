@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Laixer Equipment B.V.
+// Copyright (C) 2023 Laixer Equipment B.V.
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,8 +6,10 @@
 
 use clap::Parser;
 
+mod config;
+
 #[derive(Parser)]
-#[command(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
+#[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax ECU daemon", long_about = None)]
 struct Args {
@@ -51,12 +53,13 @@ struct Args {
     verbose: u8,
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let bin_name = format!("{}@{}", env!("CARGO_BIN_NAME").to_string(), args.interface);
 
-    let mut config = glonax::EcuConfig {
+    let mut config = config::EcuConfig {
         interface: args.interface,
         global: glonax::GlobalConfig::default(),
     };
@@ -118,7 +121,41 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    glonax::runtime_ecu(&config)?;
+    daemonize(&config).await
+}
+
+async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
+    use glonax::device::CoreDevice;
+    use glonax::device::Gateway;
+    use glonax::kernel::excavator::Excavator;
+
+    let mut runtime = glonax::RuntimeBuilder::<Excavator>::from_config(config)?
+        .enable_term_shutdown()
+        .build();
+
+    let signal_manager = runtime.new_signal_manager();
+    let motion_manager = runtime.new_motion_manager();
+
+    let mut gateway = Gateway::new(&config.interface, &signal_manager)
+        .map_err(|_| glonax::Error::CoreDeviceNotFound)?;
+
+    runtime
+        .eventhub
+        .subscribe(motion_manager.adapter(gateway.hcu()));
+
+    tokio::task::spawn(async move {
+        loop {
+            runtime.eventhub.next().await
+        }
+    });
+
+    tokio::task::spawn(async move {
+        loop {
+            gateway.next().await.unwrap();
+        }
+    });
+
+    runtime.shutdown.1.recv().await.unwrap();
 
     Ok(())
 }
