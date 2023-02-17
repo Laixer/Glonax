@@ -12,7 +12,7 @@ mod gamepad;
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Glonax input command", long_about = None)]
+#[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]

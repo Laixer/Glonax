@@ -25,8 +25,6 @@ impl Gamepad {
     }
 }
 
-unsafe impl Send for Gamepad {}
-
 impl Gamepad {
     pub(super) async fn next(&mut self) -> device::Result<Scancode> {
         loop {
