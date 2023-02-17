@@ -336,6 +336,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "glonax-input"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "glonax",
+ "glonax-gamepad",
+ "log",
+ "simplelog",
+ "tokio",
+]
+
+[[package]]
 name = "glonax-j1939"
 version = "1.2.1"
 dependencies = [

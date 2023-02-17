@@ -11,4 +11,5 @@ members = [
   "glonax-net",
   "glonax-runtime",
   "glonax-serial",
+  "glonax-input"
 ]
