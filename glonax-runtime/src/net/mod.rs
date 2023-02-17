@@ -67,67 +67,57 @@ impl J1939Network {
     }
 
     /// Broadcast Announce Message.
-    pub async fn broadcast(&self, pgn: u16, data: &[u8]) {
-        // Byte D1 Total message size, number of
-        // bytes (low byte)
-        // Byte D2 Total message size, number of
-        // bytes (high byte)
+    pub async fn broadcast(&self, node: u8, pgn: PGN, data: &[u8]) {
+        let data_length = (data.len() as u16).to_le_bytes();
 
-        let tt = (data.len() as u16).to_le_bytes();
-
-        // Byte D3 Total number of packets
         let packets = (data.len() as f32 / 8.0).ceil() as u8;
 
-        // Byte D5 PGN of the packeted message
-        // (low byte)
-        // Byte D6 PGN of the packeted message
-        // (mid byte)
-        // Byte D7 PGN of the packeted message
-        // (high byte)
-
-        let byte_array = u32::to_be_bytes(pgn as u32);
+        let byte_array = pgn.to_le_bytes();
 
         let connection_frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
                 .priority(7)
-                .da(0xff)
+                .da(node)
                 .build(),
         )
         .copy_from_slice(&[
             0x20,
-            tt[0],
-            tt[1],
+            data_length[0],
+            data_length[1],
             packets,
             0xff,
-            byte_array[3],
-            byte_array[2],
+            byte_array[0],
             byte_array[1],
+            byte_array[2],
         ])
         .build();
 
-        println!("Conn: {}", connection_frame);
+        println!("XConn: {}", connection_frame);
 
-        let data_frame0 = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
-                .priority(7)
-                .da(0xff)
-                .build(),
-        )
-        .copy_from_slice(&[0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
-        .build();
+        for data_packet in 0..packets {
+            let mut data_frame0_b = FrameBuilder::new(
+                IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                    .priority(7)
+                    .da(node)
+                    .build(),
+            )
+            .copy_from_slice(&[data_packet + 1]);
 
-        println!("Data0: {}", data_frame0);
+            let offset = data_packet as usize * 7;
 
-        let data_frame1 = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
-                .priority(7)
-                .da(0xff)
-                .build(),
-        )
-        .copy_from_slice(&[0x02, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff])
-        .build();
+            let qq = data_frame0_b.as_mut();
+            if data_packet + 1 == packets {
+                let stride_limit = offset + (data.len() - offset);
+                qq[1..(data.len() - offset + 1)].copy_from_slice(&data[offset..stride_limit]);
+            } else {
+                let stride_limit = offset + 7;
+                qq[1..8].copy_from_slice(&data[offset..stride_limit]);
+            }
 
-        println!("Data1: {}", data_frame1);
+            let data_frame0 = data_frame0_b.set_len(8).build();
+
+            println!("Data{}: {}", data_packet, data_frame0);
+        }
     }
 
     #[inline]
