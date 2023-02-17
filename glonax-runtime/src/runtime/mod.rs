@@ -12,10 +12,8 @@ pub use self::error::Error;
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 pub mod builder;
-pub(crate) use self::builder::Builder;
-use self::operand::Operand;
 
-pub mod exec;
+use self::operand::Operand;
 
 #[async_trait::async_trait]
 pub trait QueueAdapter: Send + Sync {
@@ -104,11 +102,5 @@ impl<K> RuntimeContext<K> {
 
     pub fn new_motion_manager(&self) -> motion::MotionManager {
         motion::MotionManager::new(self.eventhub.client.clone(), true)
-    }
-}
-
-impl<K: operand::FunctionFactory> RuntimeContext<K> {
-    pub(super) fn new_program_manager(&self) -> program::ProgramManager<K::FunctionType> {
-        program::ProgramManager::new(self.eventhub.client.clone())
     }
 }
