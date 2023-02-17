@@ -46,10 +46,6 @@ struct Args {
     #[arg(long)]
     daemon: bool,
 
-    /// Number of runtime workers.
-    #[arg(long)]
-    workers: Option<usize>,
-
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
@@ -74,10 +70,6 @@ async fn main() -> anyhow::Result<()> {
     config.global.enable_motion = !args.disable_motion;
     config.global.slow_motion = args.slow_motion;
     config.global.daemon = args.daemon;
-
-    if let Some(workers) = args.workers {
-        config.global.runtime_workers = workers;
-    }
 
     let mut log_config = simplelog::ConfigBuilder::new();
     if args.daemon {

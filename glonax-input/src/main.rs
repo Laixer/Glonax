@@ -27,6 +27,7 @@ struct Args {
     #[arg(long)]
     daemon: bool,
 
+    /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
 }

@@ -1,8 +1,10 @@
-mod driver;
+pub mod hcu;
+pub mod mecu;
+pub mod vecu;
 
-pub use driver::hcu::Hcu;
-pub use driver::mecu::Mecu;
-pub use driver::vecu::Vecu;
+pub use hcu::Hcu;
+pub use mecu::Mecu;
+pub use vecu::Vecu;
 
 mod error;
 pub use error::{DeviceError, ErrorKind, Result};

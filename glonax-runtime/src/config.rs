@@ -28,9 +28,6 @@ pub struct GlobalConfig {
 
     /// Whether the application runs as daemon.
     pub daemon: bool,
-
-    /// Runtime workers.
-    pub runtime_workers: usize,
 }
 
 impl Configurable for GlobalConfig {
@@ -50,7 +47,6 @@ impl Default for GlobalConfig {
             enable_motion: true,
             slow_motion: false,
             daemon: false,
-            runtime_workers: 4,
         }
     }
 }
