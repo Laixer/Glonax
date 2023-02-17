@@ -1,25 +1,23 @@
 use std::path::{Path, PathBuf};
 
+use glonax::core::input::{ButtonState, Scancode};
+use glonax::device;
 use glonax_gamepad::{Axis, Button, Event, EventType};
-
-use crate::{
-    core::input::{ButtonState, Scancode},
-    device::{self, Device, InputDevice},
-};
+use log::error;
 
 const DEVICE_NAME: &str = "gamepad";
 
 pub struct Gamepad {
-    driver: glonax_gamepad::Gamepad,
+    driver: glonax_gamepad::AsyncGamepad,
     node_path: PathBuf,
     reverse_left: bool,
     reverse_right: bool,
 }
 
 impl Gamepad {
-    pub fn new(path: &Path) -> Self {
+    pub async fn new(path: &Path) -> Self {
         Self {
-            driver: glonax_gamepad::Gamepad::new(path).unwrap(),
+            driver: glonax_gamepad::AsyncGamepad::new(path).await.unwrap(),
             node_path: path.to_path_buf(),
             reverse_left: false,
             reverse_right: false,
@@ -27,18 +25,10 @@ impl Gamepad {
     }
 }
 
-unsafe impl Send for Gamepad {}
-
-impl Device for Gamepad {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
-    }
-}
-
-impl InputDevice for Gamepad {
-    fn next(&mut self) -> device::Result<Scancode> {
+impl Gamepad {
+    pub(super) async fn next(&mut self) -> device::Result<Scancode> {
         loop {
-            match self.driver.next_event() {
+            match self.driver.next_event().await {
                 Ok(event) => match event {
                     Event {
                         ty: EventType::Axis(Axis::LeftStickY),
@@ -61,13 +51,13 @@ impl InputDevice for Gamepad {
                         ty: EventType::Button(Button::LeftBumper),
                         ..
                     } => {
-                        self.reverse_left = if event.value == 1 { true } else { false };
+                        self.reverse_left = event.value == 1;
                     }
                     Event {
                         ty: EventType::Button(Button::RightBumper),
                         ..
                     } => {
-                        self.reverse_right = if event.value == 1 { true } else { false };
+                        self.reverse_right = event.value == 1;
                     }
                     Event {
                         ty: EventType::Axis(Axis::LeftTrigger),
@@ -121,11 +111,12 @@ impl InputDevice for Gamepad {
                     }
                     _ => {}
                 },
-                Err(_) => {
+                Err(e) => {
+                    error!("{}", e);
                     break Err(device::DeviceError::no_such_device(
-                        self.name(),
+                        DEVICE_NAME.to_string(),
                         &self.node_path,
-                    ))
+                    ));
                 }
             }
         }

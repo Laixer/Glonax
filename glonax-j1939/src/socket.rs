@@ -64,7 +64,7 @@ impl From<SockAddr> for SockAddrJ1939 {
                 addr: sockaddr_can.can_addr.j1939.addr,
                 pgn: sockaddr_can.can_addr.j1939.pgn,
                 name: sockaddr_can.can_addr.j1939.name,
-                ifindex: None,
+                ifindex: Some(sockaddr_can.can_ifindex),
             }
         }
     }
@@ -160,6 +160,7 @@ impl J1939Socket {
     ///
     /// This function will cause all pending and future I/O on the specified
     /// portions to return immediately with an appropriate value.
+    #[inline]
     pub fn shutdown(&self, how: std::net::Shutdown) -> io::Result<()> {
         self.0.get_ref().shutdown(how)
     }
@@ -169,6 +170,7 @@ impl J1939Socket {
     /// For more information about this option, see [`set_broadcast`].
     ///
     /// [`set_broadcast`]: method@Self::set_broadcast
+    #[inline]
     pub fn broadcast(&self) -> io::Result<bool> {
         self.0.get_ref().broadcast()
     }
@@ -177,11 +179,37 @@ impl J1939Socket {
     ///
     /// When enabled, this socket is allowed to send packets to a broadcast
     /// address.
+    #[inline]
     pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
         self.0.get_ref().set_broadcast(on)
     }
 
+    /// Sets the value of the `SO_J1939_PROMISC` option for this socket.
+    ///
+    /// When enabled, this socket clears all filters set by the bind and connect
+    /// methods. In promiscuous mode the socket receives all packets including
+    /// the packets sent from this socket.
+    pub fn set_promisc_mode(&self, on: bool) -> io::Result<()> {
+        unsafe {
+            let optval: libc::c_int = on.into();
+
+            if libc::setsockopt(
+                self.0.as_raw_fd(),
+                libc::SOL_CAN_J1939,
+                libc::SO_J1939_PROMISC,
+                &optval as *const _ as *const libc::c_void,
+                std::mem::size_of_val(&optval) as libc::socklen_t,
+            ) < 0
+            {
+                Err(io::Error::last_os_error())
+            } else {
+                Ok(())
+            }
+        }
+    }
+
     /// Returns the value of the `SO_ERROR` option.
+    #[inline]
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
         self.0.get_ref().take_error()
     }

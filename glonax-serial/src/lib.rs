@@ -15,6 +15,7 @@ pub use future::Uart;
 /// that are widely-supported on many systems. While non-standard baud rates can be set with
 /// `BaudOther`, their behavior is system-dependent. Some systems may not support arbitrary baud
 /// rates. Using the standard baud rates is more likely to result in portable applications.
+#[derive(PartialEq, Eq, Debug)]
 pub enum BaudRate {
     /// 110 baud.
     Baud110,
@@ -43,8 +44,8 @@ pub enum BaudRate {
     /// `BaudOther` can be used to set non-standard baud rates by setting its member to be the
     /// desired baud rate.
     ///
-    /// ```no_run
-    /// glonax_serial::BaudOther(4_000_000); // 4,000,000 baud
+    /// ```ignore
+    /// BaudRate::BaudOther(4_000_000); // 4,000,000 baud
     /// ```
     ///
     /// Non-standard baud rates may not be supported on all systems.

@@ -1,71 +1,54 @@
-// Copyright (C) 2022 Laixer Equipment B.V.
+// Copyright (C) 2023 Laixer Equipment B.V.
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::Parser;
+use clap::{Parser, ValueHint};
+
+mod config;
+mod gamepad;
+
+const DEVICE_NET_LOCAL_ADDR: u8 = 0x9f;
 
 #[derive(Parser)]
-#[clap(author = "Copyright (C) 2022 Laixer Equipment B.V.")]
-#[clap(version)]
-#[clap(about = "ECU Daemon", long_about = None)]
+#[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
+#[command(version, propagate_version = true)]
+#[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
     /// CAN network interface.
     interface: String,
 
-    /// ECU network bind address.
-    #[clap(short, long, default_value = "0.0.0.0:54910")]
-    address: String,
-
-    /// Disable machine motion (frozen mode).
-    #[clap(long)]
-    disable_motion: bool,
-
-    /// Run motion requests slow.
-    #[clap(long)]
-    slow_motion: bool,
-
-    /// Record telemetrics to disk.
-    #[clap(long)]
-    trace: bool,
+    /// Gamepad input device.
+    #[arg(value_hint = ValueHint::FilePath)]
+    device: String,
 
     /// Daemonize the service.
-    #[clap(long)]
+    #[arg(long)]
     daemon: bool,
 
-    /// Number of runtime workers.
-    #[clap(long)]
-    workers: Option<usize>,
-
     /// Level of verbosity.
-    #[clap(short, long, parse(from_occurrences))]
-    verbose: usize,
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let mut config = glonax::EcuConfig {
-        address: args.address,
+    let mut config = config::InputConfig {
+        interface: args.interface,
+        device: args.device,
         global: glonax::GlobalConfig::default(),
     };
 
-    config.global.interface = args.interface;
-    config.global.enable_motion = !args.disable_motion;
-    config.global.enable_trace = args.trace;
-    config.global.slow_motion = args.slow_motion;
+    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
     config.global.daemon = args.daemon;
-
-    if let Some(workers) = args.workers {
-        config.global.runtime_workers = workers;
-    }
 
     let mut log_config = simplelog::ConfigBuilder::new();
     if args.daemon {
         log_config.set_time_level(log::LevelFilter::Off);
         log_config.set_thread_level(log::LevelFilter::Off);
-        log_config.set_target_level(log::LevelFilter::Off);
     } else {
         log_config.set_time_offset_to_local().ok();
         log_config.set_time_format_rfc2822();
@@ -83,7 +66,7 @@ fn main() -> anyhow::Result<()> {
             0 => log::LevelFilter::Error,
             1 => log::LevelFilter::Info,
             2 => log::LevelFilter::Debug,
-            3 | _ => log::LevelFilter::Trace,
+            _ => log::LevelFilter::Trace,
         }
     };
 
@@ -106,7 +89,29 @@ fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    glonax::runtime_ecu(&config)?;
+    daemonize(&config).await
+}
+
+async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
+    use glonax::core::motion::ToMotion;
+    use glonax::device::{Hcu, MotionDevice};
+    use glonax::kernel::excavator::Excavator;
+    use glonax::net::J1939Network;
+    use glonax::Operand;
+
+    let mut runtime = glonax::RuntimeBuilder::<Excavator>::from_config(config)?.build();
+
+    let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
+
+    let net = std::sync::Arc::new(J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?);
+
+    let mut motion_device = Hcu::new(net);
+
+    while let Ok(input) = input_device.next().await {
+        if let Ok(motion) = runtime.operand.try_from_input_device(input) {
+            motion_device.actuate(motion.to_motion()).await;
+        }
+    }
 
     Ok(())
 }

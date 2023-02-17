@@ -1,95 +1,44 @@
-use std::time::Instant;
+use std::fmt::Display;
+
+use serde::{Deserialize, Serialize};
 
 use crate::{
     core::{input::Scancode, motion::ToMotion},
-    signal::SignalReader,
+    Configurable,
 };
+
+use super::program::Program;
 
 pub trait Operand: Send + Sync {
     type MotionPlan: ToMotion;
 
     /// Construct operand from configuration.
-    fn from_config<C: crate::config::Configurable>(config: &C) -> Self;
+    fn from_config<C: Configurable>(config: &C) -> Self;
 
     /// Try convert input scancode to motion.
     fn try_from_input_device(&mut self, input: Scancode) -> Result<Self::MotionPlan, ()>;
 }
 
-pub trait ProgramFactory {
+/// The function trait defines a kernel function descriptor. The function descripter is used
+/// outside the kernel by the runtime and other systems of the framework when referring to
+/// a operand function.
+pub trait FunctionTrait: Send + Display + Sync + Serialize + for<'a> Deserialize<'a> {
+    fn name(&self) -> String;
+}
+
+pub trait FunctionFactory {
     type MotionPlan: ToMotion;
+    type FunctionType: FunctionTrait;
+
+    fn parse_function(&self, ident: &str, parameters: Vec<f32>) -> Self::FunctionType;
 
     // TODO: Handle result.
-    /// Fetch program by identifier.
+    /// Fetch function from the operand.
     ///
-    /// The factory method returns a pointer to the program which
-    /// will be execured by the runtime. The program identifier
-    /// is a per kernel unique program identifier.
-    fn fetch_program(
+    /// The factory method returns a reference to the function which
+    /// can be execured by the runtime.
+    fn fetch_function(
         &self,
-        id: i32,
-        params: Parameter,
+        argument: &Self::FunctionType,
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()>;
-}
-
-pub struct Context {
-    /// Time of start of the program.
-    pub start: Instant,
-    /// Time of last step.
-    pub last_step: Instant,
-    /// Total step count.
-    pub step_count: usize,
-    /// Signal reader.
-    pub reader: SignalReader,
-}
-
-impl Context {
-    /// Construct new program context.
-    pub fn new(reader: SignalReader) -> Self {
-        Self {
-            start: Instant::now(),
-            last_step: Instant::now(),
-            step_count: 0,
-            reader,
-        }
-    }
-}
-
-pub type Parameter = Vec<f32>;
-
-/// Program trait.
-///
-/// A program is run on the runtime. It reads input from various
-/// sources and returns an optional motion instruction. A program
-/// is run to completion. The completion condition is polled on
-/// every cycle.
-#[async_trait::async_trait]
-pub trait Program {
-    type MotionPlan: ToMotion;
-
-    /// Boot the program.
-    ///
-    /// This method is called when the runtime accepted
-    /// this progam and started its routine.
-    fn boot(&mut self, _context: &mut Context) -> Option<Self::MotionPlan> {
-        None
-    }
-
-    /// Propagate the program forwards.
-    ///
-    /// This method returns an optional motion instruction.
-    async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan>;
-
-    /// Program termination condition.
-    ///
-    /// Check if program is finished.
-    fn can_terminate(&self, context: &mut Context) -> bool;
-
-    /// Program termination action.
-    ///
-    /// This is an optional method to send a last motion
-    /// instruction. This method is called after `can_terminate`
-    /// returns true and before the program is terminated.
-    fn term_action(&self, _context: &mut Context) -> Option<Self::MotionPlan> {
-        None
-    }
 }

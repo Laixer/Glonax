@@ -2,16 +2,14 @@
 Description=Glonax Input Event Handler
 StartLimitIntervalSec=5
 StartLimitBurst=5
-BindsTo=sys-subsystem-input-%i.device
-Wants=sys-subsystem-net-devices-can0.device
-After=sys-subsystem-net-devices-can0.device sys-subsystem-input-%i.device
+BindsTo=sys-subsystem-input-%i.device mosquitto.service
+After=sys-subsystem-input-%i.device mosquitto.service
 
 [Service]
 WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
-ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can0 -o carrier
-ExecStart=/usr/local/bin/glonax-inputd --daemon --workers 4 can0 %I
+ExecStart=/usr/local/bin/glonax-inputd --daemon --workers 4 %I
 PrivateTmp=true
 
 [Install]

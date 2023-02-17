@@ -1,71 +1,106 @@
-use crate::{
-    core::{motion::ToMotion, time, Trace, TraceWriter, Tracer},
-    device::MotionDevice,
-};
-
-pub mod operand;
-mod trace;
-pub use trace::CsvTracer;
-pub use trace::NullTracer;
+mod motion;
+pub(super) mod operand; // TODO: Why public
+pub(super) mod program; // TODO: Why public
 
 mod error;
+use std::time::Duration;
+
+use crate::signal;
+
 pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-mod builder;
-pub(crate) use self::builder::Builder;
+pub mod builder;
+
 use self::operand::Operand;
 
-mod program;
-pub use program::RuntimeProgram;
+#[async_trait::async_trait]
+pub trait QueueAdapter: Send + Sync {
+    fn topic(&self) -> &str;
 
-pub mod ecu;
-pub mod input;
+    fn qos(&self) -> rumqttc::QoS;
 
-pub(super) struct MotionChain<'a, R, M>
-where
-    R: Tracer,
-    R::Instance: TraceWriter + Send + 'static,
-    M: MotionDevice,
-{
-    trace: R::Instance,
-    motion_device: &'a mut M,
+    async fn parse(&mut self, event: &rumqttc::Publish);
 }
 
-impl<'a, R, M> MotionChain<'a, R, M>
-where
-    R: Tracer,
-    R::Instance: TraceWriter + Send + 'static,
-    M: MotionDevice,
-{
-    pub fn new(motion_device: &'a mut M, tracer: &R) -> Self {
+pub struct EventHub {
+    /// Broker client interface.
+    client: std::sync::Arc<rumqttc::AsyncClient>,
+    /// Local MQTT eventloop.
+    eventloop: rumqttc::EventLoop,
+    /// List of subscribed adapters.
+    adapters: Vec<Box<dyn QueueAdapter>>,
+}
+
+impl EventHub {
+    pub fn new(config: &crate::GlobalConfig) -> Self {
+        use rumqttc::{AsyncClient, MqttOptions};
+
+        let mut mqttoptions =
+            MqttOptions::new(&config.bin_name, &config.mqtt_host, config.mqtt_port);
+        mqttoptions
+            .set_keep_alive(Duration::from_secs(5))
+            .set_connection_timeout(1);
+
+        if let (Some(username), Some(password)) = (&config.mqtt_username, &config.mqtt_password) {
+            mqttoptions.set_credentials(username, password);
+        }
+
+        let (client, eventloop) = AsyncClient::new(mqttoptions, 100);
+        let client = std::sync::Arc::new(client);
+
         Self {
-            motion_device,
-            trace: tracer.instance("motion"),
+            client,
+            eventloop,
+            adapters: vec![],
         }
     }
 
-    pub async fn request<T: ToMotion>(&mut self, motion: T) {
-        let motion = motion.to_motion();
-        motion.record(&mut self.trace, time::now());
+    pub fn subscribe<T: QueueAdapter + 'static>(&mut self, adapter: T) {
+        self.client
+            .try_subscribe(adapter.topic(), adapter.qos())
+            .unwrap();
 
-        self.motion_device.actuate(motion).await;
+        self.adapters.push(Box::new(adapter));
+    }
+
+    pub async fn next(&mut self) {
+        loop {
+            match self.eventloop.poll().await {
+                Ok(event) => {
+                    if let rumqttc::Event::Incoming(rumqttc::Packet::Publish(event)) = event {
+                        for adapter in self.adapters.iter_mut() {
+                            if event.topic == adapter.topic() {
+                                adapter.parse(&event).await;
+                            }
+                        }
+                    }
+                }
+                Err(e) => warn!("{}", e),
+            };
+        }
     }
 }
 
 pub struct RuntimeContext<K> {
     /// Runtime operand.
-    pub(super) operand: K,
-    /// Core device.
-    pub(super) core_device: crate::device::Gateway,
+    pub operand: K,
     /// Runtime event bus.
-    pub(super) shutdown: (
+    pub shutdown: (
         tokio::sync::broadcast::Sender<()>,
         tokio::sync::broadcast::Receiver<()>,
     ),
-    /// Signal manager.
-    pub(super) signal_manager: crate::signal::SignalManager,
-    /// Tracer used to record telemetrics.
-    pub(super) tracer: CsvTracer,
+    /// Event hub.
+    pub eventhub: EventHub,
+}
+
+impl<K> RuntimeContext<K> {
+    pub fn new_signal_manager(&self) -> signal::SignalManager {
+        signal::SignalManager::new(self.eventhub.client.clone())
+    }
+
+    pub fn new_motion_manager(&self) -> motion::MotionManager {
+        motion::MotionManager::new(self.eventhub.client.clone(), true)
+    }
 }

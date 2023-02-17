@@ -1,37 +1,34 @@
 use std::sync::Arc;
 
-use glonax_j1939::Frame;
+use glonax_j1939::{Frame, PGN};
 
 use crate::{
     core::motion::Motion,
-    device::{Device, MotionDevice},
-    net::{ActuatorService, ControlNet},
+    device::MotionDevice,
+    net::{ActuatorService, J1939Network},
 };
 
-const DEVICE_NAME: &str = "hcu";
 const DEVICE_NET_HCU_ADDR: u8 = 0x4a;
 
 pub struct Hcu {
     service: ActuatorService,
 }
 
-impl Device for Hcu {
-    fn name(&self) -> String {
-        DEVICE_NAME.to_owned()
-    }
-}
-
-#[async_trait::async_trait]
-impl super::gateway::GatewayClient for Hcu {
-    fn from_net(net: Arc<ControlNet>) -> Self {
+impl Hcu {
+    pub fn new(net: Arc<J1939Network>) -> Self {
         Self {
             service: ActuatorService::new(net, DEVICE_NET_HCU_ADDR),
         }
     }
+}
 
-    async fn incoming(&mut self, _frame: &Frame) {
-        // TODO: Need an external trigger.
-        self.service.interval().await;
+impl crate::net::Routable for Hcu {
+    fn node(&self) -> u8 {
+        DEVICE_NET_HCU_ADDR
+    }
+
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        self.service.ingress(pgn, frame)
     }
 }
 
@@ -47,7 +44,7 @@ impl MotionDevice for Hcu {
             }
             Motion::Stop(actuators) => {
                 self.service
-                    .actuator_stop(actuators.into_iter().map(|k| k as u8).collect())
+                    .actuator_control(actuators.into_iter().map(|k| (k as u8, 0)).collect())
                     .await;
             }
             Motion::Change(actuators) => {

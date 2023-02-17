@@ -1,4 +1,6 @@
-use crate::runtime::operand::*;
+use std::time::Duration;
+
+use crate::runtime::program::*;
 
 use super::{consts::DRIVE_SPEED_MAX, Actuator, HydraulicMotion};
 
@@ -12,13 +14,13 @@ pub(super) struct DriveProgram {
 }
 
 struct TrapezoidalProfile {
-    ramp_time: std::time::Duration,
-    motion_time: std::time::Duration,
+    ramp_time: Duration,
+    motion_time: Duration,
     power_range: (f32, f32),
 }
 
 impl TrapezoidalProfile {
-    fn phase_frame(&self, duration: &std::time::Duration) -> (i32, f32) {
+    fn phase_frame(&self, duration: &Duration) -> (i32, f32) {
         let p_delta = (self.power_range.1 - self.power_range.0) / self.ramp_time.as_millis() as f32;
 
         if duration < &self.ramp_time {
@@ -43,7 +45,7 @@ impl TrapezoidalProfile {
         }
     }
 
-    fn is_finished(&self, duration: &std::time::Duration) -> bool {
+    fn is_finished(&self, duration: &Duration) -> bool {
         let (phase, power) = self.phase_frame(duration);
         phase == 2 && power == 0.0
     }
@@ -58,15 +60,15 @@ impl TrapezoidalDistanceProfile {
     fn new(max_speed: f32, distance: f32) -> Self {
         Self {
             inner: TrapezoidalProfile {
-                ramp_time: std::time::Duration::from_secs(3),
-                motion_time: std::time::Duration::from_secs_f32(distance / max_speed),
-                power_range: (175.0, 255.0),
+                ramp_time: Duration::from_secs(3),
+                motion_time: Duration::from_secs_f32(distance / max_speed),
+                power_range: (5_000.0, 32_000.0),
             },
             max_speed,
         }
     }
 
-    fn phase_frame(&self, duration: &std::time::Duration) -> (i32, f32, f32) {
+    fn phase_frame(&self, duration: &Duration) -> (i32, f32, f32) {
         let (phase, power) = self.inner.phase_frame(duration);
 
         let distance = match phase {
@@ -101,13 +103,13 @@ impl TrapezoidalDistanceProfile {
         (phase, power, distance)
     }
 
-    fn is_finished(&self, duration: &std::time::Duration) -> bool {
+    fn is_finished(&self, duration: &Duration) -> bool {
         self.inner.is_finished(duration)
     }
 }
 
 impl DriveProgram {
-    pub fn new(params: Parameter) -> Self {
+    pub fn new(params: &Vec<f32>) -> Self {
         if params.len() != 1 {
             panic!("Expected 1 parameter, got {}", params.len());
         } else if params[0] == 0.0 {
@@ -125,6 +127,8 @@ impl Program for DriveProgram {
     type MotionPlan = HydraulicMotion;
 
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
         let (phase, power, distance) = self.profile.phase_frame(&context.start.elapsed());
 
         debug!(

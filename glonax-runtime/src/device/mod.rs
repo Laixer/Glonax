@@ -1,43 +1,37 @@
-mod driver;
+pub mod hcu;
+pub mod mecu;
+pub mod vecu;
 
-pub use driver::gamepad::Gamepad;
-pub use driver::gateway::*;
-pub use driver::hcu::Hcu;
-pub use driver::mecu::Mecu;
-pub use driver::vecu::Vecu;
+pub use hcu::Hcu;
+pub use mecu::Mecu;
+pub use vecu::Vecu;
 
 mod error;
 pub use error::{DeviceError, ErrorKind, Result};
 
 use crate::core::{input::Scancode, motion::Motion};
 
-/// Device trait.
-#[async_trait::async_trait]
-pub trait Device: Send {
-    /// Return the device name.
-    fn name(&self) -> String;
-}
-
 /// Device which can exercise motion.
 #[async_trait::async_trait]
-pub trait MotionDevice: Device {
+pub trait MotionDevice {
     /// Issue actuate command.
     async fn actuate(&mut self, motion: Motion); // TODO: Return result.
 }
 
 /// Device which can read input events.
-pub trait InputDevice: Device {
-    fn next(&mut self) -> Result<Scancode>;
+#[async_trait::async_trait]
+pub trait InputDevice {
+    async fn next(&mut self) -> Result<Scancode>;
 }
 
 #[async_trait::async_trait]
-pub trait CoreDevice: Device {
+pub trait CoreDevice {
     async fn next(&mut self) -> Result<()>;
 }
 
 /// Device which can read field metrics.
 #[async_trait::async_trait]
-pub trait MetricDevice: Device {
+pub trait MetricDevice {
     /// Return the next metric value and the device address from which the
     /// measurement originated. The device address may be used by the operand
     /// to map to a known machine component.

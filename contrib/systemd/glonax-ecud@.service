@@ -1,0 +1,18 @@
+[Unit]
+Description=Glonax Electronic Control Unit Proxy
+StartLimitIntervalSec=5
+StartLimitBurst=5
+Wants=sys-subsystem-net-devices-%i.device mosquitto.service
+After=sys-subsystem-net-devices-%i.device mosquitto.service
+
+[Service]
+WorkingDirectory=/var/lib/glonax
+Restart=always
+RestartSec=2
+Nice=-15
+ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i %I -o carrier
+ExecStart=/usr/local/bin/glonax-ecud --daemon --workers 4 %I
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

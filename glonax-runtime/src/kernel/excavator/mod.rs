@@ -4,7 +4,10 @@ use crate::{
         motion::{Motion, ToMotion},
         Identity, Level,
     },
-    runtime::operand::{Operand, Parameter, Program, ProgramFactory},
+    runtime::{
+        operand::{FunctionFactory, Operand},
+        program::Program,
+    },
 };
 
 mod body;
@@ -17,7 +20,7 @@ mod turn;
 
 pub(super) mod consts;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Actuator {
     Boom = 0,
     Arm = 4,
@@ -33,12 +36,13 @@ impl From<Actuator> for u32 {
     }
 }
 
-const BODY_PART_BOOM: u32 = 0x6a0;
-const BODY_PART_ARM: u32 = 0x6c0;
-const BODY_PART_BUCKET: u32 = 0x6b0;
-const BODY_PART_FRAME: u32 = 0x6e0;
+const BODY_PART_BOOM: u8 = 0x6a;
+const BODY_PART_ARM: u8 = 0x6c;
+const BODY_PART_BUCKET: u8 = 0x6b;
+const BODY_PART_FRAME: u8 = 0x20;
 
 pub struct Excavator {
+    object_model: std::sync::Arc<tokio::sync::RwLock<body::Body>>,
     drive_lock: bool,
 }
 
@@ -101,7 +105,15 @@ impl ToMotion for HydraulicMotion {
 
 impl Default for Excavator {
     fn default() -> Self {
-        Self { drive_lock: false }
+        Self {
+            object_model: std::sync::Arc::new(tokio::sync::RwLock::new(body::Body::new(
+                body::RigidBody {
+                    length_boom: consts::BOOM_LENGTH,
+                    length_arm: consts::ARM_LENGTH,
+                },
+            ))),
+            drive_lock: false,
+        }
     }
 }
 
@@ -110,7 +122,9 @@ impl Operand for Excavator {
 
     /// Construct operand from configuration.
     fn from_config<C: crate::config::Configurable>(_config: &C) -> Self {
-        Self { drive_lock: false }
+        Self {
+            ..Default::default()
+        }
     }
 
     /// Try to convert input scancode to motion.
@@ -176,28 +190,93 @@ impl Operand for Excavator {
     }
 }
 
-impl ProgramFactory for Excavator {
-    type MotionPlan = HydraulicMotion;
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExcavatorProgram {
+    Kinematic,
+    Drive,
+    Turn,
+    Noop,
+    Sleep,
+    Test,
+}
 
-    fn fetch_program(
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct ExcavatorArgument {
+    /// Program function.
+    pub function: ExcavatorProgram,
+    /// Function parameters.
+    pub parameters: Vec<f32>,
+}
+
+impl crate::runtime::operand::FunctionTrait for ExcavatorArgument {
+    fn name(&self) -> String {
+        format!("{:?}", self.function)
+    }
+}
+
+impl std::fmt::Display for ExcavatorArgument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use crate::runtime::operand::FunctionTrait;
+
+        write!(
+            f,
+            "{}({})",
+            self.name(),
+            self.parameters
+                .iter()
+                .map(|f| f.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        )
+    }
+}
+
+impl FunctionFactory for Excavator {
+    type MotionPlan = HydraulicMotion;
+    type FunctionType = ExcavatorArgument;
+
+    fn parse_function(&self, ident: &str, parameters: Vec<f32>) -> Self::FunctionType {
+        let function = match ident.to_lowercase().trim() {
+            "kinematic" => ExcavatorProgram::Kinematic,
+            "drive" => ExcavatorProgram::Drive,
+            "turn" => ExcavatorProgram::Turn,
+            "noop" => ExcavatorProgram::Noop,
+            "sleep" => ExcavatorProgram::Sleep,
+            "test" => ExcavatorProgram::Test,
+            _ => panic!(),
+        };
+
+        crate::kernel::excavator::ExcavatorArgument {
+            function,
+            parameters,
+        }
+    }
+
+    fn fetch_function(
         &self,
-        id: i32,
-        params: Parameter,
+        argument: &Self::FunctionType,
     ) -> Result<Box<dyn Program<MotionPlan = Self::MotionPlan> + Send + Sync>, ()> {
-        match id {
-            // Arm chain programs.
-            603 => Ok(Box::new(kinematic::KinematicProgram::new(params))),
+        match argument.function {
+            // Default kinematic program.
+            ExcavatorProgram::Kinematic => Ok(Box::new(kinematic::KinematicProgram::new(
+                self.object_model.clone(),
+                &argument.parameters,
+            ))),
 
             // Movement programs.
-            700 => Ok(Box::new(drive::DriveProgram::new(params))),
-            701 => Ok(Box::new(turn::TurnProgram::new(params))),
+            ExcavatorProgram::Drive => Ok(Box::new(drive::DriveProgram::new(&argument.parameters))),
+            ExcavatorProgram::Turn => Ok(Box::new(turn::TurnProgram::new(
+                self.object_model.clone(),
+                &argument.parameters,
+            ))),
 
             // Miscellaneous programs.
-            900 => Ok(Box::new(noop::NoopProgram::new())),
-            901 => Ok(Box::new(sleep::SleepProgram::new(params))),
-            910 => Ok(Box::new(test::TestProgram::new())),
-
-            _ => Err(()),
+            ExcavatorProgram::Noop => {
+                Ok(Box::new(noop::NoopProgram::new(self.object_model.clone())))
+            }
+            ExcavatorProgram::Sleep => Ok(Box::new(sleep::SleepProgram::new(&argument.parameters))),
+            ExcavatorProgram::Test => Ok(Box::new(test::TestProgram::new())),
         }
     }
 }

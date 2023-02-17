@@ -9,6 +9,7 @@ pub const BOOM_LENGTH: f32 = 6.0;
 /// Arm length in meters.
 pub const ARM_LENGTH: f32 = 2.97;
 /// Bucket length in meters.
+#[allow(dead_code)]
 pub const BUCKET_LENGTH: f32 = 1.493;
 
 // TODO: Rename. This is not an height but an transformation.
@@ -20,17 +21,21 @@ pub const FRAME_HEIGHT: f32 = 1.885;
 pub const BOOM_ORIGIN_OFFSET: (f32, f32) = (-0.784, 0.420);
 
 /// Boom encoder range.
-pub const BOOM_ENCODER_RANGE: Range<f32> = 523.0..667.0;
+pub const BOOM_ENCODER_RANGE: Range<f32> = 136100.0..195600.0;
 /// Boom angle range.
 pub const BOOM_ANGLE_RANGE: Range<f32> = 0.0..1.178;
 /// Arm encoder range.
-pub const ARM_ENCODER_RANGE: Range<f32> = 246.0..511.0;
+pub const ARM_ENCODER_RANGE: Range<f32> = 25000.0..51800.0;
 /// Arm angle range.
 pub const ARM_ANGLE_RANGE: Range<f32> = 0.0..2.1;
 /// Bucket encoder range.
 pub const BUCKET_ENCODER_RANGE: Range<f32> = 424.0..697.0;
 /// Bucket angle range.
 pub const BUCKET_ANGLE_RANGE: Range<f32> = 0.0..3.0;
+/// Slew encoder range.
+pub const SLEW_ENCODER_RANGE: Range<f32> = 0.0..290000.0;
+/// Slew angle range.
+pub const SLEW_ANGLE_RANGE: Range<f32> = 0.0..core::f32::consts::PI * 2.0;
 
 /// Frame dimensions in (L)x(W)x(H)
 #[allow(dead_code)]
@@ -48,4 +53,25 @@ pub const SERVICE_POSITION_A: (f32, f32) = (6.29, -0.49);
 pub const SERVICE_POSITION_B: (f32, f32) = (8.52, -0.830);
 /// Fold the bucket and arm in front of the machine.
 #[allow(dead_code)]
-pub const SERVICE_POSITION_C: (f32, f32) = (3.14, -1.45);
+pub const SERVICE_POSITION_C: (f32, f32) = (std::f32::consts::PI, -1.45);
+
+pub(super) const MOTION_PROFILE_SLEW: super::body::MotionProfile = super::body::MotionProfile {
+    scale: 10_000.0,
+    offset: 12_000,
+    lower_bound: 0.02,
+    inverse: false,
+};
+
+pub(super) const MOTION_PROFILE_BOOM: super::body::MotionProfile = super::body::MotionProfile {
+    scale: 15_000.0,
+    offset: 12_000,
+    lower_bound: 0.02,
+    inverse: true,
+};
+
+pub(super) const MOTION_PROFILE_ARM: super::body::MotionProfile = super::body::MotionProfile {
+    scale: 15_000.0,
+    offset: 12_000,
+    lower_bound: 0.02,
+    inverse: false,
+};

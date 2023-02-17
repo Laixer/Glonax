@@ -1,176 +1,131 @@
-use std::{
-    io,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::sync::Arc;
 
-use glonax_j1939::Frame;
+use glonax_j1939::*;
 
-use super::ControlNet;
+use super::{J1939Network, Routable};
 
-pub struct ControlService {
-    net: Arc<ControlNet>,
-    last_actuator_ival: Instant,
-    actuator_set: Option<(u8, std::collections::HashMap<u8, i16>)>,
+pub struct J1939ApplicationInspector {
+    software_indent: Option<(u8, u8, u8)>,
+    request_pgn: Option<u32>,
+    address_claim: Option<(u8, u8)>,
+    acknowledged: Option<u8>,
 }
 
-impl ControlService {
-    // TODO: rename
-    pub fn from_net(net: Arc<ControlNet>) -> Self {
-        Self {
-            net,
-            last_actuator_ival: Instant::now(),
-            actuator_set: None,
-        }
+impl Routable for J1939ApplicationInspector {
+    fn node(&self) -> u8 {
+        0xff
     }
 
-    pub async fn interval(&mut self) {
-        if self.last_actuator_ival.elapsed() >= Duration::from_millis(100) {
-            if let Some((node, actuators)) = &self.actuator_set {
-                trace!("Send actuator keepalive");
+    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+        self.software_indent = None;
+        self.request_pgn = None;
+        self.address_claim = None;
+        self.acknowledged = None;
 
-                self.net
-                    .actuator_control(node.clone(), actuators.clone())
-                    .await;
+        match pgn {
+            PGN::SoftwareIdentification => {
+                let mut major = 0;
+                let mut minor = 0;
+                let mut patch = 0;
+
+                if frame.pdu()[3] != 0xff {
+                    major = frame.pdu()[3];
+                }
+                if frame.pdu()[4] != 0xff {
+                    minor = frame.pdu()[4];
+                }
+                if frame.pdu()[5] != 0xff {
+                    patch = frame.pdu()[5];
+                }
+
+                self.software_indent = Some((major, minor, patch));
+
+                true
             }
-            self.last_actuator_ival = Instant::now();
+            PGN::Request => {
+                self.request_pgn = Some(u32::from_be_bytes([
+                    0x0,
+                    frame.pdu()[2],
+                    frame.pdu()[1],
+                    frame.pdu()[0],
+                ]));
+
+                true
+            }
+            PGN::AddressClaimed => {
+                let function = frame.pdu()[5];
+                let arbitrary_address = frame.pdu()[7] >> 7;
+
+                self.address_claim = Some((function, arbitrary_address));
+
+                true
+            }
+            PGN::AcknowledgmentMessage => {
+                self.acknowledged = Some(frame.pdu()[0]);
+
+                true
+            }
+            _ => false,
         }
     }
+}
 
-    pub async fn accept(&mut self) -> io::Result<Frame> {
-        loop {
-            if let Ok(frame) =
-                tokio::time::timeout(Duration::from_millis(100), self.net.accept()).await
-            {
-                break frame;
-            };
-
-            self.interval().await
+impl J1939ApplicationInspector {
+    pub fn new() -> Self {
+        Self {
+            software_indent: None,
+            request_pgn: None,
+            address_claim: None,
+            acknowledged: None,
         }
     }
 
     #[inline]
-    pub async fn accept_raw(&self) -> io::Result<Frame> {
-        self.net.accept().await
+    pub fn software_identification(&self) -> Option<(u8, u8, u8)> {
+        self.software_indent
     }
 
-    /// Return a reference to the underlaying control net.
-    pub fn net(&self) -> &ControlNet {
-        &self.net
+    #[inline]
+    pub fn request(&self) -> Option<u32> {
+        self.request_pgn
     }
 
-    pub async fn actuator_control(
-        &mut self,
-        node: u8,
-        actuators: std::collections::HashMap<u8, i16>,
-    ) {
-        self.net
-            .actuator_control(node.clone(), actuators.clone())
-            .await;
+    #[inline]
+    pub fn address_claimed(&self) -> Option<(u8, u8)> {
+        self.address_claim
+    }
 
-        self.actuator_set = Some((node, actuators))
+    #[inline]
+    pub fn acknowledged(&self) -> Option<u8> {
+        self.acknowledged
+    }
+}
+
+impl Default for J1939ApplicationInspector {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 pub struct StatusService {
-    net: Arc<ControlNet>,
-    last_interval: Instant,
+    net: Arc<J1939Network>,
+    node: u8,
 }
 
 impl StatusService {
-    pub fn new(net: Arc<ControlNet>) -> Self {
-        Self {
-            net,
-            last_interval: Instant::now(),
-        }
+    pub fn new(net: Arc<J1939Network>, node: u8) -> Self {
+        Self { net, node }
     }
 
-    pub async fn interval(&mut self) {
-        if self.last_interval.elapsed() >= Duration::from_secs(1) {
-            self.net.announce_status().await;
+    pub async fn set_led(&self, led_on: bool) {
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
+                .da(self.node)
+                .build(),
+        )
+        .copy_from_slice(&[b'Z', b'C', u8::from(led_on)])
+        .build();
 
-            trace!("Announce host on network");
-
-            self.last_interval = Instant::now();
-        }
-    }
-}
-
-pub struct ActuatorService {
-    net: Arc<ControlNet>,
-    node: u8,
-    last_interval: Instant,
-    actuator_set: Option<std::collections::HashMap<u8, i16>>,
-}
-
-impl ActuatorService {
-    pub fn new(net: Arc<ControlNet>, node: u8) -> Self {
-        Self {
-            net,
-            node,
-            last_interval: Instant::now(),
-            actuator_set: None,
-        }
-    }
-
-    pub async fn interval(&mut self) {
-        if self.last_interval.elapsed() >= Duration::from_millis(50) {
-            if let Some(actuators) = &self.actuator_set {
-                for (actuator, value) in actuators {
-                    trace!("Keepalive: Change actuator {} to value {}", actuator, value);
-                }
-
-                self.net
-                    .actuator_control(self.node, actuators.clone())
-                    .await;
-            }
-            self.last_interval = Instant::now();
-        }
-    }
-
-    /// Return a reference to the underlaying control net.
-    pub fn net(&self) -> &ControlNet {
-        &self.net
-    }
-
-    pub async fn lock(&mut self) {
-        self.actuator_set = None;
-        self.net.set_motion_lock(self.node, true).await;
-
-        trace!("Disable motion");
-    }
-
-    pub async fn unlock(&mut self) {
-        self.actuator_set = None;
-        self.net.set_motion_lock(self.node, false).await;
-
-        trace!("Enable motion");
-    }
-
-    pub async fn actuator_stop(&mut self, actuators: Vec<u8>) {
-        // TODO: Log after await
-        for actuator in &actuators {
-            trace!("Stop actuator {}", actuator);
-        }
-
-        self.net
-            .actuator_control(
-                self.node,
-                actuators.into_iter().map(|k| (k as u8, 0)).collect(),
-            )
-            .await;
-    }
-
-    pub async fn actuator_control(&mut self, actuators: std::collections::HashMap<u8, i16>) {
-        // TODO: Log after await
-        for (actuator, value) in &actuators {
-            trace!("Change actuator {} to value {}", actuator, value);
-        }
-
-        self.net
-            .actuator_control(self.node, actuators.clone())
-            .await;
-
-        // self.actuator_set = Some(actuators)
+        self.net.send(&frame).await.unwrap();
     }
 }

@@ -1,120 +1,27 @@
-use crate::core::{self, metric::MetricValue};
+use crate::runtime::program::*;
 
-use crate::runtime::operand::*;
-use crate::signal::Encoder;
-
-use super::consts::*;
 use super::HydraulicMotion;
 
-static mut AGENT: super::body::Body = super::body::Body::new(super::body::RigidBody {
-    length_boom: BOOM_LENGTH,
-    length_arm: ARM_LENGTH,
-});
-
 pub(super) struct KinematicProgram {
-    projection: super::body::Projection<'static>,
-    terminate: bool,
+    domain: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
+    objective: super::body::Objective,
 }
 
 impl KinematicProgram {
-    pub fn new(params: Parameter) -> Self {
-        if params.len() != 2 {
-            panic!("Expected 2 parameter, got {}", params.len());
+    pub fn new(
+        model: std::sync::Arc<tokio::sync::RwLock<super::body::Body>>,
+        params: &Vec<f32>,
+    ) -> Self {
+        if params.len() != 3 {
+            panic!("Expected 3 parameter, got {}", params.len());
         }
-
-        let target = nalgebra::Point3::new(params[0], params[1], 0.0);
 
         Self {
-            projection: unsafe { AGENT.project(target) },
-            terminate: false,
-        }
-    }
-
-    async fn decode_signal(&mut self, reader: &mut crate::signal::SignalReader) {
-        if let Ok((source, signal)) = reader.recv().await {
-            match source {
-                super::BODY_PART_BOOM => {
-                    if let MetricValue::Angle(value) = signal.value {
-                        let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
-
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
-
-                        let angle_offset = core::deg_to_rad(5.3);
-                        let angle_at_datum = angle - angle_offset;
-
-                        unsafe {
-                            AGENT.update_boom_angle(angle_at_datum);
-                            AGENT.update_slew_angle(0.0);
-                        }
-                        // self.normal.update_boom_angle(angle_at_datum);
-                        // self.normal.update_slew_angle(0.0);
-
-                        debug!(
-                            "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
-                            value.x,
-                            angle,
-                            core::rad_to_deg(angle),
-                            percentage,
-                            angle_at_datum,
-                            core::rad_to_deg(angle_at_datum)
-                        );
-                    }
-                }
-                super::BODY_PART_ARM => {
-                    if let MetricValue::Angle(value) = signal.value {
-                        let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
-
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
-
-                        let angle_offset = core::deg_to_rad(36.8);
-                        let angle_at_datum = -angle_offset - (2.1 - angle);
-
-                        unsafe {
-                            AGENT.update_arm_angle(angle_at_datum);
-                        }
-                        // self.normal.update_arm_angle(angle_at_datum);
-
-                        debug!(
-                            "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%\tAngle datum: {:>+5.2}rad {:>+5.2}°",
-                            value.x,
-                            angle,
-                            core::rad_to_deg(angle),
-                            percentage,
-                            angle_at_datum,
-                            core::rad_to_deg(angle_at_datum)
-                        );
-                    }
-                }
-                super::BODY_PART_BUCKET => {
-                    if let MetricValue::Angle(value) = signal.value {
-                        let encoder = Encoder::new(BUCKET_ENCODER_RANGE, BUCKET_ANGLE_RANGE);
-
-                        let angle = encoder.scale(value.x as f32);
-                        let percentage = encoder.scale_to(100.0, value.x as f32);
-
-                        // TODO: Offset is negative.
-                        // let angle_offset = core::deg_to_rad(36.8);
-
-                        // TODO: REMOVE MOVE MOVE MOVE MOVE
-                        unsafe {
-                            AGENT.update_boom_angle(core::deg_to_rad(60.0));
-                            AGENT.update_arm_angle(core::deg_to_rad(-40.0));
-                            AGENT.update_slew_angle(0.0);
-                        }
-
-                        debug!(
-                            "Bucket Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
-                            value.x,
-                            angle,
-                            core::rad_to_deg(angle),
-                            percentage,
-                        );
-                    }
-                }
-                _ => {}
-            }
+            domain: model.clone(),
+            objective: super::body::Objective::from_point(
+                model,
+                nalgebra::Point3::new(params[0], params[1], params[2]),
+            ),
         }
     }
 }
@@ -123,94 +30,78 @@ impl KinematicProgram {
 impl Program for KinematicProgram {
     type MotionPlan = HydraulicMotion;
 
+    /// Propagate the program forwards.
+    ///
+    /// This method returns an optional motion instruction.
     async fn step(&mut self, context: &mut Context) -> Option<Self::MotionPlan> {
-        self.decode_signal(&mut context.reader).await;
+        if let Ok(mut domain) = self.domain.try_write() {
+            domain.signal_update(context.reader).await;
+        }
 
-        if let Some(effector_point) = unsafe { AGENT.effector_point() } {
-            debug!(
-                "Effector point: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
-                effector_point.x, effector_point.y, effector_point.z,
-            );
-
-            let effector_point = unsafe { AGENT.effector_point_abs() }.unwrap();
-
-            debug!(
-                "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
-                effector_point.x, effector_point.y, effector_point.z,
-            );
-
-            if effector_point.y < 0.20 {
-                debug!("GROUND GROUND GROUND GROUND GROUND");
+        if let Ok(domain) = self.domain.try_read() {
+            if let Some(effector_point) = domain.effector_point_abs() {
+                debug!(
+                    "Effector point AGL: X {:>+5.2} Y {:>+5.2} Z {:>+5.2}",
+                    effector_point.x, effector_point.y, effector_point.z,
+                );
             }
-        };
+        }
 
-        // None
+        let rig_error = self.objective.erorr_diff();
 
-        if let Some((angle_boom_error, angle_arm_error)) = self.projection.erorr_diff() {
-            let power_boom = (angle_boom_error * 10.0 * 1_500.0) as i16;
-            let power_boom = if angle_boom_error.is_sign_positive() {
-                (-power_boom).max(-20_000) - 12_000
-            } else {
-                (-power_boom).min(20_000) + 12_000
-            };
+        let mut motion_vector = vec![];
 
-            let power_arm = (angle_arm_error * 10.0 * 1_500.0) as i16;
-            let power_arm = if angle_arm_error.is_sign_positive() {
-                power_arm.min(20_000) + 12_000
-            } else {
-                power_arm.max(-20_000) - 12_000
-            };
+        if let Some(error) = rig_error.angle_boom() {
+            let power = super::consts::MOTION_PROFILE_BOOM.proportional_power_inverse(error);
+            motion_vector.push((super::Actuator::Boom, power));
+        }
 
-            let power_arm = if angle_arm_error.abs() < 0.02 {
-                0
-            } else {
-                power_arm
-            };
-            let power_boom = if angle_boom_error.abs() < 0.02 {
-                0
-            } else {
-                power_boom
-            };
+        if let Some(error) = rig_error.angle_arm() {
+            let power = super::consts::MOTION_PROFILE_ARM.proportional_power(error);
+            motion_vector.push((super::Actuator::Arm, power));
+        }
 
-            // debug!(
-            //     "Normal Boom:\t {:>+5.2}rad {:>+5.2}°  Target Boom:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
-            //     self.normal.angle_boom.unwrap(),
-            //     core::rad_to_deg(self.normal.angle_boom.unwrap()),
-            //     self.target.angle_boom.unwrap(),
-            //     core::rad_to_deg(self.target.angle_boom.unwrap()),
-            //     angle_boom_error,
-            //     core::rad_to_deg(angle_boom_error),
-            //     power_boom
-            // );
-            // debug!(
-            //     "Normal Arm:\t\t {:>+5.2}rad {:>+5.2}°  Target Arm:  {:>+5.2}rad {:>+5.2}°  Error: {:>+5.2}rad {:>+5.2}°  Power: {:>+5.2}",
-            //     self.normal.angle_arm.unwrap(),
-            //     core::rad_to_deg(self.normal.angle_arm.unwrap()),
-            //     self.target.angle_arm.unwrap(),
-            //     core::rad_to_deg(self.target.angle_arm.unwrap()),
-            //     angle_arm_error,
-            //     core::rad_to_deg(angle_arm_error),
-            //     power_arm
-            // );
+        if let Some(error) = rig_error.angle_slew() {
+            let power = super::consts::MOTION_PROFILE_SLEW.proportional_power(error);
+            motion_vector.push((super::Actuator::Slew, power));
+        }
 
-            if angle_arm_error.abs() < 0.02 && angle_boom_error.abs() < 0.02 {
-                self.terminate = true;
-                Some(HydraulicMotion::Stop(vec![
-                    super::Actuator::Arm,
-                    super::Actuator::Boom,
-                ]))
-            } else {
-                Some(HydraulicMotion::Change(vec![
-                    (super::Actuator::Arm, power_arm),
-                    (super::Actuator::Boom, power_boom),
-                ]))
-            }
+        if !motion_vector.is_empty() {
+            Some(HydraulicMotion::Change(motion_vector))
         } else {
             None
         }
     }
 
+    /// Program termination condition.
+    ///
+    /// Check if program is finished.
     fn can_terminate(&self, _: &mut Context) -> bool {
-        self.terminate
+        let rig_error = self.objective.erorr_diff();
+
+        if let (Some(angle_boom_error), Some(angle_arm_error), Some(angle_slew_error)) = (
+            rig_error.angle_boom(),
+            rig_error.angle_arm(),
+            rig_error.angle_slew(),
+        ) {
+            angle_arm_error.abs() < 0.02
+                && angle_boom_error.abs() < 0.02
+                && angle_slew_error.abs() < 0.02
+        } else {
+            false
+        }
+    }
+
+    /// Program termination action.
+    ///
+    /// This is an optional method to send a last motion
+    /// instruction. This method is called after `can_terminate`
+    /// returns true and before the program is terminated.
+    fn term_action(&self, _context: &mut Context) -> Option<Self::MotionPlan> {
+        Some(HydraulicMotion::Stop(vec![
+            super::Actuator::Boom,
+            super::Actuator::Arm,
+            super::Actuator::Slew,
+        ]))
     }
 }

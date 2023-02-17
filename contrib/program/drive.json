@@ -1,0 +1,8 @@
+{
+    "name": "drive",
+    "version": "1.0",
+    "steps": [
+        {"run": "kinematic", "parameters": [5.21, 0.0, 0.0]},
+        {"run": "drive", "parameters": [2.5]}
+    ]
+}
