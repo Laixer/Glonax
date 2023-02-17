@@ -2,18 +2,6 @@ pub trait Configurable: Clone {
     fn global(&self) -> &GlobalConfig;
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct ProgramConfig {
-    /// Global configuration.
-    pub global: GlobalConfig,
-}
-
-impl Configurable for ProgramConfig {
-    fn global(&self) -> &GlobalConfig {
-        &self.global
-    }
-}
-
 /// Glonax global configuration.
 #[derive(Clone, Debug)]
 pub struct GlobalConfig {

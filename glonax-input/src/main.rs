@@ -14,6 +14,9 @@ mod gamepad;
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
+    /// CAN network interface.
+    interface: String,
+
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
@@ -31,6 +34,7 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let mut config = config::InputConfig {
+        interface: args.interface,
         device: args.device,
         global: glonax::GlobalConfig::default(),
     };
@@ -96,7 +100,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
 
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
 
-    let net = std::sync::Arc::new(J1939Network::new("can0", 0x9f)?);
+    let net = std::sync::Arc::new(J1939Network::new(&config.interface, 0x9f)?);
 
     let mut motion_device = Hcu::new(net);
 
