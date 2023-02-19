@@ -6,7 +6,7 @@ edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
-glonax = { version = "2.1.14", path = "../glonax-runtime" }
+glonax = { version = "2.1", path = "../glonax-runtime" }
 
 log = "0.4"
 anyhow = "1.0"

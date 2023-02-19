@@ -2,8 +2,8 @@ use glonax::net::J1939Network;
 use glonax_j1939::PGN;
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let net = J1939Network::new("can0", 0x9b)?;
+async fn main() {
+    let net = J1939Network::new("can0", 0x9b).expect("ouch");
 
     net.request(0x20, PGN::AddressClaimed).await;
 
@@ -76,6 +76,4 @@ async fn main() -> anyhow::Result<()> {
     // sleep 0.1
     // cansend can0 18EB 20 10 # 01 18 A4 49 24 11 05 06
     // cansend can0 18EB 20 10 # 02 85 6B FF FF FF FF FF
-
-    Ok(())
 }

@@ -11,5 +11,6 @@ members = [
   "glonax-runtime",
   "glonax-serial",
   "glonax-input",
-  "glonax-ecu"
+  "glonax-ecu",
+  "glonax-utils"
 ]

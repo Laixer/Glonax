@@ -1,5 +1,5 @@
 [package]
-name = "glonax-input"
+name = "glonax-utils"
 version = "1.0.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
@@ -7,14 +7,14 @@ repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
 glonax = { version = "2.1", path = "../glonax-runtime" }
-glonax-gamepad = { version = "1.0", path = "../glonax-gamepad" }
 
 log = "0.4"
 anyhow = "1.0"
 tokio = { version = "1.25", features = ["full"] }
 clap = { version = "4.0", features = ["derive"] }
 simplelog = "0.12"
+ansi_term = "0.12"
 
 [[bin]]
-name = "glonax-inputd"
+name = "glonax-netctl"
 path = "src/main.rs"

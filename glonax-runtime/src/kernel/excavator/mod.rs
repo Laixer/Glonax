@@ -53,8 +53,7 @@ impl Identity for Excavator {
     /// configuration. The message is printed with the information level.
     fn intro() -> String {
         format!(
-            "Hello, I'm an {} 🏗. Gimme som dirt! ⚒️",
-            ansi_term::Color::Yellow.paint("excavator")
+            "Hello, I'm an excavator 🏗. Gimme som dirt! ⚒️",
         )
     }
 }

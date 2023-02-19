@@ -12,17 +12,12 @@ keywords = ["hardware", "machine", "controller"]
 
 [dependencies]
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
-glonax-gamepad = { version = "1.0", path = "../glonax-gamepad" }
 
-clap = { version = "4.0", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 log = "0.4"
-simplelog = "0.12"
 tokio = { version = "1.25", features = ["full"] }
-anyhow = "1.0"
 async-trait = "0.1"
 nalgebra = "0.31"
-ansi_term = "0.12"
 rumqttc = "0.18.0"
-postcard = { version = "1.0.2", features = ["use-std"]}
+# postcard = { version = "1.0.2", features = ["use-std"]}
