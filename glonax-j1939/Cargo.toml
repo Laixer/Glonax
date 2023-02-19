@@ -12,7 +12,7 @@ keywords = ["io", "socket", "network", "j1939", "sae", "can"]
 
 [dependencies]
 log = "0.4"
-tokio = { version = "1.24", features = ["full"] }
+tokio = { version = "1.25", features = ["full"] }
 libc = "0.2"
 j1939 = { git = "https://github.com/Laixer/J1939" }
 socket2 = "0.4"

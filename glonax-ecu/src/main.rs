@@ -17,35 +17,27 @@ const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 struct Args {
     /// CAN network interface.
     interface: String,
-
     /// MQTT broker address.
     #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
     address: String,
-
     /// MQTT broker port.
     #[arg(short, long, default_value_t = 1883)]
     port: u16,
-
     /// MQTT broker username.
     #[arg(short = 'U', long)]
     username: Option<String>,
-
     /// MQTT broker password.
     #[arg(short = 'P', long)]
     password: Option<String>,
-
     /// Disable machine motion (frozen mode).
     #[arg(long)]
     disable_motion: bool,
-
     /// Run motion requests slow.
     #[arg(long)]
     slow_motion: bool,
-
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
-
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,

@@ -18,15 +18,12 @@ const DEVICE_NET_LOCAL_ADDR: u8 = 0x9f;
 struct Args {
     /// CAN network interface.
     interface: String,
-
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
-
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
-
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,

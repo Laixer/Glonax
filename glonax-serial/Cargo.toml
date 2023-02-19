@@ -14,4 +14,4 @@ keywords = ["serial", "hardware", "rs232", "tty", "glonax"]
 log = "0.4"
 libc = "0.2"
 termios = "0.2"
-tokio = { version = "1.24", features = ["full"] }
+tokio = { version = "1.25", features = ["full"] }
