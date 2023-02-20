@@ -42,22 +42,33 @@ impl crate::net::Routable for Mecu {
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
         if self.arm_encoder.node() == frame.id().sa() && self.arm_encoder.ingress(pgn, frame) {
-            /// Arm encoder range.
-            pub const ARM_ENCODER_RANGE: std::ops::Range<f32> = 24900.0..51600.0;
-            /// Arm angle range.
-            pub const ARM_ANGLE_RANGE: std::ops::Range<f32> = 0.0..2.1;
+            // /// Arm encoder range.
+            // pub const ARM_ENCODER_RANGE: std::ops::Range<f32> = 24900.0..51600.0;
+            // /// Arm angle range.
+            // pub const ARM_ANGLE_RANGE: std::ops::Range<f32> = 0.0..2.1;
 
-            let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
+            // let encoder = Encoder::new(ARM_ENCODER_RANGE, ARM_ANGLE_RANGE);
 
-            let angle = encoder.scale(self.arm_encoder.position() as f32);
-            let percentage = encoder.scale_to(100.0, self.arm_encoder.position() as f32);
+            // let angle = encoder.scale(self.arm_encoder.position() as f32);
+            // let percentage = encoder.scale_to(100.0, self.arm_encoder.position() as f32);
+
+            // write!(
+            //     f,
+            //     "Position: {:>5} {:>6.2}rad {:>6.2}°; Speed {:>5}; State: {}",
+            //     self.position,
+            //     self.position as f32 / 1000.0,
+            //     crate::core::rad_to_deg(self.position as f32 / 1000.0),
+            //     self.speed,
+            //     self.state
+            //         .as_ref()
+            //         .map_or_else(|| "-".to_owned(), |f| f.to_string()),
+            // )
 
             debug!(
-                "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
+                "Arm Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}°",
                 self.arm_encoder.position(),
-                angle,
-                crate::core::rad_to_deg(angle),
-                percentage,
+                self.arm_encoder.position() as f32 / 1000.0,
+                crate::core::rad_to_deg(self.arm_encoder.position() as f32 / 1000.0),
             );
 
             self.publisher.try_publish(
@@ -65,8 +76,8 @@ impl crate::net::Routable for Mecu {
                 EncoderSet {
                     position: self.arm_encoder.position(),
                     speed: self.arm_encoder.speed(),
-                    angle,
-                    percentage,
+                    angle: self.arm_encoder.position() as f32 / 1000.0,
+                    percentage: 0.0,
                 },
             );
 
@@ -74,22 +85,21 @@ impl crate::net::Routable for Mecu {
         } else if self.boom_encoder.node() == frame.id().sa()
             && self.boom_encoder.ingress(pgn, frame)
         {
-            /// Boom encoder range.
-            pub const BOOM_ENCODER_RANGE: std::ops::Range<f32> = 108900.0..195600.0;
-            /// Boom angle range.
-            pub const BOOM_ANGLE_RANGE: std::ops::Range<f32> = 0.0..1.178;
+            // /// Boom encoder range.
+            // pub const BOOM_ENCODER_RANGE: std::ops::Range<f32> = 108900.0..195600.0;
+            // /// Boom angle range.
+            // pub const BOOM_ANGLE_RANGE: std::ops::Range<f32> = 0.0..1.178;
 
-            let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
+            // let encoder = Encoder::new(BOOM_ENCODER_RANGE, BOOM_ANGLE_RANGE);
 
-            let angle = encoder.scale(self.boom_encoder.position() as f32);
-            let percentage = encoder.scale_to(100.0, self.boom_encoder.position() as f32);
+            // let angle = encoder.scale(self.boom_encoder.position() as f32);
+            // let percentage = encoder.scale_to(100.0, self.boom_encoder.position() as f32);
 
             debug!(
-                "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
+                "Boom Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}°",
                 self.boom_encoder.position(),
-                angle,
-                crate::core::rad_to_deg(angle),
-                percentage,
+                self.boom_encoder.position() as f32 / 1000.0,
+                crate::core::rad_to_deg(self.boom_encoder.position() as f32 / 1000.0),
             );
 
             self.publisher.try_publish(
@@ -97,8 +107,8 @@ impl crate::net::Routable for Mecu {
                 EncoderSet {
                     position: self.boom_encoder.position(),
                     speed: self.boom_encoder.speed(),
-                    angle,
-                    percentage,
+                    angle: self.boom_encoder.speed() as f32 / 1000.0,
+                    percentage: 0.0,
                 },
             );
 
@@ -106,22 +116,21 @@ impl crate::net::Routable for Mecu {
         } else if self.frame_encoder.node() == frame.id().sa()
             && self.frame_encoder.ingress(pgn, frame)
         {
-            /// Slew encoder range.
-            pub const SLEW_ENCODER_RANGE: std::ops::Range<f32> = 0.0..290000.0;
-            /// Slew angle range.
-            pub const SLEW_ANGLE_RANGE: std::ops::Range<f32> = 0.0..core::f32::consts::PI * 2.0;
+            // / Slew encoder range.
+            // pub const SLEW_ENCODER_RANGE: std::ops::Range<f32> = 0.0..290000.0;
+            // / Slew angle range.
+            // pub const SLEW_ANGLE_RANGE: std::ops::Range<f32> = 0.0..core::f32::consts::PI * 2.0;
 
-            let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
+            // let encoder = Encoder::new(SLEW_ENCODER_RANGE, SLEW_ANGLE_RANGE);
 
-            let angle = encoder.scale(self.frame_encoder.position() as f32);
-            let percentage = encoder.scale_to(100.0, self.frame_encoder.position() as f32);
+            // let angle = encoder.scale(self.frame_encoder.position() as f32);
+            // let percentage = encoder.scale_to(100.0, self.frame_encoder.position() as f32);
 
             debug!(
-                "Frame Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}° {:.1}%",
+                "Frame Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}°",
                 self.frame_encoder.position(),
-                angle,
-                crate::core::rad_to_deg(angle),
-                percentage,
+                self.frame_encoder.position() as f32 / 1000.0,
+                crate::core::rad_to_deg(self.frame_encoder.position() as f32 / 1000.0),
             );
 
             self.publisher.try_publish(
@@ -129,8 +138,8 @@ impl crate::net::Routable for Mecu {
                 EncoderSet {
                     position: self.frame_encoder.position(),
                     speed: self.frame_encoder.speed(),
-                    angle,
-                    percentage,
+                    angle: self.frame_encoder.position() as f32 / 1000.0,
+                    percentage: 0.0,
                 },
             );
 
@@ -149,8 +158,10 @@ impl crate::net::Routable for Mecu {
             // let percentage = encoder.scale_to(100.0, self.turn_encoder.position() as f32);
 
             debug!(
-                "Attachment Encoder: {:?}",
-                self.attachment_encoder.position()
+                "Attachment Encoder: {:?}\tAngle rel.: {:>+5.2}rad {:>+5.2}°",
+                self.attachment_encoder.position(),
+                self.attachment_encoder.position() as f32 / 1000.0,
+                crate::core::rad_to_deg(self.attachment_encoder.position() as f32 / 1000.0),
             );
 
             self.publisher.try_publish(
@@ -158,7 +169,7 @@ impl crate::net::Routable for Mecu {
                 EncoderSet {
                     position: self.attachment_encoder.position(),
                     speed: self.attachment_encoder.speed(),
-                    angle: 0.0,
+                    angle: self.attachment_encoder.position() as f32 / 1000.0,
                     percentage: 0.0,
                 },
             );
