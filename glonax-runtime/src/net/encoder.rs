@@ -77,8 +77,10 @@ impl std::fmt::Display for KueblerEncoderService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Position: {}; Speed {}; State: {}",
+            "Position: {:>5} {:>6.2}rad {:>6.2}°; Speed {:>5}; State: {}",
             self.position,
+            self.position as f32 / 1000.0,
+            crate::core::rad_to_deg(self.position as f32 / 1000.0),
             self.speed,
             self.state
                 .as_ref()
