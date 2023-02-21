@@ -11,7 +11,7 @@ Restart=always
 RestartSec=2
 Nice=-15
 ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i %I -o carrier
-ExecStart=/usr/local/bin/glonax-ecud --daemon --workers 4 %I
+ExecStart=/usr/local/bin/glonax-ecud --daemon %I
 PrivateTmp=true
 
 [Install]

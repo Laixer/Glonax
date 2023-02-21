@@ -9,7 +9,7 @@ After=sys-subsystem-input-%i.device mosquitto.service
 WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
-ExecStart=/usr/local/bin/glonax-inputd --daemon --workers 4 %I
+ExecStart=/usr/local/bin/glonax-inputd --daemon can0 %I
 PrivateTmp=true
 
 [Install]
