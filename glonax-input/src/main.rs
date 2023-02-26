@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
-    use glonax::core::motion::ToMotion;
+    use glonax::core::motion::{Motion, ToMotion};
     use glonax::device::{Hcu, MotionDevice};
     use glonax::kernel::excavator::Excavator;
     use glonax::net::J1939Network;
@@ -109,6 +109,8 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
             motion_device.actuate(motion.to_motion()).await;
         }
     }
+
+    motion_device.actuate(Motion::StopAll).await;
 
     Ok(())
 }
