@@ -20,10 +20,12 @@ pub enum Motion {
 }
 
 pub trait ToMotion: Sync + Send {
+    /// Convert into motion.
     fn to_motion(self) -> Motion;
 }
 
 impl ToMotion for Motion {
+    /// Convert into motion.
     fn to_motion(self) -> Motion {
         self
     }
