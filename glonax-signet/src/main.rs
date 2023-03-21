@@ -15,8 +15,8 @@ const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax ECU daemon", long_about = None)]
 struct Args {
-    /// CAN network interface.
-    interface: String,
+    /// CAN network interfaces.
+    interface: Vec<String>,
     /// Disable machine motion (frozen mode).
     #[arg(long)]
     disable_motion: bool,
@@ -35,7 +35,11 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let bin_name = format!("{}@{}", env!("CARGO_BIN_NAME").to_string(), args.interface);
+    let bin_name = format!(
+        "{}@{}",
+        env!("CARGO_BIN_NAME").to_string(),
+        args.interface.first().unwrap().to_string()
+    );
 
     let mut config = config::EcuConfig {
         interface: args.interface,
@@ -96,57 +100,46 @@ async fn main() -> anyhow::Result<()> {
 
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     use glonax::net::J1939Network;
+    use glonax::net::{EngineService, KueblerEncoderService};
     use glonax::signal::SignalSource;
 
     let queue = glonax::signal::SignalQueueWriter::new().unwrap();
 
-    let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?;
+    // TODO: Assign new network ID to each J1939 network.
+    let mut router = glonax::net::Router::from_iter(
+        config
+            .interface
+            .iter()
+            .map(|iface| J1939Network::new(iface, DEVICE_NET_LOCAL_ADDR).unwrap()),
+    );
 
-    let mut router = glonax::net::Router::new(net);
-
-    let mut engine_service = glonax::net::EngineService::new(0x0);
-    let mut frame_encoder = glonax::net::KueblerEncoderService::new(0x6A);
-    let mut boom_encoder = glonax::net::KueblerEncoderService::new(0x6B);
-    let mut arm_encoder = glonax::net::KueblerEncoderService::new(0x6C);
-    let mut attachment_encoder = glonax::net::KueblerEncoderService::new(0x6D);
+    let mut engine_service_list = vec![EngineService::new(0x0)];
+    let mut encoder_list = vec![
+        KueblerEncoderService::new(0x6A),
+        KueblerEncoderService::new(0x6B),
+        KueblerEncoderService::new(0x6C),
+        KueblerEncoderService::new(0x6D),
+    ];
 
     loop {
         if let Err(e) = router.listen().await {
             log::error!("{}", e);
         }
 
-        if router.try_accept(&mut engine_service) {
-            log::debug!("{} » {}", router.frame_source().unwrap(), engine_service);
+        for service in &mut engine_service_list {
+            if router.try_accept(service) {
+                log::debug!("{} » {}", router.frame_source().unwrap(), service);
 
-            engine_service.fetch(&queue);
+                service.fetch(&queue);
+            }
         }
 
-        if router.try_accept(&mut frame_encoder) {
-            log::debug!("{} » {}", router.frame_source().unwrap(), frame_encoder);
+        for encoder in &mut encoder_list {
+            if router.try_accept(encoder) {
+                log::debug!("{} » {}", router.frame_source().unwrap(), encoder);
 
-            frame_encoder.fetch(&queue);
-        }
-
-        if router.try_accept(&mut boom_encoder) {
-            log::debug!("{} » {}", router.frame_source().unwrap(), boom_encoder);
-
-            boom_encoder.fetch(&queue);
-        }
-
-        if router.try_accept(&mut arm_encoder) {
-            log::debug!("{} » {}", router.frame_source().unwrap(), arm_encoder);
-
-            arm_encoder.fetch(&queue);
-        }
-
-        if router.try_accept(&mut attachment_encoder) {
-            log::debug!(
-                "{} » {}",
-                router.frame_source().unwrap(),
-                attachment_encoder
-            );
-
-            attachment_encoder.fetch(&queue);
+                encoder.fetch(&queue);
+            }
         }
     }
 }

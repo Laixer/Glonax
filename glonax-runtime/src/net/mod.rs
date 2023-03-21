@@ -141,6 +141,12 @@ pub struct Router {
     node_table: HashMap<u8, std::time::Instant>,
 }
 
+impl FromIterator<J1939Network> for Router {
+    fn from_iter<T: IntoIterator<Item = J1939Network>>(iter: T) -> Self {
+        Self::new(iter.into_iter().next().unwrap())
+    }
+}
+
 impl Router {
     pub fn new(net: J1939Network) -> Self {
         Self {
