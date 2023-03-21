@@ -15,26 +15,11 @@ const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax ECU daemon", long_about = None)]
 struct Args {
+    /// Bind address.
+    #[arg(short = 'b', long = "bind", default_value = "[::1]:50051")]
+    address: String,
     /// CAN network interface.
     interface: String,
-    /// MQTT broker address.
-    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
-    address: String,
-    /// MQTT broker port.
-    #[arg(short, long, default_value_t = 1883)]
-    port: u16,
-    /// MQTT broker username.
-    #[arg(short = 'U', long)]
-    username: Option<String>,
-    /// MQTT broker password.
-    #[arg(short = 'P', long)]
-    password: Option<String>,
-    /// Disable machine motion (frozen mode).
-    #[arg(long)]
-    disable_motion: bool,
-    /// Run motion requests slow.
-    #[arg(long)]
-    slow_motion: bool,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -47,20 +32,15 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let bin_name = format!("{}@{}", env!("CARGO_BIN_NAME").to_string(), args.interface);
+    let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     let mut config = config::EcuConfig {
+        address: args.address,
         interface: args.interface,
         global: glonax::GlobalConfig::default(),
     };
 
     config.global.bin_name = bin_name;
-    config.global.mqtt_host = args.address;
-    config.global.mqtt_port = args.port;
-    config.global.mqtt_username = args.username;
-    config.global.mqtt_password = args.password;
-    config.global.enable_motion = !args.disable_motion;
-    config.global.slow_motion = args.slow_motion;
     config.global.daemon = args.daemon;
 
     let mut log_config = simplelog::ConfigBuilder::new();
@@ -110,52 +90,76 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
-    use glonax::device::{Hcu, Mecu, Vecu};
-    use glonax::kernel::excavator::Excavator;
-    use glonax::net::J1939Network;
-    use glonax::net::Router;
+use glonax::device::Hcu;
+use glonax::net::J1939Network;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tonic::{transport::Server, Request, Response, Status};
 
-    let mut runtime = glonax::RuntimeBuilder::<Excavator>::from_config(config)?
-        .enable_term_shutdown()
-        .build();
+struct VehicleManagemetService {
+    motion_device: Arc<Mutex<Hcu>>,
+}
 
-    let signal_manager = runtime.new_signal_manager();
-    let motion_manager = runtime.new_motion_manager();
+impl VehicleManagemetService {
+    pub fn new(config: config::EcuConfig) -> Self {
+        let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
 
-    let net = std::sync::Arc::new(J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?);
-
-    let mut vecu = Vecu::new(signal_manager.publisher());
-    let mut mecu = Mecu::new(net.clone(), signal_manager.publisher());
-    let mut hcu = Hcu::new(net.clone());
-
-    let motion_device = Hcu::new(net.clone());
-
-    runtime
-        .eventhub
-        .subscribe(motion_manager.adapter(motion_device));
-
-    tokio::task::spawn(async move {
-        loop {
-            runtime.eventhub.next().await
+        Self {
+            motion_device: Arc::new(Mutex::new(Hcu::new(net))),
         }
-    });
+    }
+}
 
-    let mut router = Router::new(net);
+#[tonic::async_trait]
+impl glonax::transport::vehicle_management_server::VehicleManagement for VehicleManagemetService {
+    /// Sends a motion command
+    async fn motion_command(
+        &self,
+        request: Request<glonax::transport::Motion>,
+    ) -> Result<Response<glonax::transport::Empty>, Status> {
+        let motion = request.into_inner();
 
-    tokio::task::spawn(async move {
-        loop {
-            if let Err(e) = router.listen().await {
-                log::error!("{}", e);
+        log::debug!("{}", motion);
+
+        self.motion_device.lock().await.actuate(motion).await;
+
+        Ok(Response::new(glonax::transport::Empty {}))
+    }
+
+    type ListenSignalStream = std::pin::Pin<
+        Box<dyn futures_core::Stream<Item = Result<glonax::transport::Signal, Status>> + Send>,
+    >;
+
+    /// Listen for signal updates.
+    async fn listen_signal(
+        &self,
+        _request: tonic::Request<glonax::transport::Empty>,
+    ) -> Result<tonic::Response<Self::ListenSignalStream>, tonic::Status> {
+        let signal_queue = glonax::signal::SignalQueueReaderAsync::new().unwrap();
+
+        let output = async_stream::try_stream! {
+            while let Ok(signal) = signal_queue.recv().await {
+                log::debug!("We got ze signal: {}", signal);
+
+                yield signal;
             }
+        };
 
-            router.try_accept(&mut vecu);
-            router.try_accept(&mut mecu);
-            router.try_accept(&mut hcu);
-        }
-    });
+        Ok(Response::new(Box::pin(output) as Self::ListenSignalStream))
+    }
+}
 
-    runtime.shutdown.1.recv().await.unwrap();
+async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
+    let addr = config.address.parse()?;
+
+    Server::builder()
+        .add_service(
+            glonax::transport::vehicle_management_server::VehicleManagementServer::new(
+                VehicleManagemetService::new(config.clone()),
+            ),
+        )
+        .serve(addr)
+        .await?;
 
     Ok(())
 }

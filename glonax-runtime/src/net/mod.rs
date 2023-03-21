@@ -136,7 +136,7 @@ pub trait Routable: Send + Sync {
 }
 
 pub struct Router {
-    net: std::sync::Arc<J1939Network>,
+    net: J1939Network,
     frame: Option<Frame>,
     filter_pgn: Vec<u32>,
     filter_node: Vec<u8>,
@@ -144,7 +144,7 @@ pub struct Router {
 }
 
 impl Router {
-    pub fn new(net: std::sync::Arc<J1939Network>) -> Self {
+    pub fn new(net: J1939Network) -> Self {
         Self {
             net,
             frame: None,

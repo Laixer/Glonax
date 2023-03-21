@@ -9,7 +9,7 @@ syntax = "proto3";
 package glonax;
 
 // The vehicle management service.
-service VehicleManagemet {
+service VehicleManagement {
   // Sends a motion command
   rpc MotionCommand (Motion) returns (Empty) {}
   // Listen for signal updates.
@@ -30,12 +30,14 @@ message Empty {}
 // motion indicator. However this is left to the motion device.
 message Motion {
   enum MotionType {
+    // Never use the zero index.
+    NONE = 0;
     // Stop all motion until resumed.
-    STOP_ALL = 0;
+    STOP_ALL = 1;
     // Resume all motion.
-    RESUME_ALL = 1;
+    RESUME_ALL = 2;
     // Change motion on actuators.
-    CHANGE = 2;
+    CHANGE = 3;
   }
 
   MotionType type = 1;
@@ -58,7 +60,7 @@ message Signal {
   }
 
   oneof metric {
-    // Temperature in c.
+    // Temperature in celcius.
     float temperature = 2;
     // Angle in radians.
     float angle = 3;

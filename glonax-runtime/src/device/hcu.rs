@@ -1,12 +1,6 @@
-use std::sync::Arc;
-
 use glonax_j1939::{Frame, PGN};
 
-use crate::{
-    core::motion::Motion,
-    device::MotionDevice,
-    net::{ActuatorService, J1939Network},
-};
+use crate::net::{ActuatorService, J1939Network};
 
 const DEVICE_NET_HCU_ADDR: u8 = 0x4a;
 
@@ -15,7 +9,7 @@ pub struct Hcu {
 }
 
 impl Hcu {
-    pub fn new(net: Arc<J1939Network>) -> Self {
+    pub fn new(net: J1939Network) -> Self {
         Self {
             service: ActuatorService::new(net, DEVICE_NET_HCU_ADDR),
         }
@@ -32,24 +26,25 @@ impl crate::net::Routable for Hcu {
     }
 }
 
-#[async_trait::async_trait]
-impl MotionDevice for Hcu {
-    async fn actuate(&mut self, motion: Motion) {
-        match motion {
-            Motion::StopAll => {
+impl Hcu {
+    pub async fn actuate(&mut self, motion: crate::transport::Motion) {
+        match motion.r#type() {
+            crate::transport::motion::MotionType::None => panic!("NONE should not be used"),
+            crate::transport::motion::MotionType::StopAll => {
                 self.service.lock().await;
             }
-            Motion::ResumeAll => {
+            crate::transport::motion::MotionType::ResumeAll => {
                 self.service.unlock().await;
             }
-            Motion::Stop(actuators) => {
+            crate::transport::motion::MotionType::Change => {
                 self.service
-                    .actuator_control(actuators.into_iter().map(|k| (k as u8, 0)).collect())
-                    .await;
-            }
-            Motion::Change(actuators) => {
-                self.service
-                    .actuator_control(actuators.into_iter().map(|(k, v)| (k as u8, v)).collect())
+                    .actuator_control(
+                        motion
+                            .changes
+                            .into_iter()
+                            .map(|changeset| (changeset.actuator as u8, changeset.value as i16))
+                            .collect(),
+                    )
                     .await;
             }
         }

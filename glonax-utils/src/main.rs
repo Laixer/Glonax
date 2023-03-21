@@ -36,18 +36,15 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
     }
 }
 
-async fn analyze_frames(
-    net: std::sync::Arc<J1939Network>,
-    mut router: Router,
-) -> anyhow::Result<()> {
+async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut engine_service = EngineService::new(0x0);
-    let mut frame_encoder = KueblerEncoderService::new(net.clone(), 0x6A);
-    let mut boom_encoder = KueblerEncoderService::new(net.clone(), 0x6B);
-    let mut arm_encoder = KueblerEncoderService::new(net.clone(), 0x6C);
-    let mut attachment_encoder = KueblerEncoderService::new(net.clone(), 0x6D);
-    let mut actuator = ActuatorService::new(net.clone(), 0x4A);
+    let mut frame_encoder = KueblerEncoderService::new(0x6A);
+    let mut boom_encoder = KueblerEncoderService::new(0x6B);
+    let mut arm_encoder = KueblerEncoderService::new(0x6C);
+    let mut attachment_encoder = KueblerEncoderService::new(0x6D);
+    // let mut actuator = ActuatorService::new(net.clone(), 0x4A);
 
     let mut app_inspector = J1939ApplicationInspector::new();
 
@@ -99,14 +96,14 @@ async fn analyze_frames(
             );
         }
 
-        if router.try_accept(&mut actuator) {
-            info!(
-                "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
-                Yellow.bold().paint("Hydraulic"),
-                actuator
-            );
-        }
+        // if router.try_accept(&mut actuator) {
+        //     info!(
+        //         "{} {} » {}",
+        //         style_node(router.frame_source().unwrap()),
+        //         Yellow.bold().paint("Hydraulic"),
+        //         actuator
+        //     );
+        // }
 
         if router.try_accept(&mut app_inspector) {
             if let Some((major, minor, patch)) = app_inspector.software_identification() {
@@ -318,7 +315,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
 
-                let service = ActuatorService::new(std::sync::Arc::new(net), node);
+                let service = ActuatorService::new(net, node);
 
                 info!(
                     "{} Turn motion {}",
@@ -339,7 +336,7 @@ async fn main() -> anyhow::Result<()> {
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
 
-                let mut service = ActuatorService::new(std::sync::Arc::new(net), node);
+                let mut service = ActuatorService::new(net, node);
 
                 info!(
                     "{} Set actuator {} to {}",
@@ -356,12 +353,12 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Command::Scan => {
-            let router = Router::new(std::sync::Arc::new(net));
+            let router = Router::new(net);
 
             scan_nodes(router).await?;
         }
         Command::Dump { pgn, node } => {
-            let mut router = Router::new(std::sync::Arc::new(net));
+            let mut router = Router::new(net);
 
             if let Some(pgn) = pgn {
                 router.add_pgn_filter(pgn);
@@ -373,9 +370,7 @@ async fn main() -> anyhow::Result<()> {
             print_frames(router).await?;
         }
         Command::Analyze { pgn, node } => {
-            let net = std::sync::Arc::new(net);
-
-            let mut router = Router::new(net.clone());
+            let mut router = Router::new(net);
 
             if let Some(pgn) = pgn {
                 router.add_pgn_filter(pgn);
@@ -384,7 +379,7 @@ async fn main() -> anyhow::Result<()> {
                 router.add_node_filter(node);
             }
 
-            analyze_frames(net, router).await?;
+            analyze_frames(router).await?;
         }
     }
 

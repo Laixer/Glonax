@@ -1,5 +1,5 @@
 [package]
-name = "glonax-input"
+name = "glonax-signet"
 version = "1.0.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
@@ -7,9 +7,6 @@ repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
 glonax = { version = "3.0", path = "../glonax-runtime" }
-glonax-gamepad = { version = "1.0", path = "../glonax-gamepad" }
-
-tonic = "0.8"
 
 log = "0.4"
 anyhow = "1.0"
@@ -18,5 +15,5 @@ clap = { version = "4.0", features = ["derive"] }
 simplelog = "0.12"
 
 [[bin]]
-name = "glonax-inputd"
+name = "glonax-signetd"
 path = "src/main.rs"

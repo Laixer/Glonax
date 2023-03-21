@@ -1,22 +1,21 @@
-use std::sync::Arc;
-
 use glonax_j1939::{Frame, PGN};
 
 use crate::{
-    net::{J1939Network, KueblerEncoderService},
-    signal::SignalPublisher,
+    net::KueblerEncoderService,
+    signal::SignalQueueWriter,
+    transport::{signal::Metric, Signal},
 };
 
-#[derive(Debug, serde::Serialize)]
-struct EncoderSet {
-    position: u32,
-    speed: u16,
-    angle: f32,
-    percentage: f32,
-}
+// #[derive(Debug, serde::Serialize)]
+// struct EncoderSet {
+//     position: u32,
+//     speed: u16,
+//     angle: f32,
+//     percentage: f32,
+// }
 
 pub struct Mecu {
-    publisher: SignalPublisher,
+    writer: SignalQueueWriter,
     frame_encoder: KueblerEncoderService,
     arm_encoder: KueblerEncoderService,
     boom_encoder: KueblerEncoderService,
@@ -24,13 +23,13 @@ pub struct Mecu {
 }
 
 impl Mecu {
-    pub fn new(net: Arc<J1939Network>, publisher: SignalPublisher) -> Self {
+    pub fn new(writer: SignalQueueWriter) -> Self {
         Self {
-            publisher,
-            frame_encoder: KueblerEncoderService::new(net.clone(), 0x6A),
-            boom_encoder: KueblerEncoderService::new(net.clone(), 0x6B),
-            arm_encoder: KueblerEncoderService::new(net.clone(), 0x6C),
-            attachment_encoder: KueblerEncoderService::new(net, 0x6D),
+            writer,
+            frame_encoder: KueblerEncoderService::new(0x6A),
+            boom_encoder: KueblerEncoderService::new(0x6B),
+            arm_encoder: KueblerEncoderService::new(0x6C),
+            attachment_encoder: KueblerEncoderService::new(0x6D),
         }
     }
 }
@@ -49,15 +48,14 @@ impl crate::net::Routable for Mecu {
                 crate::core::rad_to_deg(self.arm_encoder.position() as f32 / 1000.0),
             );
 
-            self.publisher.try_publish(
-                "body/arm",
-                EncoderSet {
-                    position: self.arm_encoder.position(),
-                    speed: self.arm_encoder.speed(),
-                    angle: self.arm_encoder.position() as f32 / 1000.0,
-                    percentage: 0.0,
-                },
-            );
+            self.writer.send(Signal::new(
+                0x0,
+                Metric::Angle(self.arm_encoder.position() as f32 / 1000.0),
+            ));
+            self.writer.send(Signal::new(
+                0x0,
+                Metric::Rpm(self.arm_encoder.speed() as i32),
+            ));
 
             true
         } else if self.boom_encoder.node() == frame.id().sa()
@@ -70,15 +68,14 @@ impl crate::net::Routable for Mecu {
                 crate::core::rad_to_deg(self.boom_encoder.position() as f32 / 1000.0),
             );
 
-            self.publisher.try_publish(
-                "body/boom",
-                EncoderSet {
-                    position: self.boom_encoder.position(),
-                    speed: self.boom_encoder.speed(),
-                    angle: self.boom_encoder.position() as f32 / 1000.0,
-                    percentage: 0.0,
-                },
-            );
+            self.writer.send(Signal::new(
+                0x1,
+                Metric::Angle(self.boom_encoder.position() as f32 / 1000.0),
+            ));
+            self.writer.send(Signal::new(
+                0x1,
+                Metric::Rpm(self.boom_encoder.speed() as i32),
+            ));
 
             true
         } else if self.frame_encoder.node() == frame.id().sa()
@@ -91,15 +88,14 @@ impl crate::net::Routable for Mecu {
                 crate::core::rad_to_deg(self.frame_encoder.position() as f32 / 1000.0),
             );
 
-            self.publisher.try_publish(
-                "body/frame",
-                EncoderSet {
-                    position: self.frame_encoder.position(),
-                    speed: self.frame_encoder.speed(),
-                    angle: self.frame_encoder.position() as f32 / 1000.0,
-                    percentage: 0.0,
-                },
-            );
+            self.writer.send(Signal::new(
+                0x2,
+                Metric::Angle(self.frame_encoder.position() as f32 / 1000.0),
+            ));
+            self.writer.send(Signal::new(
+                0x2,
+                Metric::Rpm(self.frame_encoder.speed() as i32),
+            ));
 
             true
         } else if self.attachment_encoder.node() == frame.id().sa()
@@ -112,15 +108,14 @@ impl crate::net::Routable for Mecu {
                 crate::core::rad_to_deg(self.attachment_encoder.position() as f32 / 1000.0),
             );
 
-            self.publisher.try_publish(
-                "body/attachment",
-                EncoderSet {
-                    position: self.attachment_encoder.position(),
-                    speed: self.attachment_encoder.speed(),
-                    angle: self.attachment_encoder.position() as f32 / 1000.0,
-                    percentage: 0.0,
-                },
-            );
+            self.writer.send(Signal::new(
+                0x3,
+                Metric::Angle(self.attachment_encoder.position() as f32 / 1000.0),
+            ));
+            self.writer.send(Signal::new(
+                0x3,
+                Metric::Rpm(self.attachment_encoder.speed() as i32),
+            ));
 
             true
         } else {

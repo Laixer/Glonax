@@ -4,8 +4,14 @@ use glonax_j1939::PGN;
 #[tokio::main]
 async fn main() {
     let net = J1939Network::new("can0", 0x9b).expect("ouch");
+    net.set_promisc_mode(true).unwrap();
 
-    net.request(0x20, PGN::AddressClaimed).await;
+    // net.request(0x20, PGN::AddressClaimed).await;
+    loop {
+        let frame = net.accept().await.unwrap();
+
+        println!("{}", frame);
+    }
 
     // net.broadcast(65_240, &[0xff; 9]).await;
 
@@ -61,7 +67,7 @@ async fn main() {
     // TX Sending via transport
     // DATA: config (21)
     //
-    // cansend can0 18EC2010#10150003FF00EF00
+    // cansend can0 18EC 20 10#10150003FF00EF00
     // sleep 0.1
     // cansend can0 18EB 20 10 # 01 04 00 FF 3F 00 00 FF
     // cansend can0 18EB 20 10 # 02 3F 00 00 32 00 00 00
@@ -76,4 +82,42 @@ async fn main() {
     // sleep 0.1
     // cansend can0 18EB 20 10 # 01 18 A4 49 24 11 05 06
     // cansend can0 18EB 20 10 # 02 85 6B FF FF FF FF FF
+
+    // cansend can0 18EA6B10#00EF00
+    // sleep 0.1
+    // cansend can0 18EC6B10#110301FFFF00EF00
+    // sleep 0.1
+    // cansend can0 18EC6B10#13150003FF00EF00
+
+    // cansend can0 18EC6B10#10150003FF00EF00
+    // sleep 0.1
+    // cansend can0 18EB6B10#010500FF3F0000B8
+    // cansend can0 18EB6B10#020B000032000000
+    // cansend can0 18EB6B10#03FF0000000001FF
+
+    // 05, 00
+    // FF, 3F, 00, 00
+    // B8  0B, 00, 00
+    // 32, 00, 00, 00
+    // 00
+    // 00, 00, 00, 00
+    // 00
+    // 01
+
+    // // 6283
+
+    // cansend can0 18EC6B10#10150003FF00EF00
+    // sleep 0.1
+    // cansend can0 18EB6B10#0105008B1800008B
+    // cansend can0 18EB6B10#0218000032000000
+    // cansend can0 18EB6B10#03FF0000000001FF
+
+    // 0000188B
+    // 8B180000
+
+// cansend can0 18EA6B10#00EF00
+// sleep 0.1
+// cansend can0 18EC6B10#110301FFFF00EF00
+// sleep 0.1
+// cansend can0 18EC6B10#13150003FF00EF00
 }

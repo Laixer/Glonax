@@ -1,16 +1,19 @@
 use glonax_j1939::{Frame, PGN};
 
-use crate::{net::EngineService, signal::SignalPublisher};
+use crate::{
+    net::EngineService,
+    transport::{signal::Metric, Signal},
+};
 
 pub struct Vecu {
-    publisher: SignalPublisher,
+    writer: crate::signal::SignalQueueWriter,
     engine_service: EngineService,
 }
 
 impl Vecu {
-    pub fn new(publisher: SignalPublisher) -> Self {
+    pub fn new(writer: crate::signal::SignalQueueWriter) -> Self {
         Self {
-            publisher,
+            writer,
             engine_service: EngineService::new(0x0),
         }
     }
@@ -27,8 +30,8 @@ impl crate::net::Routable for Vecu {
                 .ingress(glonax_j1939::PGN::ElectronicEngineController2, frame);
 
             if let Some(electronic_control) = self.engine_service.electronic_control() {
-                self.publisher
-                    .try_publish("engine/power", electronic_control);
+                self.writer
+                    .send(Signal::new(0x5, Metric::Rpm(electronic_control.rpm as i32)));
             }
 
             true

@@ -1,11 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 use glonax_j1939::*;
 
 use super::{J1939Network, Routable};
 
 pub struct ActuatorService {
-    net: Arc<J1939Network>,
+    net: J1939Network,
     node: u8,
     actuators: [Option<i16>; 8],
 }
@@ -72,7 +72,7 @@ impl std::fmt::Display for ActuatorService {
 }
 
 impl ActuatorService {
-    pub fn new(net: Arc<J1939Network>, node: u8) -> Self {
+    pub fn new(net: J1939Network, node: u8) -> Self {
         Self {
             net,
             node,

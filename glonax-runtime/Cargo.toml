@@ -1,6 +1,6 @@
 [package]
 name = "glonax"
-version = "2.3.1"
+version = "3.0.1"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
@@ -13,11 +13,17 @@ keywords = ["hardware", "machine", "controller"]
 [dependencies]
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1"
+tonic = "0.8"
+prost = "0.11"
+
+posixmq = "1.0.0"
+
+# serde = { version = "1.0", features = ["derive"] }
+# serde_json = "1"
 log = "0.4"
 tokio = { version = "1.25", features = ["full"] }
 async-trait = "0.1"
 nalgebra = "0.31"
-rumqttc = "0.18.0"
-# postcard = { version = "1.0.2", features = ["use-std"]}
+
+[build-dependencies]
+tonic-build = "0.8"

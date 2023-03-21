@@ -1,107 +1,129 @@
-use std::sync::Arc;
+use crate::transport::Signal;
+use prost::Message;
 
-use crate::core::metric::Signal;
+const QUEUE: &str = "/glonax_signal";
 
-mod encoder;
-pub(crate) use encoder::Encoder;
-use tokio::sync::watch;
+pub struct SignalQueueWriter(posixmq::PosixMq);
 
-const TOPIC: &str = "area/";
-
-pub struct SignalManager {
-    client: Arc<rumqttc::AsyncClient>,
-    sender: Option<watch::Sender<Signal>>,
-    receiver: watch::Receiver<Signal>,
-}
-
-impl SignalManager {
-    /// Construct new signal manager.
-    pub fn new(client: Arc<rumqttc::AsyncClient>) -> Self {
-        let (sender, receiver) = watch::channel(Signal::heartbeat(0xff, 0));
-
-        Self {
-            client,
-            sender: Some(sender),
-            receiver,
-        }
+impl SignalQueueWriter {
+    pub fn new() -> Result<Self, std::io::Error> {
+        Ok(Self(
+            posixmq::OpenOptions::writeonly().create().open(QUEUE)?,
+        ))
     }
 
-    pub fn adapter(&mut self) -> SignalQueueAdapter {
-        SignalQueueAdapter {
-            sender: self.sender.take().unwrap(),
-        }
-    }
+    pub fn send(&self, signal: Signal) {
+        let buf = &signal.encode_to_vec();
 
-    pub fn publisher(&self) -> SignalPublisher {
-        SignalPublisher {
-            client: self.client.clone(),
+        assert!(buf.len() > 0);
+        match self.0.send(0, buf) {
+            Ok(_) => trace!("Published signal: {}", signal),
+            Err(_) => warn!("Failed to publish motion"),
         }
-    }
-
-    pub async fn recv(&mut self) -> Signal {
-        self.receiver.changed().await.unwrap();
-        *self.receiver.borrow()
     }
 }
 
-pub struct SignalQueueAdapter {
-    sender: watch::Sender<Signal>,
+pub struct SignalQueueReader(posixmq::PosixMq);
+
+impl SignalQueueReader {
+    pub fn new() -> Result<Self, std::io::Error> {
+        Ok(Self(
+            posixmq::OpenOptions::readonly()
+                .nonblocking()
+                .max_msg_len(128)
+                .capacity(15)
+                .create()
+                .open(QUEUE)?,
+        ))
+    }
+
+    // TODO: Clean this up
+    pub fn recv(&self) -> Result<Signal, ()> {
+        let mut buf = vec![0; self.0.attributes().unwrap_or_default().max_msg_len];
+
+        let (_, len) = self.0.recv(&mut buf).unwrap();
+
+        if len > 0 {
+            if let Ok(signal) = Signal::decode(&buf[..len]) {
+                Ok(signal)
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        }
+    }
 }
 
-#[async_trait::async_trait]
-impl crate::runtime::QueueAdapter for SignalQueueAdapter {
-    fn topic(&self) -> &str {
-        self::TOPIC
+pub struct SignalQueueReaderAsync {
+    inner: tokio::io::unix::AsyncFd<posixmq::PosixMq>,
+}
+
+impl SignalQueueReaderAsync {
+    pub fn new() -> std::io::Result<Self> {
+        let q = posixmq::OpenOptions::readonly()
+            .nonblocking()
+            .max_msg_len(128)
+            .capacity(15)
+            .create()
+            .open(QUEUE)
+            .unwrap();
+
+        Ok(Self {
+            inner: tokio::io::unix::AsyncFd::new(q)?,
+        })
     }
 
-    fn qos(&self) -> rumqttc::QoS {
-        rumqttc::QoS::AtMostOnce
-    }
+    pub async fn recv(&self) -> Result<Signal, ()> {
+        loop {
+            let mut guard = self.inner.readable().await.unwrap();
 
-    async fn parse(&mut self, event: &rumqttc::Publish) {
-        if let Ok(str_payload) = std::str::from_utf8(&event.payload) {
-            if let Ok(signal) = serde_json::from_str::<Signal>(str_payload) {
-                self.sender.send(signal).unwrap();
+            let mut buf = vec![
+                0;
+                self.inner
+                    .get_ref()
+                    .attributes()
+                    .unwrap_or_default()
+                    .max_msg_len
+            ];
+
+            // let (_, len) = self.0.recv(&mut buf).unwrap();
+
+            match guard.try_io(|inner| inner.get_ref().recv(&mut buf)) {
+                Ok(result) => {
+                    let (_, len) = result.unwrap();
+
+                    if len > 0 {
+                        if let Ok(signal) = Signal::decode(&buf[..len]) {
+                            return Ok(signal);
+                        } else {
+                            return Err(());
+                        }
+                    } else {
+                        return Err(());
+                    }
+                }
+                Err(_would_block) => continue,
             }
         }
     }
+
+    // pub async fn write(&self, buf: &[u8]) -> std::io::Result<usize> {
+    //     loop {
+    //         let mut guard = self.inner.writable().await?;
+
+    //         match guard.try_io(|inner| inner.get_ref().write(buf)) {
+    //             Ok(result) => return result,
+    //             Err(_would_block) => continue,
+    //         }
+    //     }
+    // }
 }
 
-pub struct SignalPublisher {
-    client: Arc<rumqttc::AsyncClient>,
-}
+// impl tonic::codegen::futures_core::Stream for SignalQueueReader {
+//     type Item = Signal;
 
-impl SignalPublisher {
-    #[allow(dead_code)]
-    pub async fn publish(&mut self, signal: Signal) {
-        if let Ok(str_payload) = serde_json::to_string(&signal) {
-            match self
-                .client
-                .publish(
-                    TOPIC,
-                    rumqttc::QoS::AtMostOnce,
-                    false,
-                    str_payload.as_bytes(),
-                )
-                .await
-            {
-                Ok(_) => trace!("Published signal: {}", signal),
-                Err(_) => warn!("Failed to publish signal"),
-            }
-        }
-    }
-
-    pub fn try_publish<T: serde::Serialize>(&mut self, subtopic: &str, message: T) {
-        if let Ok(str_payload) = serde_json::to_string(&message) {
-            match self.client.try_publish(
-                TOPIC.to_string() + subtopic,
-                rumqttc::QoS::AtMostOnce,
-                false,
-                str_payload.as_bytes(),
-            ) {
-                Ok(_) => trace!("Published signal"),
-                Err(_) => warn!("Failed to publish signal"),
-            }
-        }
-    }
-}
+//     fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
+//         std::task::Poll::Ready(Some(self.recv().unwrap()))
+//     }
+// }

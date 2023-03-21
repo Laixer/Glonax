@@ -2,16 +2,16 @@ use glonax_j1939::{
     decode::{EngineStarterMode, EngineTorqueMode},
     *,
 };
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};
 
 use super::Routable;
 
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug)]
 pub struct ElectrnoicControl {
     // engine_torque_mode: EngineTorqueMode,
-    driver_demand: u8,
-    actual_engine: u8,
-    rpm: u16,
+    pub driver_demand: u8,
+    pub actual_engine: u8,
+    pub rpm: u16,
     // starter_mode: EngineStarterMode,
 }
 

@@ -1,16 +1,14 @@
 use glonax::{Configurable, GlobalConfig};
 
 #[derive(Clone, Debug)]
-pub struct InputConfig {
-    /// Remote network address.
-    pub address: String,
-    /// Input device.
-    pub device: String,
+pub struct EcuConfig {
+    /// CAN network interface.
+    pub interface: String,
     /// Global configuration.
     pub global: GlobalConfig,
 }
 
-impl Configurable for InputConfig {
+impl Configurable for EcuConfig {
     fn global(&self) -> &GlobalConfig {
         &self.global
     }

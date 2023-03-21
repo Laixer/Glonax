@@ -1,6 +1,6 @@
-use crate::{config::Configurable, core::Identity, runtime::EventHub, RuntimeContext};
+use crate::{config::Configurable, RuntimeContext};
 
-use super::Operand;
+// use super::Operand;
 
 /// Runtime builder.
 ///
@@ -10,21 +10,19 @@ use super::Operand;
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub struct Builder<K>(RuntimeContext<K>);
+pub struct Builder(RuntimeContext);
 
-impl<K: Operand + Identity> Builder<K> {
+impl Builder {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub fn from_config(config: &impl Configurable) -> super::Result<Builder<K>> {
+    pub fn from_config(_config: &impl Configurable) -> super::Result<Self> {
         use tokio::sync::broadcast;
 
-        info!("{}", K::intro());
-
         Ok(Self(RuntimeContext {
-            operand: K::from_config(config),
+            // operand: K::from_config(config),
             shutdown: broadcast::channel(1),
-            eventhub: EventHub::new(config.global()),
+            // eventhub: EventHub::new(config.global()),
         }))
     }
 
@@ -45,7 +43,7 @@ impl<K: Operand + Identity> Builder<K> {
     }
 
     #[inline]
-    pub fn build(self) -> RuntimeContext<K> {
+    pub fn build(self) -> RuntimeContext {
         self.0
     }
 }
