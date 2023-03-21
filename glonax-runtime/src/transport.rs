@@ -35,9 +35,9 @@ impl std::fmt::Display for Motion {
 }
 
 impl Signal {
-    pub fn new(address: u32, metric: signal::Metric) -> Self {
+    pub fn new<I: Into<u32>>(address: I, metric: signal::Metric) -> Self {
         Self {
-            address,
+            address: address.into(),
             metric: Some(metric),
         }
     }

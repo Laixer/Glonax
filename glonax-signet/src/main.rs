@@ -100,26 +100,26 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
 
     let queue = glonax::signal::SignalQueueWriter::new().unwrap();
 
-    // let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?;
+    let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?;
 
-    // let mut mecu = Mecu::new(queue);
+    let mut mecu = Mecu::new(queue);
 
-    // let mut router = glonax::net::Router::new(net);
-
-    loop {
-        queue.send(glonax::transport::Signal::new(
-            0x1,
-            glonax::transport::signal::Metric::Angle(24500.0),
-        ));
-
-        tokio::time::sleep(std::time::Duration::from_millis(5)).await
-    }
+    let mut router = glonax::net::Router::new(net);
 
     // loop {
-    //     if let Err(e) = router.listen().await {
-    //         log::error!("{}", e);
-    //     }
+    //     queue.send(glonax::transport::Signal::new(
+    //         1_u32,
+    //         glonax::transport::signal::Metric::Angle(24500.0),
+    //     ));
 
-    //     router.try_accept(&mut mecu);
+    //     tokio::time::sleep(std::time::Duration::from_millis(5)).await
     // }
+
+    loop {
+        if let Err(e) = router.listen().await {
+            log::error!("{}", e);
+        }
+
+        router.try_accept(&mut mecu);
+    }
 }

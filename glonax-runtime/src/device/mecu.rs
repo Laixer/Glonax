@@ -6,13 +6,21 @@ use crate::{
     transport::{signal::Metric, Signal},
 };
 
-// #[derive(Debug, serde::Serialize)]
-// struct EncoderSet {
-//     position: u32,
-//     speed: u16,
-//     angle: f32,
-//     percentage: f32,
-// }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Actuator {
+    Boom = 0,
+    Arm = 4,
+    Bucket = 5,
+    Slew = 1,
+    LimpLeft = 3,
+    LimpRight = 2,
+}
+
+impl From<Actuator> for u32 {
+    fn from(value: Actuator) -> Self {
+        value as u32
+    }
+}
 
 pub struct Mecu {
     writer: SignalQueueWriter,
@@ -49,11 +57,11 @@ impl crate::net::Routable for Mecu {
             );
 
             self.writer.send(Signal::new(
-                0x0,
+                Actuator::Arm,
                 Metric::Angle(self.arm_encoder.position() as f32 / 1000.0),
             ));
             self.writer.send(Signal::new(
-                0x0,
+                Actuator::Arm,
                 Metric::Rpm(self.arm_encoder.speed() as i32),
             ));
 
@@ -69,11 +77,11 @@ impl crate::net::Routable for Mecu {
             );
 
             self.writer.send(Signal::new(
-                0x1,
+                Actuator::Boom,
                 Metric::Angle(self.boom_encoder.position() as f32 / 1000.0),
             ));
             self.writer.send(Signal::new(
-                0x1,
+                Actuator::Boom,
                 Metric::Rpm(self.boom_encoder.speed() as i32),
             ));
 
@@ -89,11 +97,11 @@ impl crate::net::Routable for Mecu {
             );
 
             self.writer.send(Signal::new(
-                0x2,
+                Actuator::Slew,
                 Metric::Angle(self.frame_encoder.position() as f32 / 1000.0),
             ));
             self.writer.send(Signal::new(
-                0x2,
+                Actuator::Slew,
                 Metric::Rpm(self.frame_encoder.speed() as i32),
             ));
 
@@ -109,11 +117,11 @@ impl crate::net::Routable for Mecu {
             );
 
             self.writer.send(Signal::new(
-                0x3,
+                Actuator::Bucket,
                 Metric::Angle(self.attachment_encoder.position() as f32 / 1000.0),
             ));
             self.writer.send(Signal::new(
-                0x3,
+                Actuator::Bucket,
                 Metric::Rpm(self.attachment_encoder.speed() as i32),
             ));
 

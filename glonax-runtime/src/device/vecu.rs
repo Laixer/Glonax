@@ -30,8 +30,10 @@ impl crate::net::Routable for Vecu {
                 .ingress(glonax_j1939::PGN::ElectronicEngineController2, frame);
 
             if let Some(electronic_control) = self.engine_service.electronic_control() {
-                self.writer
-                    .send(Signal::new(0x5, Metric::Rpm(electronic_control.rpm as i32)));
+                self.writer.send(Signal::new(
+                    12_u32,
+                    Metric::Rpm(electronic_control.rpm as i32),
+                ));
             }
 
             true
