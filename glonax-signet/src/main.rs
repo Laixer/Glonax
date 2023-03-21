@@ -95,31 +95,58 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
-    use glonax::device::Mecu;
     use glonax::net::J1939Network;
+    use glonax::signal::SignalSource;
 
     let queue = glonax::signal::SignalQueueWriter::new().unwrap();
 
     let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?;
 
-    let mut mecu = Mecu::new(queue);
-
     let mut router = glonax::net::Router::new(net);
 
-    // loop {
-    //     queue.send(glonax::transport::Signal::new(
-    //         1_u32,
-    //         glonax::transport::signal::Metric::Angle(24500.0),
-    //     ));
-
-    //     tokio::time::sleep(std::time::Duration::from_millis(5)).await
-    // }
+    let mut engine_service = glonax::net::EngineService::new(0x0);
+    let mut frame_encoder = glonax::net::KueblerEncoderService::new(0x6A);
+    let mut boom_encoder = glonax::net::KueblerEncoderService::new(0x6B);
+    let mut arm_encoder = glonax::net::KueblerEncoderService::new(0x6C);
+    let mut attachment_encoder = glonax::net::KueblerEncoderService::new(0x6D);
 
     loop {
         if let Err(e) = router.listen().await {
             log::error!("{}", e);
         }
 
-        router.try_accept(&mut mecu);
+        if router.try_accept(&mut engine_service) {
+            log::debug!("{} » {}", router.frame_source().unwrap(), engine_service);
+
+            engine_service.fetch(&queue);
+        }
+
+        if router.try_accept(&mut frame_encoder) {
+            log::debug!("{} » {}", router.frame_source().unwrap(), frame_encoder);
+
+            frame_encoder.fetch(&queue);
+        }
+
+        if router.try_accept(&mut boom_encoder) {
+            log::debug!("{} » {}", router.frame_source().unwrap(), boom_encoder);
+
+            boom_encoder.fetch(&queue);
+        }
+
+        if router.try_accept(&mut arm_encoder) {
+            log::debug!("{} » {}", router.frame_source().unwrap(), arm_encoder);
+
+            arm_encoder.fetch(&queue);
+        }
+
+        if router.try_accept(&mut attachment_encoder) {
+            log::debug!(
+                "{} » {}",
+                router.frame_source().unwrap(),
+                attachment_encoder
+            );
+
+            attachment_encoder.fetch(&queue);
+        }
     }
 }

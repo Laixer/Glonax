@@ -1,4 +1,4 @@
-use glonax_j1939::{Frame, PGN};
+use glonax_j1939::Frame;
 
 use crate::net::{ActuatorService, J1939Network};
 
@@ -17,12 +17,8 @@ impl Hcu {
 }
 
 impl crate::net::Routable for Hcu {
-    fn node(&self) -> u8 {
-        DEVICE_NET_HCU_ADDR
-    }
-
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        self.service.ingress(pgn, frame)
+    fn ingress(&mut self, frame: &Frame) -> bool {
+        self.service.ingress(frame)
     }
 }
 

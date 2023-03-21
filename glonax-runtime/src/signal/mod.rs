@@ -3,6 +3,10 @@ use prost::Message;
 
 const QUEUE: &str = "/glonax_signal";
 
+pub trait SignalSource {
+    fn fetch(&self, writer: &SignalQueueWriter);
+}
+
 pub struct SignalQueueWriter(posixmq::PosixMq);
 
 impl SignalQueueWriter {

@@ -21,20 +21,23 @@ impl Vecu {
 
 impl crate::net::Routable for Vecu {
     fn node(&self) -> u8 {
-        self.engine_service.node()
+        0xff
     }
 
     fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
         if pgn == glonax_j1939::PGN::ElectronicEngineController2 {
-            self.engine_service
-                .ingress(glonax_j1939::PGN::ElectronicEngineController2, frame);
+            use crate::net::Routable2;
 
-            if let Some(electronic_control) = self.engine_service.electronic_control() {
-                self.writer.send(Signal::new(
-                    12_u32,
-                    Metric::Rpm(electronic_control.rpm as i32),
-                ));
-            }
+            self.engine_service.ingress(frame);
+
+            self.engine_service.kaas(&self.writer);
+
+            // if let Some(electronic_control) = self.engine_service.electronic_control() {
+            //     self.writer.send(Signal::new(
+            //         12_u32,
+            //         Metric::Rpm(electronic_control.rpm as i32),
+            //     ));
+            // }
 
             true
         } else {

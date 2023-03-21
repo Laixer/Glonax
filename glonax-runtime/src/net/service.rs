@@ -12,17 +12,13 @@ pub struct J1939ApplicationInspector {
 }
 
 impl Routable for J1939ApplicationInspector {
-    fn node(&self) -> u8 {
-        0xff
-    }
-
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
+    fn ingress(&mut self, frame: &Frame) -> bool {
         self.software_indent = None;
         self.request_pgn = None;
         self.address_claim = None;
         self.acknowledged = None;
 
-        match pgn {
+        match frame.id().pgn() {
             PGN::SoftwareIdentification => {
                 let mut major = 0;
                 let mut minor = 0;

@@ -11,12 +11,12 @@ pub struct ActuatorService {
 }
 
 impl Routable for ActuatorService {
-    fn node(&self) -> u8 {
-        self.node
-    }
+    fn ingress(&mut self, frame: &Frame) -> bool {
+        if frame.id().sa() != self.node {
+            return false;
+        }
 
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        if pgn == PGN::Other(40_960) {
+        if frame.id().pgn() == PGN::Other(40_960) {
             if frame.pdu()[0..2] != [0xff, 0xff] {
                 self.actuators[0] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
             }
@@ -30,7 +30,7 @@ impl Routable for ActuatorService {
                 self.actuators[3] = Some(i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()));
             }
             true
-        } else if pgn == PGN::Other(41_216) {
+        } else if frame.id().pgn() == PGN::Other(41_216) {
             if frame.pdu()[0..2] != [0xff, 0xff] {
                 self.actuators[4] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
             }

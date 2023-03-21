@@ -25,48 +25,46 @@ impl std::fmt::Display for EncoderState {
 }
 
 pub struct KueblerEncoderService {
-    node: u8,
+    pub node: u8,
     position: u32,
     speed: u16,
     state: Option<EncoderState>,
 }
 
-#[async_trait::async_trait]
 impl Routable for KueblerEncoderService {
-    fn node(&self) -> u8 {
-        self.node
-    }
-
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        if pgn == PGN::ProprietaryB(65_450) {
-            let position_bytes = &frame.pdu()[0..4];
-            if position_bytes != [0xff; 4] {
-                self.position = u32::from_le_bytes(position_bytes.try_into().unwrap());
-            };
-
-            let speed_bytes = &frame.pdu()[4..6];
-            if speed_bytes != [0xff; 2] {
-                self.speed = u16::from_le_bytes(speed_bytes.try_into().unwrap());
-            };
-
-            let state_bytes = &frame.pdu()[6..8];
-            if state_bytes != [0xff; 2] {
-                let state = u16::from_le_bytes(state_bytes.try_into().unwrap());
-
-                self.state = Some(match state {
-                    0x0 => EncoderState::NoError,
-                    0xee00 => EncoderState::GeneralSensorError,
-                    0xee01 => EncoderState::InvalidMUR,
-                    0xee02 => EncoderState::InvalidTMR,
-                    0xee03 => EncoderState::InvalidPreset,
-                    _ => EncoderState::Other,
-                });
-            }
-
-            true
-        } else {
-            false
+    fn ingress(&mut self, frame: &Frame) -> bool {
+        if frame.id().pgn() != PGN::ProprietaryB(65_450) {
+            return false;
         }
+        if frame.id().sa() != self.node {
+            return false;
+        }
+
+        let position_bytes = &frame.pdu()[0..4];
+        if position_bytes != [0xff; 4] {
+            self.position = u32::from_le_bytes(position_bytes.try_into().unwrap());
+        };
+
+        let speed_bytes = &frame.pdu()[4..6];
+        if speed_bytes != [0xff; 2] {
+            self.speed = u16::from_le_bytes(speed_bytes.try_into().unwrap());
+        };
+
+        let state_bytes = &frame.pdu()[6..8];
+        if state_bytes != [0xff; 2] {
+            let state = u16::from_le_bytes(state_bytes.try_into().unwrap());
+
+            self.state = Some(match state {
+                0x0 => EncoderState::NoError,
+                0xee00 => EncoderState::GeneralSensorError,
+                0xee01 => EncoderState::InvalidMUR,
+                0xee02 => EncoderState::InvalidTMR,
+                0xee03 => EncoderState::InvalidPreset,
+                _ => EncoderState::Other,
+            });
+        }
+
+        true
     }
 }
 
@@ -86,6 +84,19 @@ impl std::fmt::Display for KueblerEncoderService {
     }
 }
 
+impl crate::signal::SignalSource for KueblerEncoderService {
+    fn fetch(&self, writer: &crate::signal::SignalQueueWriter) {
+        writer.send(crate::transport::Signal::new(
+            self.node as u32,
+            crate::transport::signal::Metric::Angle(self.position as f32 / 1000.0),
+        ));
+        writer.send(crate::transport::Signal::new(
+            self.node as u32,
+            crate::transport::signal::Metric::Rpm(self.speed as i32),
+        ));
+    }
+}
+
 impl KueblerEncoderService {
     pub fn new(node: u8) -> Self {
         Self {
@@ -94,15 +105,5 @@ impl KueblerEncoderService {
             speed: 0,
             state: None,
         }
-    }
-
-    #[inline]
-    pub fn position(&self) -> u32 {
-        self.position
-    }
-
-    #[inline]
-    pub fn speed(&self) -> u16 {
-        self.speed
     }
 }

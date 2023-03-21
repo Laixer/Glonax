@@ -2,21 +2,11 @@ use glonax_j1939::{
     decode::{EngineStarterMode, EngineTorqueMode},
     *,
 };
-// use serde::{Deserialize, Serialize};
 
 use super::Routable;
 
-#[derive(Copy, Clone, Debug)]
-pub struct ElectrnoicControl {
-    // engine_torque_mode: EngineTorqueMode,
-    pub driver_demand: u8,
-    pub actual_engine: u8,
-    pub rpm: u16,
-    // starter_mode: EngineStarterMode,
-}
-
 pub struct EngineService {
-    node: u8,
+    pub node: u8,
     engine_torque_mode: Option<EngineTorqueMode>,
     driver_demand: Option<u8>,
     actual_engine: Option<u8>,
@@ -25,25 +15,23 @@ pub struct EngineService {
     starter_mode: Option<EngineStarterMode>,
 }
 
-#[async_trait::async_trait]
 impl Routable for EngineService {
-    fn node(&self) -> u8 {
-        self.node
-    }
-
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool {
-        if pgn == PGN::ElectronicEngineController2 {
-            self.engine_torque_mode = decode::spn899(frame.pdu()[0]);
-            self.driver_demand = decode::spn512(frame.pdu()[1]);
-            self.actual_engine = decode::spn513(frame.pdu()[2]);
-            self.rpm = decode::spn190(&frame.pdu()[3..5].try_into().unwrap());
-            self.source_addr = decode::spn1483(frame.pdu()[5]);
-            self.starter_mode = decode::spn1675(frame.pdu()[6]);
-
-            true
-        } else {
-            false
+    fn ingress(&mut self, frame: &Frame) -> bool {
+        if frame.id().pgn() != PGN::ElectronicEngineController2 {
+            return false;
         }
+        if frame.id().sa() != self.node {
+            return false;
+        }
+
+        self.engine_torque_mode = decode::spn899(frame.pdu()[0]);
+        self.driver_demand = decode::spn512(frame.pdu()[1]);
+        self.actual_engine = decode::spn513(frame.pdu()[2]);
+        self.rpm = decode::spn190(&frame.pdu()[3..5].try_into().unwrap());
+        self.source_addr = decode::spn1483(frame.pdu()[5]);
+        self.starter_mode = decode::spn1675(frame.pdu()[6]);
+
+        true
     }
 }
 
@@ -61,6 +49,23 @@ impl std::fmt::Display for EngineService {
     }
 }
 
+impl crate::signal::SignalSource for EngineService {
+    fn fetch(&self, writer: &crate::signal::SignalQueueWriter) {
+        // if let Some(driver_demand) = self.driver_demand {
+        //     writer.send(crate::transport::Signal::new(
+        //         self.node as u32,
+        //         crate::transport::signal::Metric::Rpm(driver_demand as i32),
+        //     ))
+        // }
+        if let Some(rpm) = self.rpm {
+            writer.send(crate::transport::Signal::new(
+                self.node as u32,
+                crate::transport::signal::Metric::Rpm(rpm as i32),
+            ))
+        }
+    }
+}
+
 impl EngineService {
     pub fn new(node: u8) -> Self {
         Self {
@@ -73,22 +78,6 @@ impl EngineService {
             starter_mode: None,
         }
     }
-
-    pub fn electronic_control(&self) -> Option<ElectrnoicControl> {
-        if self.rpm.is_some() {
-            Some(ElectrnoicControl {
-                driver_demand: self.driver_demand.unwrap(),
-                actual_engine: self.actual_engine.unwrap(),
-                rpm: self.rpm.unwrap(),
-            })
-        } else {
-            None
-        }
-    }
-
-    pub fn rpm(&self) -> Option<u16> {
-        self.rpm
-    }
 }
 
 #[test]
@@ -98,10 +87,7 @@ fn engine_service_engine_on() {
     let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
         .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
         .build();
-    assert_eq!(
-        engine_service.ingress(PGN::ElectronicEngineController2, &frame),
-        true
-    );
+    assert_eq!(engine_service.ingress(&frame), true);
     assert_eq!(
         engine_service.engine_torque_mode.unwrap(),
         EngineTorqueMode::NoRequest
@@ -124,10 +110,7 @@ fn engine_service_engine_off() {
         .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
         .build();
 
-    assert_eq!(
-        engine_service.ingress(PGN::ElectronicEngineController2, &frame),
-        true
-    );
+    assert_eq!(engine_service.ingress(&frame), true);
     assert_eq!(
         engine_service.engine_torque_mode.unwrap(),
         EngineTorqueMode::PTOGovernor

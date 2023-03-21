@@ -54,7 +54,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut engine_service) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_node(engine_service.node),
                 Yellow.bold().paint("Engine"),
                 engine_service
             );
@@ -63,7 +63,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut arm_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_node(arm_encoder.node),
                 Yellow.bold().paint("Arm"),
                 arm_encoder
             );
@@ -72,7 +72,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut boom_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_node(boom_encoder.node),
                 Yellow.bold().paint("Boom"),
                 boom_encoder
             );
@@ -81,7 +81,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut frame_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_node(frame_encoder.node),
                 Yellow.bold().paint("Frame"),
                 frame_encoder
             );
@@ -90,7 +90,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut attachment_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_node(attachment_encoder.node),
                 Yellow.bold().paint("Attachment"),
                 attachment_encoder
             );

@@ -130,9 +130,7 @@ impl J1939Network {
 }
 
 pub trait Routable: Send + Sync {
-    fn node(&self) -> u8;
-
-    fn ingress(&mut self, pgn: PGN, frame: &Frame) -> bool;
+    fn ingress(&mut self, frame: &Frame) -> bool;
 }
 
 pub struct Router {
@@ -226,11 +224,6 @@ impl Router {
     }
 
     pub fn try_accept(&self, service: &mut impl Routable) -> bool {
-        if let Some(frame) = self.frame {
-            (service.node() == frame.id().sa() || service.node() == 0xff)
-                && service.ingress(frame.id().pgn(), &frame)
-        } else {
-            false
-        }
+        self.frame.map_or(false, |frame| service.ingress(&frame))
     }
 }
