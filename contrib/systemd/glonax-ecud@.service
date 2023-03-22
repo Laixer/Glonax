@@ -2,8 +2,8 @@
 Description=Glonax Electronic Control Unit Proxy
 StartLimitIntervalSec=5
 StartLimitBurst=5
-Wants=sys-subsystem-net-devices-%i.device mosquitto.service
-After=sys-subsystem-net-devices-%i.device mosquitto.service
+Wants=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
 
 [Service]
 WorkingDirectory=/var/lib/glonax

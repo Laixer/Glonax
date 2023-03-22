@@ -2,8 +2,8 @@
 Description=Glonax Input Event Handler
 StartLimitIntervalSec=5
 StartLimitBurst=5
-BindsTo=sys-subsystem-input-%i.device mosquitto.service
-After=sys-subsystem-input-%i.device mosquitto.service
+BindsTo=sys-subsystem-input-%i.device
+After=sys-subsystem-input-%i.device
 
 [Service]
 WorkingDirectory=/var/lib/glonax
