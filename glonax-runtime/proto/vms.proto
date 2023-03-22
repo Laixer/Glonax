@@ -52,6 +52,7 @@ message Motion {
 
 message Signal {
   uint32 address = 1;
+  uint32 function = 2;
 
   message vector3 {
     float x = 1;
@@ -61,16 +62,16 @@ message Signal {
 
   oneof metric {
     // Temperature in celcius.
-    float temperature = 2;
+    float temperature = 10;
     // Angle in radians.
-    float angle = 3;
+    float angle = 11;
     // Speed in meters per second.
-    float speed = 4;
+    float speed = 12;
     // Revolutions per minute.
-    int32 rpm = 5;
+    int32 rpm = 13;
     // Acceleration in mg.
-    vector3 acceleration = 6;
+    vector3 acceleration = 14;
     // Percentage.
-    int32 percent = 7;
+    int32 percent = 15;
   }
 }

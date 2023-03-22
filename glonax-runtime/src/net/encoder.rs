@@ -88,10 +88,12 @@ impl crate::signal::SignalSource for KueblerEncoderService {
     fn fetch(&self, writer: &crate::signal::SignalQueueWriter) {
         writer.send(crate::transport::Signal::new(
             self.node as u32,
+            0,
             crate::transport::signal::Metric::Angle(self.position as f32 / 1000.0),
         ));
         writer.send(crate::transport::Signal::new(
             self.node as u32,
+            1,
             crate::transport::signal::Metric::Rpm(self.speed as i32),
         ));
     }
