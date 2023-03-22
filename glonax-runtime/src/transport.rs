@@ -68,6 +68,7 @@ impl std::fmt::Display for signal::Metric {
             signal::Metric::Angle(value) => write!(f, "Angle: {:>+5}", value),
             signal::Metric::Speed(value) => write!(f, "Speed: {:>+5}", value),
             signal::Metric::Rpm(value) => write!(f, "RPM: {:>+5}", value),
+            signal::Metric::Percent(value) => write!(f, "Per: {:>+5}%", value),
         }
     }
 }

@@ -70,5 +70,7 @@ message Signal {
     int32 rpm = 5;
     // Acceleration in mg.
     vector3 acceleration = 6;
+    // Percentage.
+    int32 percent = 7;
   }
 }
