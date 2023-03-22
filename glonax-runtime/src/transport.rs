@@ -35,9 +35,10 @@ impl std::fmt::Display for Motion {
 }
 
 impl Signal {
-    pub fn new<I: Into<u32>>(address: I, metric: signal::Metric) -> Self {
+    pub fn new<I: Into<u32>>(address: I, function: I, metric: signal::Metric) -> Self {
         Self {
             address: address.into(),
+            function: function.into(),
             metric: Some(metric),
         }
     }
