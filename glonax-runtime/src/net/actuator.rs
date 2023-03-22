@@ -104,6 +104,30 @@ impl ActuatorService {
         trace!("Enable motion");
     }
 
+    // TODO: Maybe move into a trait
+    pub async fn actuate(&mut self, motion: crate::transport::Motion) {
+        match motion.r#type() {
+            crate::transport::motion::MotionType::None => panic!("NONE should not be used"),
+            crate::transport::motion::MotionType::StopAll => {
+                self.lock().await;
+            }
+            crate::transport::motion::MotionType::ResumeAll => {
+                self.unlock().await;
+            }
+            crate::transport::motion::MotionType::Change => {
+                self.actuator_control(
+                    motion
+                        .changes
+                        .into_iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value as i16))
+                        .collect(),
+                )
+                .await;
+            }
+        }
+    }
+
+    // TODO: If possible make immutable.
     pub async fn actuator_control(&mut self, actuators: HashMap<u8, i16>) {
         const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
         const BANK_SLOTS: usize = 4;

@@ -281,17 +281,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86d7a0c1aa76363dac491de0ee99faf6941128376f1cf96f07db7603b7de69dd"
 
 [[package]]
-name = "futures-macro"
-version = "0.3.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3eb14ed937631bd8b8b8977f2c198443447a8355b6e3ca599f38c975e5a963b6"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "futures-sink"
 version = "0.3.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -310,11 +299,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ef6b17e481503ec85211fed8f39d1970f128935ca1f814cd32ac4a6842e84ab"
 dependencies = [
  "futures-core",
- "futures-macro",
  "futures-task",
  "pin-project-lite 0.2.9",
  "pin-utils",
- "slab",
 ]
 
 [[package]]
@@ -351,12 +338,10 @@ dependencies = [
  "async-stream",
  "clap",
  "futures-core",
- "futures-util",
  "glonax",
  "log",
  "simplelog",
  "tokio 1.26.0",
- "tokio-stream",
  "tonic",
 ]
 

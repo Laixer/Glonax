@@ -10,8 +10,6 @@ glonax = { version = "3.0", path = "../glonax-runtime" }
 tonic = "0.8"
 
 futures-core = "0.3"
-futures-util = "0.3"
-tokio-stream = "0.1"
 async-stream = "0.3.4"
 
 log = "0.4"

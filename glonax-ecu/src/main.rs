@@ -90,22 +90,22 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-use glonax::device::Hcu;
 use glonax::net::J1939Network;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
-    motion_device: Arc<Mutex<Hcu>>,
+    motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
 }
 
 impl VehicleManagemetService {
     pub fn new(config: config::EcuConfig) -> Self {
         let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
+        let service = glonax::net::ActuatorService::new(net, 0x4A);
 
         Self {
-            motion_device: Arc::new(Mutex::new(Hcu::new(net))),
+            motion_device: Arc::new(Mutex::new(service)),
         }
     }
 }
@@ -139,8 +139,6 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
 
         let output = async_stream::try_stream! {
             while let Ok(signal) = signal_queue.recv().await {
-                log::debug!("We got ze signal: {}", signal);
-
                 yield signal;
             }
         };
