@@ -91,8 +91,6 @@ impl SignalQueueReaderAsync {
                     .max_msg_len
             ];
 
-            // let (_, len) = self.0.recv(&mut buf).unwrap();
-
             match guard.try_io(|inner| inner.get_ref().recv(&mut buf)) {
                 Ok(result) => {
                     let (_, len) = result.unwrap();
@@ -111,23 +109,4 @@ impl SignalQueueReaderAsync {
             }
         }
     }
-
-    // pub async fn write(&self, buf: &[u8]) -> std::io::Result<usize> {
-    //     loop {
-    //         let mut guard = self.inner.writable().await?;
-
-    //         match guard.try_io(|inner| inner.get_ref().write(buf)) {
-    //             Ok(result) => return result,
-    //             Err(_would_block) => continue,
-    //         }
-    //     }
-    // }
 }
-
-// impl tonic::codegen::futures_core::Stream for SignalQueueReader {
-//     type Item = Signal;
-
-//     fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Option<Self::Item>> {
-//         std::task::Poll::Ready(Some(self.recv().unwrap()))
-//     }
-// }

@@ -40,11 +40,3 @@ pub fn deg_to_rad(input: f32) -> f32 {
 pub fn rad_to_deg(input: f32) -> f32 {
     input * (180.0 / PI)
 }
-
-pub trait Identity {
-    /// Introduction message.
-    ///
-    /// Returns a string to introduce the object for the first time and
-    /// should only be called once.
-    fn intro() -> String;
-}

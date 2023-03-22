@@ -134,7 +134,7 @@ pub trait Routable: Send + Sync {
 }
 
 pub struct Router {
-    net: J1939Network,
+    net: Vec<J1939Network>,
     frame: Option<Frame>,
     filter_pgn: Vec<u32>,
     filter_node: Vec<u8>,
@@ -143,14 +143,20 @@ pub struct Router {
 
 impl FromIterator<J1939Network> for Router {
     fn from_iter<T: IntoIterator<Item = J1939Network>>(iter: T) -> Self {
-        Self::new(iter.into_iter().next().unwrap())
+        Self {
+            net: Vec::from_iter(iter),
+            frame: None,
+            filter_pgn: vec![],
+            filter_node: vec![],
+            node_table: HashMap::new(),
+        }
     }
 }
 
 impl Router {
     pub fn new(net: J1939Network) -> Self {
         Self {
-            net,
+            net: vec![net],
             frame: None,
             filter_pgn: vec![],
             filter_node: vec![],
@@ -191,7 +197,7 @@ impl Router {
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
-            let frame = self.net.accept().await?;
+            let frame = self.net.first().unwrap().accept().await?;
 
             let node_address = frame.id().sa();
 
