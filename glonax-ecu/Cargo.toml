@@ -14,8 +14,8 @@ async-stream = "0.3.4"
 
 log = "0.4"
 anyhow = "1.0"
-tokio = { version = "1.25", features = ["full"] }
-clap = { version = "4.0", features = ["derive"] }
+tokio = { version = "1.27", features = ["full"] }
+clap = { version = "4.1", features = ["derive"] }
 simplelog = "0.12"
 
 [[bin]]

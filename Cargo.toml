@@ -7,7 +7,6 @@ strip = true        # Strip symbols from binary*
 [workspace]
 members = [
   "glonax-j1939",
-  "glonax-net",
   "glonax-runtime",
   "glonax-serial",
   "glonax-input",
