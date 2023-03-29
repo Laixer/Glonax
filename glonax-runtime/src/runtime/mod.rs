@@ -15,3 +15,10 @@ pub struct RuntimeContext {
         tokio::sync::broadcast::Receiver<()>,
     ),
 }
+
+impl RuntimeContext {
+    /// Listen for shutdown signal.
+    pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
+        self.shutdown.0.subscribe()
+    }
+}

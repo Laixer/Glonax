@@ -101,9 +101,9 @@ async fn main() -> anyhow::Result<()> {
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     use glonax::net::J1939Network;
     use glonax::net::{EngineService, KueblerEncoderService};
-    use glonax::signal::SignalSource;
+    use glonax::queue::SignalSource;
 
-    let queue = glonax::signal::SignalQueueWriter::new().unwrap();
+    let queue = glonax::queue::SignalQueueWriter::new().unwrap();
 
     // TODO: Assign new network ID to each J1939 network.
     let mut router = glonax::net::Router::from_iter(
@@ -130,7 +130,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
             if router.try_accept(service) {
                 log::debug!("{} » {}", router.frame_source().unwrap(), service);
 
-                service.fetch(&queue);
+                // service.fetch(&queue);
             }
         }
 
@@ -138,7 +138,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
             if router.try_accept(encoder) {
                 log::debug!("{} » {}", router.frame_source().unwrap(), encoder);
 
-                encoder.fetch(&queue);
+                // encoder.fetch(&queue);
             }
         }
     }

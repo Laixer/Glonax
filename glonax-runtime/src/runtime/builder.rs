@@ -1,7 +1,5 @@
 use crate::{config::Configurable, RuntimeContext};
 
-// use super::Operand;
-
 /// Runtime builder.
 ///
 /// The runtime builder is a convenient wrapper around the runtime core. It
@@ -22,11 +20,14 @@ impl Builder {
         Ok(Self(RuntimeContext {
             // operand: K::from_config(config),
             shutdown: broadcast::channel(1),
-            // eventhub: EventHub::new(config.global()),
         }))
     }
 
-    pub fn enable_term_shutdown(self) -> Self {
+    /// Enable termination signal shutdown.
+    ///
+    /// This method will spawn a task that will listen for a termination signal.
+    /// When the signal is received, the runtime will be shutdown.
+    pub fn enable_shutdown(self) -> Self {
         debug!("Enable signals shutdown");
 
         let sender = self.0.shutdown.0.clone();

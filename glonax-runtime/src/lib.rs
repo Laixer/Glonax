@@ -7,7 +7,7 @@
 pub mod core;
 pub mod device;
 pub mod net;
-pub mod signal;
+pub mod queue;
 pub mod transport;
 
 #[macro_use]

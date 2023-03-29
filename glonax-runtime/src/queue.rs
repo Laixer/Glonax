@@ -7,6 +7,10 @@ pub trait SignalSource {
     fn fetch(&self, writer: &SignalQueueWriter);
 }
 
+pub trait SignalSource2 {
+    fn fetch(&self, writer: &SignalQueueWriter2);
+}
+
 pub struct SignalQueueWriter(posixmq::PosixMq);
 
 impl SignalQueueWriter {
@@ -26,6 +30,25 @@ impl SignalQueueWriter {
         }
     }
 }
+
+pub struct SignalQueueWriter2(tokio::sync::broadcast::Sender<Signal>);
+
+impl SignalQueueWriter2 {
+    pub fn new(sender: tokio::sync::broadcast::Sender<Signal>) -> Result<Self, std::io::Error> {
+        Ok(Self(sender))
+    }
+
+    pub fn send(&self, signal: Signal) {
+        match self.0.send(signal.clone()) {
+            Ok(_) => trace!("Published signal: {}", signal),
+            Err(_) => warn!("Failed to publish motion"),
+        }
+    }
+}
+
+/// //////////////////////////////
+/// /////////////////////////////////
+/// /////////////////////////////////
 
 pub struct SignalQueueReader(posixmq::PosixMq);
 
@@ -108,5 +131,23 @@ impl SignalQueueReaderAsync {
                 Err(_would_block) => continue,
             }
         }
+    }
+}
+
+///////////
+/// /////////////////////////////////
+///
+
+pub struct SignalQueueReaderAsync2 {
+    inner: tokio::sync::broadcast::Receiver<Signal>,
+}
+
+impl SignalQueueReaderAsync2 {
+    pub fn new(reader: tokio::sync::broadcast::Receiver<Signal>) -> std::io::Result<Self> {
+        Ok(Self { inner: reader })
+    }
+
+    pub async fn recv(&mut self) -> Result<Signal, ()> {
+        Ok(self.inner.recv().await.unwrap())
     }
 }

@@ -97,15 +97,17 @@ use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
     motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
+    reader: std::sync::Arc<tokio::sync::Mutex<glonax::queue::SignalQueueReaderAsync2>>,
 }
 
 impl VehicleManagemetService {
-    pub fn new(config: config::EcuConfig) -> Self {
+    pub fn new(config: config::EcuConfig, reader: glonax::queue::SignalQueueReaderAsync2) -> Self {
         let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
         let service = glonax::net::ActuatorService::new(net, 0x4A);
 
         Self {
             motion_device: Arc::new(Mutex::new(service)),
+            reader: std::sync::Arc::new(tokio::sync::Mutex::new(reader)),
         }
     }
 }
@@ -135,10 +137,17 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
         &self,
         _request: tonic::Request<glonax::transport::Empty>,
     ) -> Result<tonic::Response<Self::ListenSignalStream>, tonic::Status> {
-        let signal_queue = glonax::signal::SignalQueueReaderAsync::new().unwrap();
+        // let signal_queue = glonax::queue::SignalQueueReaderAsync::new().unwrap();
 
+        let r = self.reader.clone();
+
+        // let output = async_stream::try_stream! {
+        //     while let Ok(signal) = signal_queue.recv().await {
+        //         yield signal;
+        //     }
+        // };
         let output = async_stream::try_stream! {
-            while let Ok(signal) = signal_queue.recv().await {
+            while let Ok(signal) = r.lock().await.recv().await {
                 yield signal;
             }
         };
@@ -147,16 +156,81 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
     }
 }
 
+async fn signal_listener(
+    config: config::EcuConfig,
+    writer: glonax::queue::SignalQueueWriter2,
+    mut shutdown: tokio::sync::broadcast::Receiver<()>,
+) {
+    use glonax::net::{EngineService, KueblerEncoderService};
+    use glonax::queue::SignalSource2;
+
+    // TODO: Assign new network ID to each J1939 network.
+    let network = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
+    let mut router = glonax::net::Router::new(network);
+
+    let mut engine_service_list = vec![EngineService::new(0x0)];
+    let mut encoder_list = vec![
+        KueblerEncoderService::new(0x6A),
+        KueblerEncoderService::new(0x6B),
+        KueblerEncoderService::new(0x6C),
+        KueblerEncoderService::new(0x6D),
+    ];
+
+    log::debug!("Listening for service signals");
+
+    loop {
+        tokio::select! {
+            _ = shutdown.recv() => {
+                log::debug!("Shutting down service listeners");
+                break;
+            }
+            _ = router.listen() => {}
+        }
+
+        for service in &mut engine_service_list {
+            if router.try_accept(service) {
+                log::debug!("{} » {}", router.frame_source().unwrap(), service);
+
+                service.fetch(&writer);
+            }
+        }
+
+        for encoder in &mut encoder_list {
+            if router.try_accept(encoder) {
+                log::debug!("{} » {}", router.frame_source().unwrap(), encoder);
+
+                encoder.fetch(&writer);
+            }
+        }
+    }
+}
+
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let addr = config.address.parse()?;
+
+    let builder = glonax::RuntimeBuilder::from_config(config)?
+        .enable_shutdown()
+        .build();
+
+    let queue = tokio::sync::broadcast::channel(10);
+    let queue_writer = glonax::queue::SignalQueueWriter2::new(queue.0).unwrap();
+    let queue_reader = glonax::queue::SignalQueueReaderAsync2::new(queue.1).unwrap();
+
+    tokio::spawn(signal_listener(
+        config.clone(),
+        queue_writer,
+        builder.shutdown_signal(),
+    ));
 
     Server::builder()
         .add_service(
             glonax::transport::vehicle_management_server::VehicleManagementServer::new(
-                VehicleManagemetService::new(config.clone()),
+                VehicleManagemetService::new(config.clone(), queue_reader),
             ),
         )
-        .serve(addr)
+        .serve_with_shutdown(addr, async {
+            builder.shutdown_signal().recv().await.unwrap();
+        })
         .await?;
 
     Ok(())
