@@ -50,26 +50,8 @@ impl std::fmt::Display for EngineService {
     }
 }
 
-// impl crate::queue::SignalSource for EngineService {
-//     fn fetch(&self, writer: &crate::queue::SignalQueueWriter) {
-//         // if let Some(driver_demand) = self.driver_demand {
-//         //     writer.send(crate::transport::Signal::new(
-//         //         self.node as u32,
-//         //         crate::transport::signal::Metric::Rpm(driver_demand as i32),
-//         //     ))
-//         // }
-//         if let Some(rpm) = self.rpm {
-//             writer.send(crate::transport::Signal::new(
-//                 self.node as u32,
-//                 0,
-//                 crate::transport::signal::Metric::Rpm(rpm as i32),
-//             ))
-//         }
-//     }
-// }
-
-impl crate::queue::SignalSource2 for EngineService {
-    fn fetch(&self, writer: &crate::queue::SignalQueueWriter2) {
+impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineService {
+    fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
         // if let Some(driver_demand) = self.driver_demand {
         //     writer.send(crate::transport::Signal::new(
         //         self.node as u32,

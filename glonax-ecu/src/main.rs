@@ -97,11 +97,16 @@ use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
     motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
-    reader: std::sync::Arc<tokio::sync::Mutex<glonax::queue::SignalQueueReaderAsync2>>,
+    reader: std::sync::Arc<
+        tokio::sync::Mutex<glonax::channel::BroadcastChannelReader<glonax::transport::Signal>>,
+    >,
 }
 
 impl VehicleManagemetService {
-    pub fn new(config: config::EcuConfig, reader: glonax::queue::SignalQueueReaderAsync2) -> Self {
+    pub fn new(
+        config: config::EcuConfig,
+        reader: glonax::channel::BroadcastChannelReader<glonax::transport::Signal>,
+    ) -> Self {
         let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
         let service = glonax::net::ActuatorService::new(net, 0x4A);
 
@@ -158,11 +163,11 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
 
 async fn signal_listener(
     config: config::EcuConfig,
-    writer: glonax::queue::SignalQueueWriter2,
+    writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
     mut shutdown: tokio::sync::broadcast::Receiver<()>,
 ) {
+    use glonax::channel::BroadcastSource;
     use glonax::net::{EngineService, KueblerEncoderService};
-    use glonax::queue::SignalSource2;
 
     // TODO: Assign new network ID to each J1939 network.
     let network = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
@@ -209,29 +214,31 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let addr = config.address.parse()?;
 
     let builder = glonax::RuntimeBuilder::from_config(config)?
-        .enable_shutdown()
+        .with_shutdown()
         .build();
 
-    let queue = tokio::sync::broadcast::channel(10);
-    let queue_writer = glonax::queue::SignalQueueWriter2::new(queue.0).unwrap();
-    let queue_reader = glonax::queue::SignalQueueReaderAsync2::new(queue.1).unwrap();
+    let channel_signal = glonax::channel::BroadcastChannel::new(10);
+    let signal_reader = channel_signal.reader();
+    let signal_writer = channel_signal.writer();
 
     tokio::spawn(signal_listener(
         config.clone(),
-        queue_writer,
+        signal_writer,
         builder.shutdown_signal(),
     ));
 
     Server::builder()
         .add_service(
             glonax::transport::vehicle_management_server::VehicleManagementServer::new(
-                VehicleManagemetService::new(config.clone(), queue_reader),
+                VehicleManagemetService::new(config.clone(), signal_reader),
             ),
         )
         .serve_with_shutdown(addr, async {
             builder.shutdown_signal().recv().await.unwrap();
         })
         .await?;
+
+    log::debug!("ECU was shutdown gracefully");
 
     Ok(())
 }

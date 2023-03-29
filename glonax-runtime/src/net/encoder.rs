@@ -88,23 +88,8 @@ impl std::fmt::Display for KueblerEncoderService {
     }
 }
 
-// impl crate::queue::SignalSource for KueblerEncoderService {
-//     fn fetch(&self, writer: &crate::queue::SignalQueueWriter) {
-//         writer.send(crate::transport::Signal::new(
-//             self.node as u32,
-//             0,
-//             crate::transport::signal::Metric::Angle(self.position as f32 / 1000.0),
-//         ));
-//         writer.send(crate::transport::Signal::new(
-//             self.node as u32,
-//             1,
-//             crate::transport::signal::Metric::Rpm(self.speed as i32),
-//         ));
-//     }
-// }
-
-impl crate::queue::SignalSource2 for KueblerEncoderService {
-    fn fetch(&self, writer: &crate::queue::SignalQueueWriter2) {
+impl crate::channel::BroadcastSource<crate::transport::Signal> for KueblerEncoderService {
+    fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
         writer.send(crate::transport::Signal::new(
             self.node as u32,
             0,
