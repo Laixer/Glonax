@@ -21,4 +21,24 @@ impl RuntimeContext {
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
         self.shutdown.0.subscribe()
     }
+
+    /// Spawn an asynchronous task in the background.
+    ///
+    /// The task will be terminated when the runtime is shutdown or when the
+    /// shutdown signal is received.
+    pub fn spawn_background_task<T>(&self, task: T)
+    where
+        T: std::future::Future<Output = ()> + Send + 'static,
+    {
+        let mut shutdown = self.shutdown_signal();
+
+        tokio::spawn(async move {
+            tokio::select! {
+                _ = shutdown.recv() => {
+                    log::debug!("Shutting down background task");
+                }
+                _ = task => {}
+            }
+        });
+    }
 }

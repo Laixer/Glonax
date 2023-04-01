@@ -90,7 +90,7 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-use glonax::net::J1939Network;
+use glonax::{net::J1939Network, Configurable};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
@@ -161,10 +161,11 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
     }
 }
 
+// TODO: Even though the same confiig is used as for the motion command, the signal listeners
+// should be able to listen on a different network.
 async fn signal_listener(
     config: config::EcuConfig,
     writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
-    mut shutdown: tokio::sync::broadcast::Receiver<()>,
 ) {
     use glonax::channel::BroadcastSource;
     use glonax::net::{EngineService, KueblerEncoderService};
@@ -184,13 +185,9 @@ async fn signal_listener(
     log::debug!("Listening for service signals");
 
     loop {
-        tokio::select! {
-            _ = shutdown.recv() => {
-                log::debug!("Shutting down service listeners");
-                break;
-            }
-            _ = router.listen() => {}
-        }
+        if let Err(e) = router.listen().await {
+            log::error!("Error while listening for signals: {}", e);
+        };
 
         for service in &mut engine_service_list {
             if router.try_accept(service) {
@@ -221,11 +218,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let signal_reader = channel_signal.reader();
     let signal_writer = channel_signal.writer();
 
-    tokio::spawn(signal_listener(
-        config.clone(),
-        signal_writer,
-        builder.shutdown_signal(),
-    ));
+    builder.spawn_background_task(signal_listener(config.clone(), signal_writer));
 
     Server::builder()
         .add_service(
@@ -238,7 +231,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
         })
         .await?;
 
-    log::debug!("ECU was shutdown gracefully");
+    log::debug!("{} was shutdown gracefully", config.global().bin_name);
 
     Ok(())
 }
