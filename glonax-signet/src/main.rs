@@ -17,9 +17,9 @@ const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 struct Args {
     /// CAN network interfaces.
     interface: Vec<String>,
-    /// Disable machine motion (frozen mode).
-    #[arg(long)]
-    disable_motion: bool,
+    /// Trace items per file.
+    #[arg(long, default_value_t = 100_000)]
+    items_per_file: u32,
     /// Run motion requests slow.
     #[arg(long)]
     slow_motion: bool,
@@ -41,14 +41,13 @@ async fn main() -> anyhow::Result<()> {
         args.interface.first().unwrap().to_string()
     );
 
-    let mut config = config::EcuConfig {
+    let mut config = config::TraceConfig {
         interface: args.interface,
+        items_per_file: args.items_per_file,
         global: glonax::GlobalConfig::default(),
     };
 
     config.global.bin_name = bin_name;
-    config.global.enable_motion = !args.disable_motion;
-    config.global.slow_motion = args.slow_motion;
     config.global.daemon = args.daemon;
 
     let mut log_config = simplelog::ConfigBuilder::new();
@@ -98,12 +97,14 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
-    use glonax::net::J1939Network;
-    use glonax::net::{EngineService, KueblerEncoderService};
-    use glonax::queue::SignalSource;
-
-    let queue = glonax::queue::SignalQueueWriter::new().unwrap();
+// TODO: Even though the same confiig is used as for the motion command, the signal listeners
+// should be able to listen on a different network.
+async fn signal_listener(
+    config: config::TraceConfig,
+    writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
+) {
+    use glonax::channel::BroadcastSource;
+    use glonax::net::{EngineService, J1939Network, KueblerEncoderService};
 
     // TODO: Assign new network ID to each J1939 network.
     let mut router = glonax::net::Router::from_iter(
@@ -121,16 +122,18 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
         KueblerEncoderService::new(0x6D),
     ];
 
+    log::debug!("Listening for service signals");
+
     loop {
         if let Err(e) = router.listen().await {
             log::error!("{}", e);
-        }
+        };
 
         for service in &mut engine_service_list {
             if router.try_accept(service) {
                 log::debug!("{} » {}", router.frame_source().unwrap(), service);
 
-                // service.fetch(&queue);
+                service.fetch(&writer);
             }
         }
 
@@ -138,8 +141,110 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
             if router.try_accept(encoder) {
                 log::debug!("{} » {}", router.frame_source().unwrap(), encoder);
 
-                // encoder.fetch(&queue);
+                encoder.fetch(&writer);
             }
         }
     }
+}
+
+async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
+    let runtime = glonax::RuntimeBuilder::from_config(config)?
+        .with_shutdown()
+        .build();
+
+    let channel_signal = glonax::channel::BroadcastChannel::new(10);
+    let mut signal_reader = channel_signal.reader();
+    let signal_writer = channel_signal.writer();
+
+    runtime.spawn_background_task(signal_listener(config.clone(), signal_writer));
+
+    #[derive(serde::Serialize, Debug)]
+    enum Metric {
+        /// Temperature in celcius.
+        Temperature(f32),
+        /// Angle in radians.
+        Angle(f32),
+        /// Speed in meters per second.
+        Speed(f32),
+        /// Revolutions per minute.
+        Rpm(i32),
+        /// Acceleration in mg.
+        Acceleration((f32, f32, f32)),
+        /// Percentage.
+        Percent(i32),
+    }
+
+    #[derive(serde::Serialize, Debug)]
+    struct SignalRecord2 {
+        timestamp: String,
+        address: u32,
+        function: u32,
+        metric: Metric,
+    }
+
+    /// Create new file for output data.
+    ///
+    /// The file name is based on the current timestamp.
+    fn create_file() -> anyhow::Result<std::fs::File> {
+        let file_name = format!(
+            "trace/{}.json",
+            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+        );
+        log::debug!("Open output file: {}", file_name);
+
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(file_name)?;
+
+        Ok(file)
+    }
+
+    std::fs::create_dir_all(std::path::Path::new("trace"))?;
+
+    let items_per_file = config.items_per_file;
+
+    runtime.spawn_background_task(async move {
+        use std::io::Write;
+
+        let mut file_output = create_file().unwrap();
+
+        let mut i = 0;
+        while let Ok(signal) = signal_reader.recv().await {
+            let signal_record = SignalRecord2 {
+                timestamp: chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                address: signal.address,
+                function: signal.function,
+                metric: match signal.metric.unwrap() {
+                    glonax::transport::signal::Metric::Temperature(x) => Metric::Temperature(x),
+                    glonax::transport::signal::Metric::Angle(x) => Metric::Angle(x),
+                    glonax::transport::signal::Metric::Speed(x) => Metric::Speed(x),
+                    glonax::transport::signal::Metric::Rpm(x) => Metric::Rpm(x),
+                    glonax::transport::signal::Metric::Acceleration(x) => {
+                        Metric::Acceleration((x.x, x.y, x.z))
+                    }
+                    glonax::transport::signal::Metric::Percent(x) => Metric::Percent(x),
+                },
+            };
+
+            log::trace!("Writing to file {:?}", signal_record);
+
+            if i > items_per_file {
+                file_output.sync_all().unwrap();
+                drop(file_output);
+                file_output = create_file().unwrap();
+                i = 0;
+            }
+
+            serde_json::to_writer(&mut file_output, &signal_record).unwrap();
+            file_output.write(b"\n").unwrap();
+            file_output.flush().unwrap();
+
+            i += 1;
+        }
+    });
+
+    runtime.wait_for_shutdown().await;
+
+    Ok(())
 }
