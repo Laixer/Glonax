@@ -1,6 +1,6 @@
 Package: glonax
-Version: 3.0
-Maintainer: Laixer Equipment B.V.> <info@laixer.com>
+Version: 3.0.1
+Maintainer: Laixer Equipment B.V. <info@laixer.com>
 Architecture: amd64
 Homepage: https://github.com/Laixer/Glonax
 Bugs: https://github.com/Laixer/Glonax

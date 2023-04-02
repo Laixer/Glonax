@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Create the glonax working directory
+mkdir -p /var/lib/glonax
+
+# Reload the systemd daemon to pick up the new service files
+systemctl daemon-reload
+
+# Load the udev rules
+udevadm control --reload-rules
