@@ -23,7 +23,7 @@ impl SignalQueueWriter {
     pub fn send(&self, signal: Signal) {
         let buf = &signal.encode_to_vec();
 
-        assert!(buf.len() > 0);
+        assert!(!buf.is_empty());
         match self.0.send(0, buf) {
             Ok(_) => trace!("Published signal: {}", signal),
             Err(_) => warn!("Failed to publish motion"),
