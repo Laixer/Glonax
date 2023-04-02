@@ -237,7 +237,7 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
             }
 
             serde_json::to_writer(&mut file_output, &signal_record).unwrap();
-            file_output.write(b"\n").unwrap();
+            file_output.write_all(b"\n").unwrap();
             file_output.flush().unwrap();
 
             i += 1;
