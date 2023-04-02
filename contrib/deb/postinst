@@ -4,7 +4,13 @@
 mkdir -p /var/lib/glonax
 
 # Reload the systemd daemon to pick up the new service files
-systemctl daemon-reload
+if command -v systemctl &> /dev/null
+then
+    systemctl daemon-reload
+fi
 
 # Load the udev rules
-udevadm control --reload-rules
+if command -v udevadm &> /dev/null
+then
+    udevadm control --reload-rules
+fi

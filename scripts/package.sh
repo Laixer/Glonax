@@ -22,6 +22,9 @@ cp ./target/release/glonax-inputd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-netctl ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-signetd ./target/glonax_${VERSION}_amd64/usr/local/bin
 
+# Set permissions
+chmod 755 ./target/glonax_${VERSION}_amd64/DEBIAN/postinst
+
 # Build the package
 dpkg-deb --build --root-owner-group ./target/glonax_${VERSION}_amd64
 

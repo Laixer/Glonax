@@ -31,7 +31,7 @@ jobs:
       run: ./scripts/package.sh
 
     - name: Install deb
-      run: dpkg -i ./target/glonax*.deb
+      run: sudo dpkg -i ./target/glonax*.deb
 
     - name: Publish artifacts
       uses: actions/upload-artifact@v2
