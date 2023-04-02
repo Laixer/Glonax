@@ -186,7 +186,7 @@ async fn signal_listener(
 
     loop {
         if let Err(e) = router.listen().await {
-            log::error!("Error while listening for signals: {}", e);
+            log::error!("{}", e);
         };
 
         for service in &mut engine_service_list {
@@ -210,7 +210,7 @@ async fn signal_listener(
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let addr = config.address.parse()?;
 
-    let builder = glonax::RuntimeBuilder::from_config(config)?
+    let runtime = glonax::RuntimeBuilder::from_config(config)?
         .with_shutdown()
         .build();
 
@@ -218,7 +218,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let signal_reader = channel_signal.reader();
     let signal_writer = channel_signal.writer();
 
-    builder.spawn_background_task(signal_listener(config.clone(), signal_writer));
+    runtime.spawn_background_task(signal_listener(config.clone(), signal_writer));
 
     Server::builder()
         .add_service(
@@ -227,7 +227,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
             ),
         )
         .serve_with_shutdown(addr, async {
-            builder.shutdown_signal().recv().await.unwrap();
+            runtime.shutdown_signal().recv().await.unwrap();
         })
         .await?;
 

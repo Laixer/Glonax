@@ -41,4 +41,13 @@ impl RuntimeContext {
             }
         });
     }
+
+    /// Wait for the runtime to shutdown.
+    /// 
+    /// This method will block until the runtime is shutdown.
+    pub async fn wait_for_shutdown(&self) {
+        let mut shutdown = self.shutdown_signal();
+
+        shutdown.recv().await.unwrap();
+    }
 }
