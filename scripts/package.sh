@@ -14,7 +14,7 @@ cp ./contrib/deb/control ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/deb/postinst ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/udev/79-glonax.rules ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
 cp ./contrib/systemd/glonax-ecud@.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
-cp ./contrib/systemd/glonax-inputd@.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
+cp ./contrib/systemd/glonax-inputd.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
 
 # Copy binaries
 cp ./target/release/glonax-ecud ./target/glonax_${VERSION}_amd64/usr/local/bin
