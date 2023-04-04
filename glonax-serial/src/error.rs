@@ -105,7 +105,7 @@ pub fn errno() -> i32 {
         __errno_location()
     }
 
-    unsafe { (*errno_location()) as i32 }
+    unsafe { (*errno_location()) }
 }
 
 pub fn error_string(errno: i32) -> String {

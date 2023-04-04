@@ -35,11 +35,7 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let bin_name = format!(
-        "{}@{}",
-        env!("CARGO_BIN_NAME").to_string(),
-        args.interface.first().unwrap().to_string()
-    );
+    let bin_name = env!("CARGO_BIN_NAME");
 
     let mut config = config::TraceConfig {
         interface: args.interface,
@@ -47,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
         global: glonax::GlobalConfig::default(),
     };
 
-    config.global.bin_name = bin_name;
+    config.global.bin_name = bin_name.to_string();
     config.global.daemon = args.daemon;
 
     let mut log_config = simplelog::ConfigBuilder::new();
