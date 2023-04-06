@@ -144,6 +144,8 @@ async fn signal_listener(
 }
 
 async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
+    use std::io::BufWriter;
+
     let runtime = glonax::RuntimeBuilder::from_config(config)?
         .with_shutdown()
         .build();
@@ -181,7 +183,7 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
     /// Create new file for output data.
     ///
     /// The file name is based on the current timestamp.
-    fn create_file() -> anyhow::Result<std::fs::File> {
+    fn create_file() -> anyhow::Result<BufWriter<std::fs::File>> {
         let file_name = format!(
             "trace/{}.json",
             chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
@@ -193,7 +195,9 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
             .append(true)
             .open(file_name)?;
 
-        Ok(file)
+        let writer = BufWriter::new(file);
+
+        Ok(writer)
     }
 
     std::fs::create_dir_all(std::path::Path::new("trace"))?;
@@ -226,7 +230,7 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
             log::trace!("Writing to file {:?}", signal_record);
 
             if i > items_per_file {
-                file_output.sync_all().unwrap();
+                file_output.flush().unwrap();
                 drop(file_output);
                 file_output = create_file().unwrap();
                 i = 0;
@@ -234,7 +238,6 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
 
             serde_json::to_writer(&mut file_output, &signal_record).unwrap();
             file_output.write_all(b"\n").unwrap();
-            file_output.flush().unwrap();
 
             i += 1;
         }
