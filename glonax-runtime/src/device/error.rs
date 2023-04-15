@@ -37,6 +37,7 @@ pub struct DeviceError {
 }
 
 impl DeviceError {
+    /// Create a new `DeviceError` with the given kind.
     pub fn no_such_device(device: String, path: &std::path::Path) -> Self {
         Self {
             device,

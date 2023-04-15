@@ -142,19 +142,15 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
         &self,
         _request: tonic::Request<glonax::transport::Empty>,
     ) -> Result<tonic::Response<Self::ListenSignalStream>, tonic::Status> {
-        // let signal_queue = glonax::queue::SignalQueueReaderAsync::new().unwrap();
-
         let r = self.reader.clone();
 
-        // let output = async_stream::try_stream! {
-        //     while let Ok(signal) = signal_queue.recv().await {
-        //         yield signal;
-        //     }
-        // };
         let output = async_stream::try_stream! {
             while let Ok(signal) = r.lock().await.recv().await {
+                log::debug!("Received signal: {:?}", signal);
                 yield signal;
             }
+
+            log::debug!("Signal listener stopped");
         };
 
         Ok(Response::new(Box::pin(output) as Self::ListenSignalStream))

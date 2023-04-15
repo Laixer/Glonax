@@ -25,11 +25,13 @@ impl J1939Network {
         Ok(Self(stream))
     }
 
+    /// Set the promiscuous mode.
     #[inline]
     pub fn set_promisc_mode(&self, on: bool) -> io::Result<()> {
         self.0.set_promisc_mode(on)
     }
 
+    /// Accept a frame.
     #[inline]
     pub async fn accept(&self) -> io::Result<Frame> {
         self.0.read().await
@@ -134,14 +136,20 @@ pub trait Routable: Send + Sync {
 }
 
 pub struct Router {
+    /// The network.
     net: Vec<J1939Network>,
+    /// The current frame.
     frame: Option<Frame>,
+    /// The PGN filter.
     filter_pgn: Vec<u32>,
+    /// The node filter.
     filter_node: Vec<u8>,
+    /// The node table.
     node_table: HashMap<u8, std::time::Instant>,
 }
 
 impl FromIterator<J1939Network> for Router {
+    /// Create a router from an iterator.
     fn from_iter<T: IntoIterator<Item = J1939Network>>(iter: T) -> Self {
         Self {
             net: Vec::from_iter(iter),
@@ -154,6 +162,7 @@ impl FromIterator<J1939Network> for Router {
 }
 
 impl Router {
+    /// Construct a new router.
     pub fn new(net: J1939Network) -> Self {
         Self {
             net: vec![net],
