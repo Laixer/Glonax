@@ -569,7 +569,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "glonax-signet"
+name = "glonax-trace"
 version = "1.0.0"
 dependencies = [
  "anyhow",

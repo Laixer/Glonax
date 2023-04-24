@@ -12,7 +12,7 @@ RestartSec=2
 User=glonax
 Group=glonax
 ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i %I -o carrier
-ExecStart=/usr/local/bin/glonax-signetd --daemon %I
+ExecStart=/usr/local/bin/glonax-traced --daemon %I
 PrivateTmp=true
 
 [Install]

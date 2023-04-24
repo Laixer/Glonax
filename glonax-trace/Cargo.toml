@@ -1,5 +1,5 @@
 [package]
-name = "glonax-signet"
+name = "glonax-trace"
 version = "1.0.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
@@ -19,5 +19,5 @@ clap = { version = "4.1", features = ["derive"] }
 simplelog = "0.12"
 
 [[bin]]
-name = "glonax-signetd"
+name = "glonax-traced"
 path = "src/main.rs"
