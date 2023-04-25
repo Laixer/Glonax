@@ -8,16 +8,19 @@ use super::Routable;
 // TODO: Rename to EMS
 pub struct EngineService {
     pub node: u8,
-    engine_torque_mode: Option<EngineTorqueMode>,
-    driver_demand: Option<u8>,
-    actual_engine: Option<u8>,
-    rpm: Option<u16>,
-    source_addr: Option<u8>,
-    starter_mode: Option<EngineStarterMode>,
+    pub engine_torque_mode: Option<EngineTorqueMode>,
+    pub driver_demand: Option<u8>,
+    pub actual_engine: Option<u8>,
+    pub rpm: Option<u16>,
+    pub source_addr: Option<u8>,
+    pub starter_mode: Option<EngineStarterMode>,
 }
 
 impl Routable for EngineService {
     fn ingress(&mut self, frame: &Frame) -> bool {
+        if frame.len() != 8 {
+            return false;
+        }
         if frame.id().pgn() != PGN::ElectronicEngineController2 {
             return false;
         }
@@ -34,30 +37,86 @@ impl Routable for EngineService {
 
         true
     }
+
+    fn encode(&self) -> Vec<Frame> {
+        let mut frames = vec![];
+
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ElectronicEngineController2)
+                .sa(self.node)
+                .build(),
+        );
+
+        if let Some(driver_demand) = self.driver_demand {
+            frame_builder.as_mut()[1] = driver_demand + 125;
+        }
+        if let Some(actual_engine) = self.actual_engine {
+            frame_builder.as_mut()[2] = actual_engine + 125;
+        }
+
+        if let Some(rpm) = self.rpm {
+            let rpm_bytes = (rpm * 8).to_le_bytes();
+            frame_builder.as_mut()[3..5].copy_from_slice(&rpm_bytes);
+        }
+
+        if let Some(source_addr) = self.source_addr {
+            frame_builder.as_mut()[5] = source_addr;
+        }
+
+        frames.push(frame_builder.set_len(8).build());
+
+        frames
+    }
 }
 
 impl std::fmt::Display for EngineService {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Torque mode: {:?}; Drivers Demand {}%; Actual Engine: {}%; RPM {}; Starter mode: {:?}",
-            self.engine_torque_mode.as_ref().unwrap(),
-            self.driver_demand.unwrap(),
-            self.actual_engine.unwrap(),
-            self.rpm.unwrap(),
-            self.starter_mode.as_ref().unwrap(),
-        )
+        let mut s = String::new();
+
+        if let Some(engine_torque_mode) = &self.engine_torque_mode {
+            s.push_str(&format!("Torque mode: {:?}; ", engine_torque_mode));
+        }
+
+        if let Some(driver_demand) = self.driver_demand {
+            s.push_str(&format!("Driver Demand: {}%; ", driver_demand));
+        }
+
+        if let Some(actual_engine) = self.actual_engine {
+            s.push_str(&format!("Actual Engine: {}%; ", actual_engine));
+        }
+
+        if let Some(rpm) = self.rpm {
+            s.push_str(&format!("RPM: {}; ", rpm));
+        }
+
+        if let Some(starter_mode) = &self.starter_mode {
+            s.push_str(&format!("Starter mode: {:?}; ", starter_mode));
+        }
+
+        write!(f, "{}", s)
     }
 }
 
 impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineService {
     fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
-        // if let Some(driver_demand) = self.driver_demand {
-        //     writer.send(crate::transport::Signal::new(
-        //         self.node as u32,
-        //         crate::transport::signal::Metric::Rpm(driver_demand as i32),
-        //     ))
-        // }
+        if let Some(driver_demand) = self.driver_demand {
+            writer
+                .send(crate::transport::Signal::new(
+                    self.node as u32,
+                    1,
+                    crate::transport::signal::Metric::Percent(driver_demand as i32),
+                ))
+                .ok();
+        }
+        if let Some(actual_engine) = self.actual_engine {
+            writer
+                .send(crate::transport::Signal::new(
+                    self.node as u32,
+                    2,
+                    crate::transport::signal::Metric::Percent(actual_engine as i32),
+                ))
+                .ok();
+        }
         if let Some(rpm) = self.rpm {
             writer
                 .send(crate::transport::Signal::new(

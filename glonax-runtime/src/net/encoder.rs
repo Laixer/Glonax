@@ -39,6 +39,9 @@ pub struct KueblerEncoderService {
 
 impl Routable for KueblerEncoderService {
     fn ingress(&mut self, frame: &Frame) -> bool {
+        if frame.len() != 8 {
+            return false;
+        }
         if frame.id().pgn() != PGN::ProprietaryB(65_450) {
             return false;
         }
