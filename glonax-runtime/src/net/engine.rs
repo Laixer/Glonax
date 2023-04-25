@@ -82,47 +82,54 @@ impl EngineService {
     }
 }
 
-#[test]
-fn engine_service_engine_on() {
-    let mut engine_service = EngineService::new(0x0);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
-        .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
-        .build();
-    assert_eq!(engine_service.ingress(&frame), true);
-    assert_eq!(
-        engine_service.engine_torque_mode.unwrap(),
-        EngineTorqueMode::NoRequest
-    );
-    assert_eq!(engine_service.driver_demand.unwrap(), 109);
-    assert_eq!(engine_service.actual_engine.unwrap(), 0);
-    assert_eq!(engine_service.rpm.unwrap(), 0);
-    assert_eq!(engine_service.source_addr.unwrap(), 0);
-    assert_eq!(
-        engine_service.starter_mode.unwrap(),
-        EngineStarterMode::StartNotRequested
-    );
-}
+    #[test]
+    fn engine_on() {
+        let mut engine_service = EngineService::new(0x0);
 
-#[test]
-fn engine_service_engine_off() {
-    let mut engine_service = EngineService::new(0x0);
+        let frame =
+            FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
+                .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
+                .build();
+        assert_eq!(engine_service.ingress(&frame), true);
+        assert_eq!(
+            engine_service.engine_torque_mode.unwrap(),
+            EngineTorqueMode::NoRequest
+        );
+        assert_eq!(engine_service.driver_demand.unwrap(), 109);
+        assert_eq!(engine_service.actual_engine.unwrap(), 0);
+        assert_eq!(engine_service.rpm.unwrap(), 0);
+        assert_eq!(engine_service.source_addr.unwrap(), 0);
+        assert_eq!(
+            engine_service.starter_mode.unwrap(),
+            EngineStarterMode::StartNotRequested
+        );
+    }
 
-    let frame = FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
-        .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
-        .build();
+    #[test]
+    fn engine_off() {
+        let mut engine_service = EngineService::new(0x0);
 
-    assert_eq!(engine_service.ingress(&frame), true);
-    assert_eq!(
-        engine_service.engine_torque_mode.unwrap(),
-        EngineTorqueMode::PTOGovernor
-    );
-    assert_eq!(engine_service.driver_demand.unwrap(), 20);
-    assert_eq!(engine_service.actual_engine.unwrap(), 20);
-    assert_eq!(engine_service.rpm.unwrap(), 789);
-    assert_eq!(engine_service.source_addr.unwrap(), 0);
-    assert_eq!(
-        engine_service.starter_mode.unwrap(),
-        EngineStarterMode::StartFinished
-    );
+        let frame =
+            FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
+                .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
+                .build();
+
+        assert_eq!(engine_service.ingress(&frame), true);
+        assert_eq!(
+            engine_service.engine_torque_mode.unwrap(),
+            EngineTorqueMode::PTOGovernor
+        );
+        assert_eq!(engine_service.driver_demand.unwrap(), 20);
+        assert_eq!(engine_service.actual_engine.unwrap(), 20);
+        assert_eq!(engine_service.rpm.unwrap(), 789);
+        assert_eq!(engine_service.source_addr.unwrap(), 0);
+        assert_eq!(
+            engine_service.starter_mode.unwrap(),
+            EngineStarterMode::StartFinished
+        );
+    }
 }

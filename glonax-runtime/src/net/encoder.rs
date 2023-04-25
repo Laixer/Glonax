@@ -2,6 +2,7 @@ use glonax_j1939::*;
 
 use super::Routable;
 
+#[derive(Debug, PartialEq)]
 pub enum EncoderState {
     NoError,
     GeneralSensorError,
@@ -70,6 +71,38 @@ impl Routable for KueblerEncoderService {
 
         true
     }
+
+    fn encode(&self) -> Vec<Frame> {
+        let mut frames = Vec::new();
+
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietaryB(65_450))
+                .sa(self.node)
+                .build(),
+        );
+
+        let position_bytes = self.position.to_le_bytes();
+        frame_builder.as_mut()[0..4].copy_from_slice(&position_bytes);
+
+        let speed_bytes = self.speed.to_le_bytes();
+        frame_builder.as_mut()[4..6].copy_from_slice(&speed_bytes);
+
+        let state_bytes = match self.state {
+            Some(EncoderState::NoError) => 0x0,
+            Some(EncoderState::GeneralSensorError) => 0xee00,
+            Some(EncoderState::InvalidMUR) => 0xee01,
+            Some(EncoderState::InvalidTMR) => 0xee02,
+            Some(EncoderState::InvalidPreset) => 0xee03,
+            Some(EncoderState::Other) => 0xeeff,
+            None => 0x0_u16,
+        }
+        .to_le_bytes();
+        frame_builder.as_mut()[6..8].copy_from_slice(&state_bytes);
+
+        frames.push(frame_builder.set_len(8).build());
+
+        frames
+    }
 }
 
 impl std::fmt::Display for KueblerEncoderService {
@@ -111,5 +144,48 @@ impl KueblerEncoderService {
             speed: 0,
             state: None,
         }
+    }
+
+    /// Create a new encoder service with a known position.
+    pub fn with_value(node: u8, position: u32, speed: u16, state: EncoderState) -> Self {
+        Self {
+            node,
+            position,
+            speed,
+            state: Some(state),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encoder_value_normal() {
+        let encoder_a = KueblerEncoderService::with_value(0x6A, 1_620, 0, EncoderState::NoError);
+        let mut encoder_b = KueblerEncoderService::new(0x6A);
+
+        let frames = encoder_a.encode();
+
+        assert_eq!(frames.len(), 1);
+        assert_eq!(encoder_b.ingress(&frames[0]), true);
+        assert_eq!(encoder_b.position, 1_620);
+        assert_eq!(encoder_b.speed, 0);
+        assert_eq!(encoder_b.state.unwrap(), EncoderState::NoError);
+    }
+
+    #[test]
+    fn encoder_value_error() {
+        let encoder_a = KueblerEncoderService::with_value(0x45, 173, 65_196, EncoderState::InvalidTMR);
+        let mut encoder_b = KueblerEncoderService::new(0x45);
+
+        let frames = encoder_a.encode();
+
+        assert_eq!(frames.len(), 1);
+        assert_eq!(encoder_b.ingress(&frames[0]), true);
+        assert_eq!(encoder_b.position, 173);
+        assert_eq!(encoder_b.speed, 65_196);
+        assert_eq!(encoder_b.state.unwrap(), EncoderState::InvalidTMR);
     }
 }

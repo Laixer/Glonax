@@ -129,10 +129,24 @@ impl J1939Network {
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
         self.0.write(frame).await
     }
+
+    #[inline]
+    pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
+        let mut vec = vec![];
+        for frame in frames {
+            vec.push(self.0.write(frame).await?);
+        }
+        Ok(vec)
+    }
 }
 
 pub trait Routable: Send + Sync {
+    // TODO: Rename to decode.
     fn ingress(&mut self, frame: &Frame) -> bool;
+    // TODO: Add a method to encode a frame.
+    fn encode(&self) -> Vec<Frame> {
+        vec![]
+    }
 }
 
 pub struct Router {
