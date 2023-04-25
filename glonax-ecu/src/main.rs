@@ -97,22 +97,20 @@ use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
     motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
-    reader: std::sync::Arc<
-        tokio::sync::Mutex<glonax::channel::BroadcastChannelReader<glonax::transport::Signal>>,
-    >,
+    signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 }
 
 impl VehicleManagemetService {
     pub fn new(
         config: config::EcuConfig,
-        reader: glonax::channel::BroadcastChannelReader<glonax::transport::Signal>,
+        signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
     ) -> Self {
         let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
         let service = glonax::net::ActuatorService::new(net, 0x4A);
 
         Self {
             motion_device: Arc::new(Mutex::new(service)),
-            reader: std::sync::Arc::new(tokio::sync::Mutex::new(reader)),
+            signal_writer,
         }
     }
 }
@@ -126,7 +124,7 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
     ) -> Result<Response<glonax::transport::Empty>, Status> {
         let motion = request.into_inner();
 
-        log::debug!("{}", motion);
+        log::trace!("{}", motion);
 
         self.motion_device.lock().await.actuate(motion).await;
 
@@ -142,15 +140,17 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
         &self,
         _request: tonic::Request<glonax::transport::Empty>,
     ) -> Result<tonic::Response<Self::ListenSignalStream>, tonic::Status> {
-        let r = self.reader.clone();
+        let mut signal_reader = self.signal_writer.subscribe();
+
+        log::debug!("Client subscribed to signal updates");
 
         let output = async_stream::try_stream! {
-            while let Ok(signal) = r.lock().await.recv().await {
-                log::debug!("Received signal: {:?}", signal);
+            while let Ok(signal) = signal_reader.recv().await {
+                log::trace!("Received signal: {:?}", signal);
                 yield signal;
             }
 
-            log::debug!("Signal listener stopped");
+            log::debug!("Client unsubscribed from signal updates");
         };
 
         Ok(Response::new(Box::pin(output) as Self::ListenSignalStream))
@@ -187,7 +187,7 @@ async fn signal_listener(
 
         for service in &mut engine_service_list {
             if router.try_accept(service) {
-                log::debug!("{} » {}", router.frame_source().unwrap(), service);
+                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), service);
 
                 service.fetch(&writer);
             }
@@ -195,7 +195,7 @@ async fn signal_listener(
 
         for encoder in &mut encoder_list {
             if router.try_accept(encoder) {
-                log::debug!("{} » {}", router.frame_source().unwrap(), encoder);
+                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), encoder);
 
                 encoder.fetch(&writer);
             }
@@ -210,16 +210,14 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
-    let channel_signal = glonax::channel::BroadcastChannel::new(10);
-    let signal_reader = channel_signal.reader();
-    let signal_writer = channel_signal.writer();
+    let signal_writer = glonax::channel::broadcast_channel(10);
 
-    runtime.spawn_background_task(signal_listener(config.clone(), signal_writer));
+    runtime.spawn_background_task(signal_listener(config.clone(), signal_writer.clone()));
 
     Server::builder()
         .add_service(
             glonax::transport::vehicle_management_server::VehicleManagementServer::new(
-                VehicleManagemetService::new(config.clone(), signal_reader),
+                VehicleManagemetService::new(config.clone(), signal_writer),
             ),
         )
         .serve_with_shutdown(addr, async {

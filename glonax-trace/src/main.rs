@@ -150,9 +150,7 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
-    let channel_signal = glonax::channel::BroadcastChannel::new(10);
-    let mut signal_reader = channel_signal.reader();
-    let signal_writer = channel_signal.writer();
+    let (signal_writer, mut signal_reader) = glonax::channel::broadcast_bichannel(10);
 
     runtime.spawn_background_task(signal_listener(config.clone(), signal_writer));
 
@@ -231,7 +229,6 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
 
             if i > items_per_file {
                 file_output.flush().unwrap();
-                drop(file_output);
                 file_output = create_file().unwrap();
                 i = 0;
             }

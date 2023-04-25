@@ -59,11 +59,13 @@ impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineService
         //     ))
         // }
         if let Some(rpm) = self.rpm {
-            writer.send(crate::transport::Signal::new(
-                self.node as u32,
-                0,
-                crate::transport::signal::Metric::Rpm(rpm as i32),
-            ))
+            writer
+                .send(crate::transport::Signal::new(
+                    self.node as u32,
+                    0,
+                    crate::transport::signal::Metric::Rpm(rpm as i32),
+                ))
+                .ok();
         }
     }
 }
