@@ -120,15 +120,6 @@ async fn signal_listener(
 
     log::debug!("Listening for service signals");
 
-    // loop {
-    //     writer.send(glonax::transport::Signal::new(
-    //         0x13_u32,
-    //         1,
-    //         glonax::transport::signal::Metric::Angle(123.4),
-    //     ));
-
-    //     tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    // }
     loop {
         if let Err(e) = router.listen().await {
             log::error!("{}", e);

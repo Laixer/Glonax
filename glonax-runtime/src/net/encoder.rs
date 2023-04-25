@@ -26,14 +26,15 @@ impl std::fmt::Display for EncoderState {
 }
 
 pub struct KueblerEncoderService {
+    // TODO: Maybe not pub?
     /// Node ID.
     pub node: u8,
     /// Position.
-    position: u32,
+    pub position: u32,
     /// Speed.
-    speed: u16,
+    pub speed: u16,
     /// State.
-    state: Option<EncoderState>,
+    pub state: Option<EncoderState>,
 }
 
 impl Routable for KueblerEncoderService {
@@ -73,7 +74,7 @@ impl Routable for KueblerEncoderService {
     }
 
     fn encode(&self) -> Vec<Frame> {
-        let mut frames = Vec::new();
+        let mut frames = vec![];
 
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_450))
@@ -145,16 +146,6 @@ impl KueblerEncoderService {
             state: None,
         }
     }
-
-    /// Create a new encoder service with a known position.
-    pub fn with_value(node: u8, position: u32, speed: u16, state: EncoderState) -> Self {
-        Self {
-            node,
-            position,
-            speed,
-            state: Some(state),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -162,8 +153,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn encoder_value_normal() {
-        let encoder_a = KueblerEncoderService::with_value(0x6A, 1_620, 0, EncoderState::NoError);
+    fn value_normal() {
+        let encoder_a = KueblerEncoderService {
+            node: 0x6A,
+            position: 1_620,
+            speed: 0,
+            state: None,
+        };
         let mut encoder_b = KueblerEncoderService::new(0x6A);
 
         let frames = encoder_a.encode();
@@ -176,8 +172,13 @@ mod tests {
     }
 
     #[test]
-    fn encoder_value_error() {
-        let encoder_a = KueblerEncoderService::with_value(0x45, 173, 65_196, EncoderState::InvalidTMR);
+    fn value_error() {
+        let encoder_a = KueblerEncoderService {
+            node: 0x45,
+            position: 173,
+            speed: 65_196,
+            state: Some(EncoderState::InvalidTMR),
+        };
         let mut encoder_b = KueblerEncoderService::new(0x45);
 
         let frames = encoder_a.encode();

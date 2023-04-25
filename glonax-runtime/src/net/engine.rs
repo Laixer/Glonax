@@ -87,7 +87,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn engine_on() {
+    fn turn_on() {
         let mut engine_service = EngineService::new(0x0);
 
         let frame =
@@ -110,7 +110,7 @@ mod tests {
     }
 
     #[test]
-    fn engine_off() {
+    fn turn_off() {
         let mut engine_service = EngineService::new(0x0);
 
         let frame =
