@@ -50,19 +50,6 @@ impl J1939Network {
         self.0.write(&frame).await.unwrap();
     }
 
-    // TODO: Remove from this layer.
-    pub async fn reset(&self, node: u8) {
-        let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
-                .da(node)
-                .build(),
-        )
-        .copy_from_slice(&[b'Z', b'C', 0xff, 0x69])
-        .build();
-
-        self.0.write(&frame).await.unwrap();
-    }
-
     /// Request a PGN message.
     #[inline]
     pub async fn request(&self, node: u8, pgn: PGN) {
@@ -132,21 +119,25 @@ impl J1939Network {
 
     #[inline]
     pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
-        let mut vec = vec![];
+        let mut v = vec![];
         for frame in frames {
-            vec.push(self.0.write(frame).await?);
+            v.push(self.0.write(frame).await?);
         }
-        Ok(vec)
+        Ok(v)
     }
 }
 
+// TODO: Obsolete
 pub trait Routable: Send + Sync {
-    // TODO: Rename to decode.
-    fn ingress(&mut self, frame: &Frame) -> bool;
+    fn decode(&mut self, frame: &Frame) -> bool;
     // TODO: Add a method to encode a frame.
     fn encode(&self) -> Vec<Frame> {
         vec![]
     }
+}
+
+pub trait Parsable<T>: Send + Sync {
+    fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 
 pub struct Router {
@@ -258,7 +249,16 @@ impl Router {
         Ok(())
     }
 
+    // TODO: Obsolete
     pub fn try_accept(&self, service: &mut impl Routable) -> bool {
-        self.frame.map_or(false, |frame| service.ingress(&frame))
+        self.frame.map_or(false, |frame| service.decode(&frame))
+    }
+
+    /// Try to accept a frame and parse it.
+    ///
+    /// This method will return `None` if the frame is not accepted. Otherwise, it will return
+    /// `Some` with the resulting message.
+    pub fn try_accept2<T>(&self, service: &mut impl Parsable<T>) -> Option<T> {
+        self.frame.and_then(|frame| service.parse(&frame))
     }
 }

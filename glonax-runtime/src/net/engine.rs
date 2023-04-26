@@ -3,47 +3,52 @@ use glonax_j1939::{
     *,
 };
 
-use super::Routable;
-
-// TODO: Rename to EMS
-pub struct EngineService {
-    pub node: u8,
+pub struct EngineMessage {
+    /// Node ID.
+    node: u8,
+    /// Engine Torque Mode.
     pub engine_torque_mode: Option<EngineTorqueMode>,
+    /// Driver's Demand Engine - Percent Torque.
     pub driver_demand: Option<u8>,
+    /// Actual Engine - Percent Torque.
     pub actual_engine: Option<u8>,
+    /// Engine Speed.
     pub rpm: Option<u16>,
+    /// Source Address of Controlling Device for Engine Control.
     pub source_addr: Option<u8>,
+    /// Engine Starter Mode.
     pub starter_mode: Option<EngineStarterMode>,
 }
 
-impl Routable for EngineService {
-    fn ingress(&mut self, frame: &Frame) -> bool {
-        if frame.len() != 8 {
-            return false;
+impl EngineMessage {
+    pub fn new(node: u8) -> Self {
+        Self {
+            node,
+            engine_torque_mode: None,
+            driver_demand: None,
+            actual_engine: None,
+            rpm: None,
+            source_addr: None,
+            starter_mode: None,
         }
-        if frame.id().pgn() != PGN::ElectronicEngineController2 {
-            return false;
-        }
-        if frame.id().sa() != self.node {
-            return false;
-        }
-
-        self.engine_torque_mode = decode::spn899(frame.pdu()[0]);
-        self.driver_demand = decode::spn512(frame.pdu()[1]);
-        self.actual_engine = decode::spn513(frame.pdu()[2]);
-        self.rpm = decode::spn190(&frame.pdu()[3..5].try_into().unwrap());
-        self.source_addr = decode::spn1483(frame.pdu()[5]);
-        self.starter_mode = decode::spn1675(frame.pdu()[6]);
-
-        true
     }
 
-    fn encode(&self) -> Vec<Frame> {
-        let mut frames = vec![];
+    pub fn from_frame(node: u8, frame: &Frame) -> Self {
+        Self {
+            node,
+            engine_torque_mode: decode::spn899(frame.pdu()[0]),
+            driver_demand: decode::spn512(frame.pdu()[1]),
+            actual_engine: decode::spn513(frame.pdu()[2]),
+            rpm: decode::spn190(&frame.pdu()[3..5].try_into().unwrap()),
+            source_addr: decode::spn1483(frame.pdu()[5]),
+            starter_mode: decode::spn1675(frame.pdu()[6]),
+        }
+    }
 
+    fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicEngineController2)
-                .sa(self.node)
+                .da(0xff)
                 .build(),
         );
 
@@ -63,13 +68,11 @@ impl Routable for EngineService {
             frame_builder.as_mut()[5] = source_addr;
         }
 
-        frames.push(frame_builder.set_len(8).build());
-
-        frames
+        vec![frame_builder.set_len(8).build()]
     }
 }
 
-impl std::fmt::Display for EngineService {
+impl std::fmt::Display for EngineMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
@@ -97,7 +100,7 @@ impl std::fmt::Display for EngineService {
     }
 }
 
-impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineService {
+impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineMessage {
     fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
         if let Some(driver_demand) = self.driver_demand {
             writer
@@ -129,17 +132,31 @@ impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineService
     }
 }
 
-impl EngineService {
+pub struct EngineManagementSystem {
+    node: u8,
+}
+
+impl EngineManagementSystem {
     pub fn new(node: u8) -> Self {
-        Self {
-            node,
-            engine_torque_mode: None,
-            driver_demand: None,
-            actual_engine: None,
-            rpm: None,
-            source_addr: None,
-            starter_mode: None,
+        Self { node }
+    }
+
+    pub fn serialize(&self, engine_message: &mut EngineMessage) -> Vec<Frame> {
+        engine_message.node = self.node;
+        engine_message.to_frame()
+    }
+}
+
+impl super::Parsable<EngineMessage> for EngineManagementSystem {
+    fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
+        if frame.len() != 8 {
+            return None;
         }
+        if frame.id().pgn() != PGN::ElectronicEngineController2 {
+            return None;
+        }
+
+        Some(EngineMessage::from_frame(self.node, frame))
     }
 }
 
@@ -149,47 +166,44 @@ mod tests {
 
     #[test]
     fn turn_on() {
-        let mut engine_service = EngineService::new(0x0);
-
         let frame =
             FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
                 .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
                 .build();
-        assert_eq!(engine_service.ingress(&frame), true);
+
+        let engine_message = EngineMessage::from_frame(0, &frame);
         assert_eq!(
-            engine_service.engine_torque_mode.unwrap(),
+            engine_message.engine_torque_mode.unwrap(),
             EngineTorqueMode::NoRequest
         );
-        assert_eq!(engine_service.driver_demand.unwrap(), 109);
-        assert_eq!(engine_service.actual_engine.unwrap(), 0);
-        assert_eq!(engine_service.rpm.unwrap(), 0);
-        assert_eq!(engine_service.source_addr.unwrap(), 0);
+        assert_eq!(engine_message.driver_demand.unwrap(), 109);
+        assert_eq!(engine_message.actual_engine.unwrap(), 0);
+        assert_eq!(engine_message.rpm.unwrap(), 0);
+        assert_eq!(engine_message.source_addr.unwrap(), 0);
         assert_eq!(
-            engine_service.starter_mode.unwrap(),
+            engine_message.starter_mode.unwrap(),
             EngineStarterMode::StartNotRequested
         );
     }
 
     #[test]
     fn turn_off() {
-        let mut engine_service = EngineService::new(0x0);
-
         let frame =
             FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
                 .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
                 .build();
 
-        assert_eq!(engine_service.ingress(&frame), true);
+        let engine_message = EngineMessage::from_frame(0, &frame);
         assert_eq!(
-            engine_service.engine_torque_mode.unwrap(),
+            engine_message.engine_torque_mode.unwrap(),
             EngineTorqueMode::PTOGovernor
         );
-        assert_eq!(engine_service.driver_demand.unwrap(), 20);
-        assert_eq!(engine_service.actual_engine.unwrap(), 20);
-        assert_eq!(engine_service.rpm.unwrap(), 789);
-        assert_eq!(engine_service.source_addr.unwrap(), 0);
+        assert_eq!(engine_message.driver_demand.unwrap(), 20);
+        assert_eq!(engine_message.actual_engine.unwrap(), 20);
+        assert_eq!(engine_message.rpm.unwrap(), 789);
+        assert_eq!(engine_message.source_addr.unwrap(), 0);
         assert_eq!(
-            engine_service.starter_mode.unwrap(),
+            engine_message.starter_mode.unwrap(),
             EngineStarterMode::StartFinished
         );
     }

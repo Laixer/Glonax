@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use glonax_j1939::*;
 
-use super::{J1939Network, Routable};
+use super::Routable;
 
 pub struct J1939ApplicationInspector {
     software_indent: Option<(u8, u8, u8)>,
@@ -12,7 +10,7 @@ pub struct J1939ApplicationInspector {
 }
 
 impl Routable for J1939ApplicationInspector {
-    fn ingress(&mut self, frame: &Frame) -> bool {
+    fn decode(&mut self, frame: &Frame) -> bool {
         self.software_indent = None;
         self.request_pgn = None;
         self.address_claim = None;
@@ -100,28 +98,5 @@ impl J1939ApplicationInspector {
 impl Default for J1939ApplicationInspector {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-pub struct StatusService {
-    net: Arc<J1939Network>,
-    node: u8,
-}
-
-impl StatusService {
-    pub fn new(net: Arc<J1939Network>, node: u8) -> Self {
-        Self { net, node }
-    }
-
-    pub async fn set_led(&self, led_on: bool) {
-        let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
-                .da(self.node)
-                .build(),
-        )
-        .copy_from_slice(&[b'Z', b'C', u8::from(led_on)])
-        .build();
-
-        self.net.send(&frame).await.unwrap();
     }
 }

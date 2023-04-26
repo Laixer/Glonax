@@ -100,7 +100,7 @@ async fn signal_listener(
     writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 ) {
     use glonax::channel::BroadcastSource;
-    use glonax::net::{EngineService, J1939Network, KueblerEncoderService};
+    use glonax::net::{EngineManagementSystem, J1939Network, KueblerEncoderService};
 
     // TODO: Assign new network ID to each J1939 network.
     let mut router = glonax::net::Router::from_iter(
@@ -110,7 +110,7 @@ async fn signal_listener(
             .map(|iface| J1939Network::new(iface, DEVICE_NET_LOCAL_ADDR).unwrap()),
     );
 
-    let mut engine_service_list = vec![EngineService::new(0x0)];
+    let mut engine_management_service = EngineManagementSystem::new(0x0);
     let mut encoder_list = vec![
         KueblerEncoderService::new(0x6A),
         KueblerEncoderService::new(0x6B),
@@ -125,17 +125,19 @@ async fn signal_listener(
             log::error!("{}", e);
         };
 
-        for service in &mut engine_service_list {
-            if router.try_accept(service) {
-                log::debug!("{} » {}", router.frame_source().unwrap(), service);
+        if let Some(engine_message) = router.try_accept2(&mut engine_management_service) {
+            log::trace!(
+                "0x{:X?} » {}",
+                router.frame_source().unwrap(),
+                engine_message
+            );
 
-                service.fetch(&writer);
-            }
+            engine_message.fetch(&writer)
         }
 
         for encoder in &mut encoder_list {
             if router.try_accept(encoder) {
-                log::debug!("{} » {}", router.frame_source().unwrap(), encoder);
+                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), encoder);
 
                 encoder.fetch(&writer);
             }

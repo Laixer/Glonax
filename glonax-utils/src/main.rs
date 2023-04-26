@@ -39,7 +39,7 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
-    let mut engine_service = EngineService::new(0x0);
+    let mut engine_management_service = EngineManagementSystem::new(0x0);
     let mut frame_encoder = KueblerEncoderService::new(0x6A);
     let mut boom_encoder = KueblerEncoderService::new(0x6B);
     let mut arm_encoder = KueblerEncoderService::new(0x6C);
@@ -51,12 +51,12 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     loop {
         router.listen().await?;
 
-        if router.try_accept(&mut engine_service) {
+        if let Some(ems) = router.try_accept2(&mut engine_management_service) {
             info!(
                 "{} {} » {}",
-                style_node(engine_service.node),
+                style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Engine"),
-                engine_service
+                ems
             );
         }
 
@@ -275,15 +275,10 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Bind to interface {}", args.interface);
 
-    let net = J1939Network::new(args.interface.as_str(), args.address)?;
-    net.set_promisc_mode(true)?;
-
     match args.command {
         Command::Node { address, command } => match command {
             NodeCommand::Led { toggle } => {
                 let node = node_address(address)?;
-
-                let service = StatusService::new(std::sync::Arc::new(net), node);
 
                 info!(
                     "{} Turn identification LED {}",
@@ -295,7 +290,10 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                service.set_led(string_to_bool(&toggle).unwrap()).await;
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
+                net.send_vectored(&ActuatorService::set_led(string_to_bool(&toggle).unwrap()))
+                    .await
+                    .unwrap();
             }
             NodeCommand::Assign { address_new } => {
                 let node = node_address(address)?;
@@ -303,6 +301,7 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
                 net.set_address(node, node_new).await;
             }
             NodeCommand::Reset => {
@@ -310,12 +309,11 @@ async fn main() -> anyhow::Result<()> {
 
                 info!("{} Reset", style_node(node));
 
-                net.reset(node).await;
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
+                net.send_vectored(&ActuatorService::reset()).await.unwrap();
             }
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
-
-                let service = ActuatorService::new(net, node);
 
                 info!(
                     "{} Turn motion {}",
@@ -327,15 +325,17 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
                 if string_to_bool(&toggle).unwrap() {
-                    service.lock().await;
+                    net.send_vectored(&ActuatorService::lock()).await.unwrap();
                 } else {
-                    service.unlock().await;
+                    net.send_vectored(&ActuatorService::unlock()).await.unwrap();
                 }
             }
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
 
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
                 let mut service = ActuatorService::new(net, node);
 
                 info!(
@@ -353,11 +353,15 @@ async fn main() -> anyhow::Result<()> {
             }
         },
         Command::Scan => {
-            let router = Router::new(net);
+            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+            net.set_promisc_mode(true)?;
 
-            scan_nodes(router).await?;
+            scan_nodes(Router::new(net)).await?;
         }
         Command::Dump { pgn, node } => {
+            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+            net.set_promisc_mode(true)?;
+
             let mut router = Router::new(net);
 
             if let Some(pgn) = pgn {
@@ -370,6 +374,9 @@ async fn main() -> anyhow::Result<()> {
             print_frames(router).await?;
         }
         Command::Analyze { pgn, node } => {
+            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+            net.set_promisc_mode(true)?;
+
             let mut router = Router::new(net);
 
             if let Some(pgn) = pgn {

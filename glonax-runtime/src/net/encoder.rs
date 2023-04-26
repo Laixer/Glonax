@@ -4,11 +4,17 @@ use super::Routable;
 
 #[derive(Debug, PartialEq)]
 pub enum EncoderState {
+    /// No error.
     NoError,
+    /// General error in sensor.
     GeneralSensorError,
+    /// Invalid MUR value.
     InvalidMUR,
+    /// Invalid TMR value.
     InvalidTMR,
+    /// Invalid preset value.
     InvalidPreset,
+    /// Unknown error.
     Other,
 }
 
@@ -38,7 +44,7 @@ pub struct KueblerEncoderService {
 }
 
 impl Routable for KueblerEncoderService {
-    fn ingress(&mut self, frame: &Frame) -> bool {
+    fn decode(&mut self, frame: &Frame) -> bool {
         if frame.len() != 8 {
             return false;
         }
@@ -77,8 +83,6 @@ impl Routable for KueblerEncoderService {
     }
 
     fn encode(&self) -> Vec<Frame> {
-        let mut frames = vec![];
-
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_450))
                 .sa(self.node)
@@ -103,9 +107,7 @@ impl Routable for KueblerEncoderService {
         .to_le_bytes();
         frame_builder.as_mut()[6..8].copy_from_slice(&state_bytes);
 
-        frames.push(frame_builder.set_len(8).build());
-
-        frames
+        vec![frame_builder.set_len(8).build()]
     }
 }
 
@@ -172,7 +174,7 @@ mod tests {
         let frames = encoder_a.encode();
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(encoder_b.ingress(&frames[0]), true);
+        assert_eq!(encoder_b.decode(&frames[0]), true);
         assert_eq!(encoder_b.position, 1_620);
         assert_eq!(encoder_b.speed, 0);
         assert_eq!(encoder_b.state.unwrap(), EncoderState::NoError);
@@ -191,7 +193,7 @@ mod tests {
         let frames = encoder_a.encode();
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(encoder_b.ingress(&frames[0]), true);
+        assert_eq!(encoder_b.decode(&frames[0]), true);
         assert_eq!(encoder_b.position, 173);
         assert_eq!(encoder_b.speed, 65_196);
         assert_eq!(encoder_b.state.unwrap(), EncoderState::InvalidTMR);
