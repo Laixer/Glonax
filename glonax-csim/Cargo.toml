@@ -1,0 +1,21 @@
+[package]
+name = "glonax-csim"
+version = "1.0.0"
+authors = ["Laixer Equipment B.V. <info@laixer.com>"]
+edition = "2021"
+repository = "https://github.com/Laixer/Glonax"
+
+[dependencies]
+glonax = { version = "3.0", path = "../glonax-runtime" }
+
+rand = "0.8"
+
+log = "0.4"
+anyhow = "1.0"
+tokio = { version = "1.27", features = ["full"] }
+clap = { version = "4.1", features = ["derive"] }
+simplelog = "0.12"
+
+[[bin]]
+name = "glonax-csim"
+path = "src/main.rs"
