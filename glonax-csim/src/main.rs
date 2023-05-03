@@ -15,9 +15,9 @@ mod config;
 struct Args {
     /// CAN network interfaces.
     interface: Vec<String>,
-    /// Run motion requests slow.
+    /// Randomize the start position.
     #[arg(long)]
-    slow_motion: bool,
+    randomize_start: bool,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
