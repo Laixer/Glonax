@@ -44,7 +44,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut boom_encoder = KueblerEncoderService::new(0x6B);
     let mut arm_encoder = KueblerEncoderService::new(0x6C);
     let mut attachment_encoder = KueblerEncoderService::new(0x6D);
-    // let mut actuator = ActuatorService::new(net.clone(), 0x4A);
+    let mut actuator = ActuatorService::new2(0x4A);
 
     let mut app_inspector = J1939ApplicationInspector::new();
 
@@ -63,7 +63,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut arm_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(arm_encoder.node),
+                style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Arm"),
                 arm_encoder
             );
@@ -72,7 +72,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut boom_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(boom_encoder.node),
+                style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Boom"),
                 boom_encoder
             );
@@ -81,7 +81,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut frame_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(frame_encoder.node),
+                style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Frame"),
                 frame_encoder
             );
@@ -90,20 +90,29 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if router.try_accept(&mut attachment_encoder) {
             info!(
                 "{} {} » {}",
-                style_node(attachment_encoder.node),
+                style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
                 attachment_encoder
             );
         }
 
-        // if router.try_accept(&mut actuator) {
-        //     info!(
-        //         "{} {} » {}",
-        //         style_node(router.frame_source().unwrap()),
-        //         Yellow.bold().paint("Hydraulic"),
-        //         actuator
-        //     );
-        // }
+        if let Some(message) = router.try_accept2(&mut actuator) {
+            if let Some(actuator_message) = message.0 {
+                info!(
+                    "{} {} » {}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("Actuator"),
+                    actuator_message
+                );
+            } else if let Some(motion_message) = message.1 {
+                info!(
+                    "{} {} » {}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("Actuator"),
+                    motion_message
+                );
+            }
+        }
 
         if router.try_accept(&mut app_inspector) {
             if let Some((major, minor, patch)) = app_inspector.software_identification() {
