@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use glonax::core::input::{ButtonState, Scancode};
 use glonax::device;
 use glonax_gamepad::{Axis, Button, Event, EventType};
 use log::error;
+
+use crate::input::{ButtonState, Scancode};
 
 const DEVICE_NAME: &str = "gamepad";
 
@@ -83,17 +84,7 @@ impl Gamepad {
                         ty: EventType::Button(Button::East),
                         value,
                     } => {
-                        break Ok(Scancode::Cancel(if value == 1 {
-                            ButtonState::Pressed
-                        } else {
-                            ButtonState::Released
-                        }))
-                    }
-                    Event {
-                        ty: EventType::Button(Button::South),
-                        value,
-                    } => {
-                        break Ok(Scancode::Activate(if value == 1 {
+                        break Ok(Scancode::Abort(if value == 1 {
                             ButtonState::Pressed
                         } else {
                             ButtonState::Released
@@ -103,7 +94,7 @@ impl Gamepad {
                         ty: EventType::Button(Button::West),
                         value,
                     } => {
-                        break Ok(Scancode::Restrict(if value == 1 {
+                        break Ok(Scancode::DriveLock(if value == 1 {
                             ButtonState::Pressed
                         } else {
                             ButtonState::Released

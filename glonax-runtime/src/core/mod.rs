@@ -1,5 +1,3 @@
-pub mod input;
-
 use std::f32::consts::PI;
 
 /// Level trait.

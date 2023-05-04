@@ -1,9 +1,39 @@
-use glonax::core::{
-    input::{ButtonState, Scancode},
-    Level,
-};
+use glonax::core::Level;
 
 use crate::motion::{Actuator, HydraulicMotion};
+
+/// Button state.
+#[derive(PartialEq, Eq)]
+pub enum ButtonState {
+    /// Button pressed.
+    Pressed,
+    /// Button released.
+    Released,
+}
+
+/// Input device scancode.
+///
+/// Scancodes are indirectly mapped to input pheripherials. Any
+/// input device can emit these codes. Their effect is left to
+/// device implementations.
+pub enum Scancode {
+    /// Left stick X axis.
+    LeftStickX(i16),
+    /// Left stick Y axis.
+    LeftStickY(i16),
+    /// Right stick X axis.
+    RightStickX(i16),
+    /// Right stick Y axis.
+    RightStickY(i16),
+    /// Left trigger axis.
+    LeftTrigger(i16),
+    /// Right trigger axis.
+    RightTrigger(i16),
+    /// Abort button.
+    Abort(ButtonState),
+    /// Drive lock button.
+    DriveLock(ButtonState),
+}
 
 pub(crate) struct InputState {
     /// Enable or disable drive lock.
@@ -114,27 +144,23 @@ impl InputState {
                     }
                 }
             }
-            Scancode::Cancel(ButtonState::Pressed) => {
+            Scancode::Abort(ButtonState::Pressed) => {
                 self.motion_lock = true;
                 Some(HydraulicMotion::StopAll)
             }
-            Scancode::Cancel(ButtonState::Released) => {
+            Scancode::Abort(ButtonState::Released) => {
                 self.motion_lock = false;
                 Some(HydraulicMotion::ResumeAll)
             }
-            Scancode::Restrict(ButtonState::Pressed) => {
+            Scancode::DriveLock(ButtonState::Pressed) => {
                 self.drive_lock = true;
                 None
             }
-            Scancode::Restrict(ButtonState::Released) => {
+            Scancode::DriveLock(ButtonState::Released) => {
                 self.drive_lock = false;
                 Some(HydraulicMotion::StraightDrive(
                     HydraulicMotion::POWER_NEUTRAL,
                 ))
-            }
-            _ => {
-                log::warn!("Scancode not mapped to action");
-                None
             }
         }
     }
