@@ -291,9 +291,21 @@ async fn main() -> anyhow::Result<()> {
                 );
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                net.send_vectored(&ActuatorService::set_led(string_to_bool(&toggle).unwrap()))
+                let service = ActuatorService::new2(node);
+
+                net.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
                     .await
                     .unwrap();
+            }
+            NodeCommand::Reset => {
+                let node = node_address(address)?;
+
+                info!("{} Reset", style_node(node));
+
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
+                let service = ActuatorService::new2(node);
+
+                net.send_vectored(&service.reset()).await.unwrap();
             }
             NodeCommand::Assign { address_new } => {
                 let node = node_address(address)?;
@@ -303,14 +315,6 @@ async fn main() -> anyhow::Result<()> {
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
                 net.set_address(node, node_new).await;
-            }
-            NodeCommand::Reset => {
-                let node = node_address(address)?;
-
-                info!("{} Reset", style_node(node));
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                net.send_vectored(&ActuatorService::reset()).await.unwrap();
             }
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
@@ -326,10 +330,12 @@ async fn main() -> anyhow::Result<()> {
                 );
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
+                let service = ActuatorService::new2(node);
+
                 if string_to_bool(&toggle).unwrap() {
-                    net.send_vectored(&ActuatorService::lock()).await.unwrap();
+                    net.send_vectored(&service.lock()).await.unwrap();
                 } else {
-                    net.send_vectored(&ActuatorService::unlock()).await.unwrap();
+                    net.send_vectored(&service.unlock()).await.unwrap();
                 }
             }
             NodeCommand::Actuator { actuator, value } => {
