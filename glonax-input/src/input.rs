@@ -8,9 +8,15 @@ use crate::motion::{Actuator, HydraulicMotion};
 pub(crate) struct InputState {
     /// Enable or disable drive lock.
     ///
-    /// The drive locks allows two actuators to act at the same
-    /// time with a single command.
+    /// The drive lock locks both tracks together. Input on one track
+    /// will be mirrored to the other track.
     pub(crate) drive_lock: bool,
+
+    /// Limit motion to lower values only.
+    ///
+    /// This prevents accidental damage by limiting the motion to lower
+    /// values of the actuator.
+    pub(crate) limit_motion: bool,
 }
 
 impl InputState {
@@ -23,11 +29,19 @@ impl InputState {
         match input {
             Scancode::LeftStickX(value) => Ok(HydraulicMotion::Change(vec![(
                 Actuator::Slew,
-                value.ramp(3072),
+                if self.limit_motion {
+                    value.ramp(3_000).clamp(-15_000, 15_000)
+                } else {
+                    value.ramp(3_000)
+                },
             )])),
             Scancode::LeftStickY(value) => Ok(HydraulicMotion::Change(vec![(
                 Actuator::Arm,
-                value.ramp(3072),
+                if self.limit_motion {
+                    value.ramp(3_000).clamp(-20_000, 20_000)
+                } else {
+                    value.ramp(3_000)
+                },
             )])),
             Scancode::RightStickX(value) => Ok(HydraulicMotion::Change(vec![(
                 Actuator::Bucket,
@@ -35,25 +49,29 @@ impl InputState {
             )])),
             Scancode::RightStickY(value) => Ok(HydraulicMotion::Change(vec![(
                 Actuator::Boom,
-                value.ramp(3072),
+                if self.limit_motion {
+                    value.ramp(3_000).clamp(i16::MIN, 12_000)
+                } else {
+                    value.ramp(3_000)
+                },
             )])),
             Scancode::LeftTrigger(value) => {
                 if self.drive_lock {
-                    Ok(HydraulicMotion::StraightDrive(value.ramp(2048)))
+                    Ok(HydraulicMotion::StraightDrive(value.ramp(2_000)))
                 } else {
                     Ok(HydraulicMotion::Change(vec![(
                         Actuator::LimpLeft,
-                        value.ramp(2048),
+                        value.ramp(2_000),
                     )]))
                 }
             }
             Scancode::RightTrigger(value) => {
                 if self.drive_lock {
-                    Ok(HydraulicMotion::StraightDrive(value.ramp(2048)))
+                    Ok(HydraulicMotion::StraightDrive(value.ramp(2_000)))
                 } else {
                     Ok(HydraulicMotion::Change(vec![(
                         Actuator::LimpRight,
-                        value.ramp(2048),
+                        value.ramp(2_000),
                     )]))
                 }
             }
