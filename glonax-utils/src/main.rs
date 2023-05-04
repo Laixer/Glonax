@@ -155,24 +155,6 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     }
 }
 
-async fn scan_nodes(mut router: Router) -> anyhow::Result<()> {
-    loop {
-        router.listen().await?;
-
-        print!("{}c", 27 as char);
-
-        for (node, last_seen) in router.node_table() {
-            let x = if last_seen.elapsed().as_secs() < 1 {
-                "now".to_owned()
-            } else {
-                format!("{} seconds ago", last_seen.elapsed().as_secs())
-            };
-
-            println!("Node: 0x{:X?} Last seen: {}", node, x);
-        }
-    }
-}
-
 /// Print frames to screen.
 async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
@@ -218,8 +200,6 @@ enum Command {
         #[command(subcommand)]
         command: NodeCommand,
     },
-    /// Continuously scan for network nodes.
-    Scan,
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -367,12 +347,6 @@ async fn main() -> anyhow::Result<()> {
                 service.actuator_control([(actuator, value)].into()).await;
             }
         },
-        Command::Scan => {
-            let net = J1939Network::new(args.interface.as_str(), args.address)?;
-            net.set_promisc_mode(true)?;
-
-            scan_nodes(Router::new(net)).await?;
-        }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
             net.set_promisc_mode(true)?;

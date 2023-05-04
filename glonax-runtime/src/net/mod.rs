@@ -149,8 +149,6 @@ pub struct Router {
     filter_pgn: Vec<u32>,
     /// The node filter.
     filter_node: Vec<u8>,
-    /// The node table.
-    node_table: HashMap<u8, std::time::Instant>,
 }
 
 impl FromIterator<J1939Network> for Router {
@@ -161,7 +159,6 @@ impl FromIterator<J1939Network> for Router {
             frame: None,
             filter_pgn: vec![],
             filter_node: vec![],
-            node_table: HashMap::new(),
         }
     }
 }
@@ -174,7 +171,6 @@ impl Router {
             frame: None,
             filter_pgn: vec![],
             filter_node: vec![],
-            node_table: HashMap::new(),
         }
     }
 
@@ -202,34 +198,12 @@ impl Router {
         self.frame.take()
     }
 
-    /// Return the table of nodes found on the network.
-    #[inline]
-    pub fn node_table(&self) -> &HashMap<u8, std::time::Instant> {
-        &self.node_table
-    }
-
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
             let frame = self.net.first().unwrap().accept().await?;
 
             let node_address = frame.id().sa();
-
-            if self
-                .node_table
-                .insert(node_address, time::Instant::now())
-                .is_none()
-            {
-                debug!("Detected new node on network: 0x{:X?}", node_address);
-            }
-
-            self.node_table.retain(|node_address, last_seen| {
-                let active = last_seen.elapsed() < std::time::Duration::from_millis(1_500);
-                if !active {
-                    debug!("Node 0x{:X?} not seen, kicking...", node_address);
-                }
-                active
-            });
 
             if !self.filter_pgn.is_empty() {
                 let pgn = frame.id().pgn_raw();
@@ -249,7 +223,7 @@ impl Router {
         Ok(())
     }
 
-    // TODO: Obsolete
+    #[deprecated]
     pub fn try_accept(&self, service: &mut impl Routable) -> bool {
         self.frame.map_or(false, |frame| service.decode(&frame))
     }
