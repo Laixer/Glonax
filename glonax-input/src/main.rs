@@ -106,11 +106,12 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
 
     let mut input_state = input::InputState {
         drive_lock: false,
+        motion_lock: true,
         limit_motion: !config.full_motion,
     };
 
     while let Ok(input) = input_device.next().await {
-        if let Ok(motion) = input_state.try_from_input_device(input) {
+        if let Some(motion) = input_state.try_from_input_device(input) {
             let motion = motion.to_motion();
             log::debug!("{}", motion);
 
