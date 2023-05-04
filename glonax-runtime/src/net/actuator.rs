@@ -466,6 +466,7 @@ impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for Actuat
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
