@@ -114,8 +114,8 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             }
         }
 
-        if router.try_accept(&mut app_inspector) {
-            if let Some((major, minor, patch)) = app_inspector.software_identification() {
+        if let Some(message) = router.try_accept2(&mut app_inspector) {
+            if let Some((major, minor, patch)) = message.software_indent {
                 info!(
                     "{} {} » Software identification: {}.{}.{}",
                     style_node(router.frame_source().unwrap()),
@@ -125,7 +125,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     patch
                 );
             }
-            if let Some(pgn) = app_inspector.request() {
+            if let Some(pgn) = message.request_pgn {
                 info!(
                     "{} {} » Request for PGN: {}",
                     style_node(router.frame_source().unwrap()),
@@ -133,7 +133,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     pgn
                 );
             }
-            if let Some((function, arbitrary_address)) = app_inspector.address_claimed() {
+            if let Some((function, arbitrary_address)) = message.address_claim {
                 info!(
                     "{} {} » Adress claimed; Function: {}; Arbitrary address: {}",
                     style_node(router.frame_source().unwrap()),
@@ -142,8 +142,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     arbitrary_address
                 );
             }
-
-            if let Some(acknowledged) = app_inspector.acknowledged() {
+            if let Some(acknowledged) = message.acknowledged {
                 info!(
                     "{} {} » Acknowledged: {}",
                     style_node(router.frame_source().unwrap()),

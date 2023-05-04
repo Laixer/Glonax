@@ -1,20 +1,22 @@
 use glonax_j1939::*;
 
-use super::Routable;
+use super::Parsable;
 
-pub struct J1939ApplicationInspector {
-    software_indent: Option<(u8, u8, u8)>,
-    request_pgn: Option<u32>,
-    address_claim: Option<(u8, u8)>,
-    acknowledged: Option<u8>,
+pub struct J1939ApplicationInspector {}
+
+pub struct J1939Message {
+    pub software_indent: Option<(u8, u8, u8)>,
+    pub request_pgn: Option<u32>,
+    pub address_claim: Option<(u8, u8)>,
+    pub acknowledged: Option<u8>,
 }
 
-impl Routable for J1939ApplicationInspector {
-    fn decode(&mut self, frame: &Frame) -> bool {
-        self.software_indent = None;
-        self.request_pgn = None;
-        self.address_claim = None;
-        self.acknowledged = None;
+impl J1939Message {
+    pub fn from_frame(_: u8, frame: &Frame) -> Self {
+        let mut software_indent = None;
+        let mut request_pgn = None;
+        let mut address_claim = None;
+        let mut acknowledged = None;
 
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
@@ -32,71 +34,45 @@ impl Routable for J1939ApplicationInspector {
                     patch = frame.pdu()[5];
                 }
 
-                self.software_indent = Some((major, minor, patch));
-
-                true
+                software_indent = Some((major, minor, patch));
             }
             PGN::Request => {
-                self.request_pgn = Some(u32::from_be_bytes([
+                request_pgn = Some(u32::from_be_bytes([
                     0x0,
                     frame.pdu()[2],
                     frame.pdu()[1],
                     frame.pdu()[0],
                 ]));
-
-                true
             }
             PGN::AddressClaimed => {
                 let function = frame.pdu()[5];
                 let arbitrary_address = frame.pdu()[7] >> 7;
 
-                self.address_claim = Some((function, arbitrary_address));
-
-                true
+                address_claim = Some((function, arbitrary_address));
             }
             PGN::AcknowledgmentMessage => {
-                self.acknowledged = Some(frame.pdu()[0]);
-
-                true
+                acknowledged = Some(frame.pdu()[0]);
             }
-            _ => false,
+            _ => {}
         }
+
+        Self {
+            software_indent,
+            request_pgn,
+            address_claim,
+            acknowledged,
+        }
+    }
+}
+
+impl Parsable<J1939Message> for J1939ApplicationInspector {
+    fn parse(&mut self, frame: &Frame) -> Option<J1939Message> {
+        Some(J1939Message::from_frame(0x0, frame))
     }
 }
 
 impl J1939ApplicationInspector {
     pub fn new() -> Self {
-        Self {
-            software_indent: None,
-            request_pgn: None,
-            address_claim: None,
-            acknowledged: None,
-        }
-    }
-
-    #[inline]
-    pub fn software_identification(&self) -> Option<(u8, u8, u8)> {
-        self.software_indent
-    }
-
-    #[inline]
-    pub fn request(&self) -> Option<u32> {
-        self.request_pgn
-    }
-
-    #[inline]
-    pub fn address_claimed(&self) -> Option<(u8, u8)> {
-        self.address_claim
-    }
-
-    #[inline]
-    pub fn acknowledged(&self) -> Option<u8> {
-        self.acknowledged
-    }
-}
-
-impl Default for J1939ApplicationInspector {
-    fn default() -> Self {
-        Self::new()
+        Self {}
     }
 }
