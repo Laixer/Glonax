@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io, time};
+use std::io;
 
 use glonax_j1939::*;
 
@@ -127,7 +127,7 @@ impl J1939Network {
     }
 }
 
-// TODO: Obsolete
+#[deprecated]
 pub trait Routable: Send + Sync {
     fn decode(&mut self, frame: &Frame) -> bool;
     // TODO: Add a method to encode a frame.
@@ -137,6 +137,10 @@ pub trait Routable: Send + Sync {
 }
 
 pub trait Parsable<T>: Send + Sync {
+    /// Parse a frame.
+    ///
+    /// Returns `None` if the frame is not parsable. Returns `Some(T)` if the frame is parsable
+    /// and the parsed value is `T`.
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 

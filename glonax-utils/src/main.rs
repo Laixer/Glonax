@@ -45,7 +45,6 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut arm_encoder = KueblerEncoderService::new(0x6C);
     let mut attachment_encoder = KueblerEncoderService::new(0x6D);
     let mut actuator = ActuatorService::new2(0x4A);
-
     let mut app_inspector = J1939ApplicationInspector::new();
 
     loop {

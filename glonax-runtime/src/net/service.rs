@@ -5,9 +5,13 @@ use super::Parsable;
 pub struct J1939ApplicationInspector {}
 
 pub struct J1939Message {
+    /// Software identification.
     pub software_indent: Option<(u8, u8, u8)>,
+    /// Requested PGN.
     pub request_pgn: Option<u32>,
+    /// Address claim.
     pub address_claim: Option<(u8, u8)>,
+    /// Acknowledged.
     pub acknowledged: Option<u8>,
 }
 

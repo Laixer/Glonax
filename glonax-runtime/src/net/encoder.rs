@@ -32,9 +32,8 @@ impl std::fmt::Display for EncoderState {
 }
 
 pub struct KueblerEncoderService {
-    // TODO: Maybe not pub?
     /// Node ID.
-    pub node: u8,
+    node: u8,
     /// Position.
     pub position: u32,
     /// Speed.
