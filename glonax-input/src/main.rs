@@ -23,6 +23,9 @@ struct Args {
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
+    /// Input commands will translate to the full motion range.
+    #[arg(long)]
+    full_motion: bool,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -38,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::InputConfig {
         address: args.address,
         device: args.device,
+        full_motion: args.full_motion,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -100,7 +104,10 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
 
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
 
-    let mut input_state = input::InputState { drive_lock: false };
+    let mut input_state = input::InputState {
+        drive_lock: false,
+        limit_motion: !config.full_motion,
+    };
 
     while let Ok(input) = input_device.next().await {
         if let Ok(motion) = input_state.try_from_input_device(input) {
