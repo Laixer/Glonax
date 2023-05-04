@@ -111,7 +111,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
     };
 
     while let Ok(input) = input_device.next().await {
-        if let Some(motion) = input_state.try_from_input_device(input) {
+        if let Some(motion) = input_state.try_from(input) {
             let motion = motion.to_motion();
             log::debug!("{}", motion);
 

@@ -62,7 +62,7 @@ impl InputState {
     /// Each individual scancode is mapped to its own motion
     /// structure. This way an input scancode can be more or
     /// less sensitive based on the actuator (and input control).
-    pub(crate) fn try_from_input_device(&mut self, input: Scancode) -> Option<HydraulicMotion> {
+    pub(crate) fn try_from(&mut self, input: Scancode) -> Option<HydraulicMotion> {
         match input {
             Scancode::LeftStickX(value) => {
                 if self.motion_lock {

@@ -8,8 +8,6 @@ use clap::Parser;
 
 mod config;
 
-const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
-
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
