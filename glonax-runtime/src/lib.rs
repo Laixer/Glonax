@@ -8,7 +8,6 @@ pub mod channel;
 pub mod core;
 pub mod device;
 pub mod net;
-pub mod queue;
 pub mod transport;
 
 #[macro_use]
