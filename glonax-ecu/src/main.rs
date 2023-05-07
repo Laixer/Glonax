@@ -128,40 +128,38 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
         request: Request<glonax::transport::Motion>,
     ) -> Result<Response<glonax::transport::Empty>, Status> {
         let motion = request.into_inner();
-        // let motion2 = motion.clone();
 
         log::trace!("Vehicle management: {}", motion);
-
-        // self.motion_device.lock().await.actuate(motion).await;
-
-        // PRE
 
         match motion.r#type() {
             glonax::transport::motion::MotionType::None => (),
             glonax::transport::motion::MotionType::StopAll => {
-                let msg = self.motion_device.lock();
-
-                self.net.send_vectored(&msg).await.unwrap();
+                self.net
+                    .send_vectored(&self.motion_device.lock())
+                    .await
+                    .unwrap();
             }
             glonax::transport::motion::MotionType::ResumeAll => {
-                let msg = self.motion_device.unlock();
-
-                self.net.send_vectored(&msg).await.unwrap();
+                self.net
+                    .send_vectored(&self.motion_device.unlock())
+                    .await
+                    .unwrap();
             }
             glonax::transport::motion::MotionType::Change => {
-                let msg = self.motion_device.actuator_command(
-                    motion
-                        .changes
-                        .iter()
-                        .map(|changeset| (changeset.actuator as u8, changeset.value as i16))
-                        .collect(),
-                );
-
-                self.net.send_vectored(&msg).await.unwrap();
+                self.net
+                    .send_vectored(
+                        &self.motion_device.actuator_command(
+                            motion
+                                .changes
+                                .iter()
+                                .map(|changeset| (changeset.actuator as u8, changeset.value as i16))
+                                .collect(),
+                        ),
+                    )
+                    .await
+                    .unwrap();
             }
         }
-
-        // POST
 
         Ok(Response::new(glonax::transport::Empty {}))
     }
@@ -181,7 +179,7 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
 
         let output = async_stream::try_stream! {
             while let Ok(signal) = signal_reader.recv().await {
-                log::trace!("Received signal: {:?}", signal);
+                log::trace!("Vehicle management: {:?}", signal);
                 yield signal;
             }
 

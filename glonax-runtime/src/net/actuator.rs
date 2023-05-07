@@ -53,12 +53,18 @@ impl ActuatorMessage {
         Self { node, actuators }
     }
 
-    // TODO: Ignore empty frames.
     fn to_frame(&self) -> Vec<Frame> {
         let mut frames = vec![];
 
         for (idx, bank) in BANK_PGN_LIST.into_iter().enumerate() {
             let stride = idx * BANK_SLOTS;
+
+            if !self.actuators[stride..stride + BANK_SLOTS]
+                .iter()
+                .any(|f| f.is_some())
+            {
+                continue;
+            }
 
             let pdu: [u8; 8] = self.actuators[stride..stride + BANK_SLOTS]
                 .iter()
@@ -330,23 +336,68 @@ mod tests {
     fn actuator_message_1() {
         let message_a = ActuatorMessage {
             node: 0x3D,
+            actuators: [None; 8],
+        };
+
+        let frames = message_a.to_frame();
+
+        assert_eq!(frames.len(), 0);
+    }
+
+    #[test]
+    fn actuator_message_2() {
+        let message_a = ActuatorMessage {
+            node: 0x3D,
             actuators: [Some(-24_000), None, None, Some(500), None, None, None, None],
         };
 
         let frames = message_a.to_frame();
         let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
-        let message_c = ActuatorMessage::from_frame(0x3D, &frames[1]);
 
-        assert_eq!(frames.len(), 2);
+        assert_eq!(frames.len(), 1);
         assert_eq!(
             message_b.actuators,
             [Some(-24_000), None, None, Some(500), None, None, None, None]
         );
-        assert_eq!(message_c.actuators, [None; 8]);
     }
 
     #[test]
-    fn actuator_message_2() {
+    fn actuator_message_3() {
+        let message_a = ActuatorMessage {
+            node: 0x3D,
+            actuators: [
+                None,
+                None,
+                None,
+                None,
+                Some(32_000),
+                Some(i16::MAX),
+                None,
+                None,
+            ],
+        };
+
+        let frames = message_a.to_frame();
+        let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
+
+        assert_eq!(frames.len(), 1);
+        assert_eq!(
+            message_b.actuators,
+            [
+                None,
+                None,
+                None,
+                None,
+                Some(32_000),
+                Some(i16::MAX),
+                None,
+                None
+            ]
+        );
+    }
+
+    #[test]
+    fn actuator_message_4() {
         let message_a = ActuatorMessage {
             node: 0x3D,
             actuators: [
