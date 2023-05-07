@@ -91,12 +91,11 @@ async fn main() -> anyhow::Result<()> {
 }
 
 use glonax::{net::J1939Network, Configurable};
-use std::sync::Arc;
 use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
     net: J1939Network,
-    service: Arc<glonax::net::ActuatorService>,
+    service: glonax::net::ActuatorService,
     signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 }
 
@@ -106,12 +105,11 @@ impl VehicleManagemetService {
         signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
     ) -> Self {
         let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
-        // let service = glonax::net::ActuatorService::new(net, 0x4A);
         let service = glonax::net::ActuatorService::new(0x4A);
 
         Self {
             net,
-            service: Arc::new(service),
+            service,
             signal_writer,
         }
     }

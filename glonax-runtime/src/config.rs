@@ -8,10 +8,6 @@ pub trait Configurable: Clone {
 pub struct GlobalConfig {
     /// Name of the binary.
     pub bin_name: String,
-    /// Whether motion is enabled.
-    pub enable_motion: bool,
-    /// Whether motion is slowed down.
-    pub slow_motion: bool,
     /// Whether the application runs as daemon.
     pub daemon: bool,
 }
@@ -26,8 +22,6 @@ impl Default for GlobalConfig {
     fn default() -> Self {
         Self {
             bin_name: String::new(),
-            enable_motion: true,
-            slow_motion: false,
             daemon: false,
         }
     }
