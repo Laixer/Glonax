@@ -14,6 +14,7 @@ pub struct ActuatorService {
 }
 
 impl Routable for ActuatorService {
+    // TODO: Remove this
     fn decode(&mut self, frame: &Frame) -> bool {
         if frame.len() != 8 {
             return false;
@@ -54,6 +55,7 @@ impl Routable for ActuatorService {
         }
     }
 
+    // TODO: Remove this
     fn encode(&self) -> Vec<Frame> {
         let mut frames = vec![];
 
@@ -142,6 +144,7 @@ impl ActuatorMessage {
         Self { node, actuators }
     }
 
+    // TODO: Ignore empty frames.
     fn to_frame(&self) -> Vec<Frame> {
         let mut frames = vec![];
 
@@ -194,12 +197,14 @@ pub struct MotionConfigMessage {
 }
 
 impl MotionConfigMessage {
+    /// Construct a locked new motion config message.
     pub fn locked(node: u8) -> Self {
         trace!("Disable motion");
 
         Self { node, locked: true }
     }
 
+    /// Construct a unlocked new motion config message.
     pub fn unlocked(node: u8) -> Self {
         trace!("Enable motion");
 
@@ -216,8 +221,7 @@ impl MotionConfigMessage {
         }
     }
 
-    // TODO: Rename to to_frame
-    fn encode(&self) -> Vec<Frame> {
+    fn to_frame(&self) -> Vec<Frame> {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
                 .da(self.node)
@@ -272,10 +276,10 @@ impl ConfigMessage {
         }
     }
 
-    fn encode(&self) -> Vec<Frame> {
+    fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
-                .da(0xff)
+                .da(self.node)
                 .build(),
         )
         .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
@@ -289,30 +293,6 @@ impl ConfigMessage {
         }
 
         vec![frame_builder.build()]
-    }
-
-    fn decode(&mut self, frame: &Frame) -> bool {
-        if frame.len() < 4 {
-            return false;
-        }
-        if frame.id().pgn() != PGN::ProprietarilyConfigurableMessage1 {
-            return false;
-        }
-        if frame.pdu()[0..2] != [b'Z', b'C'] {
-            return false;
-        }
-        if frame.pdu()[2] == 0x0 {
-            self.led_on = Some(false);
-        } else if frame.pdu()[2] == 0x1 {
-            self.led_on = Some(true);
-        }
-        if frame.pdu()[3] == 0x0 {
-            self.reset = Some(false);
-        } else if frame.pdu()[3] == 0x69 {
-            self.reset = Some(true);
-        }
-
-        true
     }
 }
 
@@ -335,12 +315,12 @@ impl ActuatorService {
 
     /// Locks the motion controller
     pub fn lock(&self) -> Vec<Frame> {
-        MotionConfigMessage::locked(self.node).encode()
+        MotionConfigMessage::locked(self.node).to_frame()
     }
 
     /// Unlocks the motion controller
     pub fn unlock(&self) -> Vec<Frame> {
-        MotionConfigMessage::unlocked(self.node).encode()
+        MotionConfigMessage::unlocked(self.node).to_frame()
     }
 
     /// Sets the LED on the motion controller
@@ -350,7 +330,7 @@ impl ActuatorService {
             led_on: Some(on),
             reset: None,
         }
-        .encode()
+        .to_frame()
     }
 
     /// Resets the motion controller
@@ -360,7 +340,7 @@ impl ActuatorService {
             led_on: None,
             reset: Some(true),
         }
-        .encode()
+        .to_frame()
     }
 
     // TODO: Maybe move into a trait
@@ -372,7 +352,7 @@ impl ActuatorService {
                 self.net
                     .as_ref()
                     .unwrap()
-                    .send_vectored(&msg.encode())
+                    .send_vectored(&msg.to_frame())
                     .await
                     .unwrap();
             }
@@ -381,7 +361,7 @@ impl ActuatorService {
                 self.net
                     .as_ref()
                     .unwrap()
-                    .send_vectored(&msg.encode())
+                    .send_vectored(&msg.to_frame())
                     .await
                     .unwrap();
             }
@@ -471,10 +451,79 @@ mod tests {
     use super::*;
 
     #[test]
+    fn actuator_message_1() {
+        let message_a = ActuatorMessage {
+            node: 0x3D,
+            actuators: [Some(-24_000), None, None, Some(500), None, None, None, None],
+        };
+
+        let frames = message_a.to_frame();
+        let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
+        let message_c = ActuatorMessage::from_frame(0x3D, &frames[1]);
+
+        assert_eq!(frames.len(), 2);
+        assert_eq!(
+            message_b.actuators,
+            [Some(-24_000), None, None, Some(500), None, None, None, None]
+        );
+        assert_eq!(message_c.actuators, [None; 8]);
+    }
+
+    #[test]
+    fn actuator_message_2() {
+        let message_a = ActuatorMessage {
+            node: 0x3D,
+            actuators: [
+                Some(-100),
+                Some(200),
+                Some(-300),
+                Some(400),
+                Some(-500),
+                Some(600),
+                Some(-700),
+                Some(800),
+            ],
+        };
+
+        let frames = message_a.to_frame();
+        let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
+        let message_c = ActuatorMessage::from_frame(0x3D, &frames[1]);
+
+        assert_eq!(frames.len(), 2);
+
+        assert_eq!(
+            message_b.actuators,
+            [
+                Some(-100),
+                Some(200),
+                Some(-300),
+                Some(400),
+                None,
+                None,
+                None,
+                None
+            ]
+        );
+        assert_eq!(
+            message_c.actuators,
+            [
+                None,
+                None,
+                None,
+                None,
+                Some(-500),
+                Some(600),
+                Some(-700),
+                Some(800)
+            ]
+        );
+    }
+
+    #[test]
     fn motion_config_message_1() {
         let config_a = MotionConfigMessage::locked(0x5E);
 
-        let frames = config_a.encode();
+        let frames = config_a.to_frame();
         let config_b = MotionConfigMessage::from_frame(0x5E, &frames[0]);
 
         assert_eq!(frames.len(), 1);
@@ -485,7 +534,7 @@ mod tests {
     fn motion_config_message_2() {
         let config_a = MotionConfigMessage::unlocked(0xA9);
 
-        let frames = config_a.encode();
+        let frames = config_a.to_frame();
         let config_b = MotionConfigMessage::from_frame(0xA9, &frames[0]);
 
         assert_eq!(frames.len(), 1);
@@ -500,8 +549,7 @@ mod tests {
             reset: None,
         };
 
-        let frames = config_a.encode();
-
+        let frames = config_a.to_frame();
         let config_b = ConfigMessage::from_frame(0x2B, &frames[0]);
 
         assert_eq!(frames.len(), 1);
@@ -517,8 +565,7 @@ mod tests {
             reset: None,
         };
 
-        let frames = config_a.encode();
-
+        let frames = config_a.to_frame();
         let config_b = ConfigMessage::from_frame(0x3C, &frames[0]);
 
         assert_eq!(frames.len(), 1);
@@ -534,8 +581,7 @@ mod tests {
             reset: Some(true),
         };
 
-        let frames = config_a.encode();
-
+        let frames = config_a.to_frame();
         let config_b = ConfigMessage::from_frame(0x4D, &frames[0]);
 
         assert_eq!(frames.len(), 1);
