@@ -114,7 +114,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion range is limited");
     }
     if input_state.motion_lock {
-        log::info!("Motion is locked");
+        log::info!("Motion is locked on startup");
     }
 
     while let Ok(input) = input_device.next().await {

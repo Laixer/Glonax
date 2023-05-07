@@ -92,13 +92,11 @@ async fn main() -> anyhow::Result<()> {
 
 use glonax::{net::J1939Network, Configurable};
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
     net: J1939Network,
-    // motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
-    motion_device: Arc<glonax::net::ActuatorService>,
+    service: Arc<glonax::net::ActuatorService>,
     signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 }
 
@@ -113,8 +111,7 @@ impl VehicleManagemetService {
 
         Self {
             net,
-            // motion_device: Arc::new(Mutex::new(service)),
-            motion_device: Arc::new(service),
+            service: Arc::new(service),
             signal_writer,
         }
     }
@@ -134,21 +131,18 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
         match motion.r#type() {
             glonax::transport::motion::MotionType::None => (),
             glonax::transport::motion::MotionType::StopAll => {
-                self.net
-                    .send_vectored(&self.motion_device.lock())
-                    .await
-                    .unwrap();
+                self.net.send_vectored(&self.service.lock()).await.unwrap();
             }
             glonax::transport::motion::MotionType::ResumeAll => {
                 self.net
-                    .send_vectored(&self.motion_device.unlock())
+                    .send_vectored(&self.service.unlock())
                     .await
                     .unwrap();
             }
             glonax::transport::motion::MotionType::Change => {
                 self.net
                     .send_vectored(
-                        &self.motion_device.actuator_command(
+                        &self.service.actuator_command(
                             motion
                                 .changes
                                 .iter()
@@ -179,7 +173,6 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
 
         let output = async_stream::try_stream! {
             while let Ok(signal) = signal_reader.recv().await {
-                log::trace!("Vehicle management: {:?}", signal);
                 yield signal;
             }
 

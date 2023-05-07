@@ -275,6 +275,7 @@ impl ActuatorService {
         msg.to_frame()
     }
 
+    /// Sends a command to the motion controller
     pub fn actuator_command(&self, actuator_command: HashMap<u8, i16>) -> Vec<Frame> {
         let mut actuators = [None; 8];
 
