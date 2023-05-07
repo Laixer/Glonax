@@ -44,7 +44,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut boom_encoder = KueblerEncoderService::new(0x6B);
     let mut arm_encoder = KueblerEncoderService::new(0x6C);
     let mut attachment_encoder = KueblerEncoderService::new(0x6D);
-    let mut actuator = ActuatorService::new2(0x4A);
+    let mut actuator = ActuatorService::new(0x4A);
     let mut app_inspector = J1939ApplicationInspector::new();
 
     loop {
@@ -278,7 +278,7 @@ async fn main() -> anyhow::Result<()> {
                 );
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new2(node);
+                let service = ActuatorService::new(node);
 
                 net.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
                     .await
@@ -290,18 +290,9 @@ async fn main() -> anyhow::Result<()> {
                 info!("{} Reset", style_node(node));
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new2(node);
+                let service = ActuatorService::new(node);
 
                 net.send_vectored(&service.reset()).await.unwrap();
-            }
-            NodeCommand::Assign { address_new } => {
-                let node = node_address(address)?;
-                let node_new = node_address(address_new)?;
-
-                info!("{} Assign 0x{:X?}", style_node(node), node_new);
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                net.set_address(node, node_new).await;
             }
             NodeCommand::Motion { toggle } => {
                 let node = node_address(address)?;
@@ -317,7 +308,7 @@ async fn main() -> anyhow::Result<()> {
                 );
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new2(node);
+                let service = ActuatorService::new(node);
 
                 if string_to_bool(&toggle).unwrap() {
                     net.send_vectored(&service.lock()).await.unwrap();
@@ -327,9 +318,6 @@ async fn main() -> anyhow::Result<()> {
             }
             NodeCommand::Actuator { actuator, value } => {
                 let node = node_address(address)?;
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let mut service = ActuatorService::new(net, node);
 
                 info!(
                     "{} Set actuator {} to {}",
@@ -342,7 +330,21 @@ async fn main() -> anyhow::Result<()> {
                     },
                 );
 
-                service.actuator_control([(actuator, value)].into()).await;
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
+                let service = ActuatorService::new(node);
+
+                net.send_vectored(&service.actuator_command([(actuator, value)].into()))
+                    .await
+                    .unwrap();
+            }
+            NodeCommand::Assign { address_new } => {
+                let node = node_address(address)?;
+                let node_new = node_address(address_new)?;
+
+                info!("{} Assign 0x{:X?}", style_node(node), node_new);
+
+                let net = J1939Network::new(args.interface.as_str(), args.address)?;
+                net.set_address(node, node_new).await;
             }
         },
         Command::Dump { pgn, node } => {

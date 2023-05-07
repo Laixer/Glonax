@@ -96,7 +96,9 @@ use tokio::sync::Mutex;
 use tonic::{transport::Server, Request, Response, Status};
 
 struct VehicleManagemetService {
-    motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
+    net: J1939Network,
+    // motion_device: Arc<Mutex<glonax::net::ActuatorService>>,
+    motion_device: Arc<glonax::net::ActuatorService>,
     signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 }
 
@@ -106,10 +108,13 @@ impl VehicleManagemetService {
         signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
     ) -> Self {
         let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
-        let service = glonax::net::ActuatorService::new(net, 0x4A);
+        // let service = glonax::net::ActuatorService::new(net, 0x4A);
+        let service = glonax::net::ActuatorService::new(0x4A);
 
         Self {
-            motion_device: Arc::new(Mutex::new(service)),
+            net,
+            // motion_device: Arc::new(Mutex::new(service)),
+            motion_device: Arc::new(service),
             signal_writer,
         }
     }
@@ -123,10 +128,40 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
         request: Request<glonax::transport::Motion>,
     ) -> Result<Response<glonax::transport::Empty>, Status> {
         let motion = request.into_inner();
+        // let motion2 = motion.clone();
 
-        log::trace!("{}", motion);
+        log::trace!("Vehicle management: {}", motion);
 
-        self.motion_device.lock().await.actuate(motion).await;
+        // self.motion_device.lock().await.actuate(motion).await;
+
+        // PRE
+
+        match motion.r#type() {
+            glonax::transport::motion::MotionType::None => (),
+            glonax::transport::motion::MotionType::StopAll => {
+                let msg = self.motion_device.lock();
+
+                self.net.send_vectored(&msg).await.unwrap();
+            }
+            glonax::transport::motion::MotionType::ResumeAll => {
+                let msg = self.motion_device.unlock();
+
+                self.net.send_vectored(&msg).await.unwrap();
+            }
+            glonax::transport::motion::MotionType::Change => {
+                let msg = self.motion_device.actuator_command(
+                    motion
+                        .changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value as i16))
+                        .collect(),
+                );
+
+                self.net.send_vectored(&msg).await.unwrap();
+            }
+        }
+
+        // POST
 
         Ok(Response::new(glonax::transport::Empty {}))
     }

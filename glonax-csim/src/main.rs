@@ -125,7 +125,7 @@ async fn listener(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
     let network = J1939Network::new(config.interface.first().unwrap(), 0x4A).unwrap();
     let mut router = glonax::net::Router::new(network);
 
-    let mut service = glonax::net::ActuatorService::new2(0x4A);
+    let mut service = glonax::net::ActuatorService::new(0x4A);
 
     loop {
         if let Err(e) = router.listen().await {
