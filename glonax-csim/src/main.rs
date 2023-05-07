@@ -87,8 +87,6 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-// struct EcuState([std::sync::atomic::AtomicI16; 4]);
-
 struct EcuState {
     power: [std::sync::atomic::AtomicI16; 4],
     motion_lock: std::sync::atomic::AtomicBool,
@@ -207,7 +205,7 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             encoder_a.speed = 0;
             neta.send_vectored(&encoder_a.encode()).await.unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
 
         {
@@ -220,7 +218,7 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             encoder_b.speed = 0;
             netb.send_vectored(&encoder_b.encode()).await.unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
 
         {
@@ -233,7 +231,7 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             encoder_c.speed = 0;
             netc.send_vectored(&encoder_c.encode()).await.unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
 
         {
@@ -246,7 +244,7 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             encoder_d.speed = 0;
             netd.send_vectored(&encoder_d.encode()).await.unwrap();
 
-            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
 
         let mut engine_message = EngineMessage::new(0x0);
@@ -259,7 +257,7 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             .await
             .unwrap();
 
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
 }
 
