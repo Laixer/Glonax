@@ -31,7 +31,7 @@ impl std::fmt::Display for EncoderState {
     }
 }
 
-pub struct KueblerEncoderService {
+pub struct EncoderService {
     /// Node ID.
     node: u8,
 }
@@ -147,7 +147,7 @@ impl crate::channel::BroadcastSource<crate::transport::Signal> for EncoderMessag
     }
 }
 
-impl KueblerEncoderService {
+impl EncoderService {
     pub fn new(node: u8) -> Self {
         Self { node }
     }
@@ -163,7 +163,7 @@ impl KueblerEncoderService {
     }
 }
 
-impl Parsable<EncoderMessage> for KueblerEncoderService {
+impl Parsable<EncoderMessage> for EncoderService {
     fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
         if frame.len() != 8 {
             return None;

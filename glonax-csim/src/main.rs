@@ -169,8 +169,8 @@ async fn net_listener(config: config::SimConfig, state: std::sync::Arc<EcuState>
     }
 }
 
-async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
-    use glonax::net::{EngineManagementSystem, EngineMessage, J1939Network, KueblerEncoderService};
+async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
+    use glonax::net::{EncoderService, EngineManagementSystem, EngineMessage, J1939Network};
     use rand::Rng;
 
     let mut rng = rand::rngs::OsRng::default();
@@ -181,10 +181,10 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
     let netd = J1939Network::new(config.interface.first().unwrap(), 0x6D).unwrap();
     let net0 = J1939Network::new(config.interface.first().unwrap(), 0x0).unwrap();
 
-    let encoder_a = KueblerEncoderService::new(0x6A);
-    let encoder_b = KueblerEncoderService::new(0x6B);
-    let encoder_c = KueblerEncoderService::new(0x6C);
-    let encoder_d = KueblerEncoderService::new(0x6D);
+    let encoder_a = EncoderService::new(0x6A);
+    let encoder_b = EncoderService::new(0x6B);
+    let encoder_c = EncoderService::new(0x6C);
+    let encoder_d = EncoderService::new(0x6D);
     let engine_management_system = EngineManagementSystem::new(0x0);
 
     let mut encoder_a_position = rng.gen_range(0..=6280);
@@ -271,7 +271,7 @@ async fn daemonize(config: &config::SimConfig) -> anyhow::Result<()> {
     let state = std::sync::Arc::new(EcuState::new());
 
     runtime.spawn_background_task(net_listener(config.clone(), state.clone()));
-    runtime.spawn_background_task(signal_writer(config.clone(), state));
+    runtime.spawn_background_task(ecu_simulator(config.clone(), state));
 
     runtime.wait_for_shutdown().await;
 

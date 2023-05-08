@@ -7,8 +7,7 @@ use super::Parsable;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;
 
-// TODO: Rename module to HCU
-
+// TODO: Rename module to HCUService or something similar
 pub struct ActuatorService {
     pub node: u8,
 }

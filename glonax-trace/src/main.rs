@@ -95,12 +95,12 @@ async fn main() -> anyhow::Result<()> {
 
 // TODO: Even though the same confiig is used as for the motion command, the signal listeners
 // should be able to listen on a different network.
-async fn signal_listener(
+async fn net_listener(
     config: config::TraceConfig,
     writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 ) {
     use glonax::channel::BroadcastSource;
-    use glonax::net::{EngineManagementSystem, J1939Network, KueblerEncoderService};
+    use glonax::net::{EncoderService, EngineManagementSystem, J1939Network};
 
     // TODO: Assign new network ID to each J1939 network.
     let mut router = glonax::net::Router::from_iter(
@@ -112,10 +112,10 @@ async fn signal_listener(
 
     let mut engine_management_service = EngineManagementSystem::new(0x0);
     let mut encoder_list = vec![
-        KueblerEncoderService::new(0x6A),
-        KueblerEncoderService::new(0x6B),
-        KueblerEncoderService::new(0x6C),
-        KueblerEncoderService::new(0x6D),
+        EncoderService::new(0x6A),
+        EncoderService::new(0x6B),
+        EncoderService::new(0x6C),
+        EncoderService::new(0x6D),
     ];
 
     log::debug!("Starting network services");
@@ -150,7 +150,7 @@ async fn daemonize(config: &config::TraceConfig) -> anyhow::Result<()> {
 
     let (signal_writer, mut signal_reader) = glonax::channel::broadcast_bichannel(10);
 
-    runtime.spawn_background_task(signal_listener(config.clone(), signal_writer));
+    runtime.spawn_background_task(net_listener(config.clone(), signal_writer));
 
     #[derive(serde::Serialize, Debug)]
     enum Metric {

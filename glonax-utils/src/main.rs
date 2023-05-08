@@ -36,15 +36,16 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
     }
 }
 
+/// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut engine_management_service = EngineManagementSystem::new(0x0);
-    let mut frame_encoder = KueblerEncoderService::new(0x6A);
-    let mut boom_encoder = KueblerEncoderService::new(0x6B);
-    let mut arm_encoder = KueblerEncoderService::new(0x6C);
-    let mut attachment_encoder = KueblerEncoderService::new(0x6D);
-    let mut actuator = ActuatorService::new(0x4A);
+    let mut frame_encoder = EncoderService::new(0x6A);
+    let mut boom_encoder = EncoderService::new(0x6B);
+    let mut arm_encoder = EncoderService::new(0x6C);
+    let mut attachment_encoder = EncoderService::new(0x6D);
+    let mut hcu = ActuatorService::new(0x4A);
     let mut app_inspector = J1939ApplicationInspector::new();
 
     loop {
@@ -95,19 +96,19 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             );
         }
 
-        if let Some(message) = router.try_accept(&mut actuator) {
+        if let Some(message) = router.try_accept(&mut hcu) {
             if let Some(actuator_message) = message.0 {
                 info!(
                     "{} {} » {}",
                     style_node(router.frame_source().unwrap()),
-                    Yellow.bold().paint("Actuator"),
+                    Yellow.bold().paint("HCU"),
                     actuator_message
                 );
             } else if let Some(motion_message) = message.1 {
                 info!(
                     "{} {} » {}",
                     style_node(router.frame_source().unwrap()),
-                    Yellow.bold().paint("Actuator"),
+                    Yellow.bold().paint("HCU"),
                     motion_message
                 );
             }
@@ -153,7 +154,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     }
 }
 
-/// Print frames to screen.
+/// Print raw frames to screen.
 async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
