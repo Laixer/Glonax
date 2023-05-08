@@ -346,7 +346,7 @@ async fn main() -> anyhow::Result<()> {
                 info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
                 let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                net.set_address(node, node_new).await;
+                net.commanded_address(node, node_new).await;
             }
         },
         Command::Dump { pgn, node } => {

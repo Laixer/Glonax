@@ -15,7 +15,6 @@ mod host;
 mod service;
 
 // TODO: Implement connection management.
-// TODO: Implement broadcast message.
 pub struct J1939Network(J1939Stream);
 
 // TODO: Maybe rename to J1939Application?
@@ -58,12 +57,18 @@ impl J1939Network {
         self.0.write(&protocol::request(node, pgn)).await.unwrap();
     }
 
+    /// Assign address to node.
+    pub async fn commanded_address(&self, node: u8, address: u8) {
+        let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
+
+        self.broadcast_announce(node, PGN::CommandedAddress, &data)
+            .await;
+    }
+
     /// Broadcast Announce Message.
-    pub async fn broadcast(&self, node: u8, pgn: PGN, data: &[u8]) {
+    pub async fn broadcast_announce(&self, node: u8, pgn: PGN, data: &[u8]) {
         let data_length = (data.len() as u16).to_le_bytes();
-
         let packets = (data.len() as f32 / 8.0).ceil() as u8;
-
         let byte_array = pgn.to_le_bytes();
 
         let connection_frame = FrameBuilder::new(
@@ -84,33 +89,44 @@ impl J1939Network {
         ])
         .build();
 
-        println!("XConn: {}", connection_frame);
-        // self.0.write(&connection_frame).await.unwrap();
+        self.0.write(&connection_frame).await.unwrap();
 
-        for data_packet in 0..packets {
-            let mut data_frame0_b = FrameBuilder::new(
-                IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
-                    .priority(7)
-                    .da(node)
-                    .build(),
-            )
-            .copy_from_slice(&[data_packet + 1]);
+        for (packet, data_chunk) in data.chunks(7).enumerate() {
+            let packet = packet as u8 + 1;
 
-            let offset = data_packet as usize * 7;
+            if data_chunk.len() == 7 {
+                let mut frame_builder = FrameBuilder::new(
+                    IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                        .priority(7)
+                        .da(node)
+                        .build(),
+                );
 
-            let qq = data_frame0_b.as_mut();
-            if data_packet + 1 == packets {
-                let stride_limit = offset + (data.len() - offset);
-                qq[1..(data.len() - offset + 1)].copy_from_slice(&data[offset..stride_limit]);
+                let payload = frame_builder.as_mut();
+                payload[0] = packet;
+                payload[1..8].copy_from_slice(data_chunk);
+
+                self.0
+                    .write(&frame_builder.set_len(8).build())
+                    .await
+                    .unwrap();
             } else {
-                let stride_limit = offset + 7;
-                qq[1..8].copy_from_slice(&data[offset..stride_limit]);
+                let mut frame_builder = FrameBuilder::new(
+                    IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                        .priority(7)
+                        .da(node)
+                        .build(),
+                );
+
+                let payload = frame_builder.as_mut();
+                payload[0] = packet;
+                payload[1..(data_chunk.len() + 1)].copy_from_slice(data_chunk);
+
+                self.0
+                    .write(&frame_builder.set_len(8).build())
+                    .await
+                    .unwrap();
             }
-
-            let data_frame0 = data_frame0_b.set_len(8).build();
-
-            println!("Data{}: {}", data_packet, data_frame0);
-            // self.0.write(&data_frame0).await.unwrap();
         }
     }
 
