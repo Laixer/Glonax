@@ -203,21 +203,21 @@ enum Command {
     Dump {
         /// Filter on PGN.
         #[arg(long)]
-        pgn: Option<u32>,
+        pgn: Vec<u32>,
 
         /// Filter on node.
         #[arg(long)]
-        node: Option<String>,
+        node: Vec<String>,
     },
     /// Analyze network frames.
     Analyze {
         /// Filter on PGN.
         #[arg(long)]
-        pgn: Option<u32>,
+        pgn: Vec<u32>,
 
         /// Filter on node.
         #[arg(long)]
-        node: Option<String>,
+        node: Vec<String>,
     },
 }
 
@@ -355,11 +355,15 @@ async fn main() -> anyhow::Result<()> {
 
             let mut router = Router::new(net);
 
-            if let Some(pgn) = pgn {
+            for pgn in pgn {
                 router.add_pgn_filter(pgn);
             }
-            if let Some(node) = node.map(|s| node_address(s).unwrap()) {
-                router.add_node_filter(node);
+            for node in node
+                .iter()
+                .map(|s| node_address(s.to_owned()))
+                .filter(|a| a.is_ok())
+            {
+                router.add_node_filter(node.unwrap());
             }
 
             print_frames(router).await?;
@@ -370,11 +374,15 @@ async fn main() -> anyhow::Result<()> {
 
             let mut router = Router::new(net);
 
-            if let Some(pgn) = pgn {
+            for pgn in pgn {
                 router.add_pgn_filter(pgn);
             }
-            if let Some(node) = node.map(|s| node_address(s).unwrap()) {
-                router.add_node_filter(node);
+            for node in node
+                .iter()
+                .map(|s| node_address(s.to_owned()))
+                .filter(|a| a.is_ok())
+            {
+                router.add_node_filter(node.unwrap());
             }
 
             analyze_frames(router).await?;
