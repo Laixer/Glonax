@@ -167,6 +167,7 @@ struct ConfigMessage {
 }
 
 impl ConfigMessage {
+    #[allow(dead_code)]
     fn from_frame(node: u8, frame: &Frame) -> Self {
         let mut led_on = None;
         let mut reset = None;

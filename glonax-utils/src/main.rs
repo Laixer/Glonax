@@ -50,12 +50,12 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     loop {
         router.listen().await?;
 
-        if let Some(ems) = router.try_accept(&mut engine_management_service) {
+        if let Some(message) = router.try_accept(&mut engine_management_service) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Engine"),
-                ems
+                message
             );
         }
 
@@ -220,6 +220,7 @@ enum Command {
     },
 }
 
+// TODO: Node should be HCU
 #[derive(clap::Subcommand)]
 enum NodeCommand {
     /// Enable or disable identification LED.

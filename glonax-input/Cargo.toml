@@ -6,7 +6,7 @@ edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
-glonax = { version = "3.0", path = "../glonax-runtime" }
+glonax = { version = "3.1", path = "../glonax-runtime" }
 glonax-gamepad = { version = "1.0", path = "../glonax-gamepad" }
 
 tonic = "0.8"
