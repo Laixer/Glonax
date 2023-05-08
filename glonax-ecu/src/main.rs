@@ -229,6 +229,23 @@ async fn signal_listener(
     }
 }
 
+async fn host_listener(
+    _: config::EcuConfig,
+    writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
+) {
+    use glonax::channel::BroadcastSource;
+    use glonax::net::HostService;
+
+    let mut service = HostService::new();
+
+    loop {
+        service.refresh();
+        service.fetch(&writer);
+
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    }
+}
+
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let addr = config.address.parse()?;
 
@@ -239,6 +256,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
     let signal_writer = glonax::channel::broadcast_channel(10);
 
     runtime.spawn_background_task(signal_listener(config.clone(), signal_writer.clone()));
+    runtime.spawn_background_task(host_listener(config.clone(), signal_writer.clone()));
 
     Server::builder()
         .add_service(
