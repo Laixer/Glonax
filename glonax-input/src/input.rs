@@ -85,7 +85,7 @@ impl InputState {
                     Some(HydraulicMotion::Change(vec![(
                         Actuator::Arm,
                         if self.limit_motion {
-                            value.ramp(3_000).clamp(-20_000, 20_000)
+                            value.ramp(3_000).clamp(-17_000, 17_000)
                         } else {
                             value.ramp(3_000)
                         },
@@ -98,7 +98,7 @@ impl InputState {
                 } else {
                     Some(HydraulicMotion::Change(vec![(
                         Actuator::Bucket,
-                        value.ramp(4096),
+                        value.ramp(4096).clamp(-14_000, 32_000),
                     )]))
                 }
             }
@@ -109,7 +109,7 @@ impl InputState {
                     Some(HydraulicMotion::Change(vec![(
                         Actuator::Boom,
                         if self.limit_motion {
-                            value.ramp(3_000).clamp(i16::MIN, 12_000)
+                            value.ramp(3_000).clamp(i16::MIN, 17_000)
                         } else {
                             value.ramp(3_000)
                         },
