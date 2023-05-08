@@ -119,7 +119,7 @@ impl EcuState {
     }
 }
 
-async fn listener(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
+async fn net_listener(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
     use glonax::net::J1939Network;
 
     let network = J1939Network::new(config.interface.first().unwrap(), 0x4A).unwrap();
@@ -132,7 +132,7 @@ async fn listener(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
             log::error!("{}", e);
         };
 
-        if let Some(message) = router.try_accept2(&mut service) {
+        if let Some(message) = router.try_accept(&mut service) {
             if let Some(motion_message) = message.1 {
                 if motion_message.locked {
                     state.lock();
@@ -170,9 +170,7 @@ async fn listener(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
 }
 
 async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState>) {
-    use glonax::net::{
-        EngineManagementSystem, EngineMessage, J1939Network, KueblerEncoderService, Routable,
-    };
+    use glonax::net::{EngineManagementSystem, EngineMessage, J1939Network, KueblerEncoderService};
     use rand::Rng;
 
     let mut rng = rand::rngs::OsRng::default();
@@ -183,27 +181,28 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
     let netd = J1939Network::new(config.interface.first().unwrap(), 0x6D).unwrap();
     let net0 = J1939Network::new(config.interface.first().unwrap(), 0x0).unwrap();
 
-    let mut encoder_a = KueblerEncoderService::new(0x6A);
-    let mut encoder_b = KueblerEncoderService::new(0x6B);
-    let mut encoder_c = KueblerEncoderService::new(0x6C);
-    let mut encoder_d = KueblerEncoderService::new(0x6D);
+    let encoder_a = KueblerEncoderService::new(0x6A);
+    let encoder_b = KueblerEncoderService::new(0x6B);
+    let encoder_c = KueblerEncoderService::new(0x6C);
+    let encoder_d = KueblerEncoderService::new(0x6D);
     let engine_management_system = EngineManagementSystem::new(0x0);
 
-    encoder_a.position = rng.gen_range(0..=6280);
-    encoder_b.position = rng.gen_range(0..=1832 - 1);
-    encoder_c.position = rng.gen_range(685 + 1..=2751 - 1);
-    encoder_d.position = rng.gen_range(0..=3100);
+    let mut encoder_a_position = rng.gen_range(0..=6280);
+    let mut encoder_b_position = rng.gen_range(0..=1832 - 1);
+    let mut encoder_c_position = rng.gen_range(685 + 1..=2751 - 1);
+    let mut encoder_d_position = rng.gen_range(0..=3100);
 
     loop {
         {
             let value = state.power[0].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 2_500;
-            let position_0 = (encoder_a.position as i16 + fac).clamp(0, 6280);
+            let position_0 = (encoder_a_position as i16 + fac).clamp(0, 6280);
 
-            encoder_a.position = position_0 as u32;
-            encoder_a.speed = 0;
-            neta.send_vectored(&encoder_a.encode()).await.unwrap();
+            encoder_a_position = position_0 as u32;
+            neta.send_vectored(&encoder_a.encode(encoder_a_position, 0))
+                .await
+                .unwrap();
 
             tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
@@ -212,11 +211,12 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             let value = state.power[1].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 5_000;
-            let position_0 = (encoder_b.position as i16 + fac).clamp(0, 1832 - 1);
+            let position_0 = (encoder_b_position as i16 + fac).clamp(0, 1832 - 1);
 
-            encoder_b.position = position_0 as u32;
-            encoder_b.speed = 0;
-            netb.send_vectored(&encoder_b.encode()).await.unwrap();
+            encoder_b_position = position_0 as u32;
+            netb.send_vectored(&encoder_b.encode(encoder_b_position, 0))
+                .await
+                .unwrap();
 
             tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
@@ -225,11 +225,12 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             let value = state.power[2].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 5_000;
-            let position_0 = (encoder_c.position as i16 + fac).clamp(685, 2751);
+            let position_0 = (encoder_c_position as i16 + fac).clamp(685, 2751);
 
-            encoder_c.position = position_0 as u32;
-            encoder_c.speed = 0;
-            netc.send_vectored(&encoder_c.encode()).await.unwrap();
+            encoder_c_position = position_0 as u32;
+            netc.send_vectored(&encoder_c.encode(encoder_c_position, 0))
+                .await
+                .unwrap();
 
             tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
@@ -238,11 +239,12 @@ async fn signal_writer(config: config::SimConfig, state: std::sync::Arc<EcuState
             let value = state.power[3].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 5_000;
-            let position_0 = (encoder_d.position as i16 + fac).clamp(0, 3100);
+            let position_0 = (encoder_d_position as i16 + fac).clamp(0, 3100);
 
-            encoder_d.position = position_0 as u32;
-            encoder_d.speed = 0;
-            netd.send_vectored(&encoder_d.encode()).await.unwrap();
+            encoder_d_position = position_0 as u32;
+            netd.send_vectored(&encoder_d.encode(encoder_d_position, 0))
+                .await
+                .unwrap();
 
             tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
@@ -268,7 +270,7 @@ async fn daemonize(config: &config::SimConfig) -> anyhow::Result<()> {
 
     let state = std::sync::Arc::new(EcuState::new());
 
-    runtime.spawn_background_task(listener(config.clone(), state.clone()));
+    runtime.spawn_background_task(net_listener(config.clone(), state.clone()));
     runtime.spawn_background_task(signal_writer(config.clone(), state));
 
     runtime.wait_for_shutdown().await;

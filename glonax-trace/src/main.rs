@@ -118,28 +118,24 @@ async fn signal_listener(
         KueblerEncoderService::new(0x6D),
     ];
 
-    log::debug!("Listening for service signals");
+    log::debug!("Starting network services");
 
     loop {
         if let Err(e) = router.listen().await {
             log::error!("{}", e);
         };
 
-        if let Some(engine_message) = router.try_accept2(&mut engine_management_service) {
-            log::trace!(
-                "0x{:X?} » {}",
-                router.frame_source().unwrap(),
-                engine_message
-            );
+        if let Some(message) = router.try_accept(&mut engine_management_service) {
+            log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), message);
 
-            engine_message.fetch(&writer)
+            message.fetch(&writer)
         }
 
         for encoder in &mut encoder_list {
-            if router.try_accept(encoder) {
-                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), encoder);
+            if let Some(message) = router.try_accept(encoder) {
+                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), message);
 
-                encoder.fetch(&writer);
+                message.fetch(&writer);
             }
         }
     }

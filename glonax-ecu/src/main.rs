@@ -183,7 +183,7 @@ impl glonax::transport::vehicle_management_server::VehicleManagement for Vehicle
 
 // TODO: Even though the same confiig is used as for the motion command, the signal listeners
 // should be able to listen on a different network.
-async fn signal_listener(
+async fn net_listener(
     config: config::EcuConfig,
     writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
 ) {
@@ -202,28 +202,24 @@ async fn signal_listener(
         KueblerEncoderService::new(0x6D),
     ];
 
-    log::debug!("Listening for service signals");
+    log::debug!("Starting network services");
 
     loop {
         if let Err(e) = router.listen().await {
             log::error!("{}", e);
         };
 
-        if let Some(engine_message) = router.try_accept2(&mut engine_management_service) {
-            log::trace!(
-                "0x{:X?} » {}",
-                router.frame_source().unwrap(),
-                engine_message
-            );
+        if let Some(message) = router.try_accept(&mut engine_management_service) {
+            log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), message);
 
-            engine_message.fetch(&writer)
+            message.fetch(&writer)
         }
 
         for encoder in &mut encoder_list {
-            if router.try_accept(encoder) {
-                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), encoder);
+            if let Some(message) = router.try_accept(encoder) {
+                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), message);
 
-                encoder.fetch(&writer);
+                message.fetch(&writer);
             }
         }
     }
@@ -237,6 +233,8 @@ async fn host_listener(
     use glonax::net::HostService;
 
     let mut service = HostService::new();
+
+    log::debug!("Starting host services");
 
     loop {
         service.refresh();
@@ -255,7 +253,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
 
     let signal_writer = glonax::channel::broadcast_channel(10);
 
-    runtime.spawn_background_task(signal_listener(config.clone(), signal_writer.clone()));
+    runtime.spawn_background_task(net_listener(config.clone(), signal_writer.clone()));
     runtime.spawn_background_task(host_listener(config.clone(), signal_writer.clone()));
 
     Server::builder()

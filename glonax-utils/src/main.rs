@@ -50,7 +50,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     loop {
         router.listen().await?;
 
-        if let Some(ems) = router.try_accept2(&mut engine_management_service) {
+        if let Some(ems) = router.try_accept(&mut engine_management_service) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
@@ -59,43 +59,43 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             );
         }
 
-        if router.try_accept(&mut arm_encoder) {
+        if let Some(message) = router.try_accept(&mut arm_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Arm"),
-                arm_encoder
+                message
             );
         }
 
-        if router.try_accept(&mut boom_encoder) {
+        if let Some(message) = router.try_accept(&mut boom_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Boom"),
-                boom_encoder
+                message
             );
         }
 
-        if router.try_accept(&mut frame_encoder) {
+        if let Some(message) = router.try_accept(&mut frame_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Frame"),
-                frame_encoder
+                message
             );
         }
 
-        if router.try_accept(&mut attachment_encoder) {
+        if let Some(message) = router.try_accept(&mut attachment_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
-                attachment_encoder
+                message
             );
         }
 
-        if let Some(message) = router.try_accept2(&mut actuator) {
+        if let Some(message) = router.try_accept(&mut actuator) {
             if let Some(actuator_message) = message.0 {
                 info!(
                     "{} {} » {}",
@@ -113,7 +113,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             }
         }
 
-        if let Some(message) = router.try_accept2(&mut app_inspector) {
+        if let Some(message) = router.try_accept(&mut app_inspector) {
             if let Some((major, minor, patch)) = message.software_indent {
                 info!(
                     "{} {} » Software identification: {}.{}.{}",

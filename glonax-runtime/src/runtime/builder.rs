@@ -28,7 +28,7 @@ impl Builder {
     /// This method will spawn a task that will listen for a termination signal.
     /// When the signal is received, the runtime will be shutdown.
     pub fn with_shutdown(self) -> Self {
-        debug!("Enable signals shutdown");
+        debug!("Enable shutdown signal");
 
         let sender = self.0.shutdown.0.clone();
 

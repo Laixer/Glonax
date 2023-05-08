@@ -5,8 +5,8 @@ use glonax_j1939::*;
 pub use actuator::*;
 pub use encoder::*;
 pub use engine::*;
-pub use service::*;
 pub use host::*;
+pub use service::*;
 
 mod actuator;
 mod encoder;
@@ -129,15 +129,6 @@ impl J1939Network {
     }
 }
 
-#[deprecated]
-pub trait Routable: Send + Sync {
-    fn decode(&mut self, frame: &Frame) -> bool;
-    // TODO: Add a method to encode a frame.
-    fn encode(&self) -> Vec<Frame> {
-        vec![]
-    }
-}
-
 pub trait Parsable<T>: Send + Sync {
     /// Parse a frame.
     ///
@@ -229,16 +220,11 @@ impl Router {
         Ok(())
     }
 
-    #[deprecated]
-    pub fn try_accept(&self, service: &mut impl Routable) -> bool {
-        self.frame.map_or(false, |frame| service.decode(&frame))
-    }
-
     /// Try to accept a frame and parse it.
     ///
     /// This method will return `None` if the frame is not accepted. Otherwise, it will return
     /// `Some` with the resulting message.
-    pub fn try_accept2<T>(&self, service: &mut impl Parsable<T>) -> Option<T> {
+    pub fn try_accept<T>(&self, service: &mut impl Parsable<T>) -> Option<T> {
         self.frame.and_then(|frame| service.parse(&frame))
     }
 }
