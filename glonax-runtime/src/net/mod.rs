@@ -58,7 +58,7 @@ impl J1939Network {
     }
 
     /// Broadcast Announce Message.
-    pub fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
+    fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
         let data_length = (data.len() as u16).to_le_bytes();
         let packets = (data.len() as f32 / 8.0).ceil() as u8;
         let byte_array = pgn.to_le_bytes();

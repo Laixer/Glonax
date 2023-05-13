@@ -225,7 +225,7 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             let value = state.power[2].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 5_000;
-            let position_0 = (encoder_c_position as i16 + fac).clamp(685, 2751);
+            let position_0 = (encoder_c_position as i16 - fac).clamp(685, 2760);
 
             encoder_c_position = position_0 as u32;
             netc.send_vectored(&encoder_c.encode(encoder_c_position, 0))
