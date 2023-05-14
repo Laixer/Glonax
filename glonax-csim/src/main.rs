@@ -189,7 +189,7 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
 
     let mut encoder_a_position = rng.gen_range(0..=6280);
     let mut encoder_b_position = rng.gen_range(0..=1832 - 1);
-    let mut encoder_c_position = rng.gen_range(685 + 1..=2751 - 1);
+    let mut encoder_c_position = rng.gen_range(685..=2760);
     let mut encoder_d_position = rng.gen_range(0..=3100);
 
     loop {
