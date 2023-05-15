@@ -4,7 +4,7 @@ use crate::motion::{Actuator, HydraulicMotion};
 
 /// Button state.
 #[derive(PartialEq, Eq)]
-pub enum ButtonState {
+pub(crate) enum ButtonState {
     /// Button pressed.
     Pressed,
     /// Button released.
@@ -16,7 +16,7 @@ pub enum ButtonState {
 /// Scancodes are indirectly mapped to input pheripherials. Any
 /// input device can emit these codes. Their effect is left to
 /// device implementations.
-pub enum Scancode {
+pub(crate) enum Scancode {
     /// Left stick X axis.
     LeftStickX(i16),
     /// Left stick Y axis.
@@ -62,7 +62,7 @@ impl InputState {
     /// Each individual scancode is mapped to its own motion
     /// structure. This way an input scancode can be more or
     /// less sensitive based on the actuator (and input control).
-    pub(crate) fn try_from(&mut self, input: Scancode) -> Option<HydraulicMotion> {
+    pub(super) fn try_from(&mut self, input: Scancode) -> Option<HydraulicMotion> {
         match input {
             Scancode::LeftStickX(value) => {
                 if self.motion_lock {
@@ -97,7 +97,7 @@ impl InputState {
                     None
                 } else {
                     Some(HydraulicMotion::Change(vec![(
-                        Actuator::Bucket,
+                        Actuator::Attachment,
                         if self.limit_motion {
                             if value.is_negative() {
                                 (value / 2).ramp(2_000)

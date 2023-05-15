@@ -1,12 +1,18 @@
 use glonax::transport::{Motion, ToMotion};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Actuator {
+pub(crate) enum Actuator {
+    /// Boom actuator.
     Boom = 0,
+    /// Arm actuator.
     Arm = 4,
-    Bucket = 5,
+    /// Attachment actuator.
+    Attachment = 5,
+    /// Slew actuator.
     Slew = 1,
+    /// Left limp actuator.
     LimpLeft = 3,
+    /// Right limp actuator.
     LimpRight = 2,
 }
 
@@ -16,7 +22,7 @@ impl From<Actuator> for u32 {
     }
 }
 
-pub enum HydraulicMotion {
+pub(crate) enum HydraulicMotion {
     /// Stop all motion until resumed.
     StopAll,
     /// Resume all motion.

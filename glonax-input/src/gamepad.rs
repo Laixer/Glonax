@@ -8,7 +8,7 @@ use crate::input::{ButtonState, Scancode};
 
 const DEVICE_NAME: &str = "gamepad";
 
-pub struct Gamepad {
+pub(crate) struct Gamepad {
     driver: glonax_gamepad::AsyncGamepad,
     node_path: PathBuf,
     reverse_left: bool,
@@ -16,7 +16,7 @@ pub struct Gamepad {
 }
 
 impl Gamepad {
-    pub async fn new(path: &Path) -> Self {
+    pub(crate) async fn new(path: &Path) -> Self {
         Self {
             driver: glonax_gamepad::AsyncGamepad::new(path).await.unwrap(),
             node_path: path.to_path_buf(),
