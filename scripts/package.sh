@@ -18,6 +18,7 @@ cp ./contrib/systemd/glonax-inputd.service ./target/glonax_${VERSION}_amd64/etc/
 cp ./contrib/systemd/glonax-traced@.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
 
 # Copy binaries
+cp ./target/release/glonax-csim ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-ecud ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-inputd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-netctl ./target/glonax_${VERSION}_amd64/usr/local/bin
