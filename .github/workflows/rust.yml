@@ -34,7 +34,13 @@ jobs:
       run: sudo dpkg -i ./target/glonax*.deb
       
     - name: Test install
-      run: glonax-ecud -V
+      run: |
+        glonax-csim -V
+        glonax-ecud -V
+        glonax-inputd -V
+        glonax-inputd -V
+        glonax-netctl -V
+        glonax-traced -V
 
     - name: Publish artifacts
       uses: actions/upload-artifact@v2
