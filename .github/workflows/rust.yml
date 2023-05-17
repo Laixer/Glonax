@@ -32,6 +32,9 @@ jobs:
 
     - name: Install deb
       run: sudo dpkg -i ./target/glonax*.deb
+      
+    - name: Test install
+      run: glonax-ecud -V
 
     - name: Publish artifacts
       uses: actions/upload-artifact@v2
