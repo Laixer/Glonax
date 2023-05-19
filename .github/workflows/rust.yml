@@ -20,6 +20,9 @@ jobs:
 
     - name: Install dependencies
       run: sudo apt-get install -y protobuf-compiler
+      
+    - name: Show environment
+      run: rustup show
 
     - name: Build
       run: cargo build --release --all-features
