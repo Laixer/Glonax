@@ -50,3 +50,16 @@ jobs:
       with:
         name: glonax-${{ github.ref_name }}.deb
         path: ./target/**.deb
+
+  cross-compile:
+    name: Cross Compile
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get install -y protobuf-compiler
+        rustup target add aarch64-unknown-linux-gnu
