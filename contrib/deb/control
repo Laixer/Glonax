@@ -1,7 +1,10 @@
 Package: glonax
 Version: 3.0.1
+Depends: adduser (>= 3.11)
 Maintainer: Laixer Equipment B.V. <info@laixer.com>
 Architecture: amd64
+Section: restricted/base
+Priority: optional
 Homepage: https://github.com/Laixer/Glonax
 Bugs: https://github.com/Laixer/Glonax
 Description: Heavy machinery controller daemon
