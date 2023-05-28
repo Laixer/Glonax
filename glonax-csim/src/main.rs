@@ -197,14 +197,18 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             let value = state.power[0].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 2_500;
-
             let mut position_0 = (encoder_a_position as i16 + fac) % 6280;
             if position_0 < 0 {
                 position_0 = 6280 + position_0;
             }
 
             encoder_a_position = position_0 as u32;
-            neta.send_vectored(&encoder_a.encode(encoder_a_position, 0))
+            let mut def_encoder_a_position = encoder_a_position;
+            if encoder_a_position < 6280 && encoder_a_position > 0 {
+                def_encoder_a_position += rng.gen_range(0..=1);
+            }
+
+            neta.send_vectored(&encoder_a.encode(def_encoder_a_position, 0))
                 .await
                 .unwrap();
 
@@ -218,7 +222,12 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             let position_0 = (encoder_b_position as i16 + fac).clamp(0, 1832 - 1);
 
             encoder_b_position = position_0 as u32;
-            netb.send_vectored(&encoder_b.encode(encoder_b_position, 0))
+            let mut def_encoder_b_position = encoder_b_position;
+            if def_encoder_b_position < 1832 - 1 && encoder_a_position > 0 {
+                def_encoder_b_position += rng.gen_range(0..=1);
+            }
+
+            netb.send_vectored(&encoder_b.encode(def_encoder_b_position, 0))
                 .await
                 .unwrap();
 
@@ -232,7 +241,12 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             let position_0 = (encoder_c_position as i16 - fac).clamp(685, 2760);
 
             encoder_c_position = position_0 as u32;
-            netc.send_vectored(&encoder_c.encode(encoder_c_position, 0))
+            let mut def_encoder_c_position = encoder_c_position;
+            if encoder_c_position < 2760 && encoder_c_position > 685 {
+                def_encoder_c_position += rng.gen_range(0..=1);
+            }
+
+            netc.send_vectored(&encoder_c.encode(def_encoder_c_position, 0))
                 .await
                 .unwrap();
 
@@ -246,7 +260,12 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             let position_0 = (encoder_d_position as i16 + fac).clamp(0, 3100);
 
             encoder_d_position = position_0 as u32;
-            netd.send_vectored(&encoder_d.encode(encoder_d_position, 0))
+            let mut def_encoder_d_position = encoder_d_position;
+            if encoder_d_position < 3100 && encoder_d_position > 0 {
+                def_encoder_d_position += rng.gen_range(0..=1);
+            }
+
+            netd.send_vectored(&encoder_d.encode(def_encoder_d_position, 0))
                 .await
                 .unwrap();
 
