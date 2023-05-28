@@ -197,7 +197,11 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             let value = state.power[0].load(std::sync::atomic::Ordering::SeqCst);
 
             let fac = value / 2_500;
-            let position_0 = (encoder_a_position as i16 + fac).clamp(0, 6280);
+
+            let mut position_0 = (encoder_a_position as i16 + fac) % 6280;
+            if position_0 < 0 {
+                position_0 = 6280 + position_0;
+            }
 
             encoder_a_position = position_0 as u32;
             neta.send_vectored(&encoder_a.encode(encoder_a_position, 0))
