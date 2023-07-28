@@ -1,7 +1,29 @@
 #!/bin/bash
+# Copyright (c) 2021-2023 Laixer B.V.
+#
+# Build a Debian package for Glonax
+#
+# Run script from the workspace root and make
+# sure the database runs on localhost.
+#
+# Usage: ./scripts/package.sh
+
 set -e
 
+if [ ! -d "./scripts" ]
+then
+  echo "Run script from the project directory"
+  exit 1
+fi
+
 VERSION=3.0-1
+
+# Build the project
+cargo build --release
+
+# Cleanup
+rm -rf ./target/glonax_${VERSION}_amd64
+rm -rf ./target/glonax_${VERSION}_amd64.deb
 
 # Build directory tree
 mkdir -p ./target/glonax_${VERSION}_amd64/DEBIAN
