@@ -129,7 +129,7 @@ pub trait Parsable<T>: Send + Sync {
     /// Parse a frame.
     ///
     /// Returns `None` if the frame is not parsable. Returns `Some(T)` if the frame is parsable
-    /// and the parsed value is `T`.
+    /// and the message is successfully parsed and returned.
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 

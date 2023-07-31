@@ -1,5 +1,7 @@
 use sysinfo::{System, SystemExt};
 
+const DEVICE_NET_LOCAL_ADDR: u8 = 0x9E;
+
 pub struct HostService {
     system: System,
 }
@@ -43,14 +45,14 @@ impl crate::channel::BroadcastSource<crate::transport::Signal> for HostService {
     fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
         writer
             .send(crate::transport::Signal::new(
-                0x9E_u32,
+                DEVICE_NET_LOCAL_ADDR as u32,
                 382,
                 crate::transport::signal::Metric::Percent(self.memory_used() as i32),
             ))
             .ok();
         writer
             .send(crate::transport::Signal::new(
-                0x9E_u32,
+                DEVICE_NET_LOCAL_ADDR as u32,
                 383,
                 crate::transport::signal::Metric::Percent(self.swap_used() as i32),
             ))
@@ -58,21 +60,21 @@ impl crate::channel::BroadcastSource<crate::transport::Signal> for HostService {
         let load_avg = self.load_avg();
         writer
             .send(crate::transport::Signal::new(
-                0x9E_u32,
+                DEVICE_NET_LOCAL_ADDR as u32,
                 593,
                 crate::transport::signal::Metric::Percent(load_avg.0 as i32),
             ))
             .ok();
         writer
             .send(crate::transport::Signal::new(
-                0x9E_u32,
+                DEVICE_NET_LOCAL_ADDR as u32,
                 594,
                 crate::transport::signal::Metric::Percent(load_avg.1 as i32),
             ))
             .ok();
         writer
             .send(crate::transport::Signal::new(
-                0x9E_u32,
+                DEVICE_NET_LOCAL_ADDR as u32,
                 595,
                 crate::transport::signal::Metric::Percent(load_avg.2 as i32),
             ))
