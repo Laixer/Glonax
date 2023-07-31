@@ -6,12 +6,14 @@ pub use actuator::*;
 pub use encoder::*;
 pub use engine::*;
 pub use host::*;
+pub use nmea::*;
 pub use service::*;
 
 mod actuator;
 mod encoder;
 mod engine;
 mod host;
+mod nmea;
 mod service;
 
 // TODO: Implement connection management.
