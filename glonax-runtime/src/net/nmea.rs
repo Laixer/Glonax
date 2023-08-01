@@ -76,14 +76,14 @@ impl NMEAMessage {
             //     .unwrap();
             // println!("Timestamp: {}:{}:{}", hour, minute, second);
 
-            let lat_line = sentence[2];
-            let lat_quadrant = sentence[3].to_uppercase().chars().next().unwrap();
-
-            let long_line = sentence[4];
-            let long_quadrant = sentence[5].to_uppercase().chars().next().unwrap();
-
             let fix_quality = sentence[6].parse::<u8>().unwrap();
             if fix_quality == 1 || fix_quality == 2 {
+                let lat_line = sentence[2];
+                let lat_quadrant = sentence[3].to_uppercase().chars().next().unwrap();
+
+                let long_line = sentence[4];
+                let long_quadrant = sentence[5].to_uppercase().chars().next().unwrap();
+
                 this.latitude = Self::dms_to_degree(lat_line, lat_quadrant);
                 this.longitude = Self::dms_to_degree(long_line, long_quadrant);
             }
@@ -91,33 +91,39 @@ impl NMEAMessage {
             // let number_of_satellites = sentence[7].parse::<u8>().unwrap();
             // println!("Number of satellites: {}", number_of_satellites);
 
-            let altitude = sentence[9].parse::<f64>().unwrap();
-            let altitude_unit = sentence[10].to_uppercase().chars().next().unwrap();
-            if altitude_unit == 'M' {
-                this.altitude = Some(altitude);
+            if sentence[9].len() > 0 && sentence[10].len() > 0 {
+                let altitude = sentence[9].parse::<f64>().unwrap();
+                let altitude_unit = sentence[10].to_uppercase().chars().next().unwrap();
+
+                if altitude_unit == 'M' {
+                    this.altitude = Some(altitude);
+                }
             }
         } else if line.starts_with("$GNGLL") {
             let sentence: Vec<&str> = line.split(',').collect();
 
-            let lat_line = sentence[1];
-            let lat_quadrant = sentence[2].to_uppercase().chars().next().unwrap();
+            let validity = sentence[6].to_uppercase().chars().next().unwrap();
+            if validity == 'A' {
+                let lat_line = sentence[1];
+                let lat_quadrant = sentence[2].to_uppercase().chars().next().unwrap();
 
-            let long_line = sentence[3];
-            let long_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
+                let long_line = sentence[3];
+                let long_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
 
-            this.latitude = Self::dms_to_degree(lat_line, lat_quadrant);
-            this.longitude = Self::dms_to_degree(long_line, long_quadrant);
+                this.latitude = Self::dms_to_degree(lat_line, lat_quadrant);
+                this.longitude = Self::dms_to_degree(long_line, long_quadrant);
+            }
         } else if line.starts_with("$GNRMC") {
             let sentence: Vec<&str> = line.split(',').collect();
 
-            let lat_line = sentence[3];
-            let lat_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
-
-            let long_line = sentence[5];
-            let long_quadrant = sentence[6].to_uppercase().chars().next().unwrap();
-
             let validity = sentence[2].to_uppercase().chars().next().unwrap();
             if validity == 'A' {
+                let lat_line = sentence[3];
+                let lat_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
+
+                let long_line = sentence[5];
+                let long_quadrant = sentence[6].to_uppercase().chars().next().unwrap();
+
                 this.latitude = Self::dms_to_degree(lat_line, lat_quadrant);
                 this.longitude = Self::dms_to_degree(long_line, long_quadrant);
             }
