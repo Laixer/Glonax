@@ -1,0 +1,20 @@
+[package]
+name = "glonax-host"
+version = "1.0.0"
+authors = ["Laixer Equipment B.V. <info@laixer.com>"]
+edition = "2021"
+repository = "https://github.com/Laixer/Glonax"
+
+
+[dependencies]
+glonax = { version = "3.1", path = "../glonax-runtime" }
+
+log = "0.4"
+anyhow = "1.0"
+tokio = { version = "1.29", features = ["full"] }
+clap = { version = "4.3", features = ["derive"] }
+simplelog = "0.12"
+
+[[bin]]
+name = "glonax-hostd"
+path = "src/main.rs"
