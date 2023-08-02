@@ -1,5 +1,7 @@
 use sysinfo::{System, SystemExt};
 
+use crate::core::{Metric, Signal};
+
 const DEVICE_NET_LOCAL_ADDR: u8 = 0x9E;
 
 pub struct HostService {
@@ -38,6 +40,37 @@ impl HostService {
     pub fn refresh(&mut self) {
         self.system.refresh_memory();
         self.system.refresh_cpu();
+    }
+}
+
+impl crate::channel::SignalSource for HostService {
+    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
+        writer.push(Signal::new(
+            DEVICE_NET_LOCAL_ADDR as u32,
+            382,
+            Metric::Percent(self.memory_used() as i32),
+        ));
+        writer.push(Signal::new(
+            DEVICE_NET_LOCAL_ADDR as u32,
+            383,
+            Metric::Percent(self.swap_used() as i32),
+        ));
+        let load_avg = self.load_avg();
+        writer.push(Signal::new(
+            DEVICE_NET_LOCAL_ADDR as u32,
+            593,
+            Metric::Percent(load_avg.0 as i32),
+        ));
+        writer.push(Signal::new(
+            DEVICE_NET_LOCAL_ADDR as u32,
+            594,
+            Metric::Percent(load_avg.1 as i32),
+        ));
+        writer.push(Signal::new(
+            DEVICE_NET_LOCAL_ADDR as u32,
+            595,
+            Metric::Percent(load_avg.2 as i32),
+        ));
     }
 }
 

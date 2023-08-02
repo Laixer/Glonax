@@ -1,3 +1,5 @@
+use crate::core::{Metric, Signal};
+
 pub struct NMEAMessage {
     /// Latitude.
     pub latitude: f64,
@@ -161,41 +163,84 @@ impl std::fmt::Display for NMEAMessage {
     }
 }
 
-// impl crate::channel::BroadcastSource<crate::transport::Signal> for NMEAMessage {
-//     fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
-//         writer
-//             .send(crate::transport::Signal::new(
-//                 1 as u32,
-//                 0,
-//                 crate::transport::signal::Metric::Angle(self.position as f32 / 1000.0),
-//             ))
-//             .ok();
-//         writer
-//             .send(crate::transport::Signal::new(
-//                 1 as u32,
-//                 1,
-//                 crate::transport::signal::Metric::Rpm(self.speed as i32),
-//             ))
-//             .ok();
-//     }
-// }
+impl crate::channel::SignalSource for NMEAMessage {
+    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
+        writer.push(Signal::new(
+            1_u32,
+            0_u32,
+            Metric::Coordinates((self.latitude as f32, self.longitude as f32)),
+        ));
 
-pub struct NMEAService {
-    /// Node ID.
-    node: u8,
+        if let Some(altitude) = self.altitude {
+            writer.push(Signal::new(1_u32, 1_u32, Metric::Altitude(altitude as f32)))
+        }
+        if let Some(speed) = self.speed {
+            writer.push(Signal::new(
+                1_u32,
+                2_u32,
+                Metric::Speed(speed as f32), // TODO: Convert to m/s
+            ))
+        }
+        if let Some(heading) = self.heading {
+            writer.push(Signal::new(1_u32, 3_u32, Metric::Heading(heading as f32)))
+        }
+        if let Some(timestamp) = self.timestamp {
+            writer.push(Signal::new(
+                1_u32,
+                4_u32,
+                Metric::Timestamp(timestamp as f64),
+            ))
+        }
+    }
 }
 
-impl NMEAService {
-    pub fn new(node: u8) -> Self {
-        Self { node }
+impl crate::channel::BroadcastSource<Signal> for NMEAMessage {
+    fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<Signal>) {
+        writer
+            .send(Signal::new(
+                1_u32,
+                0_u32,
+                Metric::Coordinates((self.latitude as f32, self.longitude as f32)),
+            ))
+            .ok();
+        if let Some(altitude) = self.altitude {
+            writer
+                .send(Signal::new(1_u32, 1_u32, Metric::Altitude(altitude as f32)))
+                .ok();
+        }
+        if let Some(speed) = self.speed {
+            writer
+                .send(Signal::new(
+                    1_u32,
+                    2_u32,
+                    Metric::Speed(speed as f32), // TODO: Convert to m/s
+                ))
+                .ok();
+        }
+        if let Some(heading) = self.heading {
+            writer
+                .send(Signal::new(1_u32, 3_u32, Metric::Heading(heading as f32)))
+                .ok();
+        }
+        if let Some(timestamp) = self.timestamp {
+            writer
+                .send(Signal::new(
+                    1_u32,
+                    4_u32,
+                    Metric::Timestamp(timestamp as f64),
+                ))
+                .ok();
+        }
     }
+}
 
+pub struct NMEAService;
+
+impl NMEAService {
     pub fn decode(&self, line: String) -> Option<NMEAMessage> {
         if line.starts_with("$GNGGA") {
-            // Global Positioning System Fix Data
             Some(NMEAMessage::decode(line))
         } else if line.starts_with("$GNGLL") {
-            // Geographic position – latitude and longitude
             Some(NMEAMessage::decode(line))
         } else if line.starts_with("$GNRMC") {
             Some(NMEAMessage::decode(line))
