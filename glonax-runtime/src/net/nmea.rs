@@ -194,46 +194,6 @@ impl crate::channel::SignalSource for NMEAMessage {
     }
 }
 
-impl crate::channel::BroadcastSource<Signal> for NMEAMessage {
-    fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<Signal>) {
-        writer
-            .send(Signal::new(
-                1_u32,
-                0_u32,
-                Metric::Coordinates((self.latitude as f32, self.longitude as f32)),
-            ))
-            .ok();
-        if let Some(altitude) = self.altitude {
-            writer
-                .send(Signal::new(1_u32, 1_u32, Metric::Altitude(altitude as f32)))
-                .ok();
-        }
-        if let Some(speed) = self.speed {
-            writer
-                .send(Signal::new(
-                    1_u32,
-                    2_u32,
-                    Metric::Speed(speed as f32), // TODO: Convert to m/s
-                ))
-                .ok();
-        }
-        if let Some(heading) = self.heading {
-            writer
-                .send(Signal::new(1_u32, 3_u32, Metric::Heading(heading as f32)))
-                .ok();
-        }
-        if let Some(timestamp) = self.timestamp {
-            writer
-                .send(Signal::new(
-                    1_u32,
-                    4_u32,
-                    Metric::Timestamp(timestamp as f64),
-                ))
-                .ok();
-        }
-    }
-}
-
 pub struct NMEAService;
 
 impl NMEAService {
