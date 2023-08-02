@@ -10,6 +10,7 @@ members = [
   "glonax-runtime",
   "glonax-serial",
   "glonax-host",
+  "glonax-gnss",
   "glonax-input",
   "glonax-ecu",
   "glonax-trace",

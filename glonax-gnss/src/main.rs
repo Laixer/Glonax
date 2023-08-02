@@ -11,11 +11,13 @@ mod config;
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
-#[command(about = "Glonax host daemon", long_about = None)]
+#[command(about = "Glonax GNSS daemon", long_about = None)]
 struct Args {
-    /// Refresh interval in milliseconds.
-    #[arg(long, default_value_t = 500)]
-    interval: u64,
+    /// Serial device.
+    device: std::path::PathBuf,
+    /// Serial baud rate.
+    #[arg(long, default_value_t = 9600)]
+    baud_rate: usize,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -30,8 +32,9 @@ async fn main() -> anyhow::Result<()> {
 
     let bin_name = env!("CARGO_BIN_NAME");
 
-    let mut config = config::HostConfig {
-        interval: args.interval,
+    let mut config = config::GnssConfig {
+        device: args.device,
+        baud_rate: args.baud_rate,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -107,27 +110,34 @@ impl glonax::channel::SignalChannel for SignalFifo {
     }
 }
 
-async fn daemonize(config: &config::HostConfig) -> anyhow::Result<()> {
+async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
+    use tokio::io::{AsyncBufReadExt, BufReader};
+
     let runtime = glonax::RuntimeBuilder::from_config(config)?
         .with_shutdown()
         .build();
 
+    let serial = glonax_serial::Uart::open(
+        &config.device,
+        glonax_serial::BaudRate::from_speed(config.baud_rate),
+    )?;
+
+    let reader = BufReader::new(serial);
+    let mut lines = reader.lines();
+
     let mut channel = SignalFifo::new()?;
 
-    let mut service = glonax::net::HostService::new();
+    let service = glonax::net::NMEAService;
 
     log::debug!("Starting host services");
-
-    let interval = config.interval;
 
     runtime.spawn_background_task(async move {
         use glonax::channel::SignalSource;
 
-        loop {
-            service.refresh();
-            service.fetch2(&mut channel);
-
-            tokio::time::sleep(std::time::Duration::from_millis(interval)).await;
+        while let Some(line) = lines.next_line().await.unwrap() {
+            if let Some(message) = service.decode(line) {
+                message.fetch2(&mut channel);
+            }
         }
     });
 

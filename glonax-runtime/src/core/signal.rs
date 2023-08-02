@@ -95,7 +95,7 @@ impl std::fmt::Display for Metric {
                     value_x, value_y, value_z,
                 )
             }
-            Metric::Percent(value) => write!(f, "Per: {:.1}%", value),
+            Metric::Percent(value) => write!(f, "Percent: {:.1}%", value),
             Metric::Coordinates((value_lat, value_long)) => {
                 write!(
                     f,
