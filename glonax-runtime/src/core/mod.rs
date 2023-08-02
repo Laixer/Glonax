@@ -26,11 +26,14 @@ pub mod time {
     use std::time::{Duration, SystemTime};
 
     /// Return the current time as a duration.
+    ///
+    /// This duration is the time since the UNIX epoch in cooridnated
+    /// universal time (UTC).
     #[inline]
     pub fn now() -> Duration {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
+            .expect("Time went backwards")
     }
 }
 

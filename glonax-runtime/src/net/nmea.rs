@@ -1,5 +1,7 @@
 use crate::core::{Metric, Signal};
 
+// TODO: Number of satellites
+// TODO: Timestamp
 pub struct NMEAMessage {
     /// Latitude.
     pub latitude: f64,
@@ -184,13 +186,14 @@ impl crate::channel::SignalSource for NMEAMessage {
         if let Some(heading) = self.heading {
             writer.push(Signal::new(1_u32, 3_u32, Metric::Heading(heading as f32)))
         }
-        if let Some(timestamp) = self.timestamp {
-            writer.push(Signal::new(
-                1_u32,
-                4_u32,
-                Metric::Timestamp(timestamp as f64),
-            ))
-        }
+        // TODO: Timestamp
+        // if let Some(timestamp) = self.timestamp {
+        //     writer.push(Signal::new(
+        //         1_u32,
+        //         4_u32,
+        //         Metric::Timestamp(timestamp as f64),
+        //     ))
+        // }
     }
 }
 

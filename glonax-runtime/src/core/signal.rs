@@ -20,13 +20,13 @@ pub enum Metric {
     /// WS84 coordinates.
     Coordinates((f32, f32)),
     /// Timestamp in seconds.
-    Timestamp(f64),
+    Timestamp(u64),
     //// Point in 2D space.
     Point2D((f32, f32)),
     /// Point in 3D space.
     Point3D((f32, f32, f32)),
     /// Number of unspecificed units.
-    Count(u32),
+    Count(u64),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -103,7 +103,19 @@ impl std::fmt::Display for Metric {
                     value_lat, value_long
                 )
             }
-            Metric::Timestamp(value) => write!(f, "Timestamp: {:>+5}", value),
+            Metric::Timestamp(value) => {
+                use chrono::{DateTime, NaiveDateTime, Utc};
+
+                if let Some(naive_datetime) = NaiveDateTime::from_timestamp_opt(*value as i64, 0) {
+                    write!(
+                        f,
+                        "Timestamp: {}",
+                        DateTime::<Utc>::from_utc(naive_datetime, Utc)
+                    )
+                } else {
+                    write!(f, "Timestamp: {:>+5}", value)
+                }
+            }
             Metric::Point2D((value_x, value_y)) => {
                 write!(f, "Point2D: ({:.2}, {:.2})", value_x, value_y)
             }
