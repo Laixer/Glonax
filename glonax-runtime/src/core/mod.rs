@@ -1,5 +1,10 @@
 use std::f32::consts::PI;
 
+pub use self::signal::Metric;
+pub use self::signal::Signal;
+
+mod signal;
+
 /// Level trait.
 pub trait Level {
     /// Return the value of self above the lower threshold.
