@@ -128,22 +128,18 @@ impl std::fmt::Display for EncoderMessage {
     }
 }
 
-impl crate::channel::BroadcastSource<crate::transport::Signal> for EncoderMessage {
-    fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
-        writer
-            .send(crate::transport::Signal::new(
-                self.node as u32,
-                0,
-                crate::transport::signal::Metric::Angle(self.position as f32 / 1000.0),
-            ))
-            .ok();
-        writer
-            .send(crate::transport::Signal::new(
-                self.node as u32,
-                1,
-                crate::transport::signal::Metric::Rpm(self.speed as i32),
-            ))
-            .ok();
+impl crate::channel::SignalSource for EncoderMessage {
+    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
+        writer.push(crate::core::Signal::new(
+            self.node as u32,
+            0,
+            crate::core::Metric::Angle(self.position as f32 / 1000.0),
+        ));
+        writer.push(crate::core::Signal::new(
+            self.node as u32,
+            1,
+            crate::core::Metric::Rpm(self.speed as i32),
+        ));
     }
 }
 

@@ -100,34 +100,28 @@ impl std::fmt::Display for EngineMessage {
     }
 }
 
-impl crate::channel::BroadcastSource<crate::transport::Signal> for EngineMessage {
-    fn fetch(&self, writer: &crate::channel::BroadcastChannelWriter<crate::transport::Signal>) {
+impl crate::channel::SignalSource for EngineMessage {
+    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
         if let Some(driver_demand) = self.driver_demand {
-            writer
-                .send(crate::transport::Signal::new(
-                    self.node as u32,
-                    1,
-                    crate::transport::signal::Metric::Percent(driver_demand as i32),
-                ))
-                .ok();
+            writer.push(crate::core::Signal::new(
+                self.node as u32,
+                1,
+                crate::core::Metric::Percent(driver_demand as i32),
+            ));
         }
         if let Some(actual_engine) = self.actual_engine {
-            writer
-                .send(crate::transport::Signal::new(
-                    self.node as u32,
-                    2,
-                    crate::transport::signal::Metric::Percent(actual_engine as i32),
-                ))
-                .ok();
+            writer.push(crate::core::Signal::new(
+                self.node as u32,
+                2,
+                crate::core::Metric::Percent(actual_engine as i32),
+            ));
         }
         if let Some(rpm) = self.rpm {
-            writer
-                .send(crate::transport::Signal::new(
-                    self.node as u32,
-                    0,
-                    crate::transport::signal::Metric::Rpm(rpm as i32),
-                ))
-                .ok();
+            writer.push(crate::core::Signal::new(
+                self.node as u32,
+                0,
+                crate::core::Metric::Rpm(rpm as i32),
+            ));
         }
     }
 }

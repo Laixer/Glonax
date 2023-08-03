@@ -68,7 +68,7 @@ impl std::fmt::Display for Signal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "0x{:02X?}:{:02X?} - {}",
+            "0x{:02X?}:{:02X?} » {}",
             self.address, self.function, self.metric
         )
     }
