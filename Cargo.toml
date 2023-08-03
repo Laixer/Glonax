@@ -9,6 +9,7 @@ members = [
   "glonax-j1939",
   "glonax-runtime",
   "glonax-serial",
+  "glonax-proxy",
   "glonax-host",
   "glonax-gnss",
   "glonax-input",
