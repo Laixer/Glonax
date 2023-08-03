@@ -55,16 +55,20 @@ impl crate::channel::SignalSource for HostService {
             383,
             Metric::Percent(self.swap_used() as i32),
         ));
-        writer.push(Signal::new(
-            DEVICE_NET_LOCAL_ADDR as u32,
-            421,
-            Metric::Count(self.uptime()),
-        ));
-        writer.push(Signal::new(
-            DEVICE_NET_LOCAL_ADDR as u32,
-            420,
-            Metric::Timestamp(crate::core::time::now().as_secs()),
-        ));
+        if self.uptime() % 15 == 0 {
+            writer.push(Signal::new(
+                DEVICE_NET_LOCAL_ADDR as u32,
+                421,
+                Metric::Count(self.uptime()),
+            ));
+        }
+        if self.uptime() % 60 == 0 {
+            writer.push(Signal::new(
+                DEVICE_NET_LOCAL_ADDR as u32,
+                420,
+                Metric::Timestamp(crate::core::time::now().as_secs()),
+            ));
+        }
         let load_avg = self.load_avg();
         writer.push(Signal::new(
             DEVICE_NET_LOCAL_ADDR as u32,
