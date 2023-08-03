@@ -37,7 +37,6 @@ cp ./contrib/deb/postinst ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/udev/79-glonax.rules ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
 cp ./contrib/systemd/glonax-ecud@.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
 cp ./contrib/systemd/glonax-inputd.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
-cp ./contrib/systemd/glonax-traced@.service ./target/glonax_${VERSION}_amd64/etc/systemd/system
 
 # Copy binaries
 cp ./target/release/glonax-csim ./target/glonax_${VERSION}_amd64/usr/local/bin
@@ -46,7 +45,7 @@ cp ./target/release/glonax-hostd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-gnssd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-inputd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-netctl ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-traced ./target/glonax_${VERSION}_amd64/usr/local/bin
+cp ./target/release/glonax-proxyd ./target/glonax_${VERSION}_amd64/usr/local/bin
 
 # Set permissions
 chmod 755 ./target/glonax_${VERSION}_amd64/DEBIAN/postinst

@@ -14,7 +14,6 @@ members = [
   "glonax-gnss",
   "glonax-input",
   "glonax-ecu",
-  "glonax-trace",
   "glonax-csim",
   "glonax-utils"
 ]
