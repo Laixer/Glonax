@@ -14,7 +14,6 @@ keywords = ["hardware", "machine", "controller"]
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 
 chrono = "0.4"
-
 bytes = "1.4.0"
 
 futures = "0.3"
@@ -22,6 +21,3 @@ log = "0.4"
 tokio = { version = "1.29", features = ["full"] }
 async-trait = "0.1"
 sysinfo = "0.29.0"
-
-[build-dependencies]
-tonic-build = "0.8"
