@@ -85,34 +85,12 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-struct SignalFifo {
-    file: std::fs::File,
-}
-
-impl SignalFifo {
-    pub fn new() -> anyhow::Result<Self> {
-        let file = std::fs::OpenOptions::new().write(true).open("signal")?;
-
-        Ok(Self { file })
-    }
-}
-
-impl glonax::channel::SignalChannel for SignalFifo {
-    fn push(&mut self, signal: glonax::core::Signal) {
-        use std::io::Write;
-
-        log::trace!("Write signal to channel: {}", signal);
-
-        self.file.write(signal.bytes()).unwrap();
-    }
-}
-
 async fn daemonize(config: &config::HostConfig) -> anyhow::Result<()> {
     let runtime = glonax::RuntimeBuilder::from_config(config)?
         .with_shutdown()
         .build();
 
-    let mut channel = SignalFifo::new()?;
+    let mut channel = glonax::channel::SignalFifo::new()?;
 
     let mut service = glonax::net::HostService::new();
 

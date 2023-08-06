@@ -88,28 +88,6 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-struct SignalFifo {
-    file: std::fs::File,
-}
-
-impl SignalFifo {
-    pub fn new() -> anyhow::Result<Self> {
-        let file = std::fs::OpenOptions::new().write(true).open("signal")?;
-
-        Ok(Self { file })
-    }
-}
-
-impl glonax::channel::SignalChannel for SignalFifo {
-    fn push(&mut self, signal: glonax::core::Signal) {
-        use std::io::Write;
-
-        log::trace!("Write signal to channel: {}", signal);
-
-        self.file.write(signal.bytes()).unwrap();
-    }
-}
-
 async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -125,7 +103,7 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
     let reader = BufReader::new(serial);
     let mut lines = reader.lines();
 
-    let mut channel = SignalFifo::new()?;
+    let mut channel = glonax::channel::SignalFifo::new()?;
 
     let service = glonax::net::NMEAService;
 
