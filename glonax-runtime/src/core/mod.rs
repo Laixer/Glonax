@@ -3,6 +3,10 @@ use std::f32::consts::PI;
 pub use self::signal::Metric;
 pub use self::signal::Signal;
 
+pub use self::motion::ChangeSet;
+pub use self::motion::Motion;
+
+mod motion;
 mod signal;
 
 /// Level trait.
