@@ -2,15 +2,35 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 const PROTO_TYPE_STOP_ALL: u8 = 0x00;
 const PROTO_TYPE_RESUME_ALL: u8 = 0x01;
-const PROTO_TYPE_CHANGE: u8 = 0x02;
+const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
+const PROTO_TYPE_CHANGE: u8 = 0x10;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(C)]
+pub enum Actuator {
+    /// Boom actuator.
+    Boom = 0,
+    /// Arm actuator.
+    Arm = 4,
+    /// Attachment actuator.
+    Attachment = 5,
+    /// Slew actuator.
+    Slew = 1,
+    /// Left limp actuator.
+    LimpLeft = 3,
+    /// Right limp actuator.
+    LimpRight = 2,
+}
+
+type MotionValueType = i16;
 
 #[derive(Clone, Debug)]
 #[repr(C)]
 pub struct ChangeSet {
     /// Actuator ID.
-    pub actuator: u32,
+    pub actuator: Actuator,
     /// Actuator value.
-    pub value: i32,
+    pub value: MotionValueType,
 }
 
 #[derive(Clone, Debug)]
@@ -20,18 +40,23 @@ pub enum Motion {
     StopAll,
     /// Resume all motion.
     ResumeAll,
+    /// Drive straight forward or backwards.
+    StraightDrive(MotionValueType),
     /// Change motion on actuators.
     Change(Vec<ChangeSet>),
 }
 
 impl Motion {
+    /// Maximum power setting.
+    pub const POWER_MAX: MotionValueType = MotionValueType::MAX;
+    /// Neutral power setting.
+    pub const POWER_NEUTRAL: MotionValueType = 0;
+    /// Minimum power setting.
+    pub const POWER_MIN: MotionValueType = MotionValueType::MIN;
+
     // TODO: Copy into bytes directly
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(32);
-
-        // buf.put(&PROTO_HEADER[..]);
-        // buf.put_u8(PROTO_VERSION);
-        // buf.put_u8(PROTO_MESSAGE);
 
         match self {
             Motion::StopAll => {
@@ -40,12 +65,16 @@ impl Motion {
             Motion::ResumeAll => {
                 buf.put_u8(PROTO_TYPE_RESUME_ALL);
             }
+            Motion::StraightDrive(value) => {
+                buf.put_u8(PROTO_TYPE_STRAIGHT_DRIVE);
+                buf.put_i16(*value);
+            }
             Motion::Change(changes) => {
                 buf.put_u8(PROTO_TYPE_CHANGE);
                 buf.put_u8(changes.len() as u8);
                 for change in changes {
-                    buf.put_u32(change.actuator);
-                    buf.put_i32(change.value);
+                    buf.put_u16(change.actuator as u16);
+                    buf.put_i16(change.value);
                 }
             }
         }
@@ -59,6 +88,7 @@ impl std::fmt::Display for Motion {
         match self {
             Motion::StopAll => write!(f, "Stop all"),
             Motion::ResumeAll => write!(f, "Resume all"),
+            Motion::StraightDrive(value) => write!(f, "Straight drive: {}", value),
             Motion::Change(changes) => {
                 write!(
                     f,
@@ -66,7 +96,7 @@ impl std::fmt::Display for Motion {
                     changes
                         .iter()
                         .map(|changeset| format!(
-                            "Actuator: {}; Value: {}, ",
+                            "Actuator: {:?}; Value: {}, ",
                             changeset.actuator, changeset.value
                         ))
                         .collect::<String>()
@@ -85,13 +115,14 @@ impl TryFrom<&[u8]> for Motion {
         match buf.get_u8() {
             PROTO_TYPE_STOP_ALL => Ok(Motion::StopAll),
             PROTO_TYPE_RESUME_ALL => Ok(Motion::ResumeAll),
+            PROTO_TYPE_STRAIGHT_DRIVE => Ok(Motion::StraightDrive(buf.get_i16())),
             PROTO_TYPE_CHANGE => {
                 let count = buf.get_u8();
                 let mut changes = Vec::with_capacity(count as usize);
                 for _ in 0..count {
                     changes.push(ChangeSet {
-                        actuator: buf.get_u32(),
-                        value: buf.get_i32(),
+                        actuator: unsafe { std::mem::transmute(buf.get_u16() as u32) },
+                        value: buf.get_i16(),
                     });
                 }
                 Ok(Motion::Change(changes))
