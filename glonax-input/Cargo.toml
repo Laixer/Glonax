@@ -9,7 +9,7 @@ repository = "https://github.com/Laixer/Glonax"
 glonax = { version = "3.1", path = "../glonax-runtime" }
 glonax-gamepad = { version = "1.0", path = "../glonax-gamepad" }
 
-tonic = "0.8"
+bytes = "1.4.0"
 
 log = "0.4"
 anyhow = "1.0"

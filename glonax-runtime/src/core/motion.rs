@@ -22,6 +22,22 @@ pub enum Actuator {
     LimpRight = 2,
 }
 
+impl TryFrom<u16> for Actuator {
+    type Error = ();
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Actuator::Boom),
+            4 => Ok(Actuator::Arm),
+            5 => Ok(Actuator::Attachment),
+            1 => Ok(Actuator::Slew),
+            3 => Ok(Actuator::LimpLeft),
+            2 => Ok(Actuator::LimpRight),
+            _ => Err(()),
+        }
+    }
+}
+
 type MotionValueType = i16;
 
 #[derive(Clone, Debug)]
@@ -53,6 +69,13 @@ impl Motion {
     pub const POWER_NEUTRAL: MotionValueType = 0;
     /// Minimum power setting.
     pub const POWER_MIN: MotionValueType = MotionValueType::MIN;
+
+    pub fn new<T: Into<MotionValueType>>(actuator: Actuator, value: T) -> Self {
+        Self::Change(vec![ChangeSet {
+            actuator,
+            value: value.into(),
+        }])
+    }
 
     // TODO: Copy into bytes directly
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -121,7 +144,7 @@ impl TryFrom<&[u8]> for Motion {
                 let mut changes = Vec::with_capacity(count as usize);
                 for _ in 0..count {
                     changes.push(ChangeSet {
-                        actuator: unsafe { std::mem::transmute(buf.get_u16() as u32) },
+                        actuator: buf.get_u16().try_into().unwrap(),
                         value: buf.get_i16(),
                     });
                 }

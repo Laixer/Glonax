@@ -5,12 +5,10 @@
 // of the included license.  See the LICENSE file for details.
 
 use clap::{Parser, ValueHint};
-use glonax::transport::ToMotion;
 
 mod config;
 mod gamepad;
 mod input;
-mod motion;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
@@ -96,11 +94,17 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
-    let mut client =
-        glonax::transport::vehicle_management_client::VehicleManagementClient::connect(
-            config.address.clone(),
-        )
-        .await?;
+    use tokio::io::AsyncWriteExt;
+
+    // let mut client =
+    //     glonax::transport::vehicle_management_client::VehicleManagementClient::connect(
+    //         config.address.clone(),
+    //     )
+    //     .await?;
+
+    // let mut channel = glonax::channel::MotionFifo::new().await?;
+
+    let mut stream = tokio::net::TcpStream::connect("0.0.0.0:30051").await?;
 
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
 
@@ -117,12 +121,31 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
+    use bytes::{BufMut, BytesMut};
+
     while let Ok(input) = input_device.next().await {
         if let Some(motion) = input_state.try_from(input) {
-            let motion = motion.to_motion();
             log::trace!("{}", motion);
 
-            client.motion_command(motion).await?;
+            const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
+            const PROTO_VERSION: u8 = 0x01;
+            const PROTO_MESSAGE: u8 = 0x20;
+
+            log::trace!("Write motion to socket: {}", motion);
+
+            let motion_bytes = motion.to_bytes();
+
+            let mut buf = BytesMut::with_capacity(64);
+
+            buf.put(&PROTO_HEADER[..]);
+            buf.put_u8(PROTO_VERSION);
+            buf.put_u8(PROTO_MESSAGE);
+            buf.put_u16(motion_bytes.len() as u16);
+            buf.put(&motion_bytes[..]);
+
+            // client.motion_command(motion).await?;
+            // channel.push(motion).await;
+            stream.write_all(&buf[..]).await?;
         }
     }
 

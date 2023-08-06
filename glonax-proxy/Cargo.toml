@@ -8,6 +8,8 @@ repository = "https://github.com/Laixer/Glonax"
 [dependencies]
 glonax = { version = "3.1", path = "../glonax-runtime" }
 
+bytes = "1.4.0"
+
 log = "0.4"
 anyhow = "1.0"
 tokio = { version = "1.29", features = ["full"] }
