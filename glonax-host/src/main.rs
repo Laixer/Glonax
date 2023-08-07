@@ -86,32 +86,34 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::HostConfig) -> anyhow::Result<()> {
-    let runtime = glonax::RuntimeBuilder::from_config(config)?
-        .with_shutdown()
-        .build();
-
-    let mut channel = glonax::channel::SignalFifo::new()?;
+    use glonax::channel::SignalSource;
 
     let mut service = glonax::net::HostService::new();
 
-    log::debug!("Starting host services");
+    loop {
+        log::debug!("Waiting for FIFO connection: {}", "signal");
 
-    let interval = config.interval;
+        let file = tokio::fs::OpenOptions::new()
+            .write(true)
+            .open("signal")
+            .await?;
 
-    runtime.spawn_background_task(async move {
-        use glonax::channel::SignalSource;
+        log::info!("Connected to FIFO: {}", "signal");
+
+        let mut protocol = glonax::transport::Protocol::new(file);
 
         loop {
             service.refresh();
-            service.fetch2(&mut channel);
 
-            tokio::time::sleep(std::time::Duration::from_millis(interval)).await;
+            let mut signals = vec![];
+            service.collect_signals(&mut signals);
+
+            if let Err(e) = protocol.write_all6(signals).await {
+                log::error!("Failed to write to socket: {}", e);
+                break;
+            }
+
+            tokio::time::sleep(std::time::Duration::from_millis(config.interval)).await;
         }
-    });
-
-    runtime.wait_for_shutdown().await;
-
-    log::debug!("{} was shutdown gracefully", config.global.bin_name);
-
-    Ok(())
+    }
 }

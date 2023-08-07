@@ -89,11 +89,8 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
+    use glonax::channel::SignalSource;
     use tokio::io::{AsyncBufReadExt, BufReader};
-
-    let runtime = glonax::RuntimeBuilder::from_config(config)?
-        .with_shutdown()
-        .build();
 
     let serial = glonax_serial::Uart::open(
         &config.device,
@@ -103,25 +100,32 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
     let reader = BufReader::new(serial);
     let mut lines = reader.lines();
 
-    let mut channel = glonax::channel::SignalFifo::new()?;
-
     let service = glonax::net::NMEAService;
 
-    log::debug!("Starting host services");
+    loop {
+        log::debug!("Waiting for FIFO connection: {}", "signal");
 
-    runtime.spawn_background_task(async move {
-        use glonax::channel::SignalSource;
+        let file = tokio::fs::OpenOptions::new()
+            .write(true)
+            .open("signal")
+            .await?;
 
-        while let Some(line) = lines.next_line().await.unwrap() {
+        log::info!("Connected to FIFO: {}", "signal");
+
+        let mut protocol = glonax::transport::Protocol::new(file);
+
+        log::debug!("Starting host services");
+
+        while let Some(line) = lines.next_line().await? {
             if let Some(message) = service.decode(line) {
-                message.fetch2(&mut channel);
+                let mut signals = vec![];
+                message.collect_signals(&mut signals);
+
+                if let Err(e) = protocol.write_all6(signals).await {
+                    log::error!("Failed to write to socket: {}", e);
+                    break;
+                }
             }
         }
-    });
-
-    runtime.wait_for_shutdown().await;
-
-    log::debug!("{} was shutdown gracefully", config.global.bin_name);
-
-    Ok(())
+    }
 }

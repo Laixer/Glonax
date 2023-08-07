@@ -16,7 +16,7 @@ mod input;
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
     /// Remote network address.
-    #[arg(short = 'c', long = "connect", default_value = "http://[::1]:50051")]
+    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
     address: String,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
@@ -94,18 +94,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
-    use tokio::io::AsyncWriteExt;
-
-    // let mut client =
-    //     glonax::transport::vehicle_management_client::VehicleManagementClient::connect(
-    //         config.address.clone(),
-    //     )
-    //     .await?;
-
-    // let mut channel = glonax::channel::MotionFifo::new().await?;
-
-    let mut stream = tokio::net::TcpStream::connect("0.0.0.0:30051").await?;
-
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
 
     let mut input_state = input::InputState {
@@ -121,31 +109,34 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    use bytes::{BufMut, BytesMut};
+    let retry_connect = true;
 
-    while let Ok(input) = input_device.next().await {
-        if let Some(motion) = input_state.try_from(input) {
-            log::trace!("{}", motion);
+    while retry_connect {
+        log::debug!("Waiting for connection to {}", "motion");
 
-            const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
-            const PROTO_VERSION: u8 = 0x01;
-            const PROTO_MESSAGE: u8 = 0x20;
+        let file = tokio::fs::OpenOptions::new()
+            .write(true)
+            .open("motion")
+            .await?;
 
-            log::trace!("Write motion to socket: {}", motion);
+        // let stream = tokio::net::TcpStream::connect(config.address.clone()).await?;
 
-            let motion_bytes = motion.to_bytes();
+        log::info!("Connected to {}", "motion");
 
-            let mut buf = BytesMut::with_capacity(64);
+        let mut protocol = glonax::transport::Protocol::new(file);
 
-            buf.put(&PROTO_HEADER[..]);
-            buf.put_u8(PROTO_VERSION);
-            buf.put_u8(PROTO_MESSAGE);
-            buf.put_u16(motion_bytes.len() as u16);
-            buf.put(&motion_bytes[..]);
+        // let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
+        // protocol.write_frame0(start).await?;
 
-            // client.motion_command(motion).await?;
-            // channel.push(motion).await;
-            stream.write_all(&buf[..]).await?;
+        while let Ok(input) = input_device.next().await {
+            if let Some(motion) = input_state.try_from(input) {
+                log::trace!("{}", motion);
+
+                if let Err(e) = protocol.write_frame5(motion).await {
+                    log::error!("Failed to write to socket: {}", e);
+                    break;
+                }
+            }
         }
     }
 
