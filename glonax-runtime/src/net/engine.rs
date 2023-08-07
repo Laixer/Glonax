@@ -101,23 +101,23 @@ impl std::fmt::Display for EngineMessage {
 }
 
 impl crate::channel::SignalSource for EngineMessage {
-    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
+    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
         if let Some(driver_demand) = self.driver_demand {
-            writer.push(crate::core::Signal::new(
+            signals.push(crate::core::Signal::new(
                 self.node as u32,
                 1,
                 crate::core::Metric::Percent(driver_demand as i32),
             ));
         }
         if let Some(actual_engine) = self.actual_engine {
-            writer.push(crate::core::Signal::new(
+            signals.push(crate::core::Signal::new(
                 self.node as u32,
                 2,
                 crate::core::Metric::Percent(actual_engine as i32),
             ));
         }
         if let Some(rpm) = self.rpm {
-            writer.push(crate::core::Signal::new(
+            signals.push(crate::core::Signal::new(
                 self.node as u32,
                 0,
                 crate::core::Metric::Rpm(rpm as i32),

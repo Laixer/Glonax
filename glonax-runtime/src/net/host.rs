@@ -44,43 +44,43 @@ impl HostService {
 }
 
 impl crate::channel::SignalSource for HostService {
-    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
-        writer.push(Signal::new(
+    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
+        signals.push(Signal::new(
             DEVICE_NET_LOCAL_ADDR as u32,
             382,
             Metric::Percent(self.memory_used() as i32),
         ));
-        writer.push(Signal::new(
+        signals.push(Signal::new(
             DEVICE_NET_LOCAL_ADDR as u32,
             383,
             Metric::Percent(self.swap_used() as i32),
         ));
         if self.uptime() % 15 == 0 {
-            writer.push(Signal::new(
+            signals.push(Signal::new(
                 DEVICE_NET_LOCAL_ADDR as u32,
                 421,
                 Metric::Count(self.uptime()),
             ));
         }
         if self.uptime() % 60 == 0 {
-            writer.push(Signal::new(
+            signals.push(Signal::new(
                 DEVICE_NET_LOCAL_ADDR as u32,
                 420,
                 Metric::Timestamp(crate::core::time::now().as_secs()),
             ));
         }
         let load_avg = self.load_avg();
-        writer.push(Signal::new(
+        signals.push(Signal::new(
             DEVICE_NET_LOCAL_ADDR as u32,
             593,
             Metric::Percent(load_avg.0 as i32),
         ));
-        writer.push(Signal::new(
+        signals.push(Signal::new(
             DEVICE_NET_LOCAL_ADDR as u32,
             594,
             Metric::Percent(load_avg.1 as i32),
         ));
-        writer.push(Signal::new(
+        signals.push(Signal::new(
             DEVICE_NET_LOCAL_ADDR as u32,
             595,
             Metric::Percent(load_avg.2 as i32),

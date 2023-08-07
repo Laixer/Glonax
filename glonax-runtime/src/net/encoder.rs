@@ -129,13 +129,13 @@ impl std::fmt::Display for EncoderMessage {
 }
 
 impl crate::channel::SignalSource for EncoderMessage {
-    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
-        writer.push(crate::core::Signal::new(
+    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
+        signals.push(crate::core::Signal::new(
             self.node as u32,
             0,
             crate::core::Metric::Angle(self.position as f32 / 1000.0),
         ));
-        writer.push(crate::core::Signal::new(
+        signals.push(crate::core::Signal::new(
             self.node as u32,
             1,
             crate::core::Metric::Rpm(self.speed as i32),

@@ -183,36 +183,28 @@ impl std::fmt::Display for NMEAMessage {
 }
 
 impl crate::channel::SignalSource for NMEAMessage {
-    fn fetch2(&self, writer: &mut impl crate::channel::SignalChannel) {
+    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
         if let Some((lat, long)) = self.coordinates {
-            writer.push(Signal::new(1_u32, 0_u32, Metric::Coordinates((lat, long))))
+            signals.push(Signal::new(1_u32, 0_u32, Metric::Coordinates((lat, long))))
         }
         if let Some(satellites) = self.satellites {
-            writer.push(Signal::new(1_u32, 10_u32, Metric::Count(satellites as u64)))
+            signals.push(Signal::new(1_u32, 10_u32, Metric::Count(satellites as u64)))
         }
         if let Some(altitude) = self.altitude {
-            writer.push(Signal::new(1_u32, 1_u32, Metric::Altitude(altitude)))
+            signals.push(Signal::new(1_u32, 1_u32, Metric::Altitude(altitude)))
         }
         if let Some(speed) = self.speed {
             const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
 
-            writer.push(Signal::new(
+            signals.push(Signal::new(
                 1_u32,
                 2_u32,
                 Metric::Speed(speed * KNOT_TO_METER_PER_SECOND),
             ))
         }
         if let Some(heading) = self.heading {
-            writer.push(Signal::new(1_u32, 3_u32, Metric::Heading(heading)))
+            signals.push(Signal::new(1_u32, 3_u32, Metric::Heading(heading)))
         }
-        // TODO: Timestamp
-        // if let Some(timestamp) = self.timestamp {
-        //     writer.push(Signal::new(
-        //         1_u32,
-        //         4_u32,
-        //         Metric::Timestamp(timestamp as f64),
-        //     ))
-        // }
     }
 }
 
