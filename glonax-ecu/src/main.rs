@@ -90,184 +90,130 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-use glonax::{net::J1939Network, Configurable};
-use tonic::{transport::Server, Request, Response, Status};
-
-struct VehicleManagemetService {
-    net: J1939Network,
-    service: glonax::net::ActuatorService,
-    signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
-}
-
-impl VehicleManagemetService {
-    pub fn new(
-        config: config::EcuConfig,
-        signal_writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
-    ) -> Self {
-        let net = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
-        let service = glonax::net::ActuatorService::new(0x4A);
-
-        Self {
-            net,
-            service,
-            signal_writer,
-        }
-    }
-}
-
-#[tonic::async_trait]
-impl glonax::transport::vehicle_management_server::VehicleManagement for VehicleManagemetService {
-    /// Sends a motion command
-    async fn motion_command(
-        &self,
-        request: Request<glonax::transport::Motion>,
-    ) -> Result<Response<glonax::transport::Empty>, Status> {
-        let motion = request.into_inner();
-
-        log::trace!("Vehicle management: {}", motion);
-
-        match motion.r#type() {
-            glonax::transport::motion::MotionType::None => (),
-            glonax::transport::motion::MotionType::StopAll => {
-                self.net.send_vectored(&self.service.lock()).await.unwrap();
-            }
-            glonax::transport::motion::MotionType::ResumeAll => {
-                self.net
-                    .send_vectored(&self.service.unlock())
-                    .await
-                    .unwrap();
-            }
-            glonax::transport::motion::MotionType::Change => {
-                self.net
-                    .send_vectored(
-                        &self.service.actuator_command(
-                            motion
-                                .changes
-                                .iter()
-                                .map(|changeset| (changeset.actuator as u8, changeset.value as i16))
-                                .collect(),
-                        ),
-                    )
-                    .await
-                    .unwrap();
-            }
-        }
-
-        Ok(Response::new(glonax::transport::Empty {}))
-    }
-
-    type ListenSignalStream = std::pin::Pin<
-        Box<dyn futures_core::Stream<Item = Result<glonax::transport::Signal, Status>> + Send>,
-    >;
-
-    /// Listen for signal updates.
-    async fn listen_signal(
-        &self,
-        _request: tonic::Request<glonax::transport::Empty>,
-    ) -> Result<tonic::Response<Self::ListenSignalStream>, tonic::Status> {
-        let mut signal_reader = self.signal_writer.subscribe();
-
-        log::debug!("Client subscribed to signal updates");
-
-        let output = async_stream::try_stream! {
-            while let Ok(signal) = signal_reader.recv().await {
-                yield signal;
-            }
-
-            log::debug!("Client unsubscribed from signal updates");
-        };
-
-        Ok(Response::new(Box::pin(output) as Self::ListenSignalStream))
-    }
-}
-
-// TODO: Even though the same confiig is used as for the motion command, the signal listeners
-// should be able to listen on a different network.
-async fn net_listener(
-    config: config::EcuConfig,
-    writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
-) {
-    use glonax::channel::BroadcastSource;
-    use glonax::net::{EncoderService, EngineManagementSystem};
-
-    // TODO: Assign new network ID to each J1939 network.
-    let network = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
-    let mut router = glonax::net::Router::new(network);
-
-    let mut engine_management_service = EngineManagementSystem::new(0x0);
-    let mut encoder_list = vec![
-        EncoderService::new(0x6A),
-        EncoderService::new(0x6B),
-        EncoderService::new(0x6C),
-        EncoderService::new(0x6D),
-    ];
-
-    log::debug!("Starting network services");
-
-    loop {
-        if let Err(e) = router.listen().await {
-            log::error!("{}", e);
-        };
-
-        if let Some(message) = router.try_accept(&mut engine_management_service) {
-            log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), message);
-
-            message.fetch(&writer)
-        }
-
-        for encoder in &mut encoder_list {
-            if let Some(message) = router.try_accept(encoder) {
-                log::trace!("0x{:X?} » {}", router.frame_source().unwrap(), message);
-
-                message.fetch(&writer);
-            }
-        }
-    }
-}
-
-async fn host_listener(
-    _: config::EcuConfig,
-    writer: glonax::channel::BroadcastChannelWriter<glonax::transport::Signal>,
-) {
-    use glonax::channel::BroadcastSource;
-    use glonax::net::HostService;
-
-    let mut service = HostService::new();
-
-    log::debug!("Starting host services");
-
-    loop {
-        service.refresh();
-        service.fetch(&writer);
-
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    }
-}
-
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
-    let addr = config.address.parse()?;
-
     let runtime = glonax::RuntimeBuilder::from_config(config)?
         .with_shutdown()
         .build();
 
-    let signal_writer = glonax::channel::broadcast_channel(10);
+    let interface = config.interface.clone();
+    runtime.spawn_background_task(async move {
+        use glonax::channel::SignalSource;
+        use glonax::net::{EncoderService, EngineManagementSystem, J1939Network, Router};
 
-    runtime.spawn_background_task(net_listener(config.clone(), signal_writer.clone()));
-    runtime.spawn_background_task(host_listener(config.clone(), signal_writer.clone()));
+        log::info!("Starting controller units services");
 
-    Server::builder()
-        .add_service(
-            glonax::transport::vehicle_management_server::VehicleManagementServer::new(
-                VehicleManagemetService::new(config.clone(), signal_writer),
-            ),
-        )
-        .serve_with_shutdown(addr, async {
-            runtime.shutdown_signal().recv().await.unwrap();
-        })
-        .await?;
+        let network = J1939Network::new(&interface, DEVICE_NET_LOCAL_ADDR).unwrap();
 
-    log::debug!("{} was shutdown gracefully", config.global().bin_name);
+        let mut router = Router::new(network);
+
+        let mut engine_management_service = EngineManagementSystem::new(0x0);
+        let mut encoder_list = vec![
+            EncoderService::new(0x6A),
+            EncoderService::new(0x6B),
+            EncoderService::new(0x6C),
+            EncoderService::new(0x6D),
+        ];
+
+        loop {
+            log::debug!("Waiting for FIFO connection: {}", "signal");
+
+            let file = tokio::fs::OpenOptions::new()
+                .write(true)
+                .open("signal")
+                .await
+                .unwrap();
+
+            log::debug!("Connected to FIFO: {}", "signal");
+
+            let mut protocol = glonax::transport::Protocol::new(file);
+
+            while router.listen().await.is_ok() {
+                let mut signals = vec![];
+                if let Some(message) = router.try_accept(&mut engine_management_service) {
+                    message.collect_signals(&mut signals);
+                }
+
+                for encoder in &mut encoder_list {
+                    if let Some(message) = router.try_accept(encoder) {
+                        message.collect_signals(&mut signals);
+                    }
+                }
+
+                if let Err(e) = protocol.write_all6(signals).await {
+                    log::error!("Failed to write to socket: {}", e);
+                    break;
+                }
+            }
+        }
+    });
+
+    let interface = config.interface.clone();
+    runtime.spawn_background_task(async move {
+        use glonax::net::{ActuatorService, J1939Network};
+
+        log::info!("Starting motion listener");
+
+        let network = J1939Network::new(&interface, DEVICE_NET_LOCAL_ADDR).unwrap();
+
+        let service = ActuatorService::new(0x4A);
+
+        loop {
+            log::debug!("Waiting for FIFO connection: {}", "motion");
+
+            let file = tokio::fs::OpenOptions::new()
+                .read(true)
+                .open("motion")
+                .await
+                .unwrap();
+
+            log::debug!("Connected to FIFO: {}", "motion");
+
+            let mut protocol = glonax::transport::Protocol::new(file);
+
+            while let Ok(message) = protocol.read_frame().await {
+                if let glonax::transport::Message::Motion(motion) = message {
+                    log::debug!("Received motion: {}", motion);
+
+                    match motion {
+                        glonax::core::Motion::StopAll => {
+                            network.send_vectored(&service.lock()).await.unwrap();
+                        }
+                        glonax::core::Motion::ResumeAll => {
+                            network.send_vectored(&service.unlock()).await.unwrap();
+                        }
+                        glonax::core::Motion::StraightDrive(_value) => {
+                            // network
+                            //     .send_vectored(&service.drive_command(0, value))
+                            //     .await
+                            //     .unwrap();
+                        }
+                        glonax::core::Motion::Change(changes) => {
+                            network
+                                .send_vectored(
+                                    &service.actuator_command(
+                                        changes
+                                            .iter()
+                                            .map(|changeset| {
+                                                (changeset.actuator as u8, changeset.value)
+                                            })
+                                            .collect(),
+                                    ),
+                                )
+                                .await
+                                .unwrap();
+                        }
+                    }
+                } else {
+                    // TODO: Which message was received?
+                    log::warn!("Received non-motion message");
+                }
+            }
+        }
+    });
+
+    runtime.wait_for_shutdown().await;
+
+    log::debug!("{} was shutdown gracefully", config.global.bin_name);
 
     Ok(())
 }

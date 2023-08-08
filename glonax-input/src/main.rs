@@ -112,21 +112,23 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
     let retry_connect = true;
 
     while retry_connect {
-        log::debug!("Waiting for connection to {}", "motion");
+        // log::debug!("Waiting for connection to {}", "motion");
+        log::debug!("Waiting for connection to {}", config.address.clone());
 
-        let file = tokio::fs::OpenOptions::new()
-            .write(true)
-            .open("motion")
-            .await?;
+        // let file = tokio::fs::OpenOptions::new()
+        //     .write(true)
+        //     .open("motion")
+        //     .await?;
 
-        // let stream = tokio::net::TcpStream::connect(config.address.clone()).await?;
+        let stream = tokio::net::TcpStream::connect(config.address.clone()).await?;
 
-        log::info!("Connected to {}", "motion");
+        log::info!("Connected to {}", config.address.clone());
+        // log::info!("Connected to {}", "motion");
 
-        let mut protocol = glonax::transport::Protocol::new(file);
+        let mut protocol = glonax::transport::Protocol::new(stream);
 
-        // let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
-        // protocol.write_frame0(start).await?;
+        let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
+        protocol.write_frame0(start).await?;
 
         while let Ok(input) = input_device.next().await {
             if let Some(motion) = input_state.try_from(input) {
