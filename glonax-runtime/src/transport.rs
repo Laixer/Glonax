@@ -130,10 +130,15 @@ impl<T: AsyncWrite + Unpin> Protocol<T> {
 }
 
 impl<T: AsyncRead + Unpin> Protocol<T> {
+    // TODO: Why not return UnexpectedEof?
+    // TODO: This maybe too complex
     async fn read_at_least(&mut self, min_len: usize) -> std::io::Result<Option<usize>> {
         let mut total_bytes_read = None;
         while self.buffer.len() < min_len {
             let bytes_read = self.inner.read_buf(&mut self.buffer).await?;
+            if bytes_read == 0 {
+                return Ok(Some(0));
+            }
             total_bytes_read = Some(bytes_read + total_bytes_read.unwrap_or(0));
         }
 
@@ -145,7 +150,6 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
             let bytes_read = self.read_at_least(MIN_BUFFER_SIZE).await.unwrap();
             if let Some(bytes_read) = bytes_read {
                 if bytes_read == 0 {
-                    log::warn!("Unexpected EOF 1");
                     return Err(std::io::Error::new(
                         std::io::ErrorKind::UnexpectedEof,
                         "EOF",
@@ -183,7 +187,6 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
             let bytes_read = self.read_at_least(proto_length).await.unwrap();
             if let Some(bytes_read) = bytes_read {
                 if bytes_read == 0 {
-                    log::warn!("Unexpected EOF 1");
                     return Err(std::io::Error::new(
                         std::io::ErrorKind::UnexpectedEof,
                         "EOF",
