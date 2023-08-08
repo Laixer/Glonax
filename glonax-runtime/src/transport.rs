@@ -6,6 +6,7 @@ use crate::core::{Motion, Signal};
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x01;
 
+const PROTO_MESSAGE_NULL: u8 = 0x1;
 const PROTO_MESSAGE_START: u8 = 0x10;
 const PROTO_MESSAGE_SHUTDOWN: u8 = 0x11;
 const PROTO_MESSAGE_MOTION: u8 = 0x20;
@@ -17,6 +18,7 @@ const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
     + std::mem::size_of::<u16>();
 
 pub enum Message {
+    Null,
     Start(frame::Start),
     Shutdown,
     Motion(Motion),
@@ -189,7 +191,9 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
                 }
             }
 
-            if message == PROTO_MESSAGE_START {
+            if message == PROTO_MESSAGE_NULL {
+                return Ok(Message::Null);
+            } else if message == PROTO_MESSAGE_START {
                 let payload = self.buffer.split_to(proto_length);
 
                 let mut session_name = String::new();
