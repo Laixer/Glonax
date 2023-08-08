@@ -81,56 +81,99 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
-struct SignalFifo {
-    file: std::fs::File,
-}
-
-impl SignalFifo {
-    pub fn new() -> anyhow::Result<Self> {
-        let file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open("signal")?;
-
-        Ok(Self { file })
-    }
-
-    // TODO: read more than one signal at a time
-    pub fn fetch(&mut self) -> anyhow::Result<glonax::core::Signal> {
-        use std::io::Read;
-
-        let mut buffer = [0u8; std::mem::size_of::<glonax::core::Signal>()];
-
-        self.file.read_exact(&mut buffer)?;
-
-        let signal = glonax::core::Signal::from(&buffer);
-
-        log::trace!("Read signal from channel: {}", signal);
-
-        Ok(signal)
-    }
-}
-
-impl glonax::channel::SignalChannel for SignalFifo {
-    fn push(&mut self, signal: glonax::core::Signal) {
-        use std::io::Write;
-
-        log::trace!("Write signal to channel: {}", signal);
-
-        self.file.write(signal.bytes()).unwrap();
-    }
-}
-
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
-    let mut channel = SignalFifo::new()?;
+    use tokio::net::TcpListener;
+    use tokio::sync::broadcast::{self, Sender};
 
-    log::debug!("Starting host services");
+    let listener = TcpListener::bind("0.0.0.0:30051").await?;
 
-    while let Ok(signal) = channel.fetch() {
-        log::info!("Received signal: {}", signal);
+    log::debug!("Starting proxy services");
+
+    let (tx, _rx) = broadcast::channel(8);
+
+    let sender: Sender<glonax::core::Signal> = tx.clone();
+
+    tokio::spawn(async move {
+        let file = tokio::fs::OpenOptions::new()
+            .read(true)
+            .open("signal")
+            .await
+            .unwrap();
+
+        let mut protocol = glonax::transport::Protocol::new(file);
+
+        while let Ok(message) = protocol.read_frame().await {
+            if let glonax::transport::Message::Signal(signal) = message {
+                // log::debug!("Received signal: {}", signal);
+
+                if let Err(e) = sender.send(signal) {
+                    log::error!("Failed to send signal: {}", e);
+                }
+            }
+        }
+    });
+
+    loop {
+        let (stream, addr) = listener.accept().await?;
+
+        log::info!("Accepted connection from: {}", addr);
+
+        let (stream_reader, stream_writer) = stream.into_split();
+
+        let mut rx = tx.subscribe();
+
+        tokio::spawn(async move {
+            let mut protocol_out = glonax::transport::Protocol::new(stream_writer);
+
+            while let Ok(signal) = rx.recv().await {
+                if let Err(e) = protocol_out.write_frame6(signal).await {
+                    // log::error!("Failed to write to socket: {}", e);
+                    break;
+                }
+            }
+
+            log::info!("Signal listener shutdown");
+        });
+
+        tokio::spawn(async move {
+            let mut session_name = String::new();
+
+            let file = tokio::fs::OpenOptions::new()
+                .write(true)
+                .open("motion")
+                .await
+                .unwrap();
+
+            let mut protocol_out = glonax::transport::Protocol::new(file);
+
+            let mut protocol_in = glonax::transport::Protocol::new(stream_reader);
+
+            while let Ok(message) = protocol_in.read_frame().await {
+                match message {
+                    glonax::transport::Message::Start(session) => {
+                        log::info!("Session started for: {}", session.name());
+                        session_name = session.name().to_string();
+                    }
+                    glonax::transport::Message::Shutdown => {
+                        log::info!("Session shutdown for: {}", session_name);
+                        break;
+                    }
+                    glonax::transport::Message::Motion(motion) => {
+                        log::debug!("Received motion: {}", motion);
+
+                        if let Err(e) = protocol_out.write_frame5(motion).await {
+                            log::error!("Failed to write to socket: {}", e);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            log::info!("Connection closed for: {}", addr);
+        });
     }
 
-    log::debug!("{} was shutdown gracefully", config.global.bin_name);
+    // log::debug!("{} was shutdown gracefully", config.global.bin_name);
 
-    Ok(())
+    // Ok(())
 }
