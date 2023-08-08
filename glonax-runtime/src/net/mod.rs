@@ -146,18 +146,6 @@ pub struct Router {
     filter_node: Vec<u8>,
 }
 
-impl FromIterator<J1939Network> for Router {
-    /// Create a router from an iterator.
-    fn from_iter<T: IntoIterator<Item = J1939Network>>(iter: T) -> Self {
-        Self {
-            net: Vec::from_iter(iter),
-            frame: None,
-            filter_pgn: vec![],
-            filter_node: vec![],
-        }
-    }
-}
-
 impl Router {
     /// Construct a new router.
     pub fn new(net: J1939Network) -> Self {

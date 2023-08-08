@@ -92,6 +92,8 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
     use glonax::channel::SignalSource;
     use tokio::io::{AsyncBufReadExt, BufReader};
 
+    log::info!("Starting GNSS service");
+
     let serial = glonax_serial::Uart::open(
         &config.device,
         glonax_serial::BaudRate::from_speed(config.baud_rate),
@@ -110,11 +112,9 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
             .open("signal")
             .await?;
 
-        log::info!("Connected to FIFO: {}", "signal");
+        log::debug!("Connected to FIFO: {}", "signal");
 
         let mut protocol = glonax::transport::Protocol::new(file);
-
-        log::debug!("Starting host services");
 
         while let Some(line) = lines.next_line().await? {
             if let Some(message) = service.decode(line) {

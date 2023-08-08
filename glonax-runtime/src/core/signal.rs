@@ -80,7 +80,7 @@ impl std::fmt::Display for Signal {
 impl std::fmt::Display for Metric {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Metric::Temperature(value) => write!(f, "Temperature: {:>3}°C", value),
+            Metric::Temperature(value) => write!(f, "Temperature: {:.1}°C", value),
             Metric::Angle(value) => write!(
                 f,
                 "Angle: {:>6.2}rad {:>6.2}°",
@@ -90,7 +90,7 @@ impl std::fmt::Display for Metric {
             Metric::Speed(value) => write!(f, "Speed: {:.2}m/s", value),
             Metric::Altitude(value) => write!(f, "Altitude: {:.1}m", value),
             Metric::Heading(value) => write!(f, "Heading: {:.1}°", value),
-            Metric::Rpm(value) => write!(f, "RPM: {}", value),
+            Metric::Rpm(value) => write!(f, "RPM: {}rpm", value),
             Metric::Acceleration((value_x, value_y, value_z)) => {
                 write!(
                     f,

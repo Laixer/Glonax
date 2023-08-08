@@ -88,6 +88,8 @@ async fn main() -> anyhow::Result<()> {
 async fn daemonize(config: &config::HostConfig) -> anyhow::Result<()> {
     use glonax::channel::SignalSource;
 
+    log::info!("Starting host service");
+
     let mut service = glonax::net::HostService::new();
 
     loop {
@@ -98,7 +100,7 @@ async fn daemonize(config: &config::HostConfig) -> anyhow::Result<()> {
             .open("signal")
             .await?;
 
-        log::info!("Connected to FIFO: {}", "signal");
+        log::debug!("Connected to FIFO: {}", "signal");
 
         let mut protocol = glonax::transport::Protocol::new(file);
 
