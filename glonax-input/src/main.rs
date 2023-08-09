@@ -94,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
-    let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await;
+    let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await?;
 
     let mut input_state = input::InputState {
         drive_lock: false,
@@ -109,11 +109,17 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    log::debug!("Waiting for connection to {}", config.address.clone());
+    let host = if !config.address.contains(':') {
+        config.address.to_owned() + ":30051"
+    } else {
+        config.address.to_owned()
+    };
 
-    let stream = tokio::net::TcpStream::connect(config.address.clone()).await?;
+    log::debug!("Waiting for connection to {}", host);
 
-    log::info!("Connected to {}", config.address.clone());
+    let stream = tokio::net::TcpStream::connect(&host).await?;
+
+    log::info!("Connected to {}", host);
 
     let mut protocol = glonax::transport::Protocol::new(stream);
 

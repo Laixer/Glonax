@@ -16,13 +16,13 @@ pub(crate) struct Gamepad {
 }
 
 impl Gamepad {
-    pub(crate) async fn new(path: &Path) -> Self {
-        Self {
-            driver: glonax_gamepad::AsyncGamepad::new(path).await.unwrap(),
+    pub(crate) async fn new(path: &Path) -> std::io::Result<Self> {
+        Ok(Self {
+            driver: glonax_gamepad::AsyncGamepad::new(path).await?,
             node_path: path.to_path_buf(),
             reverse_left: false,
             reverse_right: false,
-        }
+        })
     }
 }
 
