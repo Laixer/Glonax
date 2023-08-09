@@ -109,35 +109,24 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    let retry_connect = true;
+    log::debug!("Waiting for connection to {}", config.address.clone());
 
-    while retry_connect {
-        // log::debug!("Waiting for connection to {}", "motion");
-        log::debug!("Waiting for connection to {}", config.address.clone());
+    let stream = tokio::net::TcpStream::connect(config.address.clone()).await?;
 
-        // let file = tokio::fs::OpenOptions::new()
-        //     .write(true)
-        //     .open("motion")
-        //     .await?;
+    log::info!("Connected to {}", config.address.clone());
 
-        let stream = tokio::net::TcpStream::connect(config.address.clone()).await?;
+    let mut protocol = glonax::transport::Protocol::new(stream);
 
-        log::info!("Connected to {}", config.address.clone());
-        // log::info!("Connected to {}", "motion");
+    let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
+    protocol.write_frame0(start).await?;
 
-        let mut protocol = glonax::transport::Protocol::new(stream);
+    while let Ok(input) = input_device.next().await {
+        if let Some(motion) = input_state.try_from(input) {
+            log::trace!("{}", motion);
 
-        let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
-        protocol.write_frame0(start).await?;
-
-        while let Ok(input) = input_device.next().await {
-            if let Some(motion) = input_state.try_from(input) {
-                log::trace!("{}", motion);
-
-                if let Err(e) = protocol.write_frame5(motion).await {
-                    log::error!("Failed to write to socket: {}", e);
-                    break;
-                }
+            if let Err(e) = protocol.write_frame5(motion).await {
+                log::error!("Failed to write to socket: {}", e);
+                break;
             }
         }
     }
