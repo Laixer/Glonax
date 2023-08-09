@@ -136,7 +136,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Starting ECU services");
 
         let network = J1939Network::new(&ecu_interface, 0x9E).unwrap();
-
         let mut router = Router::new(network);
 
         let mut encoder_list = vec![
@@ -160,6 +159,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
         }
+
+        log::debug!("ECU services shutdown");
     });
 
     let fifo_sender: Sender<glonax::core::Signal> = tx.clone();
