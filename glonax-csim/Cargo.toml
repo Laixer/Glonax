@@ -6,7 +6,7 @@ edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
-glonax = { version = "3.1", path = "../glonax-runtime" }
+glonax = { version = "3", path = "../glonax-runtime" }
 
 rand = "0.8"
 
@@ -15,7 +15,3 @@ anyhow = "1.0"
 tokio = { version = "1.29", features = ["full"] }
 clap = { version = "4.3", features = ["derive"] }
 simplelog = "0.12"
-
-[[bin]]
-name = "glonax-csim"
-path = "src/main.rs"

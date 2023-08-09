@@ -6,11 +6,7 @@ edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
-glonax = { version = "3.1", path = "../glonax-runtime" }
-tonic = "0.9"
-
-futures-core = "0.3"
-async-stream = "0.3.4"
+glonax = { version = "3", path = "../glonax-runtime" }
 
 log = "0.4"
 anyhow = "1.0"
