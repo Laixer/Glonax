@@ -16,6 +16,9 @@ struct Args {
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
+    /// Refresh host service interval in milliseconds.
+    #[arg(long, default_value_t = 500)]
+    host_interval: u64,
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
@@ -28,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME");
 
     let mut config = config::ProxyConfig {
+        host_interval: args.host_interval,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -89,7 +93,33 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     log::debug!("Starting proxy services");
 
-    let (tx, _rx) = broadcast::channel(8);
+    let (tx, _rx) = broadcast::channel(16);
+
+    let host_sender: Sender<glonax::core::Signal> = tx.clone();
+
+    let host_interval = config.host_interval;
+    tokio::spawn(async move {
+        use glonax::channel::SignalSource;
+
+        log::info!("Starting host service");
+
+        let mut service = glonax::net::HostService::new();
+
+        loop {
+            service.refresh();
+
+            let mut signals = vec![];
+            service.collect_signals(&mut signals);
+
+            for signal in signals {
+                if let Err(e) = host_sender.send(signal) {
+                    log::error!("Failed to send signal: {}", e);
+                }
+            }
+
+            tokio::time::sleep(std::time::Duration::from_millis(host_interval)).await;
+        }
+    });
 
     let sender: Sender<glonax::core::Signal> = tx.clone();
 
