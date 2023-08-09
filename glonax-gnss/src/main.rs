@@ -104,28 +104,28 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
 
     let service = glonax::net::NMEAService;
 
-    loop {
-        log::debug!("Waiting for FIFO connection: {}", "signal");
+    log::debug!("Waiting for FIFO connection: {}", "signal");
 
-        let file = tokio::fs::OpenOptions::new()
-            .write(true)
-            .open("signal")
-            .await?;
+    let file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .open("signal")
+        .await?;
 
-        log::debug!("Connected to FIFO: {}", "signal");
+    log::debug!("Connected to FIFO: {}", "signal");
 
-        let mut protocol = glonax::transport::Protocol::new(file);
+    let mut protocol = glonax::transport::Protocol::new(file);
 
-        while let Some(line) = lines.next_line().await? {
-            if let Some(message) = service.decode(line) {
-                let mut signals = vec![];
-                message.collect_signals(&mut signals);
+    while let Some(line) = lines.next_line().await? {
+        if let Some(message) = service.decode(line) {
+            let mut signals = vec![];
+            message.collect_signals(&mut signals);
 
-                if let Err(e) = protocol.write_all6(signals).await {
-                    log::error!("Failed to write to socket: {}", e);
-                    break;
-                }
+            if let Err(e) = protocol.write_all6(signals).await {
+                log::error!("Failed to write to socket: {}", e);
+                break;
             }
         }
     }
+
+    Ok(())
 }

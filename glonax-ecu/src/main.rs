@@ -91,129 +91,40 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
-    let runtime = glonax::RuntimeBuilder::from_config(config)?
-        .with_shutdown()
-        .build();
+    use glonax::channel::SignalSource;
+    use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
-    let interface = config.interface.clone();
-    runtime.spawn_background_task(async move {
-        use glonax::channel::SignalSource;
-        use glonax::net::{EncoderService, EngineManagementSystem, J1939Network, Router};
+    log::info!("Starting EMS service");
 
-        log::info!("Starting controller units services");
+    let network = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
+    let mut router = Router::new(network);
 
-        let network = J1939Network::new(&interface, DEVICE_NET_LOCAL_ADDR).unwrap();
+    let mut engine_management_service = EngineManagementSystem::new(0x0);
 
-        let mut router = Router::new(network);
+    log::debug!("Waiting for FIFO connection: {}", "signal");
 
-        let mut engine_management_service = EngineManagementSystem::new(0x0);
-        let mut encoder_list = vec![
-            EncoderService::new(0x6A),
-            EncoderService::new(0x6B),
-            EncoderService::new(0x6C),
-            EncoderService::new(0x6D),
-        ];
+    let file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .open("signal")
+        .await?;
 
-        loop {
-            log::debug!("Waiting for FIFO connection: {}", "signal");
+    log::debug!("Connected to FIFO: {}", "signal");
 
-            let file = tokio::fs::OpenOptions::new()
-                .write(true)
-                .open("signal")
-                .await
-                .unwrap();
+    let mut protocol = glonax::transport::Protocol::new(file);
 
-            log::debug!("Connected to FIFO: {}", "signal");
+    loop {
+        router.listen().await?;
 
-            let mut protocol = glonax::transport::Protocol::new(file);
-
-            while router.listen().await.is_ok() {
-                let mut signals = vec![];
-                if let Some(message) = router.try_accept(&mut engine_management_service) {
-                    message.collect_signals(&mut signals);
-                }
-
-                for encoder in &mut encoder_list {
-                    if let Some(message) = router.try_accept(encoder) {
-                        message.collect_signals(&mut signals);
-                    }
-                }
-
-                if let Err(e) = protocol.write_all6(signals).await {
-                    log::error!("Failed to write to socket: {}", e);
-                    break;
-                }
-            }
+        let mut signals = vec![];
+        if let Some(message) = router.try_accept(&mut engine_management_service) {
+            message.collect_signals(&mut signals);
         }
-    });
 
-    let interface = config.interface.clone();
-    runtime.spawn_background_task(async move {
-        use glonax::net::{ActuatorService, J1939Network};
-
-        log::info!("Starting motion listener");
-
-        let network = J1939Network::new(&interface, DEVICE_NET_LOCAL_ADDR).unwrap();
-
-        let service = ActuatorService::new(0x4A);
-
-        loop {
-            log::debug!("Waiting for FIFO connection: {}", "motion");
-
-            let file = tokio::fs::OpenOptions::new()
-                .read(true)
-                .open("motion")
-                .await
-                .unwrap();
-
-            log::debug!("Connected to FIFO: {}", "motion");
-
-            let mut protocol = glonax::transport::Protocol::new(file);
-
-            while let Ok(message) = protocol.read_frame().await {
-                if let glonax::transport::Message::Motion(motion) = message {
-                    log::debug!("Received motion: {}", motion);
-
-                    match motion {
-                        glonax::core::Motion::StopAll => {
-                            network.send_vectored(&service.lock()).await.unwrap();
-                        }
-                        glonax::core::Motion::ResumeAll => {
-                            network.send_vectored(&service.unlock()).await.unwrap();
-                        }
-                        glonax::core::Motion::StraightDrive(_value) => {
-                            // network
-                            //     .send_vectored(&service.drive_command(0, value))
-                            //     .await
-                            //     .unwrap();
-                        }
-                        glonax::core::Motion::Change(changes) => {
-                            network
-                                .send_vectored(
-                                    &service.actuator_command(
-                                        changes
-                                            .iter()
-                                            .map(|changeset| {
-                                                (changeset.actuator as u8, changeset.value)
-                                            })
-                                            .collect(),
-                                    ),
-                                )
-                                .await
-                                .unwrap();
-                        }
-                    }
-                } else {
-                    // TODO: Which message was received?
-                    log::warn!("Received non-motion message");
-                }
-            }
+        if let Err(e) = protocol.write_all6(signals).await {
+            log::error!("Failed to write to socket: {}", e);
+            break;
         }
-    });
-
-    runtime.wait_for_shutdown().await;
-
-    log::debug!("{} was shutdown gracefully", config.global.bin_name);
+    }
 
     Ok(())
 }
