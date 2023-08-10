@@ -130,32 +130,23 @@ impl<T: AsyncWrite + Unpin> Protocol<T> {
 }
 
 impl<T: AsyncRead + Unpin> Protocol<T> {
-    // TODO: Why not return UnexpectedEof?
-    // TODO: This maybe too complex
-    async fn read_at_least(&mut self, min_len: usize) -> std::io::Result<Option<usize>> {
-        let mut total_bytes_read = None;
+    async fn read_at_least(&mut self, min_len: usize) -> std::io::Result<()> {
         while self.buffer.len() < min_len {
             let bytes_read = self.inner.read_buf(&mut self.buffer).await?;
             if bytes_read == 0 {
-                return Ok(Some(0));
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::UnexpectedEof,
+                    "EOF",
+                ));
             }
-            total_bytes_read = Some(bytes_read + total_bytes_read.unwrap_or(0));
         }
 
-        Ok(total_bytes_read)
+        Ok(())
     }
 
     pub async fn read_frame(&mut self) -> std::io::Result<Message> {
         loop {
-            let bytes_read = self.read_at_least(MIN_BUFFER_SIZE).await.unwrap();
-            if let Some(bytes_read) = bytes_read {
-                if bytes_read == 0 {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::UnexpectedEof,
-                        "EOF",
-                    ));
-                }
-            }
+            self.read_at_least(MIN_BUFFER_SIZE).await?;
 
             // Find header
             for i in 0..(self.buffer.len() - PROTO_HEADER.len()) {
@@ -184,15 +175,7 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
                 continue;
             }
 
-            let bytes_read = self.read_at_least(proto_length).await.unwrap();
-            if let Some(bytes_read) = bytes_read {
-                if bytes_read == 0 {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::UnexpectedEof,
-                        "EOF",
-                    ));
-                }
-            }
+            self.read_at_least(proto_length).await?;
 
             if message == PROTO_MESSAGE_NULL {
                 return Ok(Message::Null);
@@ -224,6 +207,78 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
                 let payload = self.buffer.split_to(proto_length);
 
                 match Signal::try_from(&payload[..]) {
+                    Ok(signal) => {
+                        return Ok(Message::Signal(signal));
+                    }
+                    Err(_) => {
+                        log::warn!("Invalid signal payload");
+                        continue;
+                    }
+                }
+            } else {
+                log::error!("Invalid message type: {}", message);
+            }
+        }
+    }
+
+    pub async fn read_frame2(&mut self) -> std::io::Result<Message> {
+        loop {
+            let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
+
+            self.inner.read_exact(&mut header_buffer).await?;
+
+            // Check header
+            if header_buffer[0] != PROTO_HEADER[0]
+                || header_buffer[1] != PROTO_HEADER[1]
+                || header_buffer[2] != PROTO_HEADER[2]
+            {
+                log::warn!("Invalid header");
+                continue;
+            }
+
+            // Check protocol version
+            let version = header_buffer[3];
+            if version != PROTO_VERSION {
+                log::warn!("Invalid version {}", version);
+                continue;
+            }
+
+            let message = header_buffer[4];
+
+            let proto_length = u16::from_be_bytes([header_buffer[5], header_buffer[6]]) as usize;
+            if proto_length > 4096 {
+                log::warn!("Invalid proto length {}", proto_length);
+                continue;
+            }
+
+            let payload_buffer = &mut vec![0u8; proto_length];
+
+            self.inner.read_exact(payload_buffer).await?;
+
+            if message == PROTO_MESSAGE_NULL {
+                return Ok(Message::Null);
+            } else if message == PROTO_MESSAGE_START {
+                let mut session_name = String::new();
+
+                for c in payload_buffer {
+                    session_name.push(*c as char);
+                }
+
+                return Ok(Message::Start(frame::Start::new(session_name)));
+            } else if message == PROTO_MESSAGE_SHUTDOWN {
+                return Ok(Message::Shutdown);
+            } else if message == PROTO_MESSAGE_MOTION {
+                match Motion::try_from(&payload_buffer[..]) {
+                    Ok(motion) => {
+                        return Ok(Message::Motion(motion));
+                    }
+                    Err(_) => {
+                        log::warn!("Invalid motion payload");
+                        continue;
+                    }
+                }
+            } else if message == PROTO_MESSAGE_SIGNAL {
+                match Signal::try_from(&payload_buffer[..]) {
                     Ok(signal) => {
                         return Ok(Message::Signal(signal));
                     }

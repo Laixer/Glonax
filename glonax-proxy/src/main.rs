@@ -125,6 +125,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             tokio::time::sleep(std::time::Duration::from_millis(host_interval)).await;
         }
+
+        // log::debug!("Host service shutdown");
     });
 
     let ecu_sender: Sender<glonax::core::Signal> = tx.clone();
@@ -184,6 +186,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
         }
+
+        log::debug!("FIFO listener shutdown");
     });
 
     let ecu_interface = config.interface.clone();
@@ -227,6 +231,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
         }
+
+        log::debug!("Motion listener shutdown");
     });
 
     let listener = TcpListener::bind(config.address.clone()).await?;
@@ -234,7 +240,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     loop {
         let (stream, addr) = listener.accept().await?;
 
-        log::info!("Accepted connection from: {}", addr);
+        log::debug!("Accepted connection from: {}", addr);
 
         let (stream_reader, stream_writer) = stream.into_split();
 
@@ -252,7 +258,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
 
-            log::info!("Signal listener shutdown");
+            log::info!("Session signal listener shutdown");
         });
 
         tokio::spawn(async move {
@@ -260,14 +266,13 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             let mut protocol_in = glonax::transport::Protocol::new(stream_reader);
 
-            while let Ok(message) = protocol_in.read_frame().await {
+            while let Ok(message) = protocol_in.read_frame2().await {
                 match message {
                     glonax::transport::Message::Start(session) => {
                         log::info!("Session started for: {}", session.name());
                         session_name = session.name().to_string();
                     }
                     glonax::transport::Message::Shutdown => {
-                        log::info!("Session shutdown for: {}", session_name);
                         break;
                     }
                     glonax::transport::Message::Motion(motion) => {
@@ -281,7 +286,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
 
-            log::info!("Connection closed for: {}", addr);
+            log::info!("Session shutdown for: {}", session_name);
         });
     }
 
