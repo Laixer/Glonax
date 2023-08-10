@@ -13,6 +13,7 @@ members = [
   "glonax-gnss",
   "glonax-input",
   "glonax-ecu",
+  "glonax-agent",
   "glonax-csim",
   "glonax-utils"
 ]
