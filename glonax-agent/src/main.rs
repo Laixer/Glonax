@@ -106,7 +106,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
     protocol.write_frame0(start).await?;
 
-    //     if "lat" in self.machine.gnss and "long" in self.machine.gnss:
+    // if "lat" in self.machine.gnss and "long" in self.machine.gnss:
     //     data["location"] = [self.machine.gnss["lat"], self.machine.gnss["long"]]
     // if "altitude" in self.machine.gnss:
     //     data["altitude"] = self.machine.gnss["altitude"]
@@ -115,23 +115,27 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     // if "satellites" in self.machine.gnss:
     //     data["satellites"] = self.machine.gnss["satellites"]
 
-    let memory = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
-    let swap = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
-    let cpu_1 = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
-    let cpu_5 = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
-    let cpu_15 = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(0));
-    let uptime = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
+    struct Telemetry {
+        memory: Option<glonax::core::Signal>,
+        swap: Option<glonax::core::Signal>,
+        cpu_1: Option<glonax::core::Signal>,
+        cpu_5: Option<glonax::core::Signal>,
+        cpu_15: Option<glonax::core::Signal>,
+        uptime: Option<glonax::core::Signal>,
+    }
 
-    let memory_clone = memory.clone();
-    let swap_clone = swap.clone();
-    let cpu_1_clone = cpu_1.clone();
-    let cpu_5_clone = cpu_5.clone();
-    let cpu_15_clone = cpu_15.clone();
-    let uptime_clone = uptime.clone();
+    let telemetrics = std::sync::Arc::new(tokio::sync::RwLock::new(Telemetry {
+        memory: None,
+        swap: None,
+        cpu_1: None,
+        cpu_5: None,
+        cpu_15: None,
+        uptime: None,
+    }));
+
+    let telemetrics_clone = telemetrics.clone();
 
     tokio::spawn(async move {
-        use std::sync::atomic::Ordering::SeqCst;
-
         log::debug!("Starting host service");
 
         let url = reqwest::Url::parse(BASE_URL).unwrap();
@@ -151,20 +155,50 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             map.insert("status", "HEALTHY".to_string());
             map.insert("name", "glonax-agent".to_string());
 
-            let memory = memory_clone.load(SeqCst);
-            let swap = swap_clone.load(SeqCst);
-            let cpu_1 = cpu_1_clone.load(SeqCst);
-            let cpu_5 = cpu_5_clone.load(SeqCst);
-            let cpu_15 = cpu_15_clone.load(SeqCst);
-            let uptime = uptime_clone.load(SeqCst);
+            {
+                let telemetric_lock = telemetrics_clone.read().await;
 
-            map.insert("memory", memory.to_string());
-            map.insert("swap", swap.to_string());
-            map.insert("cpu_1", cpu_1.to_string());
-            map.insert("cpu_5", cpu_5.to_string());
-            map.insert("cpu_15", cpu_15.to_string());
-            if uptime > 0 {
-                map.insert("uptime", uptime.to_string());
+                if let Some(memory) = telemetric_lock.memory {
+                    if let glonax::core::Metric::Percent(count) = memory.metric {
+                        map.insert("memory", count.to_string());
+                        log::debug!("memory: {}", count);
+                    }
+                }
+
+                if let Some(swap) = telemetric_lock.swap {
+                    if let glonax::core::Metric::Percent(count) = swap.metric {
+                        map.insert("swap", count.to_string());
+                        log::debug!("swap: {}", count);
+                    }
+                }
+
+                if let Some(cpu_1) = telemetric_lock.cpu_1 {
+                    if let glonax::core::Metric::Percent(count) = cpu_1.metric {
+                        map.insert("cpu_1", count.to_string());
+                        log::debug!("cpu_1: {}", count);
+                    }
+                }
+
+                if let Some(cpu_5) = telemetric_lock.cpu_5 {
+                    if let glonax::core::Metric::Percent(count) = cpu_5.metric {
+                        map.insert("cpu_5", count.to_string());
+                        log::debug!("cpu_5: {}", count);
+                    }
+                }
+
+                if let Some(cpu_15) = telemetric_lock.cpu_15 {
+                    if let glonax::core::Metric::Percent(count) = cpu_15.metric {
+                        map.insert("cpu_15", count.to_string());
+                        log::debug!("cpu_15: {}", count);
+                    }
+                }
+
+                if let Some(uptime) = telemetric_lock.uptime {
+                    if let glonax::core::Metric::Count(count) = uptime.metric {
+                        map.insert("uptime", count.to_string());
+                        log::debug!("uptime: {}", count);
+                    }
+                }
             }
 
             let request_url = url.join(&format!("api/v1/{}/probe", instance)).unwrap();
@@ -184,34 +218,19 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     while let Ok(message) = protocol.read_frame().await {
         if let glonax::transport::Message::Signal(signal) = message {
             if signal.address == 0x9E {
-                if signal.function == 382 {
-                    if let glonax::core::Metric::Percent(count) = signal.metric {
-                        memory.store(count.into(), std::sync::atomic::Ordering::SeqCst);
-                    }
-                } else if signal.function == 383 {
-                    if let glonax::core::Metric::Percent(count) = signal.metric {
-                        swap.store(count.into(), std::sync::atomic::Ordering::SeqCst);
-                    }
-                } else if signal.function == 593 {
-                    if let glonax::core::Metric::Percent(count) = signal.metric {
-                        cpu_1.store(count.into(), std::sync::atomic::Ordering::SeqCst);
-                    }
-                } else if signal.function == 594 {
-                    if let glonax::core::Metric::Percent(count) = signal.metric {
-                        cpu_5.store(count.into(), std::sync::atomic::Ordering::SeqCst);
-                    }
-                } else if signal.function == 595 {
-                    if let glonax::core::Metric::Percent(count) = signal.metric {
-                        cpu_15.store(count.into(), std::sync::atomic::Ordering::SeqCst);
-                    }
+                if signal.function == 0x17E {
+                    telemetrics.write().await.memory = Some(signal);
+                } else if signal.function == 0x17F {
+                    telemetrics.write().await.swap = Some(signal);
+                } else if signal.function == 0x251 {
+                    telemetrics.write().await.cpu_1 = Some(signal);
+                } else if signal.function == 0x252 {
+                    telemetrics.write().await.cpu_5 = Some(signal);
+                } else if signal.function == 0x253 {
+                    telemetrics.write().await.cpu_15 = Some(signal);
                 } else if signal.function == 0x1A5 {
-                    if let glonax::core::Metric::Count(count) = signal.metric {
-                        uptime.store(count.into(), std::sync::atomic::Ordering::SeqCst);
-                    }
+                    telemetrics.write().await.uptime = Some(signal);
                 }
-                // else {
-                //     log::debug!("{:?}", signal);
-                // }
             }
         }
     }
