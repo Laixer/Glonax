@@ -235,25 +235,44 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Motion listener shutdown");
     });
 
+    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
+
     let listener = TcpListener::bind(config.address.clone()).await?;
+
+    struct Session {
+        name: String,
+        addr: std::net::SocketAddr,
+        motion_tx: tokio::sync::mpsc::Sender<glonax::core::Motion>,
+        signal_rx: tokio::sync::broadcast::Receiver<glonax::core::Signal>,
+    }
 
     loop {
         let (stream, addr) = listener.accept().await?;
+
+        let permit = match semaphore.clone().try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+                log::warn!("Too many connections");
+                continue;
+            }
+        };
 
         log::debug!("Accepted connection from: {}", addr);
 
         let (stream_reader, stream_writer) = stream.into_split();
 
-        let mut rx = tx.subscribe();
-
-        let session_motion_tx = motion_tx.clone();
+        let mut session = Session {
+            name: addr.to_string(),
+            addr,
+            motion_tx: motion_tx.clone(),
+            signal_rx: tx.subscribe(),
+        };
 
         tokio::spawn(async move {
             let mut protocol_out = glonax::transport::Protocol::new(stream_writer);
 
-            while let Ok(signal) = rx.recv().await {
+            while let Ok(signal) = session.signal_rx.recv().await {
                 if let Err(_e) = protocol_out.write_frame6(signal).await {
-                    // log::error!("Failed to write to socket: {}", e);
                     break;
                 }
             }
@@ -262,15 +281,13 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         });
 
         tokio::spawn(async move {
-            let mut session_name = String::new();
-
             let mut protocol_in = glonax::transport::Protocol::new(stream_reader);
 
             while let Ok(message) = protocol_in.read_frame2().await {
                 match message {
-                    glonax::transport::Message::Start(session) => {
-                        log::info!("Session started for: {}", session.name());
-                        session_name = session.name().to_string();
+                    glonax::transport::Message::Start(sess) => {
+                        log::info!("Session started for: {}", sess.name());
+                        session.name = sess.name().to_string();
                     }
                     glonax::transport::Message::Shutdown => {
                         break;
@@ -278,7 +295,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                     glonax::transport::Message::Motion(motion) => {
                         log::debug!("Received motion: {}", motion);
 
-                        if let Err(e) = session_motion_tx.send(motion).await {
+                        if let Err(e) = session.motion_tx.send(motion).await {
                             log::error!("Failed to send motion: {}", e);
                         }
                     }
@@ -286,7 +303,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
 
-            log::info!("Session shutdown for: {}", session_name);
+            log::info!("Session shutdown for: {}", session.name);
+
+            drop(permit);
         });
     }
 
