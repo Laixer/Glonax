@@ -167,27 +167,29 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     let fifo_sender: Sender<glonax::core::Signal> = tx.clone();
     tokio::spawn(async move {
-        log::debug!("Starting FIFO listener");
+        loop {
+            log::debug!("Starting FIFO listener");
 
-        let file = tokio::fs::OpenOptions::new()
-            .read(true)
-            .open("signal")
-            .await
-            .unwrap();
+            let file = tokio::fs::OpenOptions::new()
+                .read(true)
+                .open("signal")
+                .await
+                .unwrap();
 
-        let mut protocol = glonax::transport::Protocol::new(file);
+            let mut protocol = glonax::transport::Protocol::new(file);
 
-        while let Ok(message) = protocol.read_frame().await {
-            if let glonax::transport::Message::Signal(signal) = message {
-                // log::debug!("Received signal: {}", signal);
+            while let Ok(message) = protocol.read_frame().await {
+                if let glonax::transport::Message::Signal(signal) = message {
+                    // log::debug!("Received signal: {}", signal);
 
-                if let Err(e) = fifo_sender.send(signal) {
-                    log::error!("Failed to send signal: {}", e);
+                    if let Err(e) = fifo_sender.send(signal) {
+                        log::error!("Failed to send signal: {}", e);
+                    }
                 }
             }
-        }
 
-        log::debug!("FIFO listener shutdown");
+            log::debug!("FIFO listener shutdown");
+        }
     });
 
     let ecu_interface = config.interface.clone();
@@ -283,7 +285,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         tokio::spawn(async move {
             let mut protocol_in = glonax::transport::Protocol::new(stream_reader);
 
-            while let Ok(message) = protocol_in.read_frame2().await {
+            while let Ok(message) = protocol_in.read_frame().await {
                 match message {
                     glonax::transport::Message::Start(sess) => {
                         log::info!("Session started for: {}", sess.name());
