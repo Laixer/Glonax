@@ -95,17 +95,6 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         config.address.to_owned()
     };
 
-    log::debug!("Waiting for connection to {}", host);
-
-    let stream = tokio::net::TcpStream::connect(&host).await?;
-
-    log::info!("Connected to {}", host);
-
-    let mut protocol = glonax::transport::Protocol::new(stream);
-
-    let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
-    protocol.write_frame0(start).await?;
-
     // if "lat" in self.machine.gnss and "long" in self.machine.gnss:
     //     data["location"] = [self.machine.gnss["lat"], self.machine.gnss["long"]]
     // if "altitude" in self.machine.gnss:
@@ -215,22 +204,26 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         }
     });
 
-    while let Ok(message) = protocol.read_frame().await {
-        if let glonax::transport::Message::Signal(signal) = message {
-            if signal.address == 0x9E {
-                if signal.function == 0x17E {
-                    telemetrics.write().await.memory = Some(signal);
-                } else if signal.function == 0x17F {
-                    telemetrics.write().await.swap = Some(signal);
-                } else if signal.function == 0x251 {
-                    telemetrics.write().await.cpu_1 = Some(signal);
-                } else if signal.function == 0x252 {
-                    telemetrics.write().await.cpu_5 = Some(signal);
-                } else if signal.function == 0x253 {
-                    telemetrics.write().await.cpu_15 = Some(signal);
-                } else if signal.function == 0x1A5 {
-                    telemetrics.write().await.uptime = Some(signal);
-                }
+    log::debug!("Waiting for connection to {}", host);
+
+    let mut client = glonax::transport::Client::connect(&host, &config.global.bin_name).await?;
+
+    log::info!("Connected to {}", host);
+
+    while let Ok(signal) = client.recv_signal().await {
+        if signal.address == 0x9E {
+            if signal.function == 0x17E {
+                telemetrics.write().await.memory = Some(signal);
+            } else if signal.function == 0x17F {
+                telemetrics.write().await.swap = Some(signal);
+            } else if signal.function == 0x251 {
+                telemetrics.write().await.cpu_1 = Some(signal);
+            } else if signal.function == 0x252 {
+                telemetrics.write().await.cpu_5 = Some(signal);
+            } else if signal.function == 0x253 {
+                telemetrics.write().await.cpu_15 = Some(signal);
+            } else if signal.function == 0x1A5 {
+                telemetrics.write().await.uptime = Some(signal);
             }
         }
     }

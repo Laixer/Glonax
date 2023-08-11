@@ -1,4 +1,4 @@
-use bytes::{Buf, BufMut, BytesMut};
+use bytes::{BufMut, BytesMut};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::core::{Motion, Signal};
@@ -47,15 +47,11 @@ pub mod frame {
 
 pub struct Protocol<T> {
     inner: T,
-    buffer: BytesMut,
 }
 
 impl<T> Protocol<T> {
     pub fn new(inner: T) -> Self {
-        Self {
-            inner,
-            buffer: BytesMut::with_capacity(2048),
-        }
+        Self { inner }
     }
 
     // TOOD: Why not use the buffer directly?
@@ -198,6 +194,56 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
                 }
             } else {
                 log::error!("Invalid message type: {}", message);
+            }
+        }
+    }
+}
+
+pub struct Client<T> {
+    inner: Protocol<T>,
+}
+
+impl Client<tokio::net::TcpStream> {
+    pub async fn connect(
+        addr: impl tokio::net::ToSocketAddrs,
+        session_name: impl ToString,
+    ) -> std::io::Result<Self> {
+        let stream = tokio::net::TcpStream::connect(addr).await?;
+
+        let mut this = Self {
+            inner: Protocol::new(stream),
+        };
+
+        this.handshake(session_name).await?;
+
+        Ok(this)
+    }
+}
+
+impl<T: AsyncWrite + Unpin> Client<T> {
+    pub async fn handshake(&mut self, session_name: impl ToString) -> std::io::Result<()> {
+        let start = frame::Start::new(session_name.to_string());
+        self.inner.write_frame0(start).await
+    }
+
+    pub async fn send_motion(&mut self, motion: Motion) -> std::io::Result<()> {
+        self.inner.write_frame5(motion).await
+    }
+}
+
+impl<T: AsyncRead + Unpin> Client<T> {
+    pub async fn recv_signal(&mut self) -> std::io::Result<Signal> {
+        loop {
+            if let Message::Signal(signal) = self.inner.read_frame().await? {
+                return Ok(signal);
+            }
+        }
+    }
+
+    pub async fn recv_motion(&mut self) -> std::io::Result<Motion> {
+        loop {
+            if let Message::Motion(motion) = self.inner.read_frame().await? {
+                return Ok(motion);
             }
         }
     }

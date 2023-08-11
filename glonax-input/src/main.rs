@@ -117,20 +117,15 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", host);
 
-    let stream = tokio::net::TcpStream::connect(&host).await?;
+    let mut client = glonax::transport::Client::connect(&host, &config.global.bin_name).await?;
 
     log::info!("Connected to {}", host);
-
-    let mut protocol = glonax::transport::Protocol::new(stream);
-
-    let start = glonax::transport::frame::Start::new(config.global.bin_name.clone());
-    protocol.write_frame0(start).await?;
 
     while let Ok(input) = input_device.next().await {
         if let Some(motion) = input_state.try_from(input) {
             log::trace!("{}", motion);
 
-            if let Err(e) = protocol.write_frame5(motion).await {
+            if let Err(e) = client.send_motion(motion).await {
                 log::error!("Failed to write to socket: {}", e);
                 break;
             }

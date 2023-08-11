@@ -15,9 +15,6 @@ const DEVICE_NET_LOCAL_ADDR: u8 = 0x9e;
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax ECU daemon", long_about = None)]
 struct Args {
-    /// Bind address.
-    #[arg(short = 'b', long = "bind", default_value = "[::1]:50051")]
-    address: String,
     /// CAN network interface.
     interface: String,
     /// Daemonize the service.
@@ -35,7 +32,6 @@ async fn main() -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME");
 
     let mut config = config::EcuConfig {
-        address: args.address,
         interface: args.interface,
         global: glonax::GlobalConfig::default(),
     };

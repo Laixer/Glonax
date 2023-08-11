@@ -2,8 +2,6 @@ use glonax::{Configurable, GlobalConfig};
 
 #[derive(Clone, Debug)]
 pub struct EcuConfig {
-    /// Server network address.
-    pub address: String,
     /// CAN network interface.
     pub interface: String,
     /// Global configuration.
