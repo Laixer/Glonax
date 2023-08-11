@@ -1,0 +1,21 @@
+[Unit]
+Description=Glonax Agent
+StartLimitIntervalSec=5
+StartLimitBurst=5
+Wants=network-online.target
+Requires=glonax-proxy.service
+After=glonax-proxy.service network-online.target
+
+[Service]
+WorkingDirectory=/var/lib/glonax
+Restart=always
+RestartSec=2
+Nice=5
+User=glonax
+Group=glonax
+ExecStartPre=/bin/sleep 10
+ExecStart=/usr/local/bin/glonax-agent --daemon
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

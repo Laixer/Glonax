@@ -1,0 +1,20 @@
+[Unit]
+Description=Glonax Proxy
+StartLimitIntervalSec=5
+StartLimitBurst=5
+Wants=sys-subsystem-net-devices-can0.device
+After=sys-subsystem-net-devices-can0.device
+
+[Service]
+WorkingDirectory=/var/lib/glonax
+Restart=always
+RestartSec=2
+Nice=-15
+User=glonax
+Group=glonax
+ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can0 -o carrier
+ExecStart=/usr/local/bin/glonax-ecud --bind 0:50051 --daemon can0
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
