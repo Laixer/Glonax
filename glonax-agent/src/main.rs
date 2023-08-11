@@ -93,16 +93,17 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use tokio::sync::RwLock;
 
     struct Telemetry {
-        location: Option<glonax::core::Metric>,
-        altitude: Option<glonax::core::Metric>,
-        speed: Option<glonax::core::Metric>,
-        satellites: Option<glonax::core::Metric>,
-        memory: Option<glonax::core::Metric>,
-        swap: Option<glonax::core::Metric>,
-        cpu_1: Option<glonax::core::Metric>,
-        cpu_5: Option<glonax::core::Metric>,
-        cpu_15: Option<glonax::core::Metric>,
-        uptime: Option<glonax::core::Metric>,
+        location: Option<(f32, f32)>,
+        altitude: Option<f32>,
+        speed: Option<f32>,
+        heading: Option<f32>,
+        satellites: Option<u64>,
+        memory: Option<i32>,
+        swap: Option<i32>,
+        cpu_1: Option<i32>,
+        cpu_5: Option<i32>,
+        cpu_15: Option<i32>,
+        uptime: Option<u64>,
     }
 
     let runtime = glonax::RuntimeBuilder::from_config(config)?
@@ -113,6 +114,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         location: None,
         altitude: None,
         speed: None,
+        heading: None,
         satellites: None,
         memory: None,
         swap: None,
@@ -147,74 +149,58 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             {
                 let telemetric_lock = telemetrics_clone.read().await;
 
-                if let Some(location) = telemetric_lock.location {
-                    if let glonax::core::Metric::Coordinates((lat, long)) = location {
-                        // map.insert("memory", count.to_string());
-                        log::debug!("{}", location);
-                    }
+                if let Some((lat, long)) = telemetric_lock.location {
+                    log::trace!("{} {}", lat, long);
                 }
 
                 if let Some(altitude) = telemetric_lock.altitude {
-                    if let glonax::core::Metric::Altitude(value) = altitude {
-                        map.insert("altitude", value.to_string());
-                        log::debug!("{}", altitude);
-                    }
+                    map.insert("altitude", altitude.to_string());
+                    log::trace!("{}", altitude);
                 }
 
                 if let Some(speed) = telemetric_lock.speed {
-                    if let glonax::core::Metric::Speed(value) = speed {
-                        map.insert("speed", value.to_string());
-                        log::debug!("{}", speed);
-                    }
+                    map.insert("speed", speed.to_string());
+                    log::trace!("{}", speed);
+                }
+
+                if let Some(heading) = telemetric_lock.heading {
+                    map.insert("heading", heading.to_string());
+                    log::trace!("{}", heading);
                 }
 
                 if let Some(satellites) = telemetric_lock.satellites {
-                    if let glonax::core::Metric::Count(value) = satellites {
-                        map.insert("satellites", value.to_string());
-                        log::debug!("satellites: {}", value);
-                    }
+                    map.insert("satellites", satellites.to_string());
+                    log::trace!("satellites: {}", satellites);
                 }
 
                 if let Some(memory) = telemetric_lock.memory {
-                    if let glonax::core::Metric::Percent(value) = memory {
-                        map.insert("memory", value.to_string());
-                        log::debug!("memory: {}", memory);
-                    }
+                    map.insert("memory", memory.to_string());
+                    log::trace!("memory: {}", memory);
                 }
 
                 if let Some(swap) = telemetric_lock.swap {
-                    if let glonax::core::Metric::Percent(count) = swap {
-                        map.insert("swap", count.to_string());
-                        log::debug!("swap: {}", count);
-                    }
+                    map.insert("swap", swap.to_string());
+                    log::trace!("swap: {}", swap);
                 }
 
                 if let Some(cpu_1) = telemetric_lock.cpu_1 {
-                    if let glonax::core::Metric::Percent(count) = cpu_1 {
-                        map.insert("cpu_1", count.to_string());
-                        log::debug!("cpu_1: {}", count);
-                    }
+                    map.insert("cpu_1", cpu_1.to_string());
+                    log::trace!("cpu_1: {}", cpu_1);
                 }
 
                 if let Some(cpu_5) = telemetric_lock.cpu_5 {
-                    if let glonax::core::Metric::Percent(count) = cpu_5 {
-                        map.insert("cpu_5", count.to_string());
-                        log::debug!("cpu_5: {}", count);
-                    }
+                    map.insert("cpu_5", cpu_5.to_string());
+                    log::trace!("cpu_5: {}", cpu_5);
                 }
 
                 if let Some(cpu_15) = telemetric_lock.cpu_15 {
-                    if let glonax::core::Metric::Percent(count) = cpu_15 {
-                        map.insert("cpu_15", count.to_string());
-                        log::debug!("cpu_15: {}", count);
-                    }
+                    map.insert("cpu_15", cpu_15.to_string());
+                    log::trace!("cpu_15: {}", cpu_15);
                 }
 
                 if let Some(uptime) = telemetric_lock.uptime {
-                    if let glonax::core::Metric::Count(count) = uptime {
-                        map.insert("uptime", count.to_string());
-                        log::debug!("uptime: {}", count);
-                    }
+                    map.insert("uptime", uptime.to_string());
+                    log::trace!("uptime: {}", uptime);
                 }
             }
 
@@ -247,28 +233,50 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         }
 
         if signal.address == 0x9E {
-            if signal.function == 0x17E {
-                telemetrics.write().await.memory = Some(signal.metric);
-            } else if signal.function == 0x17F {
-                telemetrics.write().await.swap = Some(signal.metric);
-            } else if signal.function == 0x251 {
-                telemetrics.write().await.cpu_1 = Some(signal.metric);
-            } else if signal.function == 0x252 {
-                telemetrics.write().await.cpu_5 = Some(signal.metric);
-            } else if signal.function == 0x253 {
-                telemetrics.write().await.cpu_15 = Some(signal.metric);
-            } else if signal.function == 0x1A5 {
-                telemetrics.write().await.uptime = Some(signal.metric);
+            let mut telemetric_lock = telemetrics.write().await;
+
+            match signal.into() {
+                glonax::net::HostMessage::Memory(memory) => {
+                    telemetric_lock.memory = Some(memory);
+                }
+                glonax::net::HostMessage::Swap(swap) => {
+                    telemetric_lock.swap = Some(swap);
+                }
+                glonax::net::HostMessage::Cpu1(cpu_1) => {
+                    telemetric_lock.cpu_1 = Some(cpu_1);
+                }
+                glonax::net::HostMessage::Cpu5(cpu_5) => {
+                    telemetric_lock.cpu_5 = Some(cpu_5);
+                }
+                glonax::net::HostMessage::Cpu15(cpu_15) => {
+                    telemetric_lock.cpu_15 = Some(cpu_15);
+                }
+                glonax::net::HostMessage::Timestamp(_timestamp) => {
+                    // telemetric_lock.uptime = Some(timestamp);
+                }
+                glonax::net::HostMessage::Uptime(uptime) => {
+                    telemetric_lock.uptime = Some(uptime);
+                }
             }
         } else if signal.address == 0x01 {
-            if signal.function == 0x0 {
-                telemetrics.write().await.location = Some(signal.metric);
-            } else if signal.function == 0x1 {
-                telemetrics.write().await.altitude = Some(signal.metric);
-            } else if signal.function == 0x2 {
-                telemetrics.write().await.speed = Some(signal.metric);
-            } else if signal.function == 0xA {
-                telemetrics.write().await.satellites = Some(signal.metric);
+            let mut telemetric_lock = telemetrics.write().await;
+
+            match signal.into() {
+                glonax::net::NMEAMessage2::Coordinates(coordinates) => {
+                    telemetric_lock.location = Some(coordinates);
+                }
+                glonax::net::NMEAMessage2::Altitude(altitude) => {
+                    telemetric_lock.altitude = Some(altitude);
+                }
+                glonax::net::NMEAMessage2::Speed(speed) => {
+                    telemetric_lock.speed = Some(speed);
+                }
+                glonax::net::NMEAMessage2::Heading(heading) => {
+                    telemetric_lock.heading = Some(heading);
+                }
+                glonax::net::NMEAMessage2::Satellites(satellites) => {
+                    telemetric_lock.satellites = Some(satellites);
+                }
             }
         }
     }

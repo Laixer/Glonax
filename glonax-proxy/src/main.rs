@@ -109,7 +109,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting host service");
 
-        let mut service = glonax::net::HostService::new();
+        let mut service = glonax::net::HostService::new(0x9E);
 
         loop {
             service.refresh();
@@ -243,7 +243,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     struct Session {
         name: String,
-        addr: std::net::SocketAddr,
         motion_tx: tokio::sync::mpsc::Sender<glonax::core::Motion>,
         signal_rx: tokio::sync::broadcast::Receiver<glonax::core::Signal>,
     }
@@ -265,7 +264,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         let mut session = Session {
             name: addr.to_string(),
-            addr,
             motion_tx: motion_tx.clone(),
             signal_rx: tx.subscribe(),
         };
