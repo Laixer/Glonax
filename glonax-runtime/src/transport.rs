@@ -206,7 +206,7 @@ pub struct Client<T> {
 impl Client<tokio::net::TcpStream> {
     pub async fn connect(address: &String, session_name: impl ToString) -> std::io::Result<Self> {
         let addr = if !address.contains(':') {
-            address.to_owned() + ":30051"
+            address.to_owned() + ":30051" // TODO: Configurable port
         } else {
             address.to_owned()
         };
