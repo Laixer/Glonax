@@ -204,10 +204,13 @@ pub struct Client<T> {
 }
 
 impl Client<tokio::net::TcpStream> {
-    pub async fn connect(
-        addr: impl tokio::net::ToSocketAddrs,
-        session_name: impl ToString,
-    ) -> std::io::Result<Self> {
+    pub async fn connect(address: &String, session_name: impl ToString) -> std::io::Result<Self> {
+        let addr = if !address.contains(':') {
+            address.to_owned() + ":30051"
+        } else {
+            address.to_owned()
+        };
+
         let stream = tokio::net::TcpStream::connect(addr).await?;
 
         let mut this = Self {

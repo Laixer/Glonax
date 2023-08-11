@@ -92,12 +92,6 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    let host = if !config.address.contains(':') {
-        config.address.to_owned() + ":30051"
-    } else {
-        config.address.to_owned()
-    };
-
     struct Telemetry {
         location: Option<glonax::core::Metric>,
         altitude: Option<glonax::core::Metric>,
@@ -238,11 +232,12 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         }
     });
 
-    log::debug!("Waiting for connection to {}", host);
+    log::debug!("Waiting for connection to {}", config.address);
 
-    let mut client = glonax::transport::Client::connect(&host, &config.global.bin_name).await?;
+    let mut client =
+        glonax::transport::Client::connect(&config.address, &config.global.bin_name).await?;
 
-    log::info!("Connected to {}", host);
+    log::info!("Connected to {}", config.address);
 
     let shutdown = runtime.shutdown_signal();
 
