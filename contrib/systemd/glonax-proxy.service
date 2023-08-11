@@ -13,7 +13,7 @@ Nice=-15
 User=glonax
 Group=glonax
 ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can0 -o carrier
-ExecStart=/usr/local/bin/glonax-ecud --bind 0:50051 --daemon can0
+ExecStart=/usr/local/bin/glonax-proxyd --bind 0:30051 --daemon can0
 PrivateTmp=true
 
 [Install]
