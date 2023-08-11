@@ -220,18 +220,38 @@ impl Client<tokio::net::TcpStream> {
     }
 }
 
+impl<T> Client<T> {
+    pub fn new(inner: T) -> Self {
+        Self {
+            inner: Protocol::new(inner),
+        }
+    }
+}
+
 impl<T: AsyncWrite + Unpin> Client<T> {
     pub async fn handshake(&mut self, session_name: impl ToString) -> std::io::Result<()> {
         let start = frame::Start::new(session_name.to_string());
         self.inner.write_frame0(start).await
     }
 
+    pub async fn shutdown(&mut self) -> std::io::Result<()> {
+        self.inner.write_frame1().await
+    }
+
     pub async fn send_motion(&mut self, motion: Motion) -> std::io::Result<()> {
         self.inner.write_frame5(motion).await
+    }
+
+    pub async fn send_signal(&mut self, signal: Signal) -> std::io::Result<()> {
+        self.inner.write_frame6(signal).await
     }
 }
 
 impl<T: AsyncRead + Unpin> Client<T> {
+    pub async fn read_frame(&mut self) -> std::io::Result<Message> {
+        self.inner.read_frame().await
+    }
+
     pub async fn recv_signal(&mut self) -> std::io::Result<Signal> {
         loop {
             if let Message::Signal(signal) = self.inner.read_frame().await? {

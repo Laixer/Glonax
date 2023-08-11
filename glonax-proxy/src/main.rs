@@ -271,10 +271,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         };
 
         tokio::spawn(async move {
-            let mut protocol_out = glonax::transport::Protocol::new(stream_writer);
+            let mut client = glonax::transport::Client::new(stream_writer);
 
             while let Ok(signal) = session.signal_rx.recv().await {
-                if let Err(_e) = protocol_out.write_frame6(signal).await {
+                if let Err(_e) = client.send_signal(signal).await {
                     break;
                 }
             }
@@ -283,9 +283,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         });
 
         tokio::spawn(async move {
-            let mut protocol_in = glonax::transport::Protocol::new(stream_reader);
+            let mut client = glonax::transport::Client::new(stream_reader);
 
-            while let Ok(message) = protocol_in.read_frame().await {
+            while let Ok(message) = client.read_frame().await {
                 match message {
                     glonax::transport::Message::Start(sess) => {
                         log::info!("Session started for: {}", sess.name());

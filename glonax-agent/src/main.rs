@@ -89,31 +89,37 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
     let host = if !config.address.contains(':') {
         config.address.to_owned() + ":30051"
     } else {
         config.address.to_owned()
     };
 
-    // if "lat" in self.machine.gnss and "long" in self.machine.gnss:
-    //     data["location"] = [self.machine.gnss["lat"], self.machine.gnss["long"]]
-    // if "altitude" in self.machine.gnss:
-    //     data["altitude"] = self.machine.gnss["altitude"]
-    // if "speed" in self.machine.gnss:
-    //     data["speed"] = self.machine.gnss["speed"]
-    // if "satellites" in self.machine.gnss:
-    //     data["satellites"] = self.machine.gnss["satellites"]
-
     struct Telemetry {
-        memory: Option<glonax::core::Signal>,
-        swap: Option<glonax::core::Signal>,
-        cpu_1: Option<glonax::core::Signal>,
-        cpu_5: Option<glonax::core::Signal>,
-        cpu_15: Option<glonax::core::Signal>,
-        uptime: Option<glonax::core::Signal>,
+        location: Option<glonax::core::Metric>,
+        altitude: Option<glonax::core::Metric>,
+        speed: Option<glonax::core::Metric>,
+        satellites: Option<glonax::core::Metric>,
+        memory: Option<glonax::core::Metric>,
+        swap: Option<glonax::core::Metric>,
+        cpu_1: Option<glonax::core::Metric>,
+        cpu_5: Option<glonax::core::Metric>,
+        cpu_15: Option<glonax::core::Metric>,
+        uptime: Option<glonax::core::Metric>,
     }
 
-    let telemetrics = std::sync::Arc::new(tokio::sync::RwLock::new(Telemetry {
+    let runtime = glonax::RuntimeBuilder::from_config(config)?
+        .with_shutdown()
+        .build();
+
+    let telemetrics = Arc::new(RwLock::new(Telemetry {
+        location: None,
+        altitude: None,
+        speed: None,
+        satellites: None,
         memory: None,
         swap: None,
         cpu_1: None,
@@ -147,43 +153,71 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             {
                 let telemetric_lock = telemetrics_clone.read().await;
 
+                if let Some(location) = telemetric_lock.location {
+                    if let glonax::core::Metric::Coordinates((lat, long)) = location {
+                        // map.insert("memory", count.to_string());
+                        log::debug!("{}", location);
+                    }
+                }
+
+                if let Some(altitude) = telemetric_lock.altitude {
+                    if let glonax::core::Metric::Altitude(value) = altitude {
+                        map.insert("altitude", value.to_string());
+                        log::debug!("{}", altitude);
+                    }
+                }
+
+                if let Some(speed) = telemetric_lock.speed {
+                    if let glonax::core::Metric::Speed(value) = speed {
+                        map.insert("speed", value.to_string());
+                        log::debug!("{}", speed);
+                    }
+                }
+
+                if let Some(satellites) = telemetric_lock.satellites {
+                    if let glonax::core::Metric::Count(value) = satellites {
+                        map.insert("satellites", value.to_string());
+                        log::debug!("satellites: {}", value);
+                    }
+                }
+
                 if let Some(memory) = telemetric_lock.memory {
-                    if let glonax::core::Metric::Percent(count) = memory.metric {
-                        map.insert("memory", count.to_string());
-                        log::debug!("memory: {}", count);
+                    if let glonax::core::Metric::Percent(value) = memory {
+                        map.insert("memory", value.to_string());
+                        log::debug!("memory: {}", memory);
                     }
                 }
 
                 if let Some(swap) = telemetric_lock.swap {
-                    if let glonax::core::Metric::Percent(count) = swap.metric {
+                    if let glonax::core::Metric::Percent(count) = swap {
                         map.insert("swap", count.to_string());
                         log::debug!("swap: {}", count);
                     }
                 }
 
                 if let Some(cpu_1) = telemetric_lock.cpu_1 {
-                    if let glonax::core::Metric::Percent(count) = cpu_1.metric {
+                    if let glonax::core::Metric::Percent(count) = cpu_1 {
                         map.insert("cpu_1", count.to_string());
                         log::debug!("cpu_1: {}", count);
                     }
                 }
 
                 if let Some(cpu_5) = telemetric_lock.cpu_5 {
-                    if let glonax::core::Metric::Percent(count) = cpu_5.metric {
+                    if let glonax::core::Metric::Percent(count) = cpu_5 {
                         map.insert("cpu_5", count.to_string());
                         log::debug!("cpu_5: {}", count);
                     }
                 }
 
                 if let Some(cpu_15) = telemetric_lock.cpu_15 {
-                    if let glonax::core::Metric::Percent(count) = cpu_15.metric {
+                    if let glonax::core::Metric::Percent(count) = cpu_15 {
                         map.insert("cpu_15", count.to_string());
                         log::debug!("cpu_15: {}", count);
                     }
                 }
 
                 if let Some(uptime) = telemetric_lock.uptime {
-                    if let glonax::core::Metric::Count(count) = uptime.metric {
+                    if let glonax::core::Metric::Count(count) = uptime {
                         map.insert("uptime", count.to_string());
                         log::debug!("uptime: {}", count);
                     }
@@ -200,7 +234,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
                 log::error!("Probe failed");
             }
 
-            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         }
     });
 
@@ -210,23 +244,43 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
 
     log::info!("Connected to {}", host);
 
+    let shutdown = runtime.shutdown_signal();
+
     while let Ok(signal) = client.recv_signal().await {
+        if !shutdown.is_empty() {
+            break;
+        }
+
         if signal.address == 0x9E {
             if signal.function == 0x17E {
-                telemetrics.write().await.memory = Some(signal);
+                telemetrics.write().await.memory = Some(signal.metric);
             } else if signal.function == 0x17F {
-                telemetrics.write().await.swap = Some(signal);
+                telemetrics.write().await.swap = Some(signal.metric);
             } else if signal.function == 0x251 {
-                telemetrics.write().await.cpu_1 = Some(signal);
+                telemetrics.write().await.cpu_1 = Some(signal.metric);
             } else if signal.function == 0x252 {
-                telemetrics.write().await.cpu_5 = Some(signal);
+                telemetrics.write().await.cpu_5 = Some(signal.metric);
             } else if signal.function == 0x253 {
-                telemetrics.write().await.cpu_15 = Some(signal);
+                telemetrics.write().await.cpu_15 = Some(signal.metric);
             } else if signal.function == 0x1A5 {
-                telemetrics.write().await.uptime = Some(signal);
+                telemetrics.write().await.uptime = Some(signal.metric);
+            }
+        } else if signal.address == 0x01 {
+            if signal.function == 0x0 {
+                telemetrics.write().await.location = Some(signal.metric);
+            } else if signal.function == 0x1 {
+                telemetrics.write().await.altitude = Some(signal.metric);
+            } else if signal.function == 0x2 {
+                telemetrics.write().await.speed = Some(signal.metric);
+            } else if signal.function == 0xA {
+                telemetrics.write().await.satellites = Some(signal.metric);
             }
         }
     }
+
+    client.shutdown().await?;
+
+    log::debug!("{} was shutdown gracefully", config.global.bin_name);
 
     Ok(())
 }
