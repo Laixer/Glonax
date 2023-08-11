@@ -80,56 +80,40 @@ impl std::fmt::Display for Signal {
 impl std::fmt::Display for Metric {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Metric::Temperature(value) => write!(f, "Temperature: {:.1}°C", value),
+            Metric::Temperature(value) => write!(f, "{:.1}°C", value),
             Metric::Angle(value) => write!(
                 f,
-                "Angle: {:>6.2}rad {:>6.2}°",
+                "{:>6.2}rad {:>6.2}°",
                 value,
                 crate::core::rad_to_deg(*value)
             ),
-            Metric::Speed(value) => write!(f, "Speed: {:.2}m/s", value),
-            Metric::Altitude(value) => write!(f, "Altitude: {:.1}m", value),
-            Metric::Heading(value) => write!(f, "Heading: {:.1}°", value),
-            Metric::Rpm(value) => write!(f, "RPM: {}rpm", value),
+            Metric::Speed(value) => write!(f, "{:.2}m/s", value),
+            Metric::Altitude(value) => write!(f, "{:.1}m", value),
+            Metric::Heading(value) => write!(f, "{:.1}°", value),
+            Metric::Rpm(value) => write!(f, "{}rpm", value),
             Metric::Acceleration((value_x, value_y, value_z)) => {
-                write!(
-                    f,
-                    "Acceleration (mg): X: {:>+5} Y: {:>+5} Z: {:>+5}",
-                    value_x, value_y, value_z,
-                )
+                write!(f, "({:.2}, {:.2}, {:.2})", value_x, value_y, value_z)
             }
-            Metric::Percent(value) => write!(f, "Percent: {:.1}%", value),
+            Metric::Percent(value) => write!(f, "{:.1}%", value),
             Metric::Coordinates((value_lat, value_long)) => {
-                write!(
-                    f,
-                    "Coordinates: (Lat: {:.5}, Long: {:.5})",
-                    value_lat, value_long
-                )
+                write!(f, "({:.5}, {:.5})", value_lat, value_long)
             }
             Metric::Timestamp(value) => {
                 use chrono::{DateTime, NaiveDateTime, Utc};
 
                 if let Some(naive_datetime) = NaiveDateTime::from_timestamp_opt(*value as i64, 0) {
-                    write!(
-                        f,
-                        "Timestamp: {}",
-                        DateTime::<Utc>::from_utc(naive_datetime, Utc)
-                    )
+                    write!(f, "{}", DateTime::<Utc>::from_utc(naive_datetime, Utc))
                 } else {
-                    write!(f, "Timestamp: {:>+5}", value)
+                    write!(f, "{:>+5}", value)
                 }
             }
             Metric::Point2D((value_x, value_y)) => {
-                write!(f, "Point2D: ({:.2}, {:.2})", value_x, value_y)
+                write!(f, "({:.2}, {:.2})", value_x, value_y)
             }
             Metric::Point3D((value_x, value_y, value_z)) => {
-                write!(
-                    f,
-                    "Point3D: ({:.2}, {:.2}, {:.2})",
-                    value_x, value_y, value_z
-                )
+                write!(f, "({:.2}, {:.2}, {:.2})", value_x, value_y, value_z)
             }
-            Metric::Count(value) => write!(f, "Count: {}", value),
+            Metric::Count(value) => write!(f, "{}", value),
         }
     }
 }
