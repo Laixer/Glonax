@@ -12,10 +12,12 @@ const PROTO_MESSAGE_SHUTDOWN: u8 = 0x11;
 const PROTO_MESSAGE_MOTION: u8 = 0x20;
 const PROTO_MESSAGE_SIGNAL: u8 = 0x31;
 
-const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
-    + std::mem::size_of::<u8>()
-    + std::mem::size_of::<u8>()
-    + std::mem::size_of::<u16>();
+// const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
+//     + std::mem::size_of::<u8>()
+//     + std::mem::size_of::<u8>()
+//     + std::mem::size_of::<u16>()
+//     + 3;
+const MIN_BUFFER_SIZE: usize = 10;
 
 pub enum Message {
     Null,
@@ -54,7 +56,6 @@ impl<T> Protocol<T> {
         Self { inner }
     }
 
-    // TOOD: Why not use the buffer directly?
     fn build_frame<'a>(
         &'a mut self,
         buffer: &'a mut BytesMut,
@@ -65,6 +66,7 @@ impl<T> Protocol<T> {
         buffer.put_u8(PROTO_VERSION);
         buffer.put_u8(message);
         buffer.put_u16(payload.len() as u16);
+        buffer.put(&[0u8; 3][..]);
         buffer.put(&payload[..]);
 
         &buffer[..]
@@ -133,10 +135,7 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
             self.inner.read_exact(&mut header_buffer).await?;
 
             // Check header
-            if header_buffer[0] != PROTO_HEADER[0]
-                || header_buffer[1] != PROTO_HEADER[1]
-                || header_buffer[2] != PROTO_HEADER[2]
-            {
+            if &header_buffer[0..3] != &PROTO_HEADER[..] {
                 log::warn!("Invalid header");
                 continue;
             }
@@ -153,6 +152,12 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
             let proto_length = u16::from_be_bytes([header_buffer[5], header_buffer[6]]) as usize;
             if proto_length > 4096 {
                 log::warn!("Invalid proto length {}", proto_length);
+                continue;
+            }
+
+            // Check padding
+            if &header_buffer[7..10] != &[0u8; 3] {
+                log::warn!("Invalid padding");
                 continue;
             }
 

@@ -133,7 +133,7 @@ impl Signal {
                 buf.put_f32(value);
             }
             Metric::Angle(value) => {
-                buf.put_u8(PROTO_METRIC_TEMPERATURE);
+                buf.put_u8(PROTO_METRIC_ANGLE);
                 buf.put_f32(value);
             }
             Metric::Speed(value) => {
