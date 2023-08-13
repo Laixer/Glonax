@@ -241,12 +241,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     let listener = TcpListener::bind(config.address.clone()).await?;
 
-    struct Session {
-        name: String,
-        motion_tx: tokio::sync::mpsc::Sender<glonax::core::Motion>,
-        signal_rx: tokio::sync::broadcast::Receiver<glonax::core::Signal>,
-    }
-
     loop {
         let (stream, addr) = listener.accept().await?;
 
@@ -258,54 +252,105 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
         };
 
-        log::debug!("Accepted connection from: {}", addr);
-
-        let (stream_reader, stream_writer) = stream.into_split();
-
-        let mut session = Session {
-            name: addr.to_string(),
-            motion_tx: motion_tx.clone(),
-            signal_rx: tx.subscribe(),
-        };
+        let session_motion_tx = motion_tx.clone();
+        let mut session_signal_rx = tx.subscribe();
 
         tokio::spawn(async move {
-            let mut client = glonax::transport::Client::new(stream_writer);
+            log::debug!("Accepted connection from: {}", addr);
 
-            while let Ok(signal) = session.signal_rx.recv().await {
-                if let Err(_e) = client.send_signal(signal).await {
-                    break;
-                }
-            }
+            let mut client = glonax::transport::Client::new(stream);
 
-            log::info!("Session signal listener shutdown");
-        });
+            let start = client
+                .recv_start()
+                .await
+                .expect("Failed to receive start message");
 
-        tokio::spawn(async move {
-            let mut client = glonax::transport::Client::new(stream_reader);
+            let session_name = start.name().to_string();
+            let session_name2 = start.name().to_string();
 
-            while let Ok(message) = client.read_frame().await {
-                match message {
-                    glonax::transport::Message::Start(sess) => {
-                        log::info!("Session started for: {}", sess.name());
-                        session.name = sess.name().to_string();
-                    }
-                    glonax::transport::Message::Shutdown => {
-                        break;
-                    }
-                    glonax::transport::Message::Motion(motion) => {
-                        log::debug!("Received motion: {}", motion);
+            let session_read = start.is_read();
+            let session_write = start.is_write();
+            let session_failsafe = start.is_failsafe();
 
-                        if let Err(e) = session.motion_tx.send(motion).await {
-                            log::error!("Failed to send motion: {}", e);
+            log::info!("Session started for: {}", session_name);
+
+            let (mut client_reader, mut client_writer) = client.into_split();
+
+            let session_teardown = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+
+            let session_teardown_r = session_teardown.clone();
+
+            let reader_handle = tokio::spawn(async move {
+                if session_read {
+                    log::debug!("Session reader started for: {}", session_name);
+
+                    while let Ok(signal) = session_signal_rx.recv().await {
+                        if session_teardown_r.load(std::sync::atomic::Ordering::Relaxed) {
+                            break;
+                        }
+
+                        if let Err(e) = client_writer.send_signal(signal).await {
+                            log::error!("Failed to send signal: {}", e);
+                            break;
                         }
                     }
-                    _ => {}
+
+                    log::debug!("Session reader shutdown for: {}", session_name);
                 }
-            }
+            });
 
-            log::info!("Session shutdown for: {}", session.name);
+            tokio::spawn(async move {
+                log::debug!("Session writer started for: {}", session_name2);
 
-            drop(permit);
+                while let Ok(message) = client_reader.read_frame().await {
+                    match message {
+                        glonax::transport::Message::Null => {}
+                        glonax::transport::Message::Start(_) => {}
+                        glonax::transport::Message::Shutdown => {
+                            log::debug!("Client requested shutdown");
+                            session_teardown.store(true, std::sync::atomic::Ordering::Relaxed);
+                            break;
+                        }
+                        glonax::transport::Message::Motion(motion) => {
+                            if session_write {
+                                log::debug!("Received motion: {}", motion);
+                                if let Err(e) = session_motion_tx.send(motion).await {
+                                    log::error!("Failed to send motion: {}", e);
+                                    break;
+                                }
+                            }
+                        }
+                        glonax::transport::Message::Signal(_) => {}
+                    }
+                }
+
+                log::debug!("Session writer shutdown for: {}", session_name2);
+
+                let q = session_teardown.compare_exchange(
+                    false,
+                    true,
+                    std::sync::atomic::Ordering::Acquire,
+                    std::sync::atomic::Ordering::Relaxed,
+                );
+
+                if q.is_ok() {
+                    log::warn!("Session was shutdown by other circumstances");
+
+                    if session_write && session_failsafe {
+                        log::warn!("Enacting failsafe for: {}", session_name2);
+                        session_motion_tx
+                            .send(glonax::core::Motion::StopAll)
+                            .await
+                            .unwrap();
+                    }
+                }
+
+                reader_handle.await.unwrap();
+
+                log::info!("Session shutdown for: {}", session_name2);
+
+                drop(permit);
+            });
         });
     }
 
