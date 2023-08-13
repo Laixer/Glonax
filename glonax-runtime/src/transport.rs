@@ -29,20 +29,50 @@ pub enum Message {
 
 pub mod frame {
     pub struct Start {
+        flags: u8,
         name: String,
     }
 
     impl Start {
-        pub fn new(name: String) -> Self {
-            Self { name }
+        pub const MODE_READ: u8 = 0b0000_0001;
+        pub const MODE_WRITE: u8 = 0b0000_0010;
+        pub const MODE_FAILSAFE: u8 = 0b0001_0000;
+
+        pub fn new(mode: u8, name: String) -> Self {
+            Self { flags: mode, name }
         }
 
+        #[inline]
+        pub fn is_read(&self) -> bool {
+            self.flags & Self::MODE_READ != 0
+        }
+
+        #[inline]
+        pub fn is_write(&self) -> bool {
+            self.flags & Self::MODE_WRITE != 0
+        }
+
+        #[inline]
+        pub fn is_failsafe(&self) -> bool {
+            self.flags & Self::MODE_FAILSAFE != 0
+        }
+
+        #[inline]
         pub fn name(&self) -> &str {
             &self.name
         }
 
-        pub fn to_bytes(&self) -> &[u8] {
-            self.name.as_bytes()
+        pub fn to_bytes(&self) -> Vec<u8> {
+            use bytes::{BufMut, BytesMut};
+
+            let name_bytes = self.name.as_bytes();
+
+            let mut buf = BytesMut::with_capacity(1 + name_bytes.len());
+
+            buf.put_u8(self.flags);
+            buf.put(name_bytes);
+
+            buf.to_vec()
         }
     }
 }
@@ -79,7 +109,9 @@ impl<T: AsyncWrite + Unpin> Protocol<T> {
 
         let mut buffer = BytesMut::with_capacity(MIN_BUFFER_SIZE + payload.len());
 
-        self.build_frame(&mut buffer, PROTO_MESSAGE_START, payload);
+        self.build_frame(&mut buffer, PROTO_MESSAGE_START, &payload);
+
+        assert_eq!(buffer.len(), MIN_BUFFER_SIZE + payload.len());
 
         self.inner.write_all(&buffer[..]).await
     }
@@ -168,13 +200,15 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
             if message == PROTO_MESSAGE_NULL {
                 return Ok(Message::Null);
             } else if message == PROTO_MESSAGE_START {
+                let flags = payload_buffer[0];
+
                 let mut session_name = String::new();
 
-                for c in payload_buffer {
+                for c in &payload_buffer[1..] {
                     session_name.push(*c as char);
                 }
 
-                return Ok(Message::Start(frame::Start::new(session_name)));
+                return Ok(Message::Start(frame::Start::new(flags, session_name)));
             } else if message == PROTO_MESSAGE_SHUTDOWN {
                 return Ok(Message::Shutdown);
             } else if message == PROTO_MESSAGE_MOTION {
@@ -204,12 +238,52 @@ impl<T: AsyncRead + Unpin> Protocol<T> {
     }
 }
 
-pub struct Client<T> {
-    inner: Protocol<T>,
+pub struct ConnectionOptions {
+    flags: u8,
 }
 
-impl Client<tokio::net::TcpStream> {
-    pub async fn connect(address: &String, session_name: impl ToString) -> std::io::Result<Self> {
+impl ConnectionOptions {
+    pub fn new() -> Self {
+        Self {
+            flags: frame::Start::MODE_READ,
+        }
+    }
+
+    pub fn write(&mut self, write: bool) -> &mut Self {
+        if write {
+            self.flags |= frame::Start::MODE_WRITE;
+        } else {
+            self.flags &= !frame::Start::MODE_WRITE;
+        }
+
+        self
+    }
+
+    pub fn read(&mut self, read: bool) -> &mut Self {
+        if read {
+            self.flags |= frame::Start::MODE_READ;
+        } else {
+            self.flags &= !frame::Start::MODE_READ;
+        }
+
+        self
+    }
+
+    pub fn failsafe(&mut self, failsafe: bool) -> &mut Self {
+        if failsafe {
+            self.flags |= frame::Start::MODE_FAILSAFE;
+        } else {
+            self.flags &= !frame::Start::MODE_FAILSAFE;
+        }
+
+        self
+    }
+
+    pub async fn connect(
+        &self,
+        address: String,
+        session_name: String,
+    ) -> std::io::Result<Client<tokio::net::TcpStream>> {
         let addr = if !address.contains(':') {
             address.to_owned() + ":30051" // TODO: Configurable port
         } else {
@@ -218,13 +292,38 @@ impl Client<tokio::net::TcpStream> {
 
         let stream = tokio::net::TcpStream::connect(addr).await?;
 
-        let mut this = Self {
-            inner: Protocol::new(stream),
-        };
+        let mut client = Client::new(stream);
 
-        this.handshake(session_name).await?;
+        client
+            .handshake(self.flags, session_name.to_owned())
+            .await?;
 
-        Ok(this)
+        Ok(client)
+    }
+}
+
+pub struct Client<T> {
+    inner: Protocol<T>,
+}
+
+impl Client<tokio::net::TcpStream> {
+    pub async fn connect(address: &String, session_name: impl ToString) -> std::io::Result<Self> {
+        let client = ConnectionOptions::new()
+            .connect(address.to_string(), session_name.to_string())
+            .await?;
+
+        Ok(client)
+    }
+
+    pub fn into_split(
+        self,
+    ) -> (
+        Client<tokio::net::tcp::OwnedReadHalf>,
+        Client<tokio::net::tcp::OwnedWriteHalf>,
+    ) {
+        let (r, w) = tokio::net::TcpStream::into_split(self.inner.inner);
+
+        (Client::new(r), Client::new(w))
     }
 }
 
@@ -234,11 +333,19 @@ impl<T> Client<T> {
             inner: Protocol::new(inner),
         }
     }
+
+    pub fn inner(&self) -> &T {
+        &self.inner.inner
+    }
 }
 
 impl<T: AsyncWrite + Unpin> Client<T> {
-    pub async fn handshake(&mut self, session_name: impl ToString) -> std::io::Result<()> {
-        let start = frame::Start::new(session_name.to_string());
+    pub async fn handshake(
+        &mut self,
+        mode: u8,
+        session_name: impl ToString,
+    ) -> std::io::Result<()> {
+        let start = frame::Start::new(mode, session_name.to_string());
         self.inner.write_frame0(start).await
     }
 
@@ -258,6 +365,14 @@ impl<T: AsyncWrite + Unpin> Client<T> {
 impl<T: AsyncRead + Unpin> Client<T> {
     pub async fn read_frame(&mut self) -> std::io::Result<Message> {
         self.inner.read_frame().await
+    }
+
+    pub async fn recv_start(&mut self) -> std::io::Result<frame::Start> {
+        loop {
+            if let Message::Start(session) = self.inner.read_frame().await? {
+                return Ok(session);
+            }
+        }
     }
 
     pub async fn recv_signal(&mut self) -> std::io::Result<Signal> {
