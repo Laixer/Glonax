@@ -97,12 +97,12 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         altitude: Option<f32>,
         speed: Option<f32>,
         heading: Option<f32>,
-        satellites: Option<u64>,
-        memory: Option<i32>,
-        swap: Option<i32>,
-        cpu_1: Option<i32>,
-        cpu_5: Option<i32>,
-        cpu_15: Option<i32>,
+        satellites: Option<u8>,
+        memory: Option<u64>,
+        swap: Option<u64>,
+        cpu_1: Option<f64>,
+        cpu_5: Option<f64>,
+        cpu_15: Option<f64>,
         uptime: Option<u64>,
     }
 
@@ -232,52 +232,45 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             break;
         }
 
-        if signal.address == 0x9E {
-            let mut telemetric_lock = telemetrics.write().await;
+        let mut telemetric_lock = telemetrics.write().await;
 
-            match signal.into() {
-                glonax::net::HostMessage::Memory(memory) => {
-                    telemetric_lock.memory = Some(memory);
-                }
-                glonax::net::HostMessage::Swap(swap) => {
-                    telemetric_lock.swap = Some(swap);
-                }
-                glonax::net::HostMessage::Cpu1(cpu_1) => {
-                    telemetric_lock.cpu_1 = Some(cpu_1);
-                }
-                glonax::net::HostMessage::Cpu5(cpu_5) => {
-                    telemetric_lock.cpu_5 = Some(cpu_5);
-                }
-                glonax::net::HostMessage::Cpu15(cpu_15) => {
-                    telemetric_lock.cpu_15 = Some(cpu_15);
-                }
-                glonax::net::HostMessage::Timestamp(_timestamp) => {
-                    // telemetric_lock.uptime = Some(timestamp);
-                }
-                glonax::net::HostMessage::Uptime(uptime) => {
-                    telemetric_lock.uptime = Some(uptime);
-                }
+        match signal.metric {
+            glonax::core::Metric::VmsUptime(uptime) => {
+                telemetric_lock.uptime = Some(uptime);
             }
-        } else if signal.address == 0x01 {
-            let mut telemetric_lock = telemetrics.write().await;
+            glonax::core::Metric::VmsTimestamp(_timestamp) => {
+                // telemetric_lock.uptime = Some(timestamp);
+            }
+            glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
+                let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
 
-            match signal.into() {
-                glonax::net::NMEAMessage2::Coordinates(coordinates) => {
-                    telemetric_lock.location = Some(coordinates);
-                }
-                glonax::net::NMEAMessage2::Altitude(altitude) => {
-                    telemetric_lock.altitude = Some(altitude);
-                }
-                glonax::net::NMEAMessage2::Speed(speed) => {
-                    telemetric_lock.speed = Some(speed);
-                }
-                glonax::net::NMEAMessage2::Heading(heading) => {
-                    telemetric_lock.heading = Some(heading);
-                }
-                glonax::net::NMEAMessage2::Satellites(satellites) => {
-                    telemetric_lock.satellites = Some(satellites);
-                }
+                telemetric_lock.memory = Some(memory_usage as u64);
             }
+            glonax::core::Metric::VmsSwapUsage(swap) => {
+                telemetric_lock.swap = Some(swap);
+            }
+            glonax::core::Metric::VmsCpuLoad(cpu_load) => {
+                telemetric_lock.cpu_1 = Some(cpu_load.0);
+                telemetric_lock.cpu_5 = Some(cpu_load.1);
+                telemetric_lock.cpu_15 = Some(cpu_load.2);
+            }
+
+            glonax::core::Metric::GnssLatLong(lat_long) => {
+                telemetric_lock.location = Some(lat_long);
+            }
+            glonax::core::Metric::GnssAltitude(altitude) => {
+                telemetric_lock.altitude = Some(altitude);
+            }
+            glonax::core::Metric::GnssSpeed(speed) => {
+                telemetric_lock.speed = Some(speed);
+            }
+            glonax::core::Metric::GnssHeading(heading) => {
+                telemetric_lock.heading = Some(heading);
+            }
+            glonax::core::Metric::GnssSatellites(satellites) => {
+                telemetric_lock.satellites = Some(satellites);
+            }
+            _ => {}
         }
     }
 

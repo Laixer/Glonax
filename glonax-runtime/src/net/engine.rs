@@ -104,24 +104,18 @@ impl crate::channel::SignalSource for EngineMessage {
     fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
         if let Some(driver_demand) = self.driver_demand {
             signals.push(crate::core::Signal::new(
-                self.node as u32,
-                1,
-                crate::core::Metric::Percent(driver_demand as i32),
+                crate::core::Metric::EngineDriverDemand(driver_demand),
             ));
         }
         if let Some(actual_engine) = self.actual_engine {
             signals.push(crate::core::Signal::new(
-                self.node as u32,
-                2,
-                crate::core::Metric::Percent(actual_engine as i32),
+                crate::core::Metric::EngineActualEngine(actual_engine),
             ));
         }
         if let Some(rpm) = self.rpm {
-            signals.push(crate::core::Signal::new(
-                self.node as u32,
-                0,
-                crate::core::Metric::Rpm(rpm as i32),
-            ));
+            signals.push(crate::core::Signal::new(crate::core::Metric::EngineRpm(
+                rpm,
+            )));
         }
     }
 }

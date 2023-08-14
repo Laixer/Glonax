@@ -102,7 +102,7 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
     let reader = BufReader::new(serial);
     let mut lines = reader.lines();
 
-    let service = glonax::net::NMEAService::new(0x1);
+    let service = glonax::net::NMEAService::new();
 
     log::debug!("Waiting for FIFO connection: {}", "signal");
 

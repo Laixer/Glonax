@@ -109,7 +109,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting host service");
 
-        let mut service = glonax::net::HostService::new(0x9E);
+        let mut service = glonax::net::HostService::new();
 
         loop {
             service.refresh();

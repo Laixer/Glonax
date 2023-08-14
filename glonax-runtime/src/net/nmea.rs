@@ -1,66 +1,7 @@
 use crate::core::{Metric, Signal};
 
-const SIGNAL_FUNCTION_COORDINATES: u32 = 0x0;
-const SIGNAL_FUNCTION_ALTITUDE: u32 = 0x1;
-const SIGNAL_FUNCTION_SPEED: u32 = 0x2;
-const SIGNAL_FUNCTION_HEADING: u32 = 0x3;
-const SIGNAL_FUNCTION_SATELLITES: u32 = 0xA;
-
-pub enum NMEAMessage2 {
-    Coordinates((f32, f32)),
-    Altitude(f32),
-    Speed(f32),
-    Heading(f32),
-    Satellites(u64),
-}
-
-impl From<crate::core::Signal> for NMEAMessage2 {
-    fn from(value: crate::core::Signal) -> Self {
-        match value.function {
-            SIGNAL_FUNCTION_COORDINATES => {
-                NMEAMessage2::Coordinates(if let Metric::Coordinates(value) = value.metric {
-                    value
-                } else {
-                    panic!("Invalid metric")
-                })
-            }
-            SIGNAL_FUNCTION_ALTITUDE => {
-                NMEAMessage2::Altitude(if let Metric::Altitude(value) = value.metric {
-                    value
-                } else {
-                    panic!("Invalid metric")
-                })
-            }
-            SIGNAL_FUNCTION_SPEED => {
-                NMEAMessage2::Speed(if let Metric::Speed(value) = value.metric {
-                    value
-                } else {
-                    panic!("Invalid metric")
-                })
-            }
-            SIGNAL_FUNCTION_HEADING => {
-                NMEAMessage2::Heading(if let Metric::Heading(value) = value.metric {
-                    value
-                } else {
-                    panic!("Invalid metric")
-                })
-            }
-            SIGNAL_FUNCTION_SATELLITES => {
-                NMEAMessage2::Satellites(if let Metric::Count(value) = value.metric {
-                    value
-                } else {
-                    panic!("Invalid metric")
-                })
-            }
-            _ => panic!("Invalid function"),
-        }
-    }
-}
-
 // TODO: Timestamp
 pub struct NMEAMessage {
-    /// Node ID.
-    node: u32,
     /// WGS 84 coordinates.
     pub coordinates: Option<(f32, f32)>,
     /// Number of satellites.
@@ -103,9 +44,8 @@ impl NMEAMessage {
         }
     }
 
-    fn decode(node: u32, line: String) -> Self {
+    fn decode(line: String) -> Self {
         let mut this = Self {
-            node,
             coordinates: None,
             satellites: None,
             altitude: None,
@@ -245,62 +185,41 @@ impl std::fmt::Display for NMEAMessage {
 impl crate::channel::SignalSource for NMEAMessage {
     fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
         if let Some((lat, long)) = self.coordinates {
-            signals.push(Signal::new(
-                self.node,
-                SIGNAL_FUNCTION_COORDINATES,
-                Metric::Coordinates((lat, long)),
-            ))
+            signals.push(Signal::new(Metric::GnssLatLong((lat, long))));
         }
         if let Some(altitude) = self.altitude {
-            signals.push(Signal::new(
-                self.node,
-                SIGNAL_FUNCTION_ALTITUDE,
-                Metric::Altitude(altitude),
-            ))
+            signals.push(Signal::new(Metric::GnssAltitude(altitude)));
         }
         if let Some(speed) = self.speed {
             const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
 
-            signals.push(Signal::new(
-                self.node,
-                SIGNAL_FUNCTION_SPEED,
-                Metric::Speed(speed * KNOT_TO_METER_PER_SECOND),
-            ))
+            signals.push(Signal::new(Metric::GnssSpeed(
+                speed * KNOT_TO_METER_PER_SECOND,
+            )));
         }
         if let Some(heading) = self.heading {
-            signals.push(Signal::new(
-                self.node,
-                SIGNAL_FUNCTION_HEADING,
-                Metric::Heading(heading),
-            ))
+            signals.push(Signal::new(Metric::GnssHeading(heading)));
         }
         if let Some(satellites) = self.satellites {
-            signals.push(Signal::new(
-                self.node,
-                SIGNAL_FUNCTION_SATELLITES,
-                Metric::Count(satellites as u64),
-            ))
+            signals.push(Signal::new(Metric::GnssSatellites(satellites)));
         }
     }
 }
 
-pub struct NMEAService {
-    /// Node ID.
-    node: u32,
-}
+pub struct NMEAService {}
 
 impl NMEAService {
-    pub fn new(node: u32) -> Self {
-        Self { node }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn decode(&self, line: String) -> Option<NMEAMessage> {
         if line.starts_with("$GNGGA") {
-            Some(NMEAMessage::decode(self.node, line))
+            Some(NMEAMessage::decode(line))
         } else if line.starts_with("$GNGLL") {
-            Some(NMEAMessage::decode(self.node, line))
+            Some(NMEAMessage::decode(line))
         } else if line.starts_with("$GNRMC") {
-            Some(NMEAMessage::decode(self.node, line))
+            Some(NMEAMessage::decode(line))
         } else {
             None
         }
