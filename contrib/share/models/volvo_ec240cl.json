@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "type": "excavator",
+  "devices": [
+    {"name": "0x6a", "id": 106, "type": "rot_abs_mul_enc", "options": {"upper": 6.283} },
+    {"name": "0x6b", "id": 107, "type": "rot_abs_snl_enc", "options": {"upper": 1.832} },
+    {"name": "0x6c", "id": 108, "type": "rot_abs_snl_enc", "options": {"lower": 0.685, "upper": 2.760 } },
+    {"name": "0x6d", "id": 109, "type": "rot_abs_snl_enc", "options": {"upper": 3.100} }
+  ],
+  "body": {
+    "chain": [
+      {"name": "articulation_arm", "order": ["frame", "boom", "arm", "attachment"]},
+      {"name": "kinematic_arm", "order": ["undercarriage", "frame", "boom", "arm", "attachment", "end"]}
+    ],
+    "joint": [{
+      "name": "undercarriage",
+      "type": "fixed"
+    },{
+      "name": "frame",
+      "type": "continuous",
+      "device": "0x6a",
+      "origin": {"translation":[0, 0, 1.295]},
+      "axis": [0, 0, 1],
+      "power": {"scale":7000,"offset":12000,"tolerance":0.01}
+    },{
+      "name": "boom",
+      "type": "revolute",
+      "device": "0x6b",
+      "origin": {"translation": [0.16, 0, 0.595]},
+      "axis": [0, 1, 0],
+      "power": {"scale":15000,"offset":12000,"tolerance":0.01},
+      "limit": {"lower":-1.047,"upper":0.785}
+    },{
+      "name": "arm",
+      "type": "revolute",
+      "device": "0x6c",
+      "origin": {"translation": [6, 0, 0]},
+      "axis": [0, 1, 0],
+      "power": {"scale": 15000,"offset": 12000, "tolerance": 0.01, "inverse": true},
+      "limit": {"lower": 0.68,"upper": 2.76}
+    },{
+      "name": "attachment",
+      "type": "revolute",
+      "device": "0x6d",
+      "origin": {"translation": [2.97, 0, 0]},
+      "axis": [0, 1, 0],
+      "power": {"scale":15000,"offset": 12000,"tolerance":0.01},
+      "limit": {"lower":-0.962,"upper": 2.19}
+    },{
+      "name": "end",
+      "type": "fixed",
+      "origin": {"translation": [1.5, 0, 0]},
+      "axis": [0, 1, 0]
+    }]
+  }
+}

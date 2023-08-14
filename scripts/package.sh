@@ -30,12 +30,15 @@ mkdir -p ./target/glonax_${VERSION}_amd64/DEBIAN
 mkdir -p ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
 mkdir -p ./target/glonax_${VERSION}_amd64/etc/systemd/system
 mkdir -p ./target/glonax_${VERSION}_amd64/usr/local/bin
+mkdir -p ./target/glonax_${VERSION}_amd64/usr/local/share/glonax
 
 # Copy config files
 cp ./contrib/deb/control ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/deb/postinst ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/udev/79-glonax.rules ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
 cp ./contrib/systemd/* ./target/glonax_${VERSION}_amd64/etc/systemd/system
+cp ./contrib/etc/glonax.conf ./target/glonax_${VERSION}_amd64/etc
+cp -r ./contrib/share/* ./target/glonax_${VERSION}_amd64/usr/local/share/glonax
 
 # Copy binaries
 cp ./target/release/glonax-csim ./target/glonax_${VERSION}_amd64/usr/local/bin
