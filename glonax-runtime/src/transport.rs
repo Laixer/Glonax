@@ -281,21 +281,15 @@ impl ConnectionOptions {
 
     pub async fn connect(
         &self,
-        address: String,
-        session_name: String,
+        address: impl tokio::net::ToSocketAddrs,
+        session_name: impl ToString,
     ) -> std::io::Result<Client<tokio::net::TcpStream>> {
-        let addr = if !address.contains(':') {
-            address.to_owned() + ":30051" // TODO: Configurable port
-        } else {
-            address.to_owned()
-        };
-
-        let stream = tokio::net::TcpStream::connect(addr).await?;
+        let stream = tokio::net::TcpStream::connect(address).await?;
 
         let mut client = Client::new(stream);
 
         client
-            .handshake(self.flags, session_name.to_owned())
+            .handshake(self.flags, session_name.to_string())
             .await?;
 
         Ok(client)

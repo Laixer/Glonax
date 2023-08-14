@@ -109,12 +109,22 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    log::debug!("Waiting for connection to {}", config.address);
+    let mut address = config.address.to_string();
 
-    let mut client =
-        glonax::transport::Client::connect(&config.address, &config.global.bin_name).await?;
+    if !address.contains(':') {
+        address.push_str(":30051");
+    }
 
-    log::info!("Connected to {}", config.address);
+    log::debug!("Waiting for connection to {}", address);
+
+    let mut client = glonax::transport::ConnectionOptions::new()
+        .read(false)
+        .write(true)
+        .failsafe(true)
+        .connect(address.to_string(), config.global.bin_name.to_string())
+        .await?;
+
+    log::info!("Connected to {}", address);
 
     while let Ok(input) = input_device.next().await {
         if let Some(motion) = input_state.try_from(input) {
