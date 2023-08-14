@@ -51,3 +51,14 @@ if command -v udevadm &> /dev/null; then
   echo "Reloading udev rules"
   udevadm control --reload-rules
 fi
+
+# Restart the glonax services
+if command -v systemctl &> /dev/null; then
+  echo "Restarting glonax services"
+  if systemctl is-active glonax-proxy.service &> /dev/null; then
+    systemctl restart glonax-proxy.service
+  fi
+  if systemctl is-active glonax-agent.service &> /dev/null; then
+    systemctl restart glonax-agent.service
+  fi
+fi
