@@ -175,10 +175,10 @@ async fn main() -> anyhow::Result<()> {
                             * Rotation3::from_euler_angles(0.0, attachment_pitch, 0.0))
                         * point;
 
-                    println!(
-                        "effector_point: [{:.2}, {:.2}, {:.2}]",
-                        effector_point.x, effector_point.y, effector_point.z
-                    );
+                    // println!(
+                    //     "effector_point: [{:.2}, {:.2}, {:.2}]",
+                    //     effector_point.x, effector_point.y, effector_point.z
+                    // );
                 }
                 0x6B => {
                     //     println!(
@@ -196,10 +196,10 @@ async fn main() -> anyhow::Result<()> {
                             * Rotation3::from_euler_angles(0.0, attachment_pitch, 0.0))
                         * point;
 
-                    println!(
-                        "effector_point: [{:.2}, {:.2}, {:.2}]",
-                        effector_point.x, effector_point.y, effector_point.z
-                    );
+                    // println!(
+                    //     "effector_point: [{:.2}, {:.2}, {:.2}]",
+                    //     effector_point.x, effector_point.y, effector_point.z
+                    // );
                 }
                 0x6C => {
                     // println!(
@@ -218,10 +218,10 @@ async fn main() -> anyhow::Result<()> {
                             * Rotation3::from_euler_angles(0.0, attachment_pitch, 0.0))
                         * point;
 
-                    println!(
-                        "effector_point: [{:.2}, {:.2}, {:.2}]",
-                        effector_point.x, effector_point.y, effector_point.z
-                    );
+                    // println!(
+                    //     "effector_point: [{:.2}, {:.2}, {:.2}]",
+                    //     effector_point.x, effector_point.y, effector_point.z
+                    // );
                 }
                 0x6D => {
                     // println!(
@@ -240,15 +240,27 @@ async fn main() -> anyhow::Result<()> {
                             * Rotation3::from_euler_angles(0.0, attachment_pitch, 0.0))
                         * point;
 
-                    println!(
-                        "effector_point: [{:.2}, {:.2}, {:.2}]",
-                        effector_point.x, effector_point.y, effector_point.z
-                    );
+                    // println!(
+                    //     "effector_point: [{:.2}, {:.2}, {:.2}]",
+                    //     effector_point.x, effector_point.y, effector_point.z
+                    // );
                 }
                 _ => {}
             },
             _ => {}
         }
+
+        println!(
+            "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°",
+            frame_yaw,
+            glonax::core::rad_to_deg(frame_yaw),
+            boom_pitch,
+            glonax::core::rad_to_deg(boom_pitch),
+            arm_pitch,
+            glonax::core::rad_to_deg(arm_pitch),
+            attachment_pitch,
+            glonax::core::rad_to_deg(attachment_pitch),
+        );
     }
 
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
