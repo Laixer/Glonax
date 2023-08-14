@@ -301,9 +301,12 @@ pub struct Client<T> {
 }
 
 impl Client<tokio::net::TcpStream> {
-    pub async fn connect(address: &String, session_name: impl ToString) -> std::io::Result<Self> {
+    pub async fn connect(
+        address: impl tokio::net::ToSocketAddrs,
+        session_name: impl ToString,
+    ) -> std::io::Result<Self> {
         let client = ConnectionOptions::new()
-            .connect(address.to_string(), session_name.to_string())
+            .connect(address, session_name)
             .await?;
 
         Ok(client)

@@ -120,7 +120,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
         .write(true)
-        .failsafe(true)
+        .failsafe(true) // TODO: Make failsafe configurable
         .connect(address.to_string(), config.global.bin_name.to_string())
         .await?;
 
