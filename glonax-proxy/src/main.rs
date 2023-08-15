@@ -216,11 +216,11 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 glonax::core::Motion::ResumeAll => {
                     network.send_vectored(&service.unlock()).await.unwrap();
                 }
-                glonax::core::Motion::StraightDrive(_value) => {
-                    // network
-                    //     .send_vectored(&service.drive_command(0, value))
-                    //     .await
-                    //     .unwrap();
+                glonax::core::Motion::StraightDrive(value) => {
+                    network
+                        .send_vectored(&service.drive_straight(value))
+                        .await
+                        .unwrap();
                 }
                 glonax::core::Motion::Change(changes) => {
                     network

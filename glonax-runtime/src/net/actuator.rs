@@ -277,6 +277,12 @@ impl ActuatorService {
         msg.to_frame()
     }
 
+    // TODO: MOve this to HCU
+    /// Drive both tracks
+    pub fn drive_straight(&self, value: i16) -> Vec<Frame> {
+        self.actuator_command([(2, value), (3, value)].into_iter().collect())
+    }
+
     /// Sends a command to the motion controller
     pub fn actuator_command(&self, actuator_command: HashMap<u8, i16>) -> Vec<Frame> {
         let mut actuators = [None; 8];
