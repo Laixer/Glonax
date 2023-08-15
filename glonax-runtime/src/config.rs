@@ -1,6 +1,58 @@
+use serde_derive::Deserialize;
+
 pub trait Configurable: Clone {
     /// Get the global configuration
     fn global(&self) -> &GlobalConfig;
+}
+
+// TODO: Move to a more appropriate place
+// / Locate the file_name in the file system.
+// /
+// / NOTE: This function is UNIX specific.
+// pub fn locate_file(file_name: &str) -> Option<String> {
+//     let path = std::path::Path::new(file_name);
+//     if path.exists() {
+//         return Some(path.to_str().unwrap().to_string());
+//     }
+
+//     let path = std::path::Path::new("/etc").join(file_name);
+//     if path.exists() {
+//         return Some(path.to_str().unwrap().to_string());
+//     }
+
+//     let path = std::path::Path::new("/usr/local/share/glonax").join(file_name);
+//     if path.exists() {
+//         return Some(path.to_str().unwrap().to_string());
+//     }
+
+//     let path = std::path::Path::new("/var/lib/glonax").join(file_name);
+//     if path.exists() {
+//         return Some(path.to_str().unwrap().to_string());
+//     }
+
+//     None
+// }
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct TelemetryConfig {
+    host: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct InstanceConfig {
+    instance: String,
+    name: Option<String>,
+    model: String,
+    telemetry: Option<TelemetryConfig>,
+}
+
+pub fn instance_config(path: impl AsRef<std::path::Path>) -> std::io::Result<InstanceConfig> {
+    use std::io::Read;
+
+    let mut contents = String::new();
+    std::fs::File::open(path)?.read_to_string(&mut contents)?;
+
+    Ok(toml::from_str(&contents).expect("Failed to parse instance configuration"))
 }
 
 /// Glonax global configuration.
