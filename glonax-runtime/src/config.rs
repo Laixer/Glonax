@@ -43,10 +43,10 @@ pub struct TelemetryConfig {
 pub struct InstanceConfig {
     /// Instance unique identifier.
     pub instance: String,
-    /// Instance name.
-    pub name: Option<String>,
     /// Instance model.
     pub model: String,
+    /// Instance name.
+    pub name: String,
     /// Telemetry configuration.
     pub telemetry: Option<TelemetryConfig>,
 }

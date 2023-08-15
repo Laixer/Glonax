@@ -193,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
 
     let robot = RobotBuilder::new(instance.instance, RobotType::Excavator)
         .model(instance.model)
-        .name(instance.name.unwrap_or("Unnamed".to_string()))
+        .name(instance.name)
         .add_device(Device::new(
             "frame_encoder",
             0x6A,

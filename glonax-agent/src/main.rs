@@ -101,7 +101,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     struct Telemetry {
         version: String,
         status: String,
-        name: Option<String>,
+        name: String,
         location: Option<(f32, f32)>,
         altitude: Option<f32>,
         speed: Option<f32>,

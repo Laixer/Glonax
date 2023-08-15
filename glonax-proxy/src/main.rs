@@ -102,10 +102,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     log::info!("Starting proxy services");
     log::debug!("Instance ID: {}", config.instance.instance);
-
-    if let Some(name) = &config.instance.name {
-        log::debug!("Instance name: {}", name);
-    }
+    log::debug!("Instance model: {}", config.instance.model);
+    log::debug!("Instance name: {}", config.instance.name);
 
     let (tx, _rx) = broadcast::channel(16);
 
@@ -269,6 +267,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             let mut client = glonax::transport::Client::new(stream);
 
+            // TODO: Handle errors
+            // TODO: Set timeout
             let start = client
                 .recv_start()
                 .await
