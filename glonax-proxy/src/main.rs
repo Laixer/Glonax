@@ -101,6 +101,11 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use tokio::sync::broadcast::{self, Sender};
 
     log::info!("Starting proxy services");
+    log::debug!("Instance ID: {}", config.instance.instance);
+
+    if let Some(name) = &config.instance.name {
+        log::debug!("Instance name: {}", name);
+    }
 
     let (tx, _rx) = broadcast::channel(16);
 
