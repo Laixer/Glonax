@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use na::{Isometry, IsometryMatrix3, Rotation3, Translation3};
+use na::{IsometryMatrix3, Rotation3, Translation3};
 use nalgebra as na;
 
 enum JointType {

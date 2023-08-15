@@ -8,9 +8,6 @@ use clap::Parser;
 
 mod config;
 
-use std::collections::HashMap;
-
-const BASE_URL: &str = "https://cymbion-oybqn.ondigitalocean.app/";
 const VERSION: &str = "102";
 
 #[derive(Parser)]
@@ -100,8 +97,11 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    // #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Clone, serde_derive::Serialize)]
     struct Telemetry {
+        version: String,
+        status: String,
+        name: Option<String>,
         location: Option<(f32, f32)>,
         altitude: Option<f32>,
         speed: Option<f32>,
@@ -120,6 +120,9 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         .build();
 
     let telemetrics = Arc::new(RwLock::new(Telemetry {
+        version: VERSION.to_string(),
+        status: "HEALTHY".to_string(),
+        name: config.instance.name.clone(),
         location: None,
         altitude: None,
         speed: None,
@@ -136,12 +139,14 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     let telemetrics_clone = telemetrics.clone();
 
     let instance_id = config.instance.instance.clone();
+    let host = config.instance.telemetry.as_ref().unwrap().host.clone();
+
     let interval = config.interval;
 
     tokio::spawn(async move {
         log::debug!("Starting host service");
 
-        let url = reqwest::Url::parse(BASE_URL).unwrap();
+        let url = reqwest::Url::parse(&host).unwrap();
 
         let client = reqwest::Client::builder()
             .user_agent("glonax-agent/0.1.0")
@@ -150,76 +155,17 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             .build()
             .unwrap();
 
-        let mut map = HashMap::new();
-        map.insert("version", VERSION.to_string());
-        map.insert("status", "HEALTHY".to_string());
-
-        if let Some(name) = instance_name {
-            map.insert("name", name);
-        }
+        let request_url = url.join(&format!("api/v1/{}/probe", instance_id)).unwrap();
 
         loop {
-            {
-                let telemetric_lock = telemetrics_clone.read().await;
+            let data = { telemetrics_clone.read().await.clone() };
 
-                if let Some((lat, long)) = telemetric_lock.location {
-                    log::trace!("{} {}", lat, long);
-                }
-
-                if let Some(altitude) = telemetric_lock.altitude {
-                    map.insert("altitude", altitude.to_string());
-                    log::trace!("{}", altitude);
-                }
-
-                if let Some(speed) = telemetric_lock.speed {
-                    map.insert("speed", speed.to_string());
-                    log::trace!("{}", speed);
-                }
-
-                if let Some(heading) = telemetric_lock.heading {
-                    map.insert("heading", heading.to_string());
-                    log::trace!("{}", heading);
-                }
-
-                if let Some(satellites) = telemetric_lock.satellites {
-                    map.insert("satellites", satellites.to_string());
-                    log::trace!("satellites: {}", satellites);
-                }
-
-                if let Some(memory) = telemetric_lock.memory {
-                    map.insert("memory", memory.to_string());
-                    log::trace!("memory: {}", memory);
-                }
-
-                if let Some(swap) = telemetric_lock.swap {
-                    map.insert("swap", swap.to_string());
-                    log::trace!("swap: {}", swap);
-                }
-
-                if let Some(cpu_1) = telemetric_lock.cpu_1 {
-                    map.insert("cpu_1", cpu_1.to_string());
-                    log::trace!("cpu_1: {}", cpu_1);
-                }
-
-                if let Some(cpu_5) = telemetric_lock.cpu_5 {
-                    map.insert("cpu_5", cpu_5.to_string());
-                    log::trace!("cpu_5: {}", cpu_5);
-                }
-
-                if let Some(cpu_15) = telemetric_lock.cpu_15 {
-                    map.insert("cpu_15", cpu_15.to_string());
-                    log::trace!("cpu_15: {}", cpu_15);
-                }
-
-                if let Some(uptime) = telemetric_lock.uptime {
-                    map.insert("uptime", uptime.to_string());
-                    log::trace!("uptime: {}", uptime);
-                }
-            }
-
-            let request_url = url.join(&format!("api/v1/{}/probe", instance_id)).unwrap();
-
-            let response = client.post(request_url).json(&map).send().await.unwrap();
+            let response = client
+                .post(request_url.clone())
+                .json(&data)
+                .send()
+                .await
+                .unwrap();
 
             if response.status() == 200 {
                 log::info!("Probe sent successfully");
