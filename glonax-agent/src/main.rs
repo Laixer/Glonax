@@ -21,6 +21,9 @@ struct Args {
     /// Remote network address.
     #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
     address: String,
+    /// Probe interval in seconds.
+    #[arg(short, long, default_value_t = 60)]
+    interval: u64,
     /// Configuration file.
     #[arg(long = "config", default_value = "/etc/glonax.conf")]
     config: String,
@@ -38,6 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut config = config::AgentConfig {
         address: args.address,
+        interval: args.interval,
         instance: glonax::instance_config(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
@@ -132,7 +136,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     let telemetrics_clone = telemetrics.clone();
 
     let instance_id = config.instance.instance.clone();
-    let instance_name = config.instance.name.clone();
+    let interval = config.interval;
 
     tokio::spawn(async move {
         log::debug!("Starting host service");
@@ -223,7 +227,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
                 log::error!("Probe failed, status: {}", response.status());
             }
 
-            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
         }
     });
 

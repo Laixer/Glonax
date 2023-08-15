@@ -544,6 +544,8 @@ dependencies = [
  "glonax",
  "log",
  "reqwest",
+ "serde",
+ "serde_derive",
  "simplelog",
  "tokio 1.29.1",
 ]

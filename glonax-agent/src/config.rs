@@ -4,6 +4,8 @@ use glonax::{Configurable, GlobalConfig, InstanceConfig};
 pub(crate) struct AgentConfig {
     /// Remote network address.
     pub address: String,
+    /// Probe interval in seconds.
+    pub interval: u64,
     /// Local instance configuration.
     pub instance: InstanceConfig,
     /// Global configuration.
