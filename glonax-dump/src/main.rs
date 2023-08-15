@@ -20,6 +20,7 @@ struct Joint {
     name: String,
     ty: JointType,
     origin: na::IsometryMatrix3<f32>,
+    bounds: (f32, f32),
 }
 
 impl Joint {
@@ -27,23 +28,18 @@ impl Joint {
         Self {
             name: name.to_string(),
             ty,
-            origin: Isometry::identity(),
+            origin: IsometryMatrix3::identity(),
+            bounds: (-f32::INFINITY, f32::INFINITY),
         }
     }
 
     pub fn origin_translation(mut self, origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
-        self.origin = na::IsometryMatrix3::from_parts(
-            Translation3::new(origin_x, origin_y, origin_z),
-            Rotation3::identity(),
-        );
+        self.origin.translation = Translation3::new(origin_x, origin_y, origin_z);
         self
     }
 
     pub fn origin_rotation(mut self, origin_roll: f32, origin_pitch: f32, origin_yaw: f32) -> Self {
-        // self.origin = na::IsometryMatrix3::from_parts(
-        //     Translation3::new(origin_x, origin_y, origin_z),
-        //     Rotation3::identity(),
-        // );
+        self.origin.rotation = Rotation3::from_euler_angles(origin_roll, origin_pitch, origin_yaw);
         self
     }
 }
@@ -262,9 +258,17 @@ async fn main() -> anyhow::Result<()> {
         ))
         .add_joint(Joint::new("undercarriage", JointType::Fixed))
         .add_joint(Joint::new("frame", JointType::Continuous).origin_translation(0.0, 0.0, 1.295))
-        .add_joint(Joint::new("boom", JointType::Revolute).origin_translation(0.16, 0.0, 0.595))
+        .add_joint(
+            Joint::new("boom", JointType::Revolute)
+                .origin_translation(0.16, 0.0, 0.595)
+                .origin_rotation(0.0, -1.0472, 0.0),
+        )
         .add_joint(Joint::new("arm", JointType::Revolute).origin_translation(6.0, 0.0, 0.0))
-        .add_joint(Joint::new("attachment", JointType::Revolute).origin_translation(2.97, 0.0, 0.0))
+        .add_joint(
+            Joint::new("attachment", JointType::Revolute)
+                .origin_translation(2.97, 0.0, 0.0)
+                .origin_rotation(0.0, -0.962, 0.0),
+        )
         .add_joint(Joint::new("effector", JointType::Fixed).origin_translation(1.5, 0.0, 0.0))
         .build();
 
@@ -290,9 +294,9 @@ async fn main() -> anyhow::Result<()> {
         match signal.metric {
             glonax::core::Metric::EncoderAbsAngle((node, value)) => match node {
                 node if frame_encoder.id == node => frame_yaw = value,
-                node if boom_encoder.id == node => boom_pitch = value - 1.047,
+                node if boom_encoder.id == node => boom_pitch = value,
                 node if arm_encoder.id == node => arm_pitch = value,
-                node if attachment_encoder.id == node => attachment_pitch = value - 0.962,
+                node if attachment_encoder.id == node => attachment_pitch = value,
                 _ => {}
             },
             _ => {}
@@ -306,21 +310,17 @@ async fn main() -> anyhow::Result<()> {
             * point;
 
         println!(
-            "effector_point: [{:.2}, {:.2}, {:.2}]",
+            "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°\tEffector: [{:.2}, {:.2}, {:.2}]",
+            frame_yaw,
+            glonax::core::rad_to_deg(frame_yaw),
+            boom_pitch,
+            glonax::core::rad_to_deg(boom_pitch),
+            arm_pitch,
+            glonax::core::rad_to_deg(arm_pitch),
+            attachment_pitch,
+            glonax::core::rad_to_deg(attachment_pitch),
             effector_point.x, effector_point.y, effector_point.z
         );
-
-        // println!(
-        //     "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°",
-        //     frame_yaw,
-        //     glonax::core::rad_to_deg(frame_yaw),
-        //     boom_pitch,
-        //     glonax::core::rad_to_deg(boom_pitch),
-        //     arm_pitch,
-        //     glonax::core::rad_to_deg(arm_pitch),
-        //     attachment_pitch,
-        //     glonax::core::rad_to_deg(attachment_pitch),
-        // );
     }
 
     tokio::time::sleep(std::time::Duration::from_secs(5)).await;
