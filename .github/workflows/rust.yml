@@ -21,9 +21,6 @@ jobs:
     - name: Show environment
       run: rustup show
 
-    - name: Build
-      run: cargo build --release --all-features
-
     - name: Run tests
       run: cargo test --release --all-features
 
