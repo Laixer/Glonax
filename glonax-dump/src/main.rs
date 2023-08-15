@@ -185,57 +185,15 @@ impl EulerAngles for Rotation3<f32> {
     }
 }
 
-#[derive(Debug, serde_derive::Deserialize)]
-struct AgentConfig {
-    host: String,
-}
-
-#[derive(Debug, serde_derive::Deserialize)]
-struct Config {
-    instance: String,
-    name: Option<String>,
-    r#type: String,
-    telemetry: Option<AgentConfig>,
-}
-
-fn locate_config_file(path: Option<&str>) -> Option<String> {
-    if let Some(path) = path {
-        if std::path::Path::new(path).exists() {
-            return Some(path.to_string());
-        }
-    }
-
-    if std::path::Path::new("glonax.conf").exists() {
-        return Some("glonax.conf".to_string());
-    }
-
-    if std::path::Path::new("/etc/glonax.conf").exists() {
-        return Some("/etc/glonax.conf".to_string());
-    }
-
-    None
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    use std::io::Read;
-
-    let config_file = "contrib/etc/glonax.conf";
-
-    let config_file = locate_config_file(Some(config_file)).expect("Config file not found");
-
-    let mut file = std::fs::File::open(config_file)?;
-
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    let global_config: Config = toml::from_str(&contents)?;
+    let instance = glonax::instance_config("/etc/glonax.conf")?;
 
     let mut client = glonax::transport::Client::connect("localhost:30051", "glonax-dump").await?;
 
-    let robot = RobotBuilder::new(global_config.instance, RobotType::Excavator)
-        .model(global_config.r#type)
-        .name(global_config.name.unwrap_or("Unnamed".to_string()))
+    let robot = RobotBuilder::new(instance.instance, RobotType::Excavator)
+        .model(instance.model)
+        .name(instance.name.unwrap_or("Unnamed".to_string()))
         .add_device(Device::new(
             "frame_encoder",
             0x6A,

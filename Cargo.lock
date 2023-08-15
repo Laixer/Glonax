@@ -528,8 +528,11 @@ dependencies = [
  "futures",
  "glonax-j1939",
  "log",
+ "serde",
+ "serde_derive",
  "sysinfo",
  "tokio 1.29.1",
+ "toml",
 ]
 
 [[package]]
@@ -568,11 +571,8 @@ dependencies = [
  "log",
  "nalgebra",
  "rand",
- "serde",
- "serde_derive",
  "simplelog",
  "tokio 1.29.1",
- "toml",
 ]
 
 [[package]]

@@ -9,9 +9,6 @@ glonax = { version = "3", path = "../glonax-runtime" }
 rand = "0.8"
 
 nalgebra = "0.32.3"
-toml = "0.7.6"
-serde = "1.0"
-serde_derive = "1.0"
 
 log = "0.4"
 anyhow = "1.0"

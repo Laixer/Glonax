@@ -18,6 +18,9 @@ struct Args {
     /// Serial baud rate.
     #[arg(long, default_value_t = 9600)]
     baud_rate: usize,
+    /// Configuration file.
+    #[arg(long = "config", default_value = "/etc/glonax.conf")]
+    config: String,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -35,6 +38,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::GnssConfig {
         device: args.device,
         baud_rate: args.baud_rate,
+        instance: glonax::instance_config(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
 

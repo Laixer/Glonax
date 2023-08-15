@@ -96,6 +96,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
+    // #[derive(Debug, Serialize, Deserialize)]
     struct Telemetry {
         location: Option<(f32, f32)>,
         altitude: Option<f32>,
@@ -219,7 +220,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             if response.status() == 200 {
                 log::info!("Probe sent successfully");
             } else {
-                log::error!("Probe failed");
+                log::error!("Probe failed, status: {}", response.status());
             }
 
             tokio::time::sleep(std::time::Duration::from_secs(10)).await;
