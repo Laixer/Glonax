@@ -1,0 +1,20 @@
+[Unit]
+Description=Glonax GNSS daemon
+StartLimitIntervalSec=5
+StartLimitBurst=5
+Requires=glonax-proxy.service
+After=glonax-proxy.service
+ConditionPathExists=/dev/ttyACM0
+
+[Service]
+WorkingDirectory=/var/lib/glonax
+Restart=always
+RestartSec=2
+User=glonax
+Group=glonax
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/local/bin/glonax-gnssd --daemon /dev/ttyACM0
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

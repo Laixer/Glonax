@@ -46,6 +46,7 @@ cp ./target/release/glonax-ecud ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-gnssd ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-input ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-netctl ./target/glonax_${VERSION}_amd64/usr/local/bin
+cp ./target/release/glonax-agent ./target/glonax_${VERSION}_amd64/usr/local/bin
 cp ./target/release/glonax-proxyd ./target/glonax_${VERSION}_amd64/usr/local/bin
 
 # Set permissions
