@@ -260,6 +260,12 @@ async fn main() -> anyhow::Result<()> {
             _ => {}
         }
 
+        let link_point = (frame_joint.origin * Rotation3::from_yaw(frame_yaw))
+            * (boom_joint.origin * Rotation3::from_pitch(boom_pitch))
+            * (arm_joint.origin * Rotation3::from_pitch(arm_pitch))
+            * (attachment_joint.origin * Rotation3::from_pitch(attachment_pitch))
+            * point;
+
         let effector_point = (frame_joint.origin * Rotation3::from_yaw(frame_yaw))
             * (boom_joint.origin * Rotation3::from_pitch(boom_pitch))
             * (arm_joint.origin * Rotation3::from_pitch(arm_pitch))
@@ -268,7 +274,7 @@ async fn main() -> anyhow::Result<()> {
             * point;
 
         println!(
-            "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°\tEffector: [{:.2}, {:.2}, {:.2}]",
+            "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°\tLink: [{:.2}, {:.2}, {:.2}]\tEffector: [{:.2}, {:.2}, {:.2}]",
             frame_yaw,
             glonax::core::rad_to_deg(frame_yaw),
             boom_pitch,
@@ -277,6 +283,7 @@ async fn main() -> anyhow::Result<()> {
             glonax::core::rad_to_deg(arm_pitch),
             attachment_pitch,
             glonax::core::rad_to_deg(attachment_pitch),
+            link_point.x, link_point.y, link_point.z,
             effector_point.x, effector_point.y, effector_point.z
         );
     }
