@@ -21,6 +21,9 @@ struct Args {
     /// Remote network address.
     #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
     address: String,
+    /// Configuration file.
+    #[arg(long = "config", default_value = "/etc/glonax.conf")]
+    config: String,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -35,6 +38,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut config = config::AgentConfig {
         address: args.address,
+        instance: glonax::instance_config(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -126,12 +130,13 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
 
     let telemetrics_clone = telemetrics.clone();
 
+    let instance_id = config.instance.instance.clone();
+    let instance_name = config.instance.name.clone();
+
     tokio::spawn(async move {
         log::debug!("Starting host service");
 
         let url = reqwest::Url::parse(BASE_URL).unwrap();
-
-        let instance = "7e796adf-c4e5-40e2-88d8-d79d5db61e95";
 
         let client = reqwest::Client::builder()
             .user_agent("glonax-agent/0.1.0")
@@ -140,12 +145,15 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             .build()
             .unwrap();
 
-        loop {
-            let mut map = HashMap::new();
-            map.insert("version", VERSION.to_string());
-            map.insert("status", "HEALTHY".to_string());
-            map.insert("name", "glonax-agent".to_string());
+        let mut map = HashMap::new();
+        map.insert("version", VERSION.to_string());
+        map.insert("status", "HEALTHY".to_string());
 
+        if let Some(name) = instance_name {
+            map.insert("name", name);
+        }
+
+        loop {
             {
                 let telemetric_lock = telemetrics_clone.read().await;
 
