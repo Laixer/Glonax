@@ -21,6 +21,9 @@ struct Args {
     /// Refresh host service interval in milliseconds.
     #[arg(long, default_value_t = 500)]
     host_interval: u64,
+    /// Configuration file.
+    #[arg(long = "config", default_value = "/etc/glonax.conf")]
+    config: String,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -39,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
         address: args.address,
         interface: args.interface,
         host_interval: args.host_interval,
+        instance: glonax::instance_config(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
 

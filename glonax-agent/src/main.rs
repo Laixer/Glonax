@@ -212,7 +212,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
                 }
             }
 
-            let request_url = url.join(&format!("api/v1/{}/probe", instance)).unwrap();
+            let request_url = url.join(&format!("api/v1/{}/probe", instance_id)).unwrap();
 
             let response = client.post(request_url).json(&map).send().await.unwrap();
 

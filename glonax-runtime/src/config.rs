@@ -35,15 +35,20 @@ pub trait Configurable: Clone {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct TelemetryConfig {
-    host: String,
+    /// Telemetry host.
+    pub host: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct InstanceConfig {
-    instance: String,
-    name: Option<String>,
-    model: String,
-    telemetry: Option<TelemetryConfig>,
+    /// Instance unique identifier.
+    pub instance: String,
+    /// Instance name.
+    pub name: Option<String>,
+    /// Instance model.
+    pub model: String,
+    /// Telemetry configuration.
+    pub telemetry: Option<TelemetryConfig>,
 }
 
 pub fn instance_config(path: impl AsRef<std::path::Path>) -> std::io::Result<InstanceConfig> {
