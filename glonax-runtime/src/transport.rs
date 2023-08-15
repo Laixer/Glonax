@@ -9,6 +9,8 @@ const PROTO_VERSION: u8 = 0x01;
 const PROTO_MESSAGE_NULL: u8 = 0x1;
 const PROTO_MESSAGE_START: u8 = 0x10;
 const PROTO_MESSAGE_SHUTDOWN: u8 = 0x11;
+const PROTO_MESSAGE_INSTANCE: u8 = 0x15;
+
 const PROTO_MESSAGE_MOTION: u8 = 0x20;
 const PROTO_MESSAGE_SIGNAL: u8 = 0x31;
 
@@ -62,6 +64,7 @@ pub mod frame {
             &self.name
         }
 
+        // TODO: Write name length to buffer
         pub fn to_bytes(&self) -> Vec<u8> {
             use bytes::{BufMut, BytesMut};
 
@@ -70,6 +73,61 @@ pub mod frame {
             let mut buf = BytesMut::with_capacity(1 + name_bytes.len());
 
             buf.put_u8(self.flags);
+            buf.put(name_bytes);
+
+            buf.to_vec()
+        }
+    }
+
+    pub struct ProxyService {
+        /// Instance unique identifier.
+        instance: String,
+        /// Instance model.
+        model: String,
+        /// Instance name.
+        name: String,
+    }
+
+    impl ProxyService {
+        pub fn new(instance: String, model: String, name: String) -> Self {
+            Self {
+                instance,
+                model,
+                name,
+            }
+        }
+
+        #[inline]
+        pub fn instance(&self) -> &str {
+            &self.instance
+        }
+
+        #[inline]
+        pub fn model(&self) -> &str {
+            &self.model
+        }
+
+        #[inline]
+        pub fn name(&self) -> &str {
+            &self.name
+        }
+
+        pub fn to_bytes(&self) -> Vec<u8> {
+            use bytes::{BufMut, BytesMut};
+
+            let instance_bytes = self.instance.as_bytes();
+            let model_bytes = self.model.as_bytes();
+            let name_bytes = self.name.as_bytes();
+
+            let mut buf = BytesMut::with_capacity(
+                2 + instance_bytes.len() + model_bytes.len() + name_bytes.len(),
+            );
+
+            buf.put_u16(instance_bytes.len() as u16);
+            buf.put(instance_bytes);
+            buf.put_u16(model_bytes.len() as u16);
+            buf.put(model_bytes);
+            buf.put_u16(name_bytes.len() as u16);
             buf.put(name_bytes);
 
             buf.to_vec()
@@ -120,6 +178,18 @@ impl<T: AsyncWrite + Unpin> Protocol<T> {
         let mut buffer = BytesMut::with_capacity(MIN_BUFFER_SIZE);
 
         self.build_frame(&mut buffer, PROTO_MESSAGE_SHUTDOWN, &[]);
+
+        self.inner.write_all(&buffer[..]).await
+    }
+
+    pub async fn write_frame2(&mut self, instance: frame::ProxyService) -> std::io::Result<()> {
+        let payload = instance.to_bytes();
+
+        let mut buffer = BytesMut::with_capacity(MIN_BUFFER_SIZE + payload.len());
+
+        self.build_frame(&mut buffer, PROTO_MESSAGE_INSTANCE, &payload);
+
+        assert_eq!(buffer.len(), MIN_BUFFER_SIZE + payload.len());
 
         self.inner.write_all(&buffer[..]).await
     }
@@ -344,6 +414,26 @@ impl<T: AsyncWrite + Unpin> Client<T> {
     ) -> std::io::Result<()> {
         let start = frame::Start::new(mode, session_name.to_string());
         self.inner.write_frame0(start).await
+    }
+
+    pub async fn send_start(
+        &mut self,
+        mode: u8,
+        session_name: impl ToString,
+    ) -> std::io::Result<()> {
+        let start = frame::Start::new(mode, session_name.to_string());
+        self.inner.write_frame0(start).await
+    }
+
+    pub async fn send_instance(
+        &mut self,
+        id: String,
+        model: String,
+        name: String,
+    ) -> std::io::Result<()> {
+        let instance = frame::ProxyService::new(id, model, name);
+
+        self.inner.write_frame2(instance).await
     }
 
     pub async fn shutdown(&mut self) -> std::io::Result<()> {

@@ -262,6 +262,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         let session_motion_tx = motion_tx.clone();
         let mut session_signal_rx = tx.subscribe();
 
+        let instance = config.instance.instance.clone();
+        let model = config.instance.model.clone();
+        let name = config.instance.name.clone();
+
         tokio::spawn(async move {
             log::debug!("Accepted connection from: {}", addr);
 
@@ -282,6 +286,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             let session_failsafe = start.is_failsafe();
 
             log::info!("Session started for: {}", session_name);
+
+            client.send_instance(instance, model, name).await.unwrap();
 
             let (mut client_reader, mut client_writer) = client.into_split();
 

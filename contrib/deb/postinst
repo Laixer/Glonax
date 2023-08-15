@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) 2021-2023 Laixer B.V.
+#
+# Debian package post-installation script.
 
 set -e
 
@@ -38,14 +41,16 @@ usermod -c "$SERVER_NAME" \
 
 # Add user to tty group
 if getent group | grep -q "^$TTY_GROUP:" ; then
-  echo "Adding user $SERVER_USER to group $TTY_GROUP"
+  echo -n "Adding user $SERVER_USER to group $TTY_GROUP.."
   usermod -a -G $TTY_GROUP $SERVER_USER
+  echo "..done"
 fi
 
 # Add user to dialout group
 if getent group | grep -q "^$DIALOUT_GROUP:" ; then
-  echo "Adding user $SERVER_USER to group $DIALOUT_GROUP"
+  echo -n "Adding user $SERVER_USER to group $DIALOUT_GROUP.."
   usermod -a -G $DIALOUT_GROUP $SERVER_USER
+  echo "..done"
 fi
 
 # Adjust file and directory permissions
@@ -57,31 +62,35 @@ fi
 # Create signal fifo if not existing
 SIGNAL_FIFO="/var/lib/glonax/signal"
 if [ ! -e "$FILE_PATH" ]; then
-  echo "Creating signal fifo"
+  echo -n "Creating signal fifo $SIGNAL_FIFO.."
   mkfifo "$SIGNAL_FIFO"
   chown $SERVER_USER:adm "$SIGNAL_FIFO"
   chmod u=rwx,g=rxs,o= "$SIGNAL_FIFO"
+  echo "..done"
 fi
 
 # Reload the systemd daemon to pick up the new service files
 if command -v systemctl &> /dev/null; then
-  echo "Reloading systemd units"
+  echo -n "Reloading systemd units.."
   systemctl daemon-reload
+  echo "..done"
 fi
 
 # Load the udev rules
 if command -v udevadm &> /dev/null; then
-  echo "Reloading udev rules"
+  echo -n "Reloading udev rules.."
   udevadm control --reload-rules
+  echo "..done"
 fi
 
 # Restart the glonax services
 if command -v systemctl &> /dev/null; then
-  echo "Restarting glonax services"
+  echo -n "Restarting glonax services.."
   if systemctl is-active glonax-proxy.service &> /dev/null; then
     systemctl restart glonax-proxy.service
   fi
   if systemctl is-active glonax-agent.service &> /dev/null; then
     systemctl restart glonax-agent.service
   fi
+  echo "..done"
 fi
