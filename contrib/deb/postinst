@@ -32,8 +32,7 @@ fi
 # Adjust passwd entry
 usermod -c "$SERVER_NAME" \
         -d $SERVER_HOME   \
-        -g $SERVER_GROUP, \
-        $TTY_GROUP \
+        -g $SERVER_GROUP \
         $SERVER_USER
 
 # Adjust file and directory permissions
