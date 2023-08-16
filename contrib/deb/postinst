@@ -69,13 +69,6 @@ if [ ! -e "$FILE_PATH" ]; then
   echo "..done"
 fi
 
-# Reload the systemd daemon to pick up the new service files
-if command -v systemctl &> /dev/null; then
-  echo -n "Reloading systemd units.."
-  systemctl daemon-reload
-  echo "..done"
-fi
-
 # Load the udev rules
 if command -v udevadm &> /dev/null; then
   echo -n "Reloading udev rules.."
@@ -83,14 +76,30 @@ if command -v udevadm &> /dev/null; then
   echo "..done"
 fi
 
-# Restart the glonax services
-if command -v systemctl &> /dev/null; then
-  echo -n "Restarting glonax services.."
-  if systemctl is-active glonax-proxy.service &> /dev/null; then
-    systemctl restart glonax-proxy.service
+start_glonax_service() {
+  local SERVICE_NAME="$1"
+
+  if systemctl is-active "$SERVICE_NAME" &> /dev/null; then
+    echo -n "Restarting $SERVICE_NAME.."
+    systemctl restart "$SERVICE_NAME"
+    echo "..done"
+  else
+    echo -n "Starting $SERVICE_NAME.."
+    systemctl start "$SERVICE_NAME"
+    echo "..done"
   fi
-  if systemctl is-active glonax-agent.service &> /dev/null; then
-    systemctl restart glonax-agent.service
-  fi
+  echo -n "Enabling $SERVICE_NAME.."
+  systemctl enable "$SERVICE_NAME"
   echo "..done"
+}
+
+# Start the glonax services
+if command -v systemctl &> /dev/null; then
+  # Reload the systemd daemon to pick up the new service files
+  echo -n "Reloading systemd units.."
+  systemctl daemon-reload
+  echo "..done"
+
+  start_glonax_service glonax-proxy.service
+  start_glonax_service glonax-agent.service
 fi

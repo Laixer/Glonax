@@ -12,7 +12,6 @@ Restart=always
 RestartSec=2
 User=glonax
 Group=glonax
-ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/glonax-gnssd --daemon /dev/ttyACM0
 PrivateTmp=true
 

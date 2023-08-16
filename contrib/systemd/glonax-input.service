@@ -2,14 +2,14 @@
 Description=Glonax Input Event Handler
 StartLimitIntervalSec=5
 StartLimitBurst=5
-After=bluetooth.target
+#After=bluetooth.target
 ConditionPathExists=/dev/input/js0
 
 [Service]
 WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
-ExecStart=/usr/local/bin/glonax-inputd --daemon /dev/input/js0
+ExecStart=/usr/local/bin/glonax-input --daemon /dev/input/js0
 PrivateTmp=true
 
 [Install]

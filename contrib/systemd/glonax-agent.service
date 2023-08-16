@@ -13,7 +13,6 @@ RestartSec=2
 Nice=5
 User=glonax
 Group=glonax
-ExecStartPre=/bin/sleep 10
 ExecStart=/usr/local/bin/glonax-agent --daemon
 PrivateTmp=true
 
