@@ -94,7 +94,7 @@ start_glonax_service() {
 }
 
 # Start the glonax services
-if command -v systemctl &> /dev/null; then
+if [ -d /run/systemd/system ]; then
   # Reload the systemd daemon to pick up the new service files
   echo -n "Reloading systemd units.."
   systemctl daemon-reload
