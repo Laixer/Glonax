@@ -61,7 +61,7 @@ fi
 
 # Create signal fifo if not existing
 SIGNAL_FIFO="/var/lib/glonax/signal"
-if [ ! -e "$FILE_PATH" ]; then
+if [ ! -p "$SIGNAL_FIFO" ]; then
   echo -n "Creating signal fifo $SIGNAL_FIFO.."
   mkfifo "$SIGNAL_FIFO"
   chown $SERVER_USER:adm "$SIGNAL_FIFO"
