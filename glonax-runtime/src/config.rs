@@ -5,34 +5,6 @@ pub trait Configurable: Clone {
     fn global(&self) -> &GlobalConfig;
 }
 
-// TODO: Move to a more appropriate place
-// / Locate the file_name in the file system.
-// /
-// / NOTE: This function is UNIX specific.
-// pub fn locate_file(file_name: &str) -> Option<String> {
-//     let path = std::path::Path::new(file_name);
-//     if path.exists() {
-//         return Some(path.to_str().unwrap().to_string());
-//     }
-
-//     let path = std::path::Path::new("/etc").join(file_name);
-//     if path.exists() {
-//         return Some(path.to_str().unwrap().to_string());
-//     }
-
-//     let path = std::path::Path::new("/usr/local/share/glonax").join(file_name);
-//     if path.exists() {
-//         return Some(path.to_str().unwrap().to_string());
-//     }
-
-//     let path = std::path::Path::new("/var/lib/glonax").join(file_name);
-//     if path.exists() {
-//         return Some(path.to_str().unwrap().to_string());
-//     }
-
-//     None
-// }
-
 #[derive(Clone, Debug, Deserialize)]
 pub struct TelemetryConfig {
     /// Telemetry host.
