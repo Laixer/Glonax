@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
-    use tokio::net::TcpListener;
+    use tokio::net::{TcpListener, UdpSocket};
     use tokio::sync::broadcast::{self, Sender};
 
     log::info!("Starting proxy services");
@@ -244,6 +244,75 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Motion listener shutdown");
     });
 
+    let instance = config.instance.instance.clone();
+    let model = config.instance.model.clone();
+    let name = config.instance.name.clone();
+
+    let mut session_signal_rx = tx.subscribe();
+    tokio::spawn(async move {
+        let socket = UdpSocket::bind("0.0.0.0:0").await.unwrap();
+        socket.set_broadcast(true).unwrap();
+
+        let broadcast_addr = std::net::SocketAddrV4::new(
+            std::net::Ipv4Addr::BROADCAST,
+            glonax::constants::DEFAULT_NETWORK_PORT,
+        );
+
+        let ps = glonax::transport::frame::ProxyService::new(
+            instance.clone(),
+            model.clone(),
+            name.clone(),
+        );
+        let payload = ps.to_bytes();
+
+        let mut frame = glonax::transport::frame::Frame::new(
+            glonax::transport::frame::FrameMessage::Instance,
+            payload.len(),
+        );
+        frame.put(&payload[..]);
+
+        if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+            log::error!("Failed to send signal: {}", e);
+        }
+
+        let mut now = std::time::Instant::now();
+        while let Ok(signal) = session_signal_rx.recv().await {
+            let payload = signal.to_bytes();
+
+            let mut frame = glonax::transport::frame::Frame::new(
+                glonax::transport::frame::FrameMessage::Signal,
+                payload.len(),
+            );
+            frame.put(&payload[..]);
+
+            if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+                log::error!("Failed to send signal: {}", e);
+                break;
+            }
+
+            if now.elapsed().as_millis() > 1_000 {
+                let ps = glonax::transport::frame::ProxyService::new(
+                    instance.clone(),
+                    model.clone(),
+                    name.clone(),
+                );
+                let payload = ps.to_bytes();
+
+                let mut frame = glonax::transport::frame::Frame::new(
+                    glonax::transport::frame::FrameMessage::Instance,
+                    payload.len(),
+                );
+                frame.put(&payload[..]);
+
+                if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+                    log::error!("Failed to send signal: {}", e);
+                } else {
+                    now = std::time::Instant::now();
+                }
+            }
+        }
+    });
+
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
 
     let listener = TcpListener::bind(config.address.clone()).await?;
@@ -260,7 +329,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         };
 
         let session_motion_tx = motion_tx.clone();
-        let mut session_signal_rx = tx.subscribe();
+        // let mut session_signal_rx = tx.subscribe();
 
         let instance = config.instance.instance.clone();
         let model = config.instance.model.clone();
@@ -281,7 +350,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             let session_name = start.name().to_string();
             let session_name2 = start.name().to_string();
 
-            let session_read = start.is_read();
+            // let session_read = start.is_read();
             let session_write = start.is_write();
             let session_failsafe = start.is_failsafe();
 
@@ -289,53 +358,98 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             client.send_instance(instance, model, name).await.unwrap();
 
-            let (mut client_reader, mut client_writer) = client.into_split();
+            let (mut client_reader, mut _client_writer) = client.into_split();
 
             let session_teardown = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
-            let session_teardown_r = session_teardown.clone();
+            // let session_teardown_r = session_teardown.clone();
 
-            let reader_handle = tokio::spawn(async move {
-                if session_read {
-                    log::debug!("Session reader started for: {}", session_name);
+            // let reader_handle = tokio::spawn(async move {
+            //     if session_read {
+            //         log::debug!("Session reader started for: {}", session_name);
 
-                    while let Ok(signal) = session_signal_rx.recv().await {
-                        if session_teardown_r.load(std::sync::atomic::Ordering::Relaxed) {
-                            break;
-                        }
+            //         while let Ok(signal) = session_signal_rx.recv().await {
+            //             if session_teardown_r.load(std::sync::atomic::Ordering::Relaxed) {
+            //                 break;
+            //             }
 
-                        if let Err(e) = client_writer.send_signal(signal).await {
-                            log::error!("Failed to send signal: {}", e);
-                            break;
-                        }
-                    }
+            //             if let Err(e) = client_writer.send_signal(signal).await {
+            //                 log::error!("Failed to send signal: {}", e);
+            //                 break;
+            //             }
+            //         }
 
-                    log::debug!("Session reader shutdown for: {}", session_name);
-                }
-            });
+            //         log::debug!("Session reader shutdown for: {}", session_name);
+            //     }
+            // });
 
             tokio::spawn(async move {
                 log::debug!("Session writer started for: {}", session_name2);
 
-                while let Ok(message) = client_reader.read_frame().await {
-                    match message {
-                        glonax::transport::Message::Null => {}
-                        glonax::transport::Message::Start(_) => {}
-                        glonax::transport::Message::Shutdown => {
+                while let Ok(frame) = client_reader.read_frame().await {
+                    match frame.message {
+                        glonax::transport::frame::FrameMessage::Null => {}
+                        glonax::transport::frame::FrameMessage::Start => {}
+                        glonax::transport::frame::FrameMessage::Shutdown => {
                             log::debug!("Client requested shutdown");
                             session_teardown.store(true, std::sync::atomic::Ordering::Relaxed);
                             break;
                         }
-                        glonax::transport::Message::Motion(motion) => {
+                        glonax::transport::frame::FrameMessage::Motion => {
                             if session_write {
-                                log::debug!("Received motion: {}", motion);
-                                if let Err(e) = session_motion_tx.send(motion).await {
+                                let payload_buffer = &mut vec![0u8; frame.payload_length];
+
+                                use tokio::io::AsyncReadExt;
+
+                                let k = client_reader.inner_mut();
+
+                                k.read_exact(payload_buffer).await.unwrap();
+
+                                // match glonax::core::Motion::try_from(&payload_buffer[..]) {
+                                //     Ok(motion) => {
+                                //         return Ok(motion);
+                                //     }
+                                //     Err(_) => {
+                                //         log::warn!("Invalid motion payload");
+                                //         return Err(std::io::Error::new(
+                                //             std::io::ErrorKind::InvalidData,
+                                //             "Invalid motion payload",
+                                //         ));
+                                //     }
+                                // }
+
+                                // log::debug!("Received motion: {}", frame.payload_length);
+                                if let Err(e) = session_motion_tx
+                                    .send(
+                                        glonax::core::Motion::try_from(&payload_buffer[..])
+                                            .expect("Failed to parse motion"),
+                                    )
+                                    .await
+                                {
                                     log::error!("Failed to send motion: {}", e);
                                     break;
                                 }
                             }
                         }
-                        glonax::transport::Message::Signal(_) => {}
+                        _ => {} // glonax::transport::frame::FrameMessage::Signal => {}
+
+                                // glonax::transport::Message::Null => {}
+                                // glonax::transport::Message::Start(_) => {}
+                                // glonax::transport::Message::Shutdown => {
+                                //     log::debug!("Client requested shutdown");
+                                //     session_teardown.store(true, std::sync::atomic::Ordering::Relaxed);
+                                //     break;
+                                // }
+                                // glonax::transport::Message::Motion(motion) => {
+                                //     if session_write {
+                                //         log::debug!("Received motion: {}", motion);
+                                //         if let Err(e) = session_motion_tx.send(motion).await {
+                                //             log::error!("Failed to send motion: {}", e);
+                                //             break;
+                                //         }
+                                //     }
+                                // }
+                                // glonax::transport::Message::Signal(_) => {}
                     }
                 }
 
@@ -360,7 +474,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                     }
                 }
 
-                reader_handle.await.unwrap();
+                // reader_handle.await.unwrap();
 
                 log::info!("Session shutdown for: {}", session_name2);
 

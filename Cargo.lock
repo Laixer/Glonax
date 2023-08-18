@@ -528,6 +528,7 @@ dependencies = [
  "futures",
  "glonax-j1939",
  "log",
+ "nalgebra",
  "serde",
  "serde_derive",
  "sysinfo",
@@ -640,6 +641,7 @@ name = "glonax-proxy"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "bytes 1.4.0",
  "clap",
  "glonax",
  "log",

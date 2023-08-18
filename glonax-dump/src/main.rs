@@ -4,166 +4,12 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use std::collections::HashMap;
+use clap::Parser;
 
-use na::{IsometryMatrix3, Rotation3, Translation3};
+use na::Rotation3;
 use nalgebra as na;
 
-enum JointType {
-    Revolute,
-    Prismatic,
-    Continuous,
-    Fixed,
-}
-
-struct Joint {
-    name: String,
-    ty: JointType,
-    origin: na::IsometryMatrix3<f32>,
-    bounds: (f32, f32),
-}
-
-impl Joint {
-    pub fn new(name: impl ToString, ty: JointType) -> Self {
-        Self {
-            name: name.to_string(),
-            ty,
-            origin: IsometryMatrix3::identity(),
-            bounds: (-f32::INFINITY, f32::INFINITY),
-        }
-    }
-
-    pub fn origin_translation(mut self, origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
-        self.origin.translation = Translation3::new(origin_x, origin_y, origin_z);
-        self
-    }
-
-    pub fn origin_rotation(mut self, origin_roll: f32, origin_pitch: f32, origin_yaw: f32) -> Self {
-        self.origin.rotation = Rotation3::from_euler_angles(origin_roll, origin_pitch, origin_yaw);
-        self
-    }
-}
-
-enum DeviceType {
-    EncoderAbsoluteMultiTurn,
-    EncoderAbsoluteSingleTurn,
-}
-
-struct Device {
-    name: String,
-    id: u8,
-    ty: DeviceType,
-    options: HashMap<String, String>,
-}
-
-impl Device {
-    fn new(name: impl ToString, id: u8, ty: DeviceType) -> Self {
-        Self {
-            name: name.to_string(),
-            id,
-            ty,
-            options: HashMap::new(),
-        }
-    }
-}
-
-enum RobotType {
-    Excavator,
-    WheelLoader,
-    Dozer,
-    Grader,
-    Hauler,
-    Forestry,
-}
-
-struct Robot {
-    instance: String, // TODO: Replace with UUID
-    name: String,
-    model: String,
-    ty: RobotType,
-    joints: Vec<Joint>,
-    chains: Vec<String>,
-    devices: Vec<Device>,
-    position_state: Vec<f64>,
-}
-
-impl Robot {
-    pub fn joint_by_name(&self, name: impl ToString) -> Option<&Joint> {
-        self.joints
-            .iter()
-            .find(|joint| joint.name == name.to_string())
-    }
-
-    pub fn device_by_name(&self, name: impl ToString) -> Option<&Device> {
-        self.devices
-            .iter()
-            .find(|device| device.name == name.to_string())
-    }
-}
-
-struct RobotBuilder {
-    instance: String, // TODO: Replace with UUID
-    name: String,
-    model: String,
-    ty: RobotType,
-    joints: Vec<Joint>,
-    chains: Vec<String>,
-    devices: Vec<Device>,
-    position_state: Vec<f64>,
-}
-
-impl RobotBuilder {
-    pub fn new(instance: impl ToString, ty: RobotType) -> Self {
-        Self {
-            instance: instance.to_string(),
-            name: String::new(),
-            model: String::new(),
-            ty,
-            joints: Vec::new(),
-            chains: Vec::new(),
-            devices: Vec::new(),
-            position_state: Vec::new(),
-        }
-    }
-
-    pub fn name(mut self, instance: impl ToString) -> Self {
-        self.name = instance.to_string();
-        self
-    }
-
-    pub fn model(mut self, model: impl ToString) -> Self {
-        self.model = model.to_string();
-        self
-    }
-
-    pub fn add_joint(mut self, joint: Joint) -> Self {
-        self.joints.push(joint);
-        self
-    }
-
-    pub fn add_chain(mut self, chain: String) -> Self {
-        self.chains.push(chain);
-        self
-    }
-
-    pub fn add_device(mut self, device: Device) -> Self {
-        self.devices.push(device);
-        self
-    }
-
-    pub fn build(self) -> Robot {
-        Robot {
-            instance: self.instance,
-            name: self.name,
-            model: self.model,
-            ty: self.ty,
-            joints: self.joints,
-            chains: self.chains,
-            devices: self.devices,
-            position_state: self.position_state,
-        }
-    }
-}
+mod config;
 
 trait EulerAngles {
     fn from_roll(roll: f32) -> Self;
@@ -185,8 +31,130 @@ impl EulerAngles for Rotation3<f32> {
     }
 }
 
+#[derive(Parser)]
+#[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
+#[command(version, propagate_version = true)]
+#[command(about = "Glonax input daemon", long_about = None)]
+struct Args {
+    /// Remote network address.
+    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
+    address: String,
+    /// Daemonize the service.
+    #[arg(long)]
+    daemon: bool,
+    /// Level of verbosity.
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    let mut config = config::DumpConfig {
+        address: args.address,
+        global: glonax::GlobalConfig::default(),
+    };
+
+    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
+    config.global.daemon = args.daemon;
+
+    let mut log_config = simplelog::ConfigBuilder::new();
+    if args.daemon {
+        log_config.set_time_level(log::LevelFilter::Off);
+        log_config.set_thread_level(log::LevelFilter::Off);
+    } else {
+        log_config.set_time_offset_to_local().ok();
+        log_config.set_time_format_rfc2822();
+    }
+
+    log_config.set_target_level(log::LevelFilter::Off);
+    log_config.set_location_level(log::LevelFilter::Off);
+    log_config.add_filter_ignore_str("sled");
+    log_config.add_filter_ignore_str("mio");
+
+    let log_level = if args.daemon {
+        log::LevelFilter::Info
+    } else {
+        match args.verbose {
+            0 => log::LevelFilter::Error,
+            1 => log::LevelFilter::Info,
+            2 => log::LevelFilter::Debug,
+            _ => log::LevelFilter::Trace,
+        }
+    };
+
+    let color_choice = if args.daemon {
+        simplelog::ColorChoice::Never
+    } else {
+        simplelog::ColorChoice::Auto
+    };
+
+    simplelog::TermLogger::init(
+        log_level,
+        log_config.build(),
+        simplelog::TerminalMode::Mixed,
+        color_choice,
+    )?;
+
+    if args.daemon {
+        log::debug!("Running service as daemon");
+    }
+
+    log::trace!("{:#?}", config);
+
+    daemonize2(&config).await
+}
+
+async fn daemonize2(config: &config::DumpConfig) -> anyhow::Result<()> {
+    let socket = tokio::net::UdpSocket::bind("0.0.0.0:30051").await?;
+
+    let mut buffer = [0u8; 1024];
+
+    log::info!("Listening for signal packets");
+
+    while let Ok((size, _socket_addr)) = socket.recv_from(&mut buffer).await {
+        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
+            // TODO: Validate packet length
+            if frame.payload_length + 10 != size {
+                log::warn!("Invalid packet length");
+                continue;
+            }
+
+            if frame.message == glonax::transport::frame::FrameMessage::Signal {
+                match glonax::core::Signal::try_from(&buffer[frame.payload_range()]) {
+                    Ok(signal) => {
+                        log::debug!("{}", signal);
+                    }
+                    Err(_) => {
+                        log::warn!("Invalid signal payload");
+                        continue;
+                    }
+                }
+            } else if frame.message == glonax::transport::frame::FrameMessage::Instance {
+                match glonax::transport::frame::ProxyService::try_from(
+                    &buffer[frame.payload_range()],
+                ) {
+                    Ok(service) => {
+                        log::debug!("Instance: {}", service.instance());
+                        log::debug!("Model: {}", service.model());
+                        log::debug!("Name: {}", service.name());
+                    }
+                    Err(_) => {
+                        log::warn!("Invalid ProxyService payload");
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
+    use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
+
     let instance = glonax::instance_config("/etc/glonax.conf")?;
 
     let mut client = glonax::transport::Client::connect("localhost:30051", "glonax-dump").await?;
@@ -251,26 +219,26 @@ async fn main() -> anyhow::Result<()> {
     while let Ok(signal) = client.recv_signal().await {
         match signal.metric {
             glonax::core::Metric::EncoderAbsAngle((node, value)) => match node {
-                node if frame_encoder.id == node => frame_yaw = value,
-                node if boom_encoder.id == node => boom_pitch = value,
-                node if arm_encoder.id == node => arm_pitch = value,
-                node if attachment_encoder.id == node => attachment_pitch = value,
+                node if frame_encoder.id() == node => frame_yaw = value,
+                node if boom_encoder.id() == node => boom_pitch = value,
+                node if arm_encoder.id() == node => arm_pitch = value,
+                node if attachment_encoder.id() == node => attachment_pitch = value,
                 _ => {}
             },
             _ => {}
         }
 
-        let link_point = (frame_joint.origin * Rotation3::from_yaw(frame_yaw))
-            * (boom_joint.origin * Rotation3::from_pitch(boom_pitch))
-            * (arm_joint.origin * Rotation3::from_pitch(arm_pitch))
-            * (attachment_joint.origin * Rotation3::from_pitch(attachment_pitch))
+        let link_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
+            * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
+            * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
+            * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
             * point;
 
-        let effector_point = (frame_joint.origin * Rotation3::from_yaw(frame_yaw))
-            * (boom_joint.origin * Rotation3::from_pitch(boom_pitch))
-            * (arm_joint.origin * Rotation3::from_pitch(arm_pitch))
-            * (attachment_joint.origin * Rotation3::from_pitch(attachment_pitch))
-            * effector_joint.origin
+        let effector_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
+            * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
+            * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
+            * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
+            * effector_joint.origin()
             * point;
 
         println!(
