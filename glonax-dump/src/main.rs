@@ -53,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut config = config::DumpConfig {
         address: args.address,
+        instance: None,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -106,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&mut config).await
 }
 
-async fn daemonize(_config: &mut config::DumpConfig) -> anyhow::Result<()> {
+async fn daemonize(config: &mut config::DumpConfig) -> anyhow::Result<()> {
     use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
 
     let socket = tokio::net::UdpSocket::bind("0.0.0.0:30051").await?;
@@ -115,8 +116,8 @@ async fn daemonize(_config: &mut config::DumpConfig) -> anyhow::Result<()> {
 
     log::debug!("Waiting for instance announcement");
 
-    let instance = loop {
-        let (size, _socket_addr) = socket.recv_from(&mut buffer).await?;
+    let (instance, ip) = loop {
+        let (size, socket_addr) = socket.recv_from(&mut buffer).await?;
 
         if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
             // TODO: Validate packet length
@@ -126,9 +127,9 @@ async fn daemonize(_config: &mut config::DumpConfig) -> anyhow::Result<()> {
             }
 
             if frame.message == glonax::transport::frame::FrameMessage::Instance {
-                match glonax::transport::frame::Instance::try_from(&buffer[frame.payload_range()]) {
+                match glonax::core::Instance::try_from(&buffer[frame.payload_range()]) {
                     Ok(service) => {
-                        break service;
+                        break (service, socket_addr.ip());
                     }
                     Err(_) => {
                         log::warn!("Invalid ProxyService payload");
@@ -140,10 +141,13 @@ async fn daemonize(_config: &mut config::DumpConfig) -> anyhow::Result<()> {
     };
 
     // TODO: Write instance to config
+    config.instance = Some(instance.clone());
+    config.address =
+        std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT).to_string();
 
-    let robot = RobotBuilder::new(instance.instance(), RobotType::Excavator)
-        .model(instance.model())
-        .name(instance.model())
+    let robot = RobotBuilder::new(instance.id, RobotType::Excavator)
+        .model(instance.model)
+        .name(instance.name)
         .add_device(Device::new(
             "frame_encoder",
             0x6A,

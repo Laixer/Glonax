@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::AgentConfig {
         address: args.address,
         interval: args.interval,
-        instance: glonax::instance_config(args.config)?,
+        instance: None,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -90,12 +90,34 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    daemonize(&config).await
+    daemonize(&mut config).await
 }
 
-async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
+async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
+
+    let socket = tokio::net::UdpSocket::bind("0.0.0.0:30051").await?;
+
+    let mut buffer = [0u8; 1024];
+
+    log::debug!("Waiting for instance announcement");
+
+    let (instance, ip) = loop {
+        let (size, socket_addr) = socket.recv_from(&mut buffer).await?;
+        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
+            if frame.message == glonax::transport::frame::FrameMessage::Instance {
+                let instance =
+                    glonax::core::Instance::try_from(&buffer[frame.payload_range()]).unwrap();
+
+                break (instance, socket_addr.ip());
+            }
+        }
+    };
+
+    config.instance = Some(instance.clone());
+
+    log::info!("Instance announcement received: {}", instance);
 
     #[derive(Debug, Clone, serde_derive::Serialize)]
     struct Telemetry {
@@ -115,14 +137,10 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         uptime: Option<u64>,
     }
 
-    let runtime = glonax::RuntimeBuilder::from_config(config)?
-        .with_shutdown()
-        .build();
-
     let telemetrics = Arc::new(RwLock::new(Telemetry {
         version: VERSION.to_string(),
         status: "HEALTHY".to_string(),
-        name: config.instance.name.clone(),
+        name: instance.name.clone(),
         location: None,
         altitude: None,
         speed: None,
@@ -137,16 +155,14 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     }));
 
     let telemetrics_clone = telemetrics.clone();
-
-    let instance_id = config.instance.instance.clone();
-    let host = config.instance.telemetry.as_ref().unwrap().host.clone();
+    let instance_clone = config.instance.clone().unwrap();
 
     let interval = config.interval;
 
     tokio::spawn(async move {
         log::debug!("Starting host service");
 
-        let url = reqwest::Url::parse(&host).unwrap();
+        let url = reqwest::Url::parse("https://cymbion-oybqn.ondigitalocean.app").unwrap();
 
         let client = reqwest::Client::builder()
             .user_agent("glonax-agent/0.1.0")
@@ -155,7 +171,9 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             .build()
             .unwrap();
 
-        let request_url = url.join(&format!("api/v1/{}/probe", instance_id)).unwrap();
+        let request_url = url
+            .join(&format!("api/v1/{}/probe", instance_clone.id))
+            .unwrap();
 
         loop {
             let data = { telemetrics_clone.read().await.clone() };
@@ -177,65 +195,52 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         }
     });
 
-    log::debug!("Waiting for connection to {}", config.address);
+    loop {
+        let (size, _) = socket.recv_from(&mut buffer).await?;
 
-    let mut client =
-        glonax::transport::Client::connect(&config.address, &config.global.bin_name).await?;
+        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
+            if frame.message == glonax::transport::frame::FrameMessage::Signal {
+                let signal =
+                    glonax::core::Signal::try_from(&buffer[frame.payload_range()]).unwrap();
 
-    log::info!("Connected to {}", config.address);
+                match signal.metric {
+                    glonax::core::Metric::VmsUptime(uptime) => {
+                        telemetrics.write().await.uptime = Some(uptime);
+                    }
+                    glonax::core::Metric::VmsTimestamp(_timestamp) => {
+                        // telemetric_lock.uptime = Some(timestamp);
+                    }
+                    glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
+                        let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
 
-    let shutdown = runtime.shutdown_signal();
-
-    while let Ok(signal) = client.recv_signal().await {
-        if !shutdown.is_empty() {
-            break;
-        }
-
-        let mut telemetric_lock = telemetrics.write().await;
-
-        match signal.metric {
-            glonax::core::Metric::VmsUptime(uptime) => {
-                telemetric_lock.uptime = Some(uptime);
+                        telemetrics.write().await.memory = Some(memory_usage as u64);
+                    }
+                    glonax::core::Metric::VmsSwapUsage(swap) => {
+                        telemetrics.write().await.swap = Some(swap);
+                    }
+                    glonax::core::Metric::VmsCpuLoad(cpu_load) => {
+                        telemetrics.write().await.cpu_1 = Some(cpu_load.0);
+                        telemetrics.write().await.cpu_5 = Some(cpu_load.1);
+                        telemetrics.write().await.cpu_15 = Some(cpu_load.2);
+                    }
+                    glonax::core::Metric::GnssLatLong(lat_long) => {
+                        telemetrics.write().await.location = Some(lat_long);
+                    }
+                    glonax::core::Metric::GnssAltitude(altitude) => {
+                        telemetrics.write().await.altitude = Some(altitude);
+                    }
+                    glonax::core::Metric::GnssSpeed(speed) => {
+                        telemetrics.write().await.speed = Some(speed);
+                    }
+                    glonax::core::Metric::GnssHeading(heading) => {
+                        telemetrics.write().await.heading = Some(heading);
+                    }
+                    glonax::core::Metric::GnssSatellites(satellites) => {
+                        telemetrics.write().await.satellites = Some(satellites);
+                    }
+                    _ => {}
+                }
             }
-            glonax::core::Metric::VmsTimestamp(_timestamp) => {
-                // telemetric_lock.uptime = Some(timestamp);
-            }
-            glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
-                let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
-
-                telemetric_lock.memory = Some(memory_usage as u64);
-            }
-            glonax::core::Metric::VmsSwapUsage(swap) => {
-                telemetric_lock.swap = Some(swap);
-            }
-            glonax::core::Metric::VmsCpuLoad(cpu_load) => {
-                telemetric_lock.cpu_1 = Some(cpu_load.0);
-                telemetric_lock.cpu_5 = Some(cpu_load.1);
-                telemetric_lock.cpu_15 = Some(cpu_load.2);
-            }
-
-            glonax::core::Metric::GnssLatLong(lat_long) => {
-                telemetric_lock.location = Some(lat_long);
-            }
-            glonax::core::Metric::GnssAltitude(altitude) => {
-                telemetric_lock.altitude = Some(altitude);
-            }
-            glonax::core::Metric::GnssSpeed(speed) => {
-                telemetric_lock.speed = Some(speed);
-            }
-            glonax::core::Metric::GnssHeading(heading) => {
-                telemetric_lock.heading = Some(heading);
-            }
-            glonax::core::Metric::GnssSatellites(satellites) => {
-                telemetric_lock.satellites = Some(satellites);
-            }
-            _ => {}
         }
     }
-
-    client.shutdown().await?;
-
-    log::debug!("{} was shutdown gracefully", config.global.bin_name);
-
-    Ok(())
 }

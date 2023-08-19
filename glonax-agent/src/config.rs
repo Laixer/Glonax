@@ -1,4 +1,4 @@
-use glonax::{Configurable, GlobalConfig, InstanceConfig};
+use glonax::{core::Instance, Configurable, GlobalConfig};
 
 #[derive(Clone, Debug)]
 pub(crate) struct AgentConfig {
@@ -6,8 +6,8 @@ pub(crate) struct AgentConfig {
     pub address: String,
     /// Probe interval in seconds.
     pub interval: u64,
-    /// Local instance configuration.
-    pub instance: InstanceConfig,
+    /// Instance configuration.
+    pub instance: Option<Instance>,
     /// Global configuration.
     pub global: GlobalConfig,
 }
