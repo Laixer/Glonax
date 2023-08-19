@@ -68,6 +68,7 @@ impl Device {
     }
 }
 
+#[derive(Debug)]
 pub enum RobotType {
     Excavator,
     WheelLoader,
@@ -99,6 +100,20 @@ impl Robot {
         self.devices
             .iter()
             .find(|device| device.name == name.to_string())
+    }
+}
+
+impl std::fmt::Display for Robot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Robot: {}; Model: {}; Name: {} Type: {:?}; Joints: {}",
+            self.instance,
+            self.name,
+            self.model,
+            self.ty,
+            self.joints.len()
+        )
     }
 }
 
