@@ -239,8 +239,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     });
 
     let instance_id = config.instance.instance.clone();
-    let model = config.instance.model.clone();
-    let name = config.instance.name.clone();
+    let instance_model = config.instance.model.clone();
+    let instance_name = config.instance.name.clone();
 
     let mut session_signal_rx = tx.subscribe();
     tokio::spawn(async move {
@@ -252,10 +252,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             glonax::constants::DEFAULT_NETWORK_PORT,
         );
 
-        let instance = glonax::transport::frame::Instance::new(
+        let instance = glonax::core::Instance::new(
             instance_id.clone(),
-            model.clone(),
-            name.clone(),
+            instance_model.clone(),
+            instance_name.clone(),
         );
         let payload = instance.to_bytes();
 
@@ -285,10 +285,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
 
             if now.elapsed().as_millis() > 1_000 {
-                let instance = glonax::transport::frame::Instance::new(
+                let instance = glonax::core::Instance::new(
                     instance_id.clone(),
-                    model.clone(),
-                    name.clone(),
+                    instance_model.clone(),
+                    instance_name.clone(),
                 );
                 let payload = instance.to_bytes();
 
@@ -325,9 +325,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         let session_motion_tx = motion_tx.clone();
         // let mut session_signal_rx = tx.subscribe();
 
-        let instance = config.instance.instance.clone();
-        let model = config.instance.model.clone();
-        let name = config.instance.name.clone();
+        // let instance = config.instance.instance.clone();
+        // let model = config.instance.model.clone();
+        // let name = config.instance.name.clone();
 
         tokio::spawn(async move {
             log::debug!("Accepted connection from: {}", addr);
@@ -350,9 +350,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             log::info!("Session started for: {}", session_name);
 
-            let instance = glonax::transport::frame::Instance::new(instance, model, name);
+            // let instance = glonax::transport::frame::Instance::new(instance, model, name);
 
-            client.send_instance(instance).await.unwrap();
+            // client.send_instance(instance).await.unwrap();
 
             // let (mut client_reader, mut _client_writer) = client.into_split();
 
