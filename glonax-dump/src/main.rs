@@ -103,17 +103,21 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    daemonize2(&config).await
+    daemonize(&mut config).await
 }
 
-async fn daemonize2(config: &config::DumpConfig) -> anyhow::Result<()> {
+async fn daemonize(_config: &mut config::DumpConfig) -> anyhow::Result<()> {
+    use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
+
     let socket = tokio::net::UdpSocket::bind("0.0.0.0:30051").await?;
 
     let mut buffer = [0u8; 1024];
 
-    log::info!("Listening for signal packets");
+    log::debug!("Waiting for instance announcement");
 
-    while let Ok((size, _socket_addr)) = socket.recv_from(&mut buffer).await {
+    let instance = loop {
+        let (size, _socket_addr) = socket.recv_from(&mut buffer).await?;
+
         if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
             // TODO: Validate packet length
             if frame.payload_length + 10 != size {
@@ -121,24 +125,10 @@ async fn daemonize2(config: &config::DumpConfig) -> anyhow::Result<()> {
                 continue;
             }
 
-            if frame.message == glonax::transport::frame::FrameMessage::Signal {
-                match glonax::core::Signal::try_from(&buffer[frame.payload_range()]) {
-                    Ok(signal) => {
-                        log::debug!("{}", signal);
-                    }
-                    Err(_) => {
-                        log::warn!("Invalid signal payload");
-                        continue;
-                    }
-                }
-            } else if frame.message == glonax::transport::frame::FrameMessage::Instance {
-                match glonax::transport::frame::ProxyService::try_from(
-                    &buffer[frame.payload_range()],
-                ) {
+            if frame.message == glonax::transport::frame::FrameMessage::Instance {
+                match glonax::transport::frame::Instance::try_from(&buffer[frame.payload_range()]) {
                     Ok(service) => {
-                        log::debug!("Instance: {}", service.instance());
-                        log::debug!("Model: {}", service.model());
-                        log::debug!("Name: {}", service.name());
+                        break service;
                     }
                     Err(_) => {
                         log::warn!("Invalid ProxyService payload");
@@ -147,21 +137,13 @@ async fn daemonize2(config: &config::DumpConfig) -> anyhow::Result<()> {
                 }
             }
         }
-    }
+    };
 
-    Ok(())
-}
+    // TODO: Write instance to config
 
-async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
-    use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
-
-    let instance = glonax::instance_config("/etc/glonax.conf")?;
-
-    let mut client = glonax::transport::Client::connect("localhost:30051", "glonax-dump").await?;
-
-    let robot = RobotBuilder::new(instance.instance, RobotType::Excavator)
-        .model(instance.model)
-        .name(instance.name)
+    let robot = RobotBuilder::new(instance.instance(), RobotType::Excavator)
+        .model(instance.model())
+        .name(instance.model())
         .add_device(Device::new(
             "frame_encoder",
             0x6A,
@@ -198,6 +180,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         .add_joint(Joint::new("effector", JointType::Fixed).origin_translation(1.5, 0.0, 0.0))
         .build();
 
+    log::debug!("Configured: {}", robot);
+
     let point = na::Point3::new(0.0, 0.0, 0.0);
 
     let mut frame_yaw = 0.0;
@@ -216,49 +200,53 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let attachment_joint = robot.joint_by_name("attachment").unwrap();
     let effector_joint = robot.joint_by_name("effector").unwrap();
 
-    while let Ok(signal) = client.recv_signal().await {
-        match signal.metric {
-            glonax::core::Metric::EncoderAbsAngle((node, value)) => match node {
-                node if frame_encoder.id() == node => frame_yaw = value,
-                node if boom_encoder.id() == node => boom_pitch = value,
-                node if arm_encoder.id() == node => arm_pitch = value,
-                node if attachment_encoder.id() == node => attachment_pitch = value,
-                _ => {}
-            },
-            _ => {}
+    log::debug!("Waiting for signals");
+
+    while let Ok((size, _)) = socket.recv_from(&mut buffer).await {
+        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
+            if frame.message == glonax::transport::frame::FrameMessage::Signal {
+                let signal =
+                    glonax::core::Signal::try_from(&buffer[frame.payload_range()]).unwrap();
+
+                if let glonax::core::Metric::EncoderAbsAngle((node, value)) = signal.metric {
+                    match node {
+                        node if frame_encoder.id() == node => frame_yaw = value,
+                        node if boom_encoder.id() == node => boom_pitch = value,
+                        node if arm_encoder.id() == node => arm_pitch = value,
+                        node if attachment_encoder.id() == node => attachment_pitch = value,
+                        _ => {}
+                    }
+
+                    let link_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
+                        * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
+                        * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
+                        * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
+                        * point;
+
+                    let effector_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
+                        * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
+                        * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
+                        * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
+                        * effector_joint.origin()
+                        * point;
+
+                    println!(
+                            "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°\tLink: [{:.2}, {:.2}, {:.2}]\tEffector: [{:.2}, {:.2}, {:.2}]",
+                            frame_yaw,
+                            glonax::core::rad_to_deg(frame_yaw),
+                            boom_pitch,
+                            glonax::core::rad_to_deg(boom_pitch),
+                            arm_pitch,
+                            glonax::core::rad_to_deg(arm_pitch),
+                            attachment_pitch,
+                            glonax::core::rad_to_deg(attachment_pitch),
+                            link_point.x, link_point.y, link_point.z,
+                            effector_point.x, effector_point.y, effector_point.z
+                        );
+                }
+            }
         }
-
-        let link_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
-            * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
-            * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
-            * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
-            * point;
-
-        let effector_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
-            * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
-            * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
-            * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
-            * effector_joint.origin()
-            * point;
-
-        println!(
-            "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°\tLink: [{:.2}, {:.2}, {:.2}]\tEffector: [{:.2}, {:.2}, {:.2}]",
-            frame_yaw,
-            glonax::core::rad_to_deg(frame_yaw),
-            boom_pitch,
-            glonax::core::rad_to_deg(boom_pitch),
-            arm_pitch,
-            glonax::core::rad_to_deg(arm_pitch),
-            attachment_pitch,
-            glonax::core::rad_to_deg(attachment_pitch),
-            link_point.x, link_point.y, link_point.z,
-            effector_point.x, effector_point.y, effector_point.z
-        );
     }
-
-    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-
-    client.shutdown().await?;
 
     Ok(())
 }
