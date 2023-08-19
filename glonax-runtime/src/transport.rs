@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+// use bytes::{BufMut, BytesMut};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 use crate::core::{Motion, Signal};
@@ -6,13 +6,13 @@ use crate::core::{Motion, Signal};
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x01;
 
-const PROTO_MESSAGE_NULL: u8 = 0x1;
-const PROTO_MESSAGE_START: u8 = 0x10;
-const PROTO_MESSAGE_SHUTDOWN: u8 = 0x11;
-const PROTO_MESSAGE_INSTANCE: u8 = 0x15;
+// const PROTO_MESSAGE_NULL: u8 = 0x1;
+// const PROTO_MESSAGE_START: u8 = 0x10;
+// const PROTO_MESSAGE_SHUTDOWN: u8 = 0x11;
+// const PROTO_MESSAGE_INSTANCE: u8 = 0x15;
 
-const PROTO_MESSAGE_MOTION: u8 = 0x20;
-const PROTO_MESSAGE_SIGNAL: u8 = 0x31;
+// const PROTO_MESSAGE_MOTION: u8 = 0x20;
+// const PROTO_MESSAGE_SIGNAL: u8 = 0x31;
 
 // const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
 //     + std::mem::size_of::<u8>()
@@ -184,7 +184,7 @@ pub mod frame {
 
         // TODO: Write name length to buffer
         pub fn to_bytes(&self) -> Vec<u8> {
-            use bytes::{BufMut, BytesMut};
+            // use bytes::{BufMut, BytesMut};
 
             let name_bytes = self.name.as_bytes();
 
@@ -197,7 +197,8 @@ pub mod frame {
         }
     }
 
-    pub struct ProxyService {
+    // TODO: Move this core.
+    pub struct Instance {
         /// Instance unique identifier.
         instance: String,
         /// Instance model.
@@ -206,7 +207,7 @@ pub mod frame {
         name: String,
     }
 
-    impl ProxyService {
+    impl Instance {
         pub fn new(instance: String, model: String, name: String) -> Self {
             Self {
                 instance,
@@ -250,7 +251,7 @@ pub mod frame {
         }
     }
 
-    impl TryFrom<&[u8]> for ProxyService {
+    impl TryFrom<&[u8]> for Instance {
         type Error = ();
 
         fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
@@ -279,95 +280,6 @@ pub mod frame {
             .to_string();
 
             Ok(Self::new(instance, model, name))
-        }
-    }
-}
-
-pub struct Protocol<T> {
-    inner: T,
-}
-
-impl<T> Protocol<T> {
-    pub fn new(inner: T) -> Self {
-        Self { inner }
-    }
-}
-
-impl<T: AsyncRead + Unpin> Protocol<T> {
-    pub async fn read_frame(&mut self) -> std::io::Result<Message> {
-        loop {
-            let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
-
-            self.inner.read_exact(&mut header_buffer).await?;
-
-            // Check header
-            if &header_buffer[0..3] != &PROTO_HEADER[..] {
-                log::warn!("Invalid header");
-                continue;
-            }
-
-            // Check protocol version
-            let version = header_buffer[3];
-            if version != PROTO_VERSION {
-                log::warn!("Invalid version {}", version);
-                continue;
-            }
-
-            let message = header_buffer[4];
-
-            let proto_length = u16::from_be_bytes([header_buffer[5], header_buffer[6]]) as usize;
-            if proto_length > 4096 {
-                log::warn!("Invalid proto length {}", proto_length);
-                continue;
-            }
-
-            // Check padding
-            if &header_buffer[7..10] != &[0u8; 3] {
-                log::warn!("Invalid padding");
-                continue;
-            }
-
-            let payload_buffer = &mut vec![0u8; proto_length];
-
-            self.inner.read_exact(payload_buffer).await?;
-
-            if message == PROTO_MESSAGE_NULL {
-                return Ok(Message::Null);
-            } else if message == PROTO_MESSAGE_START {
-                let flags = payload_buffer[0];
-
-                let mut session_name = String::new();
-
-                for c in &payload_buffer[1..] {
-                    session_name.push(*c as char);
-                }
-
-                return Ok(Message::Start(frame::Start::new(flags, session_name)));
-            } else if message == PROTO_MESSAGE_SHUTDOWN {
-                return Ok(Message::Shutdown);
-            } else if message == PROTO_MESSAGE_MOTION {
-                match Motion::try_from(&payload_buffer[..]) {
-                    Ok(motion) => {
-                        return Ok(Message::Motion(motion));
-                    }
-                    Err(_) => {
-                        log::warn!("Invalid motion payload");
-                        continue;
-                    }
-                }
-            } else if message == PROTO_MESSAGE_SIGNAL {
-                match Signal::try_from(&payload_buffer[..]) {
-                    Ok(signal) => {
-                        return Ok(Message::Signal(signal));
-                    }
-                    Err(_) => {
-                        log::warn!("Invalid signal payload");
-                        continue;
-                    }
-                }
-            } else {
-                log::error!("Invalid message type: {}", message);
-            }
         }
     }
 }
@@ -431,7 +343,7 @@ impl ConnectionOptions {
 }
 
 pub struct Client<T> {
-    inner: Protocol<T>,
+    inner: T,
 }
 
 impl Client<tokio::net::TcpStream> {
@@ -445,34 +357,25 @@ impl Client<tokio::net::TcpStream> {
 
         Ok(client)
     }
+}
 
-    pub fn into_split(
-        self,
-    ) -> (
-        Client<tokio::net::tcp::OwnedReadHalf>,
-        Client<tokio::net::tcp::OwnedWriteHalf>,
-    ) {
-        let (r, w) = tokio::net::TcpStream::into_split(self.inner.inner);
+impl Client<tokio::fs::File> {
+    pub async fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let file = tokio::fs::OpenOptions::new().write(true).open(path).await?;
 
-        (Client::new(r), Client::new(w))
+        Ok(Self::new(file))
+    }
+
+    pub async fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let file = tokio::fs::OpenOptions::new().read(true).open(path).await?;
+
+        Ok(Self::new(file))
     }
 }
 
 impl<T> Client<T> {
     pub fn new(inner: T) -> Self {
-        Self {
-            inner: Protocol::new(inner),
-        }
-    }
-
-    // TODO: Remove this
-    pub fn inner(&self) -> &T {
-        &self.inner.inner
-    }
-
-    // TODO: Remove this
-    pub fn inner_mut(&mut self) -> &mut T {
-        &mut self.inner.inner
+        Self { inner }
     }
 }
 
@@ -496,28 +399,22 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         let mut frame = frame::Frame::new(frame::FrameMessage::Start, payload.len());
         frame.put(&payload[..]);
 
-        self.inner.inner.write_all(frame.as_ref()).await
+        self.inner.write_all(frame.as_ref()).await
     }
 
-    pub async fn send_instance(
-        &mut self,
-        id: String,
-        model: String,
-        name: String,
-    ) -> std::io::Result<()> {
-        let instance = frame::ProxyService::new(id, model, name);
+    pub async fn send_instance(&mut self, instance: frame::Instance) -> std::io::Result<()> {
         let payload = instance.to_bytes();
 
         let mut frame = frame::Frame::new(frame::FrameMessage::Instance, payload.len());
         frame.put(&payload[..]);
 
-        self.inner.inner.write_all(frame.as_ref()).await
+        self.inner.write_all(frame.as_ref()).await
     }
 
     pub async fn shutdown(&mut self) -> std::io::Result<()> {
         let frame = frame::Frame::new(frame::FrameMessage::Shutdown, 0);
 
-        self.inner.inner.write_all(frame.as_ref()).await
+        self.inner.write_all(frame.as_ref()).await
     }
 
     pub async fn send_motion(&mut self, motion: Motion) -> std::io::Result<()> {
@@ -526,7 +423,7 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         let mut frame = frame::Frame::new(frame::FrameMessage::Motion, payload.len());
         frame.put(&payload[..]);
 
-        self.inner.inner.write_all(frame.as_ref()).await
+        self.inner.write_all(frame.as_ref()).await
     }
 
     pub async fn send_signal(&mut self, signal: Signal) -> std::io::Result<()> {
@@ -535,34 +432,53 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         let mut frame = frame::Frame::new(frame::FrameMessage::Signal, payload.len());
         frame.put(&payload[..]);
 
-        self.inner.inner.write_all(frame.as_ref()).await
+        self.inner.write_all(frame.as_ref()).await
     }
 }
 
 impl<T: AsyncRead + Unpin> Client<T> {
     pub async fn read_frame(&mut self) -> std::io::Result<frame::Frame> {
-        // self.inner.read_frame().await
-
         let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
-        self.inner.inner.read_exact(&mut header_buffer).await?;
+
+        self.inner.read_exact(&mut header_buffer).await?;
 
         Ok(frame::Frame::try_from(&header_buffer[..]).unwrap())
+    }
 
-        // if let Ok(frame) = frame::Frame::try_from(&header_buffer[..]) {
-        // let payload_buffer = &mut vec![0u8; frame.payload_length];
+    pub async fn signal(&mut self, size: usize) -> std::io::Result<Signal> {
+        let payload_buffer = &mut vec![0u8; size];
 
-        // self.inner.inner.read_exact(payload_buffer).await?;
+        self.inner.read_exact(payload_buffer).await?;
 
-        // if frame.message == frame::FrameMessage::Signal {
+        Ok(Signal::try_from(&payload_buffer[..]).unwrap())
+    }
 
-        // }
-        // }
+    pub async fn motion(&mut self, size: usize) -> std::io::Result<Motion> {
+        let payload_buffer = &mut vec![0u8; size];
+
+        self.inner.read_exact(payload_buffer).await?;
+
+        Ok(Motion::try_from(&payload_buffer[..]).unwrap())
     }
 
     pub async fn recv_start(&mut self) -> std::io::Result<frame::Start> {
         loop {
-            if let Message::Start(session) = self.inner.read_frame().await? {
-                return Ok(session);
+            let frame = self.read_frame().await?;
+
+            if frame.message == frame::FrameMessage::Start {
+                let payload_buffer = &mut vec![0u8; frame.payload_length];
+
+                self.inner.read_exact(payload_buffer).await?;
+
+                let flags = payload_buffer[0];
+
+                let mut session_name = String::new();
+
+                for c in &payload_buffer[1..] {
+                    session_name.push(*c as char);
+                }
+
+                return Ok(frame::Start::new(flags, session_name));
             }
         }
     }
@@ -572,76 +488,17 @@ impl<T: AsyncRead + Unpin> Client<T> {
             let frame = self.read_frame().await?;
 
             if frame.message == frame::FrameMessage::Signal {
-                let payload_buffer = &mut vec![0u8; frame.payload_length];
-
-                self.inner.inner.read_exact(payload_buffer).await?;
-
-                match crate::core::Signal::try_from(&payload_buffer[..]) {
-                    Ok(signal) => {
-                        return Ok(signal);
-                    }
-                    Err(_) => {
-                        log::warn!("Invalid signal payload");
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            "Invalid signal payload",
-                        ));
-                    }
-                }
+                return self.signal(frame.payload_length).await;
             }
         }
-
-        // loop {
-        //     let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
-        //     self.inner.inner.read_exact(&mut header_buffer).await?;
-
-        //     if let Ok(frame) = frame::Frame::try_from(&header_buffer[..]) {
-        //         let payload_buffer = &mut vec![0u8; frame.payload_length];
-
-        //         self.inner.inner.read_exact(payload_buffer).await?;
-
-        //         if frame.message == frame::FrameMessage::Signal {
-        //             match crate::core::Signal::try_from(&payload_buffer[..]) {
-        //                 Ok(signal) => {
-        //                     return Ok(signal);
-        //                 }
-        //                 Err(_) => {
-        //                     log::warn!("Invalid signal payload");
-        //                     return Err(std::io::Error::new(
-        //                         std::io::ErrorKind::InvalidData,
-        //                         "Invalid signal payload",
-        //                     ));
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
     }
 
     pub async fn recv_motion(&mut self) -> std::io::Result<Motion> {
         loop {
-            let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
-            self.inner.inner.read_exact(&mut header_buffer).await?;
+            let frame = self.read_frame().await?;
 
-            if let Ok(frame) = frame::Frame::try_from(&header_buffer[..]) {
-                let payload_buffer = &mut vec![0u8; frame.payload_length];
-
-                self.inner.inner.read_exact(payload_buffer).await?;
-
-                if frame.message == frame::FrameMessage::Motion {
-                    match crate::core::Motion::try_from(&payload_buffer[..]) {
-                        Ok(motion) => {
-                            return Ok(motion);
-                        }
-                        Err(_) => {
-                            log::warn!("Invalid motion payload");
-                            return Err(std::io::Error::new(
-                                std::io::ErrorKind::InvalidData,
-                                "Invalid motion payload",
-                            ));
-                        }
-                    }
-                }
+            if frame.message == frame::FrameMessage::Motion {
+                return self.motion(frame.payload_length).await;
             }
         }
     }
