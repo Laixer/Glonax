@@ -175,23 +175,17 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     let fifo_sender: Sender<glonax::core::Signal> = tx.clone();
     tokio::spawn(async move {
         loop {
-            log::debug!("Starting FIFO listener");
+            log::debug!("Waiting for FIFO connection: {}", "signal");
 
-            let file = tokio::fs::OpenOptions::new()
-                .read(true)
-                .open("signal")
+            let mut client = glonax::transport::Client::open_write("signal")
                 .await
                 .unwrap();
 
-            let mut protocol = glonax::transport::Protocol::new(file);
+            log::debug!("Connected to FIFO: {}", "signal");
 
-            while let Ok(message) = protocol.read_frame().await {
-                if let glonax::transport::Message::Signal(signal) = message {
-                    // log::debug!("Received signal: {}", signal);
-
-                    if let Err(e) = fifo_sender.send(signal) {
-                        log::error!("Failed to send signal: {}", e);
-                    }
+            while let Ok(signal) = client.recv_signal().await {
+                if let Err(e) = fifo_sender.send(signal) {
+                    log::error!("Failed to send signal: {}", e);
                 }
             }
 
@@ -244,7 +238,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Motion listener shutdown");
     });
 
-    let instance = config.instance.instance.clone();
+    let instance_id = config.instance.instance.clone();
     let model = config.instance.model.clone();
     let name = config.instance.name.clone();
 
@@ -258,12 +252,12 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             glonax::constants::DEFAULT_NETWORK_PORT,
         );
 
-        let ps = glonax::transport::frame::ProxyService::new(
-            instance.clone(),
+        let instance = glonax::transport::frame::Instance::new(
+            instance_id.clone(),
             model.clone(),
             name.clone(),
         );
-        let payload = ps.to_bytes();
+        let payload = instance.to_bytes();
 
         let mut frame = glonax::transport::frame::Frame::new(
             glonax::transport::frame::FrameMessage::Instance,
@@ -291,12 +285,12 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
 
             if now.elapsed().as_millis() > 1_000 {
-                let ps = glonax::transport::frame::ProxyService::new(
-                    instance.clone(),
+                let instance = glonax::transport::frame::Instance::new(
+                    instance_id.clone(),
                     model.clone(),
                     name.clone(),
                 );
-                let payload = ps.to_bytes();
+                let payload = instance.to_bytes();
 
                 let mut frame = glonax::transport::frame::Frame::new(
                     glonax::transport::frame::FrameMessage::Instance,
@@ -356,9 +350,11 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             log::info!("Session started for: {}", session_name);
 
-            client.send_instance(instance, model, name).await.unwrap();
+            let instance = glonax::transport::frame::Instance::new(instance, model, name);
 
-            let (mut client_reader, mut _client_writer) = client.into_split();
+            client.send_instance(instance).await.unwrap();
+
+            // let (mut client_reader, mut _client_writer) = client.into_split();
 
             let session_teardown = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
 
@@ -386,7 +382,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             tokio::spawn(async move {
                 log::debug!("Session writer started for: {}", session_name2);
 
-                while let Ok(frame) = client_reader.read_frame().await {
+                while let Ok(frame) = client.read_frame().await {
                     match frame.message {
                         glonax::transport::frame::FrameMessage::Null => {}
                         glonax::transport::frame::FrameMessage::Start => {}
@@ -397,59 +393,15 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                         }
                         glonax::transport::frame::FrameMessage::Motion => {
                             if session_write {
-                                let payload_buffer = &mut vec![0u8; frame.payload_length];
+                                let motion = client.motion(frame.payload_length).await.unwrap();
 
-                                use tokio::io::AsyncReadExt;
-
-                                let k = client_reader.inner_mut();
-
-                                k.read_exact(payload_buffer).await.unwrap();
-
-                                // match glonax::core::Motion::try_from(&payload_buffer[..]) {
-                                //     Ok(motion) => {
-                                //         return Ok(motion);
-                                //     }
-                                //     Err(_) => {
-                                //         log::warn!("Invalid motion payload");
-                                //         return Err(std::io::Error::new(
-                                //             std::io::ErrorKind::InvalidData,
-                                //             "Invalid motion payload",
-                                //         ));
-                                //     }
-                                // }
-
-                                // log::debug!("Received motion: {}", frame.payload_length);
-                                if let Err(e) = session_motion_tx
-                                    .send(
-                                        glonax::core::Motion::try_from(&payload_buffer[..])
-                                            .expect("Failed to parse motion"),
-                                    )
-                                    .await
-                                {
+                                if let Err(e) = session_motion_tx.send(motion).await {
                                     log::error!("Failed to send motion: {}", e);
                                     break;
                                 }
                             }
                         }
-                        _ => {} // glonax::transport::frame::FrameMessage::Signal => {}
-
-                                // glonax::transport::Message::Null => {}
-                                // glonax::transport::Message::Start(_) => {}
-                                // glonax::transport::Message::Shutdown => {
-                                //     log::debug!("Client requested shutdown");
-                                //     session_teardown.store(true, std::sync::atomic::Ordering::Relaxed);
-                                //     break;
-                                // }
-                                // glonax::transport::Message::Motion(motion) => {
-                                //     if session_write {
-                                //         log::debug!("Received motion: {}", motion);
-                                //         if let Err(e) = session_motion_tx.send(motion).await {
-                                //             log::error!("Failed to send motion: {}", e);
-                                //             break;
-                                //         }
-                                //     }
-                                // }
-                                // glonax::transport::Message::Signal(_) => {}
+                        _ => {}
                     }
                 }
 
