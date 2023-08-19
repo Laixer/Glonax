@@ -1,0 +1,10 @@
+Source: glonax
+Section: restricted/base
+Priority: optional
+Maintainer: Laixer Equipment B.V. <info@laixer.com>
+Standards-Version: 3.0.1
+Build-Depends: debhelper (>= 4)
+
+Package: glonax
+Architecture: any
+Description: Glonax heavy machine controller
