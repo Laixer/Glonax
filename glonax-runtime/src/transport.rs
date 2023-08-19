@@ -1,18 +1,9 @@
-// use bytes::{BufMut, BytesMut};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::core::{Motion, Signal};
+use crate::core::{Instance, Motion, Signal};
 
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x01;
-
-// const PROTO_MESSAGE_NULL: u8 = 0x1;
-// const PROTO_MESSAGE_START: u8 = 0x10;
-// const PROTO_MESSAGE_SHUTDOWN: u8 = 0x11;
-// const PROTO_MESSAGE_INSTANCE: u8 = 0x15;
-
-// const PROTO_MESSAGE_MOTION: u8 = 0x20;
-// const PROTO_MESSAGE_SIGNAL: u8 = 0x31;
 
 // const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
 //     + std::mem::size_of::<u8>()
@@ -184,8 +175,6 @@ pub mod frame {
 
         // TODO: Write name length to buffer
         pub fn to_bytes(&self) -> Vec<u8> {
-            // use bytes::{BufMut, BytesMut};
-
             let name_bytes = self.name.as_bytes();
 
             let mut buf = BytesMut::with_capacity(1 + name_bytes.len());
@@ -194,92 +183,6 @@ pub mod frame {
             buf.put(name_bytes);
 
             buf.to_vec()
-        }
-    }
-
-    // TODO: Move this core.
-    pub struct Instance {
-        /// Instance unique identifier.
-        instance: String,
-        /// Instance model.
-        model: String,
-        /// Instance name.
-        name: String,
-    }
-
-    impl Instance {
-        pub fn new(instance: String, model: String, name: String) -> Self {
-            Self {
-                instance,
-                model,
-                name,
-            }
-        }
-
-        #[inline]
-        pub fn instance(&self) -> &str {
-            &self.instance
-        }
-
-        #[inline]
-        pub fn model(&self) -> &str {
-            &self.model
-        }
-
-        #[inline]
-        pub fn name(&self) -> &str {
-            &self.name
-        }
-
-        pub fn to_bytes(&self) -> Vec<u8> {
-            let instance_bytes = self.instance.as_bytes();
-            let model_bytes = self.model.as_bytes();
-            let name_bytes = self.name.as_bytes();
-
-            let mut buf = BytesMut::with_capacity(
-                2 + instance_bytes.len() + model_bytes.len() + name_bytes.len(),
-            );
-
-            buf.put_u16(instance_bytes.len() as u16);
-            buf.put(instance_bytes);
-            buf.put_u16(model_bytes.len() as u16);
-            buf.put(model_bytes);
-            buf.put_u16(name_bytes.len() as u16);
-            buf.put(name_bytes);
-
-            buf.to_vec()
-        }
-    }
-
-    impl TryFrom<&[u8]> for Instance {
-        type Error = ();
-
-        fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
-            if buffer.len() < 6 {
-                log::warn!("Invalid buffer size");
-                return Err(());
-            }
-
-            let instance_length = u16::from_be_bytes([buffer[0], buffer[1]]) as usize;
-            let instance = String::from_utf8_lossy(&buffer[2..2 + instance_length]).to_string();
-            let model_length =
-                u16::from_be_bytes([buffer[2 + instance_length], buffer[3 + instance_length]])
-                    as usize;
-            let model = String::from_utf8_lossy(
-                &buffer[4 + instance_length..4 + instance_length + model_length],
-            )
-            .to_string();
-            let name_length = u16::from_be_bytes([
-                buffer[4 + instance_length + model_length],
-                buffer[5 + instance_length + model_length],
-            ]) as usize;
-            let name = String::from_utf8_lossy(
-                &buffer[6 + instance_length + model_length
-                    ..6 + instance_length + model_length + name_length],
-            )
-            .to_string();
-
-            Ok(Self::new(instance, model, name))
         }
     }
 }
@@ -402,7 +305,7 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         self.inner.write_all(frame.as_ref()).await
     }
 
-    pub async fn send_instance(&mut self, instance: frame::Instance) -> std::io::Result<()> {
+    pub async fn send_instance(&mut self, instance: Instance) -> std::io::Result<()> {
         let payload = instance.to_bytes();
 
         let mut frame = frame::Frame::new(frame::FrameMessage::Instance, payload.len());

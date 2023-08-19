@@ -109,8 +109,8 @@ impl std::fmt::Display for Robot {
             f,
             "Robot: {}; Model: {}; Name: {} Type: {:?}; Joints: {}",
             self.instance,
-            self.name,
             self.model,
+            self.name,
             self.ty,
             self.joints.len()
         )
