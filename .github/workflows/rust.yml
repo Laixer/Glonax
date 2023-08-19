@@ -18,14 +18,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Install PostgreSQL development tools
-      run: sudo apt install debhelper fakeroot
+    - name: Install Debian tools
+      run: sudo apt install debhelper
 
     - name: Show environment
       run: rustup show
 
     - name: Run tests
       run: cargo test --release --all-features
+
+    - name: Build deb
+      run: dpkg-buildpackage -b --no-sign
 
     # - name: Build deb
     #   run: ./scripts/package.sh
