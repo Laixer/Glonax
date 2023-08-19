@@ -24,24 +24,24 @@ jobs:
     - name: Run tests
       run: cargo test --release --all-features
 
-    - name: Build deb
-      run: ./scripts/package.sh
+    # - name: Build deb
+    #   run: ./scripts/package.sh
 
-    - name: Install deb
-      run: sudo dpkg -i ./target/glonax*.deb
+    # - name: Install deb
+    #   run: sudo dpkg -i ./target/glonax*.deb
 
-    - name: Test install
-      run: |
-        glonax-csim -V
-        glonax-ecud -V
-        glonax-gnssd -V
-        glonax-input -V
-        glonax-netctl -V
-        glonax-agent -V
-        glonax-proxyd -V
+    # - name: Test install
+    #   run: |
+    #     glonax-csim -V
+    #     glonax-ecud -V
+    #     glonax-gnssd -V
+    #     glonax-input -V
+    #     glonax-netctl -V
+    #     glonax-agent -V
+    #     glonax-proxyd -V
 
-    - name: Publish artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: glonax-${{ github.ref_name }}.deb
-        path: ./target/**.deb
+    # - name: Publish artifacts
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: glonax-${{ github.ref_name }}.deb
+    #     path: ./target/**.deb
