@@ -99,14 +99,9 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
 
     log::debug!("Waiting for FIFO connection: {}", "signal");
 
-    let file = tokio::fs::OpenOptions::new()
-        .write(true)
-        .open("signal")
-        .await?;
+    let mut client = glonax::transport::Client::open_write("signal").await?;
 
     log::debug!("Connected to FIFO: {}", "signal");
-
-    let mut client = glonax::transport::Client::new(file);
 
     loop {
         router.listen().await?;
@@ -117,12 +112,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
         }
 
         for signal in signals {
-            if let Err(e) = client.send_signal(signal).await {
-                log::error!("Failed to write to socket: {}", e);
-                break;
-            }
+            client.send_signal(signal).await?;
         }
     }
-
-    Ok(())
 }

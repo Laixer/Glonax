@@ -110,14 +110,9 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
 
     log::debug!("Waiting for FIFO connection: {}", "signal");
 
-    let file = tokio::fs::OpenOptions::new()
-        .write(true)
-        .open("signal")
-        .await?;
+    let mut client = glonax::transport::Client::open_write("signal").await?;
 
     log::debug!("Connected to FIFO: {}", "signal");
-
-    let mut client = glonax::transport::Client::new(file);
 
     while let Some(line) = lines.next_line().await? {
         if let Some(message) = service.decode(line) {
@@ -125,10 +120,7 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
             message.collect_signals(&mut signals);
 
             for signal in signals {
-                if let Err(e) = client.send_signal(signal).await {
-                    log::error!("Failed to write to socket: {}", e);
-                    break;
-                }
+                client.send_signal(signal).await?;
             }
         }
     }
