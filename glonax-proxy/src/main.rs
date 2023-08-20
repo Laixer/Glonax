@@ -14,7 +14,7 @@ mod config;
 #[command(about = "Glonax proxy daemon", long_about = None)]
 struct Args {
     /// Bind address.
-    #[arg(short = 'b', long = "bind", default_value = "127.0.0.1:30051")]
+    #[arg(short = 'b', long = "bind", default_value = "0.0.0.0:30051")]
     address: String,
     /// CAN network interface.
     interface: String,

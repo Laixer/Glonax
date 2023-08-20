@@ -16,8 +16,8 @@ mod input;
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
     /// Remote network address.
-    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
-    address: String,
+    #[arg(short = 'c', long = "connect")]
+    address: Option<String>,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
@@ -36,8 +36,23 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    let address = match args.address {
+        Some(mut address) => {
+            if !address.contains(':') {
+                address.push_str(":30051");
+            }
+
+            address
+        }
+        None => {
+            let (_, ip) = net_recv_instance().await?;
+
+            std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT).to_string()
+        }
+    };
+
     let mut config = config::InputConfig {
-        address: args.address,
+        address,
         device: args.device,
         full_motion: args.full_motion,
         global: glonax::GlobalConfig::default(),
@@ -93,6 +108,33 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
+async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net::IpAddr)> {
+    let broadcast_addr = std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::UNSPECIFIED,
+        glonax::constants::DEFAULT_NETWORK_PORT,
+    );
+
+    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
+
+    let mut buffer = [0u8; 1024];
+
+    log::debug!("Waiting for instance announcement");
+
+    loop {
+        let (size, socket_addr) = socket.recv_from(&mut buffer).await?;
+        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
+            if frame.message == glonax::transport::frame::FrameMessage::Instance {
+                let instance =
+                    glonax::core::Instance::try_from(&buffer[frame.payload_range()]).unwrap();
+
+                log::info!("Instance announcement received: {}", instance);
+
+                return Ok((instance, socket_addr.ip()));
+            }
+        }
+    }
+}
+
 async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await?;
 
@@ -109,22 +151,19 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    let mut address = config.address.to_string();
-
-    if !address.contains(':') {
-        address.push_str(":30051");
-    }
-
-    log::debug!("Waiting for connection to {}", address);
+    log::debug!("Waiting for connection to {}", config.address);
 
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
         .write(true)
         .failsafe(true) // TODO: Make failsafe configurable
-        .connect(address.to_string(), config.global.bin_name.to_string())
+        .connect(
+            config.address.to_owned(),
+            config.global.bin_name.to_string(),
+        )
         .await?;
 
-    log::info!("Connected to {}", address);
+    log::info!("Connected to {}", config.address);
 
     while let Ok(input) = input_device.next().await {
         if let Some(motion) = input_state.try_from(input) {

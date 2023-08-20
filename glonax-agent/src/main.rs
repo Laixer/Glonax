@@ -219,9 +219,6 @@ async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
                     glonax::core::Metric::VmsUptime(uptime) => {
                         telemetrics.write().await.uptime = Some(uptime);
                     }
-                    glonax::core::Metric::VmsTimestamp(_timestamp) => {
-                        // telemetric_lock.uptime = Some(timestamp);
-                    }
                     glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
                         let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
 
