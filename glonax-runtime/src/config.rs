@@ -1,29 +1,13 @@
-use serde_derive::Deserialize;
-
 pub trait Configurable: Clone {
     /// Get the global configuration
     fn global(&self) -> &GlobalConfig;
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct TelemetryConfig {
-    /// Telemetry host.
-    pub host: String,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct InstanceConfig {
-    /// Instance unique identifier.
-    pub instance: String,
-    /// Instance model.
-    pub model: String,
-    /// Instance name.
-    pub name: String,
-    /// Telemetry configuration.
-    pub telemetry: Option<TelemetryConfig>,
-}
-
-pub fn instance_config(path: impl AsRef<std::path::Path>) -> std::io::Result<InstanceConfig> {
+// TODO: Move up ?
+/// Load structure from TOML file.
+pub fn from_toml<T: serde::de::DeserializeOwned>(
+    path: impl AsRef<std::path::Path>,
+) -> std::io::Result<T> {
     use std::io::Read;
 
     let mut contents = String::new();

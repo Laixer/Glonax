@@ -1,4 +1,4 @@
-use glonax::{Configurable, GlobalConfig, InstanceConfig};
+use glonax::{core::Instance, Configurable, GlobalConfig};
 
 #[derive(Clone, Debug)]
 pub struct ProxyConfig {
@@ -8,8 +8,8 @@ pub struct ProxyConfig {
     pub interface: String,
     /// Refresh host service interval in milliseconds.
     pub host_interval: u64,
-    /// Local instance configuration.
-    pub instance: InstanceConfig,
+    /// Instance configuration.
+    pub instance: Instance,
     /// Global configuration.
     pub global: GlobalConfig,
 }

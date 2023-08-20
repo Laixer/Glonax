@@ -1,6 +1,7 @@
 use bytes::{BufMut, BytesMut};
+use serde_derive::Deserialize;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize)]
 pub struct Instance {
     /// Instance unique identifier.
     pub id: String,
@@ -41,7 +42,11 @@ impl Instance {
 
 impl std::fmt::Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Instance ID: {}, Model: {}, Name: {}", self.id, self.model, self.name)
+        write!(
+            f,
+            "Instance ID: {}, Model: {}, Name: {}",
+            self.id, self.model, self.name
+        )
     }
 }
 

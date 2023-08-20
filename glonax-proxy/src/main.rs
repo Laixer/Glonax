@@ -23,7 +23,7 @@ struct Args {
     host_interval: u64,
     /// Configuration file.
     #[arg(long = "config", default_value = "/etc/glonax.conf")]
-    config: String,
+    config: std::path::PathBuf,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -42,7 +42,7 @@ async fn main() -> anyhow::Result<()> {
         address: args.address,
         interface: args.interface,
         host_interval: args.host_interval,
-        instance: glonax::instance_config(args.config)?,
+        instance: glonax::from_toml(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -101,9 +101,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use tokio::sync::broadcast::{self, Sender};
 
     log::info!("Starting proxy services");
-    log::debug!("Instance ID: {}", config.instance.instance);
-    log::debug!("Instance model: {}", config.instance.model);
-    log::debug!("Instance name: {}", config.instance.name);
 
     let (tx, _rx) = broadcast::channel(16);
 
@@ -238,7 +235,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Motion listener shutdown");
     });
 
-    let instance_id = config.instance.instance.clone();
+    let instance_id = config.instance.id.clone();
     let instance_model = config.instance.model.clone();
     let instance_name = config.instance.name.clone();
 
