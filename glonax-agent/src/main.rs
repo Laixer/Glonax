@@ -18,9 +18,6 @@ struct Args {
     /// Probe interval in seconds.
     #[arg(short, long, default_value_t = 60)]
     interval: u64,
-    /// Configuration file.
-    #[arg(long = "config", default_value = "/etc/glonax.conf")]
-    config: String,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,

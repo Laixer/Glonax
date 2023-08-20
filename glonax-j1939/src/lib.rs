@@ -41,8 +41,9 @@ impl J1939Stream {
     pub async fn read(&self) -> io::Result<Frame> {
         let mut frame = FrameBuilder::default();
 
+        // TODO: This was not done yet.
         // let (frame_size, peer_addr) = self.0.recv_from(frame.as_mut()).await?;
-        let (frame_size, flags, peer_addr) = self.0.recv_msg(frame.as_mut()).await.unwrap();
+        let (frame_size, _flags, peer_addr) = self.0.recv_msg(frame.as_mut()).await.unwrap();
 
         frame = frame.set_len(frame_size);
 

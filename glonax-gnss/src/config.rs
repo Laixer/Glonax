@@ -1,4 +1,4 @@
-use glonax::{Configurable, GlobalConfig, InstanceConfig};
+use glonax::{Configurable, GlobalConfig};
 
 #[derive(Clone, Debug)]
 pub struct GnssConfig {
@@ -6,8 +6,6 @@ pub struct GnssConfig {
     pub device: std::path::PathBuf,
     /// Serial baud rate.
     pub baud_rate: usize,
-    /// Local instance configuration.
-    pub instance: InstanceConfig,
     /// Global configuration.
     pub global: GlobalConfig,
 }
