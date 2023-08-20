@@ -21,6 +21,9 @@ struct Args {
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
+    /// Configure failsafe mode.
+    #[arg(short, long)]
+    fail_safe: bool,
     /// Input commands will translate to the full motion range.
     #[arg(long)]
     full_motion: bool,
@@ -54,6 +57,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::InputConfig {
         address,
         device: args.device,
+        fail_safe: args.fail_safe,
         full_motion: args.full_motion,
         global: glonax::GlobalConfig::default(),
     };
@@ -156,7 +160,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
         .write(true)
-        .failsafe(true) // TODO: Make failsafe configurable
+        .failsafe(config.fail_safe)
         .connect(
             config.address.to_owned(),
             config.global.bin_name.to_string(),

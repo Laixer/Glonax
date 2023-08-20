@@ -120,7 +120,12 @@ impl std::fmt::Display for Motion {
                         .iter()
                         .map(|changeset| format!(
                             "Actuator: {:?}; Value: {}, ",
-                            changeset.actuator, changeset.value
+                            changeset.actuator,
+                            match changeset.value {
+                                Self::POWER_MIN => "Power minimum".to_string(),
+                                Self::POWER_MAX => "Power maximum".to_string(),
+                                _ => changeset.value.to_string(),
+                            }
                         ))
                         .collect::<String>()
                 )
