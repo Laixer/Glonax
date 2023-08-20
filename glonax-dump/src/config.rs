@@ -5,7 +5,7 @@ pub(crate) struct DumpConfig {
     /// Remote network address.
     pub address: String,
     /// Instance configuration.
-    pub instance: Option<Instance>,
+    pub instance: Instance,
     /// Global configuration.
     pub global: GlobalConfig,
 }

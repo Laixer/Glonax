@@ -9,6 +9,7 @@ pub enum JointType {
     Fixed,
 }
 
+#[allow(dead_code)]
 pub struct Joint {
     name: String,
     ty: JointType,
@@ -46,6 +47,7 @@ pub enum DeviceType {
     EncoderAbsoluteSingleTurn,
 }
 
+#[allow(dead_code)]
 pub struct Device {
     name: String,
     id: u8,
@@ -78,6 +80,7 @@ pub enum RobotType {
     Forestry,
 }
 
+#[allow(dead_code)]
 pub struct Robot {
     instance: String, // TODO: Replace with UUID
     name: String,

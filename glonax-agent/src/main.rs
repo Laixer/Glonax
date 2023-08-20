@@ -118,7 +118,7 @@ async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net
     }
 }
 
-async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
+async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -206,6 +206,8 @@ async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
     let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
 
     let mut buffer = [0u8; 1024];
+
+    log::debug!("Listening for signals");
 
     loop {
         let (size, _) = socket.recv_from(&mut buffer).await?;

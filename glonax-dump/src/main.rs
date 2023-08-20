@@ -36,9 +36,6 @@ impl EulerAngles for Rotation3<f32> {
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
-    /// Remote network address.
-    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
-    address: String,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -51,9 +48,14 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    let (instance, ip) = net_recv_instance().await?;
+
+    let address =
+        std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT).to_string();
+
     let mut config = config::DumpConfig {
-        address: args.address,
-        instance: None,
+        address,
+        instance,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -107,47 +109,39 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&mut config).await
 }
 
-async fn daemonize(config: &mut config::DumpConfig) -> anyhow::Result<()> {
-    use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
+async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net::IpAddr)> {
+    let broadcast_addr = std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::UNSPECIFIED,
+        glonax::constants::DEFAULT_NETWORK_PORT,
+    );
 
-    let socket = tokio::net::UdpSocket::bind("0.0.0.0:30051").await?;
+    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
 
     let mut buffer = [0u8; 1024];
 
     log::debug!("Waiting for instance announcement");
 
-    let (instance, ip) = loop {
+    loop {
         let (size, socket_addr) = socket.recv_from(&mut buffer).await?;
-
         if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
-            // TODO: Validate packet length
-            if frame.payload_length + 10 != size {
-                log::warn!("Invalid packet length");
-                continue;
-            }
-
             if frame.message == glonax::transport::frame::FrameMessage::Instance {
-                match glonax::core::Instance::try_from(&buffer[frame.payload_range()]) {
-                    Ok(service) => {
-                        break (service, socket_addr.ip());
-                    }
-                    Err(_) => {
-                        log::warn!("Invalid ProxyService payload");
-                        continue;
-                    }
-                }
+                let instance =
+                    glonax::core::Instance::try_from(&buffer[frame.payload_range()]).unwrap();
+
+                log::info!("Instance announcement received: {}", instance);
+
+                return Ok((instance, socket_addr.ip()));
             }
         }
-    };
+    }
+}
 
-    // TODO: Write instance to config
-    config.instance = Some(instance.clone());
-    config.address =
-        std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT).to_string();
+async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
+    use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
 
-    let robot = RobotBuilder::new(instance.id, RobotType::Excavator)
-        .model(instance.model)
-        .name(instance.name)
+    let robot = RobotBuilder::new(config.instance.id.clone(), RobotType::Excavator)
+        .model(config.instance.model.clone())
+        .name(config.instance.name.clone())
         .add_device(Device::new(
             "frame_encoder",
             0x6A,
@@ -204,7 +198,16 @@ async fn daemonize(config: &mut config::DumpConfig) -> anyhow::Result<()> {
     let attachment_joint = robot.joint_by_name("attachment").unwrap();
     let effector_joint = robot.joint_by_name("effector").unwrap();
 
-    log::debug!("Waiting for signals");
+    let broadcast_addr = std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::UNSPECIFIED,
+        glonax::constants::DEFAULT_NETWORK_PORT,
+    );
+
+    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
+
+    let mut buffer = [0u8; 1024];
+
+    log::debug!("Listening for signals");
 
     while let Ok((size, _)) = socket.recv_from(&mut buffer).await {
         if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
