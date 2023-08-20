@@ -15,9 +15,6 @@ const VERSION: &str = "102";
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax agent", long_about = None)]
 struct Args {
-    /// Remote network address.
-    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1:30051")]
-    address: String,
     /// Probe interval in seconds.
     #[arg(short, long, default_value_t = 60)]
     interval: u64,
@@ -36,10 +33,11 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
+    let (instance, _) = net_recv_instance().await?;
+
     let mut config = config::AgentConfig {
-        address: args.address,
         interval: args.interval,
-        instance: None,
+        instance,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -93,31 +91,36 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&mut config).await
 }
 
-async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
+async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net::IpAddr)> {
+    let broadcast_addr = std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::UNSPECIFIED,
+        glonax::constants::DEFAULT_NETWORK_PORT,
+    );
 
-    let socket = tokio::net::UdpSocket::bind("0.0.0.0:30051").await?;
+    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
 
     let mut buffer = [0u8; 1024];
 
     log::debug!("Waiting for instance announcement");
 
-    let (instance, ip) = loop {
+    loop {
         let (size, socket_addr) = socket.recv_from(&mut buffer).await?;
         if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
             if frame.message == glonax::transport::frame::FrameMessage::Instance {
                 let instance =
                     glonax::core::Instance::try_from(&buffer[frame.payload_range()]).unwrap();
 
-                break (instance, socket_addr.ip());
+                log::info!("Instance announcement received: {}", instance);
+
+                return Ok((instance, socket_addr.ip()));
             }
         }
-    };
+    }
+}
 
-    config.instance = Some(instance.clone());
-
-    log::info!("Instance announcement received: {}", instance);
+async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
 
     #[derive(Debug, Clone, serde_derive::Serialize)]
     struct Telemetry {
@@ -140,7 +143,7 @@ async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
     let telemetrics = Arc::new(RwLock::new(Telemetry {
         version: VERSION.to_string(),
         status: "HEALTHY".to_string(),
-        name: instance.name.clone(),
+        name: config.instance.name.clone(),
         location: None,
         altitude: None,
         speed: None,
@@ -155,7 +158,7 @@ async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
     }));
 
     let telemetrics_clone = telemetrics.clone();
-    let instance_clone = config.instance.clone().unwrap();
+    let instance_clone = config.instance.clone();
 
     let interval = config.interval;
 
@@ -194,6 +197,15 @@ async fn daemonize(config: &mut config::AgentConfig) -> anyhow::Result<()> {
             tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
         }
     });
+
+    let broadcast_addr = std::net::SocketAddrV4::new(
+        std::net::Ipv4Addr::UNSPECIFIED,
+        glonax::constants::DEFAULT_NETWORK_PORT,
+    );
+
+    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
+
+    let mut buffer = [0u8; 1024];
 
     loop {
         let (size, _) = socket.recv_from(&mut buffer).await?;
