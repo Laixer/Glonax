@@ -1,0 +1,21 @@
+[Unit]
+Description=Glonax ECU daemon
+StartLimitIntervalSec=5
+StartLimitBurst=5
+Wants=sys-subsystem-net-devices-can1.device
+Requires=glonax-proxy.service
+After=sys-subsystem-net-devices-can1.device glonax-proxy.service 
+
+[Service]
+WorkingDirectory=/var/lib/glonax
+Restart=always
+RestartSec=2
+Nice=-5
+User=glonax
+Group=glonax
+ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can1 -o carrier
+ExecStart=/usr/local/bin/glonax-ecud --daemon can1
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
