@@ -112,6 +112,8 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
 
     while let Some(line) = lines.next_line().await? {
         if let Some(message) = service.decode(line) {
+            log::trace!("Received message: {}", message);
+
             let mut signals = vec![];
             message.collect_signals(&mut signals);
 
