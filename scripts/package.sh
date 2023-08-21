@@ -16,45 +16,62 @@ then
   exit 1
 fi
 
-VERSION=3.0-1
+VERSION=3.0-2
+ARCH=$(uname -m)
+
+case $ARCH in
+    x86_64)
+        ARCH_NAME="amd64"
+        ;;
+    aarch64)
+        ARCH_NAME="arm64"
+        ;;
+    *)
+        ARCH_NAME="any"
+        ;;
+esac
+
+PACKAGE_DIR="./target/glonax_${VERSION}_$ARCH_NAME"
+PACKAGE_NAME="glonax_${VERSION}_$ARCH_NAME.deb"
 
 # Build the project
 cargo build --release
 
 # Cleanup
-rm -rf ./target/glonax_${VERSION}_amd64
-rm -rf ./target/glonax_${VERSION}_amd64.deb
+rm -rf $PACKAGE_DIR
+rm -rf ./target/glonax_${VERSION}_$ARCH_NAME.deb
 
 # Build directory tree
-mkdir -p ./target/glonax_${VERSION}_amd64/DEBIAN
-mkdir -p ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
-mkdir -p ./target/glonax_${VERSION}_amd64/etc/systemd/system
-mkdir -p ./target/glonax_${VERSION}_amd64/usr/local/bin
-mkdir -p ./target/glonax_${VERSION}_amd64/usr/local/share/glonax
+mkdir -p $PACKAGE_DIR/DEBIAN
+mkdir -p $PACKAGE_DIR/etc/udev/rules.d
+mkdir -p $PACKAGE_DIR/etc/systemd/system
+mkdir -p $PACKAGE_DIR/usr/local/bin
+mkdir -p $PACKAGE_DIR/usr/local/share/glonax
 
 # Copy config files
-cp ./contrib/deb/control ./target/glonax_${VERSION}_amd64/DEBIAN
-cp ./contrib/deb/preinst ./target/glonax_${VERSION}_amd64/DEBIAN
-cp ./contrib/deb/postinst ./target/glonax_${VERSION}_amd64/DEBIAN
-cp ./contrib/udev/* ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
-cp ./contrib/systemd/* ./target/glonax_${VERSION}_amd64/etc/systemd/system
-cp -r ./contrib/etc/* ./target/glonax_${VERSION}_amd64/etc
-cp -r ./contrib/share/* ./target/glonax_${VERSION}_amd64/usr/local/share/glonax
+cp ./contrib/deb/* $PACKAGE_DIR/DEBIAN
+cp ./contrib/udev/* $PACKAGE_DIR/etc/udev/rules.d
+cp ./contrib/systemd/* $PACKAGE_DIR/etc/systemd/system
+cp -r ./contrib/etc/* $PACKAGE_DIR/etc
+cp -r ./contrib/share/* $PACKAGE_DIR/usr/local/share/glonax
 
 # Copy binaries
-cp ./target/release/glonax-csim ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-ecud ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-gnssd ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-input ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-netctl ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-agent ./target/glonax_${VERSION}_amd64/usr/local/bin
-cp ./target/release/glonax-proxyd ./target/glonax_${VERSION}_amd64/usr/local/bin
+cp ./target/release/glonax-csim $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-ecud $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-gnssd $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-input $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-netctl $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-agent $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-proxyd $PACKAGE_DIR/usr/local/bin
+
+# Set package architecture
+sed -i "s/{ARCH}/$ARCH_NAME/" $PACKAGE_DIR/DEBIAN/control
 
 # Set permissions
-chmod 755 ./target/glonax_${VERSION}_amd64/DEBIAN/postinst
+chmod 755 $PACKAGE_DIR/DEBIAN/postinst
 
 # Build the package
-dpkg-deb --build --root-owner-group ./target/glonax_${VERSION}_amd64
+dpkg-deb --build --root-owner-group $PACKAGE_DIR
 
 # Cleanup
-rm -rf ./target/glonax_${VERSION}_amd64
+rm -rf $PACKAGE_DIR
