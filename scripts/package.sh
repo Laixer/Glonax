@@ -61,6 +61,7 @@ cp ./target/release/glonax-ecud $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-gnssd $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-input $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-netctl $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonax-diag $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-agent $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-proxyd $PACKAGE_DIR/usr/local/bin
 

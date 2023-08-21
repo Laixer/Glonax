@@ -17,4 +17,8 @@ ansi_term = "0.12"
 
 [[bin]]
 name = "glonax-netctl"
-path = "src/main.rs"
+path = "src/netctl.rs"
+
+[[bin]]
+name = "glonax-diag"
+path = "src/diag.rs"

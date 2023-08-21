@@ -175,16 +175,13 @@ struct Args {
     /// CAN network interface.
     #[arg(short, long, default_value = "can0")]
     interface: String,
-
     /// Local network address.
     #[arg(long, default_value_t = 0x9e)]
     address: u8,
-
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
-
-    /// Node commands.
+    /// Commands.
     #[command(subcommand)]
     command: Command,
 }
@@ -195,7 +192,7 @@ enum Command {
     Node {
         /// Target node address.
         address: String,
-
+        /// Node commands.
         #[command(subcommand)]
         command: NodeCommand,
     },
@@ -204,7 +201,6 @@ enum Command {
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
-
         /// Filter on node.
         #[arg(long)]
         node: Vec<String>,
@@ -214,7 +210,6 @@ enum Command {
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
-
         /// Filter on node.
         #[arg(long)]
         node: Vec<String>,

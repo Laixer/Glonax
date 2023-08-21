@@ -31,14 +31,12 @@ if ! getent passwd | grep -q "^$SERVER_USER:"; then
           --no-create-home \
           --disabled-password \
           $SERVER_USER 2>/dev/null || true
-  echo "..done"
-fi
-
-# Adjust passwd entry
-usermod -c "$SERVER_NAME" \
+  usermod -c "$SERVER_NAME" \
         -d $SERVER_HOME   \
         -g $SERVER_GROUP \
         $SERVER_USER
+  echo "..done"
+fi
 
 # Add user to tty group
 if getent group | grep -q "^$TTY_GROUP:" ; then
