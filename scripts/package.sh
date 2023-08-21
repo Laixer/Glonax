@@ -34,6 +34,7 @@ mkdir -p ./target/glonax_${VERSION}_amd64/usr/local/share/glonax
 
 # Copy config files
 cp ./contrib/deb/control ./target/glonax_${VERSION}_amd64/DEBIAN
+cp ./contrib/deb/preinst ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/deb/postinst ./target/glonax_${VERSION}_amd64/DEBIAN
 cp ./contrib/udev/* ./target/glonax_${VERSION}_amd64/etc/udev/rules.d
 cp ./contrib/systemd/* ./target/glonax_${VERSION}_amd64/etc/systemd/system

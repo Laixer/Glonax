@@ -1,0 +1,14 @@
+#!/bin/bash
+# Copyright (c) 2021-2023 Laixer B.V.
+#
+# Debian package post-installation script.
+
+set -e
+
+CONF_FILE="/etc/glonax.conf"
+
+if [ -e "$CONF_FILE" ]; then
+    echo -n "Backup $CONF_FILE.."
+    cp "$CONF_FILE" "$CONF_FILE.2"
+    echo "..done"
+fi
