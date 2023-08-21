@@ -1,6 +1,6 @@
 Package: glonax
 Version: 3.0.1
-Depends: adduser (>= 3.11)
+Depends: adduser (>= 3.11), dpkg (>= 1.10.0), libssl1.1 (>= 1.1.1)
 Maintainer: Laixer Equipment B.V. <info@laixer.com>
 Architecture: {ARCH}
 Section: restricted/base

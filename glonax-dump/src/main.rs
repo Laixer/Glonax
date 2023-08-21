@@ -237,7 +237,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         * effector_joint.origin()
                         * point;
 
-                    println!(
+                    log::info!(
                             "F Angle: {:5.2}rad {:5.2}°\tB Angle: {:5.2}rad {:5.2}°\tA Angle: {:5.2}rad {:5.2}°\tT Angle: {:5.2}rad {:5.2}°\tLink: [{:.2}, {:.2}, {:.2}]\tEffector: [{:.2}, {:.2}, {:.2}]",
                             frame_yaw,
                             glonax::core::rad_to_deg(frame_yaw),
