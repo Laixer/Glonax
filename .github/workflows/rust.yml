@@ -27,11 +27,11 @@ jobs:
     - name: Run tests
       run: cargo test --release --all-features
 
-    - name: Build deb
-      run: dpkg-buildpackage -b --no-sign
-
     # - name: Build deb
-    #   run: ./scripts/package.sh
+      # run: dpkg-buildpackage -b --no-sign
+
+    - name: Build deb
+      run: ./scripts/package.sh
 
     # - name: Install deb
     #   run: sudo dpkg -i ./target/glonax*.deb

@@ -84,10 +84,6 @@ start_glonax_service() {
     echo -n "Restarting $SERVICE_NAME.."
     systemctl restart "$SERVICE_NAME"
     echo "..done"
-  else
-    echo -n "Starting $SERVICE_NAME.."
-    systemctl start "$SERVICE_NAME"
-    echo "..done"
   fi
   echo -n "Enabling $SERVICE_NAME.."
   systemctl enable "$SERVICE_NAME"
