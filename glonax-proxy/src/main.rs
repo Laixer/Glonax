@@ -102,7 +102,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     log::info!("Starting proxy services");
 
-    let (tx, _rx) = broadcast::channel(16);
+    let (tx, _rx) = broadcast::channel(8);
 
     let (motion_tx, mut motion_rx) = tokio::sync::mpsc::channel(16);
 
@@ -174,7 +174,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         loop {
             log::debug!("Waiting for FIFO connection: {}", "signal");
 
-            let mut client = glonax::transport::Client::open_write("signal")
+            let mut client = glonax::transport::Client::open_read("signal")
                 .await
                 .unwrap();
 
