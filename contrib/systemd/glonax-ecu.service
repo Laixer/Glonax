@@ -13,7 +13,7 @@ RestartSec=2
 Nice=-5
 User=glonax
 Group=glonax
-ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i can1 -o carrier
+ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i eth0 -i can1 -o carrier
 ExecStart=/usr/local/bin/glonax-ecud --daemon can1
 PrivateTmp=true
 
