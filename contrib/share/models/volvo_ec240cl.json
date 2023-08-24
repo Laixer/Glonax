@@ -9,8 +9,8 @@
   ],
   "body": {
     "chain": [
-      {"name": "articulation_arm", "order": ["frame", "boom", "arm", "attachment"]},
-      {"name": "kinematic_arm", "order": ["undercarriage", "frame", "boom", "arm", "attachment", "end"]}
+      {"name": "articulation_arm", "joints": ["frame", "boom", "arm", "attachment"]},
+      {"name": "kinematic_arm", "joints": ["undercarriage", "frame", "boom", "arm", "attachment", "end"]}
     ],
     "joint": [{
       "name": "undercarriage",
