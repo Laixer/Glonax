@@ -98,15 +98,13 @@ async fn main() -> anyhow::Result<()> {
 
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use tokio::net::{TcpListener, UdpSocket};
-    use tokio::sync::broadcast::{self, Sender};
 
     log::info!("Starting proxy services");
 
-    let (tx, _rx) = broadcast::channel(8);
-
+    let (signal_tx, signal_rx) = tokio::sync::mpsc::channel(16);
     let (motion_tx, mut motion_rx) = tokio::sync::mpsc::channel(16);
 
-    let host_sender: Sender<glonax::core::Signal> = tx.clone();
+    let host_sender = signal_tx.clone();
     let host_interval = config.host_interval;
     tokio::spawn(async move {
         use glonax::channel::SignalSource;
@@ -122,18 +120,16 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             service.collect_signals(&mut signals);
 
             for signal in signals {
-                if let Err(e) = host_sender.send(signal) {
+                if let Err(e) = host_sender.send(signal).await {
                     log::error!("Failed to send signal: {}", e);
                 }
             }
 
             tokio::time::sleep(std::time::Duration::from_millis(host_interval)).await;
         }
-
-        // log::debug!("Host service shutdown");
     });
 
-    let ecu_sender: Sender<glonax::core::Signal> = tx.clone();
+    let ecu_sender = signal_tx.clone();
     let ecu_interface = config.interface.clone();
     tokio::spawn(async move {
         use glonax::channel::SignalSource;
@@ -151,7 +147,11 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             EncoderService::new(0x6D),
         ];
 
-        while router.listen().await.is_ok() {
+        loop {
+            if let Err(e) = router.listen().await {
+                log::error!("Failed to receive from router: {}", e);
+            }
+
             let mut signals = vec![];
             for encoder in &mut encoder_list {
                 if let Some(message) = router.try_accept(encoder) {
@@ -160,33 +160,31 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
 
             for signal in signals {
-                if let Err(e) = ecu_sender.send(signal) {
+                if let Err(e) = ecu_sender.send(signal).await {
                     log::error!("Failed to send signal: {}", e);
                 }
             }
         }
-
-        log::debug!("ECU services shutdown");
     });
 
-    let fifo_sender: Sender<glonax::core::Signal> = tx.clone();
+    let fifo_sender = signal_tx.clone();
     tokio::spawn(async move {
         loop {
-            log::debug!("Waiting for FIFO connection: {}", "signal");
+            log::debug!("Waiting for FIFO connection: signal");
 
             let mut client = glonax::transport::Client::open_read("signal")
                 .await
                 .unwrap();
 
-            log::debug!("Connected to FIFO: {}", "signal");
+            log::debug!("Connected to FIFO: signal");
 
             while let Ok(signal) = client.recv_signal().await {
-                if let Err(e) = fifo_sender.send(signal) {
+                if let Err(e) = fifo_sender.send(signal).await {
                     log::error!("Failed to send signal: {}", e);
                 }
             }
 
-            log::debug!("FIFO listener shutdown");
+            log::debug!("FIFO listener shutdown: signal");
         }
     });
 
@@ -201,33 +199,35 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         let service = ActuatorService::new(0x4A);
 
         while let Some(motion) = motion_rx.recv().await {
-            log::debug!("Received motion: {}", motion);
-
             match motion {
                 glonax::core::Motion::StopAll => {
-                    network.send_vectored(&service.lock()).await.unwrap();
+                    if let Err(e) = network.send_vectored(&service.lock()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
                 glonax::core::Motion::ResumeAll => {
-                    network.send_vectored(&service.unlock()).await.unwrap();
+                    if let Err(e) = network.send_vectored(&service.unlock()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
                 glonax::core::Motion::StraightDrive(value) => {
-                    network
-                        .send_vectored(&service.drive_straight(value))
-                        .await
-                        .unwrap();
+                    let frames = &service.drive_straight(value);
+
+                    if let Err(e) = network.send_vectored(frames).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
                 glonax::core::Motion::Change(changes) => {
-                    network
-                        .send_vectored(
-                            &service.actuator_command(
-                                changes
-                                    .iter()
-                                    .map(|changeset| (changeset.actuator as u8, changeset.value))
-                                    .collect(),
-                            ),
-                        )
-                        .await
-                        .unwrap();
+                    let frames = &service.actuator_command(
+                        changes
+                            .iter()
+                            .map(|changeset| (changeset.actuator as u8, changeset.value))
+                            .collect(),
+                    );
+
+                    if let Err(e) = network.send_vectored(frames).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
             }
         }
@@ -239,8 +239,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     let instance_model = config.instance.model.clone();
     let instance_name = config.instance.name.clone();
 
-    let mut session_signal_rx = tx.subscribe();
+    let mut session_signal_rx = signal_rx;
     tokio::spawn(async move {
+        log::debug!("Starting signal broadcast");
+
         let socket = UdpSocket::bind("0.0.0.0:0").await.unwrap();
         socket.set_broadcast(true).unwrap();
 
@@ -267,7 +269,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         }
 
         let mut now = std::time::Instant::now();
-        while let Ok(signal) = session_signal_rx.recv().await {
+        while let Some(signal) = session_signal_rx.recv().await {
             let payload = signal.to_bytes();
 
             let mut frame = glonax::transport::frame::Frame::new(
@@ -302,6 +304,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
         }
+
+        log::debug!("Signal broadcast shutdown");
     });
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
