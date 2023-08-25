@@ -463,7 +463,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         .map(|(j, e)| (j, e.angle()))
                     {
                         log::debug!(
-                            " - Abs. {:10} {:5.2}rad {:5.2}°",
+                            " - Abs.Err. {:10} {:5.2}rad {:5.2}°",
                             joint.name(),
                             rot_angle,
                             glonax::core::rad_to_deg(rot_angle)
@@ -576,12 +576,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         }
                     }
 
-                    // let link_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
-                    //     * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
-                    //     * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
-                    //     * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
-                    //     * point;
-
                     // let effector_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
                     //     * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
                     //     * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
@@ -593,63 +587,5 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     }
 
-    // if let Some((p_frame_yaw, p_boom_pitch, p_arm_pitch)) = solver.solve(target) {
-    //     let error = projection_chain.vector_error(&perception_chain);
-    //     log::debug!("Error: [{:.2}, {:.2}, {:.2}]", error.x, error.y, error.z);
-
-    //     let error_chain = perception_chain.error(&projection_chain);
-
-    //     let mut done = true;
-    //     for (joint, rot_angle) in error_chain
-    //         .iter()
-    //         .filter(|(_, e)| e.axis().is_some())
-    //         .map(|(j, e)| (j, e.angle()))
-    //     {
-    //         log::debug!("{} \t=> {:?}", joint.name(), rot_angle);
-
-    //         if rot_angle.abs() > 0.01 {
-    //             done = false;
-    //         }
-    //     }
-
-    //     log::debug!("Done: {}", done);
-
-    // let mut motion_list = vec![];
-
-    // for (joint, rot_error) in &error_chain {
-    // log::debug!("{} \t=> {:?}", joint.name(), rot_error.axis_angle());
-
-    // if joint.name() == "frame" && rot_error.axis().is_some() {
-    //     // let power = frame_power.power(rot_error.angle());
-    //     // log::debug!("Frame power: {}", power);
-
-    //     let axis_rot_error_angle = rot_error.axis().unwrap().z * rot_error.angle();
-
-    //     let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
-
-    //     log::debug!("Frame power: {:?}", rot_error.axis_angle());
-    //     log::debug!("Frame power: {:?}", axis_rot_error_angle);
-    //     log::debug!("Frame power: {:?}", axis_rot_error_power);
-
-    //     motion_list.push(glonax::core::Motion::new(
-    //         glonax::core::Actuator::Slew,
-    //         axis_rot_error_power as i16,
-    //     ));
-    // }
-    // } else if joint.name() == "boom" {
-    //     let power = boom_power.power(rot_error.angle());
-    //     log::debug!("Boom power: {}", power);
-    // } else if joint.name() == "arm" {
-    //     let power = arm_power.power(rot_error.angle());
-    //     log::debug!("Arm power: {}", power);
-    // } else if joint.name() == "attachment" {
-    //     let power = attachment_power.power(rot_error.angle());
-    //     log::debug!("Attachment power: {}", power);
-    // }
-    // }
-    // } else {
-    //     println!("Target out of range");
-    // }
-
-    return Ok(());
+    Ok(())
 }
