@@ -49,12 +49,24 @@ impl Joint {
         &self.origin
     }
 
-    pub fn position(&self) -> Rotation3<f32> {
+    pub fn rotation(&self) -> Rotation3<f32> {
         self.rotation
     }
 
-    pub fn set_position(&mut self, rotation: Rotation3<f32>) {
+    pub fn set_rotation(&mut self, rotation: Rotation3<f32>) {
         self.rotation = rotation;
+    }
+
+    pub fn rotation_angle(&self) -> Option<f32> {
+        if let Some(axis) = self.rotation.axis() {
+            Some(
+                (axis.x * self.rotation.angle())
+                    + (axis.y * self.rotation.angle())
+                    + (axis.z * self.rotation.angle()),
+            )
+        } else {
+            None
+        }
     }
 }
 
@@ -106,12 +118,20 @@ impl Chain {
             .find(|joint| joint.name == name.to_string())
     }
 
-    pub fn set_joint_positions(&mut self, positions: Vec<Rotation3<f32>>) -> &mut Self {
-        for (joint, position) in self.joints.iter_mut().zip(positions) {
-            joint.set_position(position);
+    pub fn set_joint_position(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
+        if let Some(joint) = self
+            .joints
+            .iter_mut()
+            .find(|joint| joint.name == name.to_string())
+        {
+            joint.set_rotation(rotation)
         }
+    }
 
-        self
+    pub fn set_joint_positions(&mut self, rotations: Vec<Rotation3<f32>>) {
+        for (joint, rotation) in self.joints.iter_mut().zip(rotations) {
+            joint.set_rotation(rotation);
+        }
     }
 
     pub fn world_transformation(&self) -> IsometryMatrix3<f32> {
@@ -135,22 +155,22 @@ impl Chain {
         let mut error_vec = vec![];
 
         for (lhs_joint, rhs_joint) in self.joints.iter().zip(&rhs.joints) {
-            log::debug!(
-                "{} \t=> {:.3} -- {:.3} - {:?}",
-                lhs_joint.name,
-                lhs_joint.rotation.angle(),
-                rhs_joint.rotation.angle(),
-                lhs_joint
-                    .rotation
-                    .rotation_to(&rhs_joint.rotation)
-                    .axis_angle()
-            );
+            // log::debug!(
+            //     "{} \t=> {:.3} -- {:.3} - {:?}",
+            //     lhs_joint.name,
+            //     lhs_joint.rotation.angle(),
+            //     rhs_joint.rotation.angle(),
+            //     lhs_joint
+            //         .rotation
+            //         .rotation_to(&rhs_joint.rotation)
+            //         .axis_angle()
+            // );
 
-            let t = (
+            error_vec.push((
                 lhs_joint,
                 lhs_joint.rotation.rotation_to(&rhs_joint.rotation),
-            );
-            error_vec.push(t);
+            ));
+            // error_vec.push(t);
         }
 
         error_vec
