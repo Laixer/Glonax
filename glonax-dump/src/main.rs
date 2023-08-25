@@ -312,16 +312,18 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let attachment_power = MotionProfile::new(15000.0, 12000.0, 0.01, false);
 
     let mut perception_chain = glonax::robot::Chain::new();
-    perception_chain.add_joint(frame_joint.clone());
-    perception_chain.add_joint(boom_joint.clone());
-    perception_chain.add_joint(arm_joint.clone());
-    perception_chain.add_joint(attachment_joint.clone());
+    perception_chain
+        .add_joint(frame_joint.clone())
+        .add_joint(boom_joint.clone())
+        .add_joint(arm_joint.clone())
+        .add_joint(attachment_joint.clone());
 
     let mut projection_chain = glonax::robot::Chain::new();
-    projection_chain.add_joint(frame_joint.clone());
-    projection_chain.add_joint(boom_joint.clone());
-    projection_chain.add_joint(arm_joint.clone());
-    projection_chain.add_joint(attachment_joint.clone());
+    projection_chain
+        .add_joint(frame_joint.clone())
+        .add_joint(boom_joint.clone())
+        .add_joint(arm_joint.clone())
+        .add_joint(attachment_joint.clone());
 
     let solver = InverseKinematics::new(6.0, 2.97);
 
@@ -394,57 +396,44 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         _ => {}
                     }
 
-                    if perception_chain
+                    let perception_point =
+                        perception_chain.world_transformation() * na::Point3::origin();
+
+                    let frame_rot_angle = perception_chain
                         .joint_by_name("frame")
                         .unwrap()
-                        .rotation()
-                        .axis_angle()
-                        .is_some()
-                        && perception_chain
-                            .joint_by_name("boom")
-                            .unwrap()
-                            .rotation()
-                            .axis_angle()
-                            .is_some()
-                        && perception_chain
-                            .joint_by_name("arm")
-                            .unwrap()
-                            .rotation()
-                            .axis_angle()
-                            .is_some()
-                    {
-                        let perception_point =
-                            perception_chain.world_transformation() * na::Point3::origin();
+                        .rotation_angle()
+                        .unwrap_or(0.0);
+                    let boom_rot_angle = perception_chain
+                        .joint_by_name("boom")
+                        .unwrap()
+                        .rotation_angle()
+                        .unwrap_or(0.0);
+                    let arm_rot_angle = perception_chain
+                        .joint_by_name("arm")
+                        .unwrap()
+                        .rotation_angle()
+                        .unwrap_or(0.0);
+                    let attachment_rot_angle = perception_chain
+                        .joint_by_name("attachment")
+                        .unwrap()
+                        .rotation_angle()
+                        .unwrap_or(0.0);
 
-                        let frame_rot_angle = perception_chain
-                            .joint_by_name("frame")
-                            .unwrap()
-                            .rotation_angle()
-                            .unwrap_or(0.0);
-                        let boom_rot_angle = perception_chain
-                            .joint_by_name("boom")
-                            .unwrap()
-                            .rotation_angle()
-                            .unwrap_or(0.0);
-                        let arm_rot_angle = perception_chain
-                            .joint_by_name("arm")
-                            .unwrap()
-                            .rotation_angle()
-                            .unwrap_or(0.0);
-
-                        log::info!(
-                            "Frame {:5.2}rad {:5.2}° Boom {:5.2}rad {:5.2}° Arm {:5.2}rad {:5.2}°\tPerception point: [{:.2}, {:.2}, {:.2}]",
+                    log::info!(
+                            "Frame {:5.2}rad {:5.2}° Boom {:5.2}rad {:5.2}° Arm {:5.2}rad {:5.2}° Attachment {:5.2}rad {:5.2}°\tPerception point: [{:.2}, {:.2}, {:.2}]",
                             frame_rot_angle,
                             glonax::core::rad_to_deg(frame_rot_angle),
                             boom_rot_angle,
                             glonax::core::rad_to_deg(boom_rot_angle),
                             arm_rot_angle,
                             glonax::core::rad_to_deg(arm_rot_angle),
+                            attachment_rot_angle,
+                            glonax::core::rad_to_deg(attachment_rot_angle),
                             perception_point.x,
                             perception_point.y,
                             perception_point.z
                         );
-                    }
 
                     let error = projection_chain.vector_error(&perception_chain);
                     log::debug!(

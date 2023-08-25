@@ -8,6 +8,7 @@ use clap::Parser;
 
 mod config;
 
+const HOST: &str = "https://cymbion-oybqn.ondigitalocean.app";
 const VERSION: &str = "102";
 
 #[derive(Parser)]
@@ -162,7 +163,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     tokio::spawn(async move {
         log::debug!("Starting host service");
 
-        let url = reqwest::Url::parse("https://cymbion-oybqn.ondigitalocean.app").unwrap();
+        let url = reqwest::Url::parse(HOST).unwrap();
 
         let client = reqwest::Client::builder()
             .user_agent("glonax-agent/0.1.0")

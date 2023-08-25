@@ -155,22 +155,10 @@ impl Chain {
         let mut error_vec = vec![];
 
         for (lhs_joint, rhs_joint) in self.joints.iter().zip(&rhs.joints) {
-            // log::debug!(
-            //     "{} \t=> {:.3} -- {:.3} - {:?}",
-            //     lhs_joint.name,
-            //     lhs_joint.rotation.angle(),
-            //     rhs_joint.rotation.angle(),
-            //     lhs_joint
-            //         .rotation
-            //         .rotation_to(&rhs_joint.rotation)
-            //         .axis_angle()
-            // );
-
             error_vec.push((
                 lhs_joint,
                 lhs_joint.rotation.rotation_to(&rhs_joint.rotation),
             ));
-            // error_vec.push(t);
         }
 
         error_vec

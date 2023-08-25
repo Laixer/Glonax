@@ -92,7 +92,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
 
     log::info!("Starting EMS service");
 
-    let network = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR).unwrap();
+    let network = J1939Network::new(&config.interface, DEVICE_NET_LOCAL_ADDR)?;
     let mut router = Router::new(network);
 
     let mut engine_management_service = EngineManagementSystem::new(0x0);
