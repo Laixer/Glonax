@@ -222,11 +222,7 @@ impl std::fmt::Display for Chain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let point = self.world_transformation() * Point3::origin();
 
-        write!(
-            f,
-            "Endpoint [{:.2}, {:.2}, {:.2}]",
-            point.x, point.y, point.z
-        )
+        write!(f, "[{:.2}, {:.2}, {:.2}]", point.x, point.y, point.z)
     }
 }
 

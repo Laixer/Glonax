@@ -346,16 +346,18 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     // let perception_point = perception_chain.world_transformation() * na::Point3::origin();
     // log::debug!("Perception point:   {}", perception_point);
 
-    ///////////////////////////////////
-    log::debug!("IK");
+    let targets = [na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595)];
 
-    let target = na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595);
+    let target = targets[0];
     log::debug!(
-        "Target point:       [{:.3}, {:.3}, {:.3}]",
+        "Target point:       [{:.2}, {:.2}, {:.2}]",
         target.x,
         target.y,
         target.z
     );
+
+    ///////////////////////////////////
+    log::debug!("IK");
 
     let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.xy().coords);
 
@@ -483,13 +485,17 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         ),
     );
 
+    let epsilon = 0.0001;
     let projection_point = projection_chain.world_transformation() * na::Point3::origin();
-    log::debug!(
-        "Projection point:   [{:.3}, {:.3}, {:.3}]",
-        projection_point.x,
-        projection_point.y,
-        projection_point.z
-    );
+    if target.coords.norm() - projection_point.coords.norm() > epsilon {
+        log::error!(
+            "Projection point:   [{:.2}, {:.2}, {:.2}]",
+            projection_point.x,
+            projection_point.y,
+            projection_point.z
+        );
+        return Err(anyhow::anyhow!("IK error"));
+    }
 
     log::info!("Press enter to continue");
     std::io::stdin().read_line(&mut String::new())?;
