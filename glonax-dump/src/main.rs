@@ -251,11 +251,15 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         .add_joint(Joint::new("undercarriage", JointType::Fixed))
         .add_joint(Joint::new("frame", JointType::Continuous).origin_translation(0.0, 0.0, 1.295))
         .add_joint(
-            Joint::new("boom", JointType::Revolute).origin_translation(0.16, 0.0, 0.595), // .origin_rotation(0.0, -1.0472, 0.0),
+            Joint::new("boom", JointType::Revolute)
+                .origin_translation(0.16, 0.0, 0.595)
+                .origin_rotation(0.0, glonax::core::deg_to_rad(-59.35), 0.0),
         )
         .add_joint(Joint::new("arm", JointType::Revolute).origin_translation(6.0, 0.0, 0.0))
         .add_joint(
-            Joint::new("attachment", JointType::Revolute).origin_translation(2.97, 0.0, 0.0), // .origin_rotation(0.0, -0.962, 0.0),
+            Joint::new("attachment", JointType::Revolute)
+                .origin_translation(2.97, 0.0, 0.0)
+                .origin_rotation(0.0, glonax::core::deg_to_rad(-55.0), 0.0),
         )
         .add_joint(Joint::new("effector", JointType::Fixed).origin_translation(1.5, 0.0, 0.0))
         .build();
