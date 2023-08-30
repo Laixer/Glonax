@@ -197,12 +197,11 @@ impl Chain {
         pose
     }
 
-    // TODO: na::distance(&self.world_transformation(), &rhs.world_transformation())
-    pub fn vector_error(&self, rhs: &Self) -> Point3<f32> {
+    pub fn distance(&self, rhs: &Self) -> f32 {
         let lhs_point = self.world_transformation() * Point3::origin();
         let rhs_point = rhs.world_transformation() * Point3::origin();
 
-        (lhs_point - rhs_point).abs().into()
+        nalgebra::distance(&lhs_point, &rhs_point)
     }
 
     pub fn error(&self, rhs: &Self) -> Vec<(&Joint, Rotation3<f32>)> {
@@ -216,6 +215,41 @@ impl Chain {
         }
 
         error_vec
+    }
+}
+
+impl std::fmt::Display for Chain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let point = self.world_transformation() * Point3::origin();
+
+        write!(
+            f,
+            "Endpoint [{:.2}, {:.2}, {:.2}]",
+            point.x, point.y, point.z
+        )
+    }
+}
+
+impl std::fmt::Debug for Chain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let point = self.world_transformation() * Point3::origin();
+
+        let mut s = String::new();
+
+        for (joint, rotation) in &self.joint_state {
+            s.push_str(&format!(
+                "{}={:.2}rad/{:5.2}° ",
+                joint,
+                rotation.unwrap().angle(),
+                rotation.unwrap().angle().to_degrees()
+            ));
+        }
+
+        write!(
+            f,
+            "{s} Endpoint [{:.2}, {:.2}, {:.2}]",
+            point.x, point.y, point.z
+        )
     }
 }
 

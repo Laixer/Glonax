@@ -549,52 +549,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         continue;
                     }
 
-                    let perception_point =
-                        perception_chain.world_transformation() * na::Point3::origin();
+                    log::debug!("Perception chain: {:?}", perception_chain);
 
-                    let frame_rot_angle = perception_chain
-                        .joint_by_name("frame")
-                        .unwrap()
-                        .rotation_angle()
-                        .unwrap_or(0.0);
-                    let boom_rot_angle = perception_chain
-                        .joint_by_name("boom")
-                        .unwrap()
-                        .rotation_angle()
-                        .unwrap_or(0.0);
-                    let arm_rot_angle = perception_chain
-                        .joint_by_name("arm")
-                        .unwrap()
-                        .rotation_angle()
-                        .unwrap_or(0.0);
-                    let attachment_rot_angle = perception_chain
-                        .joint_by_name("attachment")
-                        .unwrap()
-                        .rotation_angle()
-                        .unwrap_or(0.0);
-
-                    log::info!(
-                            "Frame {:5.2}rad {:5.2}° Boom {:5.2}rad {:5.2}° Arm {:5.2}rad {:5.2}° Attachment {:5.2}rad {:5.2}°\tPerception point: [{:.2}, {:.2}, {:.2}]",
-                            frame_rot_angle,
-                            glonax::core::rad_to_deg(frame_rot_angle),
-                            boom_rot_angle,
-                            glonax::core::rad_to_deg(boom_rot_angle),
-                            arm_rot_angle,
-                            glonax::core::rad_to_deg(arm_rot_angle),
-                            attachment_rot_angle,
-                            glonax::core::rad_to_deg(attachment_rot_angle),
-                            perception_point.x,
-                            perception_point.y,
-                            perception_point.z
-                        );
-
-                    let error = projection_chain.vector_error(&perception_chain);
-                    log::debug!(
-                        "Euler error  [{:.2}, {:.2}, {:.2}]",
-                        error.x,
-                        error.y,
-                        error.z
-                    );
+                    let distance = projection_chain.distance(&perception_chain);
+                    log::debug!("Target distance:        {:.2}m", distance);
 
                     let error_chain = perception_chain.error(&projection_chain);
 
