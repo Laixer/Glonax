@@ -6,7 +6,7 @@
 
 use clap::Parser;
 
-use na::Rotation3;
+use na::{Rotation2, Rotation3};
 use nalgebra as na;
 
 mod config;
@@ -23,12 +23,46 @@ impl InverseKinematics {
     }
 
     fn solve(&self, target: nalgebra::Point3<f32>) -> Option<(f32, f32, f32)> {
-        let l4 = (target.x.powi(2) + target.z.powi(2)).sqrt();
-        let l5 = (l4.powi(2) + target.y.powi(2)).sqrt();
+        let local_z = target.z - 0.595 - 1.295;
+        log::debug!("Local Z:            {:.2}", local_z);
 
-        let theta_1 = target.z.atan2(target.x);
+        let theta_1 = target.y.atan2(target.x);
 
-        let theta_2 = target.y.atan2(l4)
+        let offset = 0.16;
+        let offset_x = offset * theta_1.cos();
+        // let offset_x = 0.0;
+        // let offset_y = 0.0;
+        let offset_y = offset * theta_1.sin();
+
+        log::debug!("Vector offset:      [{:.2}, {:.2}]", offset_x, offset_y);
+
+        let local_x = target.x - offset_x;
+        let local_y = target.y - offset_y;
+        log::debug!("Local X:            {:.2}", local_x);
+        log::debug!("Local Y:            {:.2}", local_y);
+
+        // L4 is the leg between the origin and the target projected on the XY plane (ground).
+        let l4 = (local_x.powi(2) + local_y.powi(2)).sqrt();
+        log::debug!("Vector length L4:   {:.2}", l4);
+        // L5 is the leg between the origin and the target (vector).
+        let l5 = (l4.powi(2) + local_z.powi(2)).sqrt();
+        log::debug!("Vector length L5:   {:.2}", l5);
+
+        let theta_2p1 = local_z.atan2(l4);
+        log::debug!(
+            "theta_2p1:         {:5.2}rad {:5.2}° ",
+            theta_2p1,
+            glonax::core::rad_to_deg(theta_2p1)
+        );
+        let theta_2p2 =
+            ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
+        log::debug!(
+            "theta_2p2:         {:5.2}rad {:5.2}° ",
+            theta_2p2,
+            glonax::core::rad_to_deg(theta_2p2)
+        );
+
+        let theta_2 = local_z.atan2(l4)
             + ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
 
         let theta_3 = std::f32::consts::PI
@@ -270,17 +304,17 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let boom_joint = robot.joint_by_name("boom").unwrap();
     let arm_joint = robot.joint_by_name("arm").unwrap();
     let attachment_joint = robot.joint_by_name("attachment").unwrap();
-    let effector_joint = robot.joint_by_name("effector").unwrap();
+    // let effector_joint = robot.joint_by_name("effector").unwrap();
 
     let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
     let boom_encoder = robot.device_by_name("boom_encoder").unwrap();
     let arm_encoder = robot.device_by_name("arm_encoder").unwrap();
     let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap();
 
-    let frame_power = MotionProfile::new(7000.0, 12000.0, 0.01, false);
-    let boom_power = MotionProfile::new(15000.0, 12000.0, 0.01, false);
-    let arm_power = MotionProfile::new(15000.0, 12000.0, 0.01, true);
-    let attachment_power = MotionProfile::new(15000.0, 12000.0, 0.01, false);
+    let frame_power = MotionProfile::new(7_000.0, 12_000.0, 0.01, false);
+    let boom_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, false);
+    let arm_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, true);
+    let attachment_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, false);
 
     let mut perception_chain = glonax::robot::Chain::new();
     perception_chain
@@ -296,29 +330,162 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         .add_joint(arm_joint.clone())
         .add_joint(attachment_joint.clone());
 
-    let solver = InverseKinematics::new(6.0, 2.97);
+    // perception_chain.set_joint_position(
+    //     "frame",
+    //     Rotation3::from_yaw(glonax::core::deg_to_rad(25.49)),
+    // );
+    // perception_chain.set_joint_position(
+    //     "boom",
+    //     Rotation3::from_pitch(glonax::core::deg_to_rad(49.56)),
+    // );
+    // perception_chain.set_joint_position(
+    //     "arm",
+    //     Rotation3::from_pitch(glonax::core::deg_to_rad(113.25)),
+    // );
 
-    let target = na::Point3::new(5.21, 0.0, 0.0);
+    // let perception_point = perception_chain.world_transformation() * na::Point3::origin();
+    // log::debug!("Perception point:   {}", perception_point);
 
-    let (p_frame_yaw, p_boom_pitch, p_arm_pitch) = solver.solve(target).unwrap();
+    ///////////////////////////////////
+    log::debug!("IK");
+
+    let target = na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595);
+    log::debug!(
+        "Target point:       [{:.3}, {:.3}, {:.3}]",
+        target.x,
+        target.y,
+        target.z
+    );
+
+    let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.xy().coords);
 
     log::debug!(
-        "Projection angles: {:.2} {:.2} {:.2}",
+        "Angle θ1           {:5.2}rad {:5.2}°",
+        rot.angle(),
+        glonax::core::rad_to_deg(rot.angle() as f32)
+    );
+
+    let offset = rot * na::Point2::new(0.16, 0.0);
+    log::debug!("Vector point:       [{:.3}, {:.3}]", offset.x, offset.y);
+    let lv = na::distance(&na::Point2::new(0.0, 0.0), &offset);
+    log::debug!("Vector L:           {:.2}", lv);
+
+    let l1 = na::distance(&na::Point2::new(0.0, 0.0), &target.xy());
+    log::debug!("L1 distance:        {:.2}", l1);
+    let l4 = na::distance(&offset, &target.xy());
+    log::debug!("L4 distance:        {:.2}", l4);
+
+    let offset = na::Point3::new(offset.x, offset.y, 0.595 + 1.295);
+    let l5 = na::distance(&offset, &target);
+    log::debug!("L5 distance:        {:.2}", l5);
+
+    // let q = target - offset;
+    // log::debug!("Vector point:       [{:.3}, {:.3}, {:.3}]", q.x, q.y, q.z);
+
+    // let rot = na::Rotation3::rotation_between(&na::Vector3::new(1.0,0.0, 0.0), &na::Vector3::new(5.226, 2.491, 0.010) ).unwrap();
+    // log::debug!(
+    //     "Angle θ2p1          {:?} {:?} {:?}",
+    //     rot.axis(),
+    //     rot.angle(),
+    //     glonax::core::rad_to_deg(rot.angle() as f32)
+    // );
+
+    // let q = target - offset;
+
+    // log::debug!("Vector point:       [{:.3}, {:.3}, {:.3}]", q.x, q.y, q.z);
+
+    // let rot = na::Rotation2::rotation_between(&na::Vector2::new(1.0,0.01), &na::Vector2::new(5.226,0.2) );
+    // log::debug!(
+    //     "Angle θ2p1          {:?} {:?}",
+    //     rot.angle(),
+    //     glonax::core::rad_to_deg(rot.angle() as f32)
+    // );
+
+    // let l5 = na::distance(&na::Point2::new(0.16, 0.0), &target.xz());
+    // log::debug!("L5 distance: {:.2}", l5);
+
+    // let theta_2p2 = ((6.0_f32.powi(2) + (l5 as f32).powi(2) - 2.97_f32.powi(2))
+    //     / (2.0 * 6.0_f32 * (l5 as f32)))
+    //     .acos();
+
+    // log::debug!(
+    //     "Angle (θp2): {:5.2}rad {:5.2}°",
+    //     theta_2p2,
+    //     glonax::core::rad_to_deg(theta_2p2)
+    // );
+
+    // let theta_3 = std::f32::consts::PI
+    //     - ((6.0_f32.powi(2) + 2.97_f32.powi(2) - (l5 as f32).powi(2)) / (2.0 * 6.0_f32 * 2.97_f32))
+    //         .acos();
+
+    // log::debug!(
+    //     "Angle (θ3): {:5.2}rad {:5.2}°",
+    //     theta_3,
+    //     glonax::core::rad_to_deg(theta_3)
+    // );
+
+    // return Ok(());
+
+    ///////////////////////////////////
+    log::debug!("IK2");
+
+    let solver = InverseKinematics::new(6.0, 2.97);
+
+    log::debug!(
+        "Target point:       [{:.3}, {:.3}, {:.3}]",
+        target.x,
+        target.y,
+        target.z
+    );
+
+    let (p_frame_yaw, p_boom_pitch, p_arm_pitch) = solver.solve(target).unwrap();
+    log::debug!(
+        "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
         p_frame_yaw,
+        glonax::core::rad_to_deg(p_frame_yaw),
         p_boom_pitch,
-        p_arm_pitch
+        glonax::core::rad_to_deg(p_boom_pitch),
+        p_arm_pitch,
+        glonax::core::rad_to_deg(p_arm_pitch)
     );
 
     projection_chain.set_joint_positions(vec![
         Rotation3::from_yaw(p_frame_yaw),
-        Rotation3::from_pitch(-p_boom_pitch),
+        Rotation3::from_pitch((-p_boom_pitch) + glonax::core::deg_to_rad(59.35)),
         Rotation3::from_pitch(p_arm_pitch),
     ]);
 
-    let projection_point = projection_chain.world_transformation() * na::Point3::origin();
-
     log::debug!(
-        "Projection point: [{:.2}, {:.2}, {:.2}]",
+        "Projection angles: {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
+        projection_chain
+            .joint_rotation_angle("frame")
+            .unwrap_or_default(),
+        glonax::core::rad_to_deg(
+            projection_chain
+                .joint_rotation_angle("frame")
+                .unwrap_or_default()
+        ),
+        projection_chain
+            .joint_rotation_angle("boom")
+            .unwrap_or_default(),
+        glonax::core::rad_to_deg(
+            projection_chain
+                .joint_rotation_angle("boom")
+                .unwrap_or_default()
+        ),
+        projection_chain
+            .joint_rotation_angle("arm")
+            .unwrap_or_default(),
+        glonax::core::rad_to_deg(
+            projection_chain
+                .joint_rotation_angle("arm")
+                .unwrap_or_default()
+        ),
+    );
+
+    let projection_point = projection_chain.world_transformation() * na::Point3::origin();
+    log::debug!(
+        "Projection point:   [{:.3}, {:.3}, {:.3}]",
         projection_point.x,
         projection_point.y,
         projection_point.z

@@ -100,14 +100,23 @@ impl Device {
 
 pub struct Chain {
     joints: Vec<Joint>,
+    joint_state: Vec<(String, Option<Rotation3<f32>>)>,
 }
 
 impl Chain {
     pub fn new() -> Self {
-        Self { joints: vec![] }
+        Self {
+            joints: vec![],
+            joint_state: vec![],
+        }
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.joint_state.iter().all(|(_, joint)| joint.is_some())
     }
 
     pub fn add_joint(&mut self, joint: Joint) -> &mut Self {
+        self.joint_state.push((joint.name.clone(), None));
         self.joints.push(joint);
         self
     }
@@ -118,19 +127,63 @@ impl Chain {
             .find(|joint| joint.name == name.to_string())
     }
 
+    pub fn joint_rotation_angle(&mut self, name: impl ToString) -> Option<f32> {
+        if let Some(joint) = self
+            .joints
+            .iter()
+            .find(|joint| joint.name == name.to_string())
+        {
+            joint.rotation_angle()
+        } else {
+            None
+        }
+    }
+
+    // TODO: Return error instead of Option
+    pub fn joint_position(&mut self, name: impl ToString) -> Option<Rotation3<f32>> {
+        if let Some(joint) = self
+            .joints
+            .iter()
+            .find(|joint| joint.name == name.to_string())
+        {
+            Some(joint.rotation)
+        } else {
+            None
+        }
+    }
+
+    // TODO: Return error instead of Option
     pub fn set_joint_position(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
         if let Some(joint) = self
             .joints
             .iter_mut()
             .find(|joint| joint.name == name.to_string())
         {
-            joint.set_rotation(rotation)
+            joint.set_rotation(rotation);
+            self.joint_state
+                .iter_mut()
+                .find(|(joint_name, _)| joint_name == &name.to_string())
+                .unwrap()
+                .1 = Some(rotation);
         }
+    }
+
+    pub fn joint_positions(&mut self) -> Vec<Rotation3<f32>> {
+        let mut rotations = vec![];
+        for joint in &self.joints {
+            rotations.push(joint.rotation);
+        }
+        rotations
     }
 
     pub fn set_joint_positions(&mut self, rotations: Vec<Rotation3<f32>>) {
         for (joint, rotation) in self.joints.iter_mut().zip(rotations) {
             joint.set_rotation(rotation);
+            self.joint_state
+                .iter_mut()
+                .find(|(joint_name, _)| joint_name == &joint.name)
+                .unwrap()
+                .1 = Some(rotation);
         }
     }
 
@@ -144,6 +197,7 @@ impl Chain {
         pose
     }
 
+    // TODO: na::distance(&self.world_transformation(), &rhs.world_transformation())
     pub fn vector_error(&self, rhs: &Self) -> Point3<f32> {
         let lhs_point = self.world_transformation() * Point3::origin();
         let rhs_point = rhs.world_transformation() * Point3::origin();
