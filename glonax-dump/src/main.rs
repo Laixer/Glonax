@@ -596,9 +596,13 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                 let axis_rot_error_angle = (axis.x * rot_error.angle())
                                     + (axis.y * rot_error.angle())
                                     + (axis.z * rot_error.angle());
-                                let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
 
-                                if rot_error.angle() > 0.01 {
+                                let axis_rot_error_angle_optimized =
+                                    glonax::core::geometry::shortest_rotation(axis_rot_error_angle);
+                                let axis_rot_error_power =
+                                    frame_power.power(axis_rot_error_angle_optimized);
+
+                                if rot_error.angle() > angular_tolerance {
                                     log::debug!(
                                         " * Frame error angle        {:5.2}rad {:5.2}° Power: {}",
                                         axis_rot_error_angle,
@@ -614,7 +618,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     log::debug!(" * Frame error angle        -");
                                     motion_list.push(glonax::core::Motion::new(
                                         glonax::core::Actuator::Slew,
-                                        0_i16,
+                                        glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
                             } else if joint.name() == "boom" && rot_error.axis().is_some() {
@@ -624,7 +628,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     + (axis.z * rot_error.angle());
                                 let axis_rot_error_power = boom_power.power(axis_rot_error_angle);
 
-                                if rot_error.angle() > 0.01 {
+                                if rot_error.angle() > angular_tolerance {
                                     log::debug!(
                                         " * Boom error angle         {:5.2}rad {:5.2}° Power: {}",
                                         axis_rot_error_angle,
@@ -640,7 +644,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     log::debug!(" * Boom error angle         -");
                                     motion_list.push(glonax::core::Motion::new(
                                         glonax::core::Actuator::Boom,
-                                        0_i16,
+                                        glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
                             } else if joint.name() == "arm" && rot_error.axis().is_some() {
@@ -650,7 +654,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     + (axis.z * rot_error.angle());
                                 let axis_rot_error_power = arm_power.power(axis_rot_error_angle);
 
-                                if rot_error.angle() > 0.01 {
+                                if rot_error.angle() > angular_tolerance {
                                     log::debug!(
                                         " * Arm error angle          {:5.2}rad {:5.2}° Power: {}",
                                         axis_rot_error_angle,
@@ -666,7 +670,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     log::debug!(" * Arm error angle          -");
                                     motion_list.push(glonax::core::Motion::new(
                                         glonax::core::Actuator::Arm,
-                                        0_i16,
+                                        glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
                             } else if joint.name() == "attachment" && rot_error.axis().is_some() {
@@ -677,7 +681,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                 let axis_rot_error_power =
                                     attachment_power.power(axis_rot_error_angle);
 
-                                if rot_error.angle() > 0.01 {
+                                if rot_error.angle() > angular_tolerance {
                                     log::debug!(
                                         " * Attachment error angle   {:5.2}rad {:5.2}° Power: {}",
                                         axis_rot_error_angle,
@@ -693,7 +697,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     log::debug!(" * Attachment error angle   -");
                                     motion_list.push(glonax::core::Motion::new(
                                         glonax::core::Actuator::Attachment,
-                                        0_i16,
+                                        glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
                             }
