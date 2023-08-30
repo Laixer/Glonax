@@ -563,14 +563,14 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         let error_chain = perception_chain.error(&projection_chain);
 
                         let mut done = true;
-                        for (joint, rot_angle) in error_chain
+                        for (joint_name, rot_angle) in error_chain
                             .iter()
                             .filter(|(_, e)| e.axis().is_some())
                             .map(|(j, e)| (j, e.angle()))
                         {
                             log::debug!(
                                 " - Abs.Err. {:10} {:5.2}rad {:5.2}°",
-                                joint.name(),
+                                joint_name,
                                 rot_angle,
                                 glonax::core::rad_to_deg(rot_angle)
                             );
@@ -590,8 +590,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                         let mut motion_list = vec![];
 
-                        for (joint, rot_error) in &error_chain {
-                            if joint.name() == "frame" && rot_error.axis().is_some() {
+                        for (joint_name, rot_error) in &error_chain {
+                            if joint_name == &&"frame" && rot_error.axis().is_some() {
                                 let axis = rot_error.axis().unwrap();
                                 let axis_rot_error_angle = (axis.x * rot_error.angle())
                                     + (axis.y * rot_error.angle())
@@ -621,7 +621,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                         glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
-                            } else if joint.name() == "boom" && rot_error.axis().is_some() {
+                            } else if joint_name == &&"boom" && rot_error.axis().is_some() {
                                 let axis = rot_error.axis().unwrap();
                                 let axis_rot_error_angle = (axis.x * rot_error.angle())
                                     + (axis.y * rot_error.angle())
@@ -647,7 +647,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                         glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
-                            } else if joint.name() == "arm" && rot_error.axis().is_some() {
+                            } else if joint_name == &&"arm" && rot_error.axis().is_some() {
                                 let axis = rot_error.axis().unwrap();
                                 let axis_rot_error_angle = (axis.x * rot_error.angle())
                                     + (axis.y * rot_error.angle())
@@ -673,7 +673,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                         glonax::core::Motion::POWER_NEUTRAL,
                                     ));
                                 }
-                            } else if joint.name() == "attachment" && rot_error.axis().is_some() {
+                            } else if joint_name == &&"attachment" && rot_error.axis().is_some() {
                                 let axis = rot_error.axis().unwrap();
                                 let axis_rot_error_angle = (axis.x * rot_error.angle())
                                     + (axis.y * rot_error.angle())

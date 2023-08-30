@@ -127,77 +127,35 @@ impl Chain {
         self
     }
 
-    pub fn joint_by_name(&mut self, name: impl ToString) -> Option<&mut Joint> {
-        self.joints
-            .iter_mut()
-            .find(|joint| joint.name == name.to_string())
-    }
-
-    pub fn joint_rotation_angle(&mut self, name: impl ToString) -> Option<f32> {
-        if let Some(joint) = self
-            .joints
-            .iter()
-            .find(|joint| joint.name == name.to_string())
-        {
-            joint.rotation_angle()
-        } else {
-            None
-        }
-    }
-
-    // TODO: Return error instead of Option
-    pub fn joint_position(&mut self, name: impl ToString) -> Option<Rotation3<f32>> {
-        if let Some(joint) = self
-            .joints
-            .iter()
-            .find(|joint| joint.name == name.to_string())
-        {
-            Some(joint.rotation)
-        } else {
-            None
-        }
-    }
-
-    // TODO: Return error instead of Option
     pub fn set_joint_position(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
-        if let Some(joint) = self
-            .joints
+        self.joint_state
             .iter_mut()
-            .find(|joint| joint.name == name.to_string())
-        {
-            joint.set_rotation(rotation);
-            self.joint_state
-                .iter_mut()
-                .find(|(joint_name, _)| joint_name == &name.to_string())
-                .unwrap()
-                .1 = Some(rotation);
-        }
-    }
-
-    pub fn joint_positions(&mut self) -> Vec<Rotation3<f32>> {
-        let mut rotations = vec![];
-        for joint in &self.joints {
-            rotations.push(joint.rotation);
-        }
-        rotations
+            .find(|(joint_name, _)| joint_name == &name.to_string())
+            .unwrap()
+            .1 = Some(rotation);
     }
 
     pub fn set_joint_positions(&mut self, rotations: Vec<Rotation3<f32>>) {
-        for (joint, rotation) in self.joints.iter_mut().zip(rotations) {
-            joint.set_rotation(rotation);
-            self.joint_state
-                .iter_mut()
-                .find(|(joint_name, _)| joint_name == &joint.name)
-                .unwrap()
-                .1 = Some(rotation);
+        for ((_, state), rotation) in self.joint_state.iter_mut().zip(rotations) {
+            *state = Some(rotation);
         }
     }
 
     pub fn world_transformation(&self) -> IsometryMatrix3<f32> {
         let mut pose = IsometryMatrix3::identity();
 
-        for joint in &self.joints {
-            pose = pose * joint.origin() * joint.rotation;
+        for (joint_name, rotation) in &self.joint_state {
+            let joint = self
+                .joints
+                .iter()
+                .find(|joint| joint.name == *joint_name)
+                .unwrap();
+
+            if rotation.is_some() {
+                pose = pose * joint.origin() * rotation.unwrap();
+            } else {
+                pose = pose * joint.origin();
+            }
         }
 
         pose
@@ -210,13 +168,18 @@ impl Chain {
         nalgebra::distance(&lhs_point, &rhs_point)
     }
 
-    pub fn error(&self, rhs: &Self) -> Vec<(&Joint, Rotation3<f32>)> {
+    pub fn error(&self, rhs: &Self) -> Vec<(&String, Rotation3<f32>)> {
         let mut error_vec = vec![];
 
-        for (lhs_joint, rhs_joint) in self.joints.iter().zip(&rhs.joints) {
+        for ((lhs_joint_name, lhs_rotation), (_, rhs_rotation)) in self
+            .joint_state
+            .iter()
+            .zip(&rhs.joint_state)
+            .filter(|(lhs, rhs)| lhs.0 == rhs.0 && lhs.1.is_some() && rhs.1.is_some())
+        {
             error_vec.push((
-                lhs_joint,
-                lhs_joint.rotation.rotation_to(&rhs_joint.rotation),
+                lhs_joint_name,
+                lhs_rotation.unwrap().rotation_to(&rhs_rotation.unwrap()),
             ));
         }
 
