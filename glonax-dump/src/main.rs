@@ -355,16 +355,26 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 if let glonax::core::Metric::EncoderAbsAngle((node, value)) = signal.metric {
                     match node {
                         node if frame_encoder.id() == node => {
-                            perception_chain.set_joint_position("frame", Rotation3::from_yaw(value))
+                            perception_chain
+                                .set_joint_position("frame", Rotation3::from_yaw(value));
                         }
-                        node if boom_encoder.id() == node => perception_chain
-                            .set_joint_position("boom", Rotation3::from_pitch(value)),
+                        node if boom_encoder.id() == node => {
+                            perception_chain
+                                .set_joint_position("boom", Rotation3::from_pitch(value));
+                        }
                         node if arm_encoder.id() == node => {
-                            perception_chain.set_joint_position("arm", Rotation3::from_pitch(value))
+                            perception_chain
+                                .set_joint_position("arm", Rotation3::from_pitch(value));
                         }
-                        node if attachment_encoder.id() == node => perception_chain
-                            .set_joint_position("attachment", Rotation3::from_pitch(value)),
+                        node if attachment_encoder.id() == node => {
+                            perception_chain
+                                .set_joint_position("attachment", Rotation3::from_pitch(value));
+                        }
                         _ => {}
+                    }
+
+                    if !perception_chain.is_ready() {
+                        continue;
                     }
 
                     let perception_point =
