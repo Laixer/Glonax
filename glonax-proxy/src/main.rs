@@ -308,6 +308,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Signal broadcast shutdown");
     });
 
+    motion_tx.send(glonax::core::Motion::StopAll).await?;
+    motion_tx.send(glonax::core::Motion::ResumeAll).await?;
+
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
 
     let listener = TcpListener::bind(config.address.clone()).await?;
