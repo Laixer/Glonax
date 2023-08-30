@@ -44,6 +44,11 @@ impl Joint {
         self
     }
 
+    pub fn set_bounds(mut self, lower: f32, upper: f32) -> Self {
+        self.bounds = (lower, upper);
+        self
+    }
+
     #[inline]
     pub fn name(&self) -> &str {
         &self.name
