@@ -100,15 +100,15 @@ impl Device {
     }
 }
 
-pub struct Chain {
-    joints: Vec<Joint>,
+pub struct Chain<'a> {
+    robot: &'a Robot,
     joint_state: Vec<(String, Option<Rotation3<f32>>)>,
 }
 
-impl Chain {
-    pub fn new() -> Self {
+impl<'a> Chain<'a> {
+    pub fn new(robot: &'a Robot) -> Self {
         Self {
-            joints: vec![],
+            robot,
             joint_state: vec![],
         }
     }
@@ -123,9 +123,13 @@ impl Chain {
         }
     }
 
+    pub fn add_link(&mut self, link: impl ToString) -> &mut Self {
+        self.joint_state.push((link.to_string(), None));
+        self
+    }
+
     pub fn add_joint(&mut self, joint: Joint) -> &mut Self {
         self.joint_state.push((joint.name.clone(), None));
-        self.joints.push(joint);
         self
     }
 
@@ -147,11 +151,7 @@ impl Chain {
         let mut pose = IsometryMatrix3::identity();
 
         for (joint_name, rotation) in &self.joint_state {
-            let joint = self
-                .joints
-                .iter()
-                .find(|joint| joint.name == *joint_name)
-                .unwrap();
+            let joint = self.robot.joint_by_name(joint_name).unwrap();
 
             if rotation.is_some() {
                 pose = pose * joint.origin() * rotation.unwrap();
@@ -189,7 +189,7 @@ impl Chain {
     }
 }
 
-impl std::fmt::Display for Chain {
+impl std::fmt::Display for Chain<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let point = self.world_transformation() * Point3::origin();
 
@@ -197,7 +197,7 @@ impl std::fmt::Display for Chain {
     }
 }
 
-impl std::fmt::Debug for Chain {
+impl std::fmt::Debug for Chain<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let point = self.world_transformation() * Point3::origin();
 

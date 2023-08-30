@@ -309,10 +309,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     log::debug!("Configured: {}", robot);
 
-    let frame_joint = robot.joint_by_name("frame").unwrap();
-    let boom_joint = robot.joint_by_name("boom").unwrap();
-    let arm_joint = robot.joint_by_name("arm").unwrap();
-    let attachment_joint = robot.joint_by_name("attachment").unwrap();
+    // let frame_joint = robot.joint_by_name("frame").unwrap();
+    // let boom_joint = robot.joint_by_name("boom").unwrap();
+    // let arm_joint = robot.joint_by_name("arm").unwrap();
+    // let attachment_joint = robot.joint_by_name("attachment").unwrap();
     // let effector_joint = robot.joint_by_name("effector").unwrap();
 
     let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
@@ -325,19 +325,19 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let arm_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, true);
     let attachment_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, false);
 
-    let mut perception_chain = glonax::robot::Chain::new();
+    let mut perception_chain = glonax::robot::Chain::new(&robot);
     perception_chain
-        .add_joint(frame_joint.clone())
-        .add_joint(boom_joint.clone())
-        .add_joint(arm_joint.clone())
-        .add_joint(attachment_joint.clone());
+        .add_link("frame")
+        .add_link("boom")
+        .add_link("arm")
+        .add_link("attachment");
 
-    let mut projection_chain = glonax::robot::Chain::new();
+    let mut projection_chain = glonax::robot::Chain::new(&robot);
     projection_chain
-        .add_joint(frame_joint.clone())
-        .add_joint(boom_joint.clone())
-        .add_joint(arm_joint.clone())
-        .add_joint(attachment_joint.clone());
+        .add_link("frame")
+        .add_link("boom")
+        .add_link("arm")
+        .add_link("attachment");
 
     ///////////////////////////////////////////
 
