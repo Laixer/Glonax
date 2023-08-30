@@ -115,6 +115,12 @@ impl Chain {
         self.joint_state.iter().all(|(_, joint)| joint.is_some())
     }
 
+    pub fn reset(&mut self) {
+        for (_, joint) in &mut self.joint_state {
+            *joint = None;
+        }
+    }
+
     pub fn add_joint(&mut self, joint: Joint) -> &mut Self {
         self.joint_state.push((joint.name.clone(), None));
         self.joints.push(joint);
