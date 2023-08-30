@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 pub use self::instance::Instance;
 pub use self::signal::Metric;
 pub use self::signal::Signal;
@@ -43,14 +41,44 @@ pub mod time {
     }
 }
 
-/// Convert degree to radian
-pub fn deg_to_rad(input: f32) -> f32 {
-    input * (PI / 180.0)
+pub mod geometry {
+    use std::f32::consts::PI;
+
+    /// Calculate the shortest rotation between two points on a circle
+    pub fn shortest_rotation(distance: f32) -> f32 {
+        let dist_normal = (distance + (2.0 * PI)) % (2.0 * PI);
+
+        if dist_normal > PI {
+            dist_normal - (2.0 * PI)
+        } else {
+            dist_normal
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use crate::core::deg_to_rad;
+
+        use super::*;
+
+        #[test]
+        fn test_shortest_rotation() {
+            assert!(shortest_rotation(deg_to_rad(45.0)) < deg_to_rad(46.0));
+            assert!(shortest_rotation(deg_to_rad(179.0)) < deg_to_rad(180.0));
+        }
+    }
 }
 
-/// Convert radian to degree
-pub fn rad_to_deg(input: f32) -> f32 {
-    input * (180.0 / PI)
+/// Convert degrees to radians
+#[inline]
+pub fn deg_to_rad<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
+    input * (std::f32::consts::PI / 180.0)
+}
+
+/// Convert radians to degrees
+#[inline]
+pub fn rad_to_deg<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
+    input * (180.0 / std::f32::consts::PI)
 }
 
 #[cfg(test)]
