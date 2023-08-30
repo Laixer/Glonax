@@ -65,6 +65,8 @@ pub mod geometry {
         fn test_shortest_rotation() {
             assert!(shortest_rotation(deg_to_rad(45.0)) < deg_to_rad(46.0));
             assert!(shortest_rotation(deg_to_rad(179.0)) < deg_to_rad(180.0));
+
+            // TODO: More tests
         }
     }
 }

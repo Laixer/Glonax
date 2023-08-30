@@ -4,35 +4,34 @@ use nalgebra::{IsometryMatrix3, Point3, Rotation3, Translation3};
 
 #[derive(Clone)]
 pub enum JointType {
+    /// A joint that provides one degree of freedom about a fixed axis of rotation.
     Revolute,
+    /// A joint that provides one degree of freedom about a fixed axis of translation.
     Prismatic,
+    /// A joint that provides one degree of freedom about a fixed axis of rotation with a continuous range of motion.
     Continuous,
+    /// A joint that provides zero degrees of freedom.
     Fixed,
 }
 
-// #[allow(dead_code)]
+#[allow(dead_code)]
 #[derive(Clone)]
 pub struct Joint {
     name: String,
     ty: JointType,
     origin: IsometryMatrix3<f32>,
     bounds: (f32, f32),
-    rotation: Rotation3<f32>,
 }
 
 impl Joint {
+    /// Construct a new joint.
     pub fn new(name: impl ToString, ty: JointType) -> Self {
         Self {
             name: name.to_string(),
             ty,
             origin: IsometryMatrix3::identity(),
             bounds: (-f32::INFINITY, f32::INFINITY),
-            rotation: Rotation3::identity(),
         }
-    }
-
-    pub fn name(&self) -> &str {
-        &self.name
     }
 
     pub fn origin_translation(mut self, origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
@@ -45,29 +44,27 @@ impl Joint {
         self
     }
 
+    #[inline]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    #[inline]
     pub fn origin(&self) -> &IsometryMatrix3<f32> {
         &self.origin
     }
 
-    pub fn rotation(&self) -> Rotation3<f32> {
-        self.rotation
-    }
-
-    pub fn set_rotation(&mut self, rotation: Rotation3<f32>) {
-        self.rotation = rotation;
-    }
-
-    pub fn rotation_angle(&self) -> Option<f32> {
-        if let Some(axis) = self.rotation.axis() {
-            Some(
-                (axis.x * self.rotation.angle())
-                    + (axis.y * self.rotation.angle())
-                    + (axis.z * self.rotation.angle()),
-            )
-        } else {
-            None
-        }
-    }
+    // pub fn rotation_angle(&self) -> Option<f32> {
+    //     if let Some(axis) = self.rotation.axis() {
+    //         Some(
+    //             (axis.x * self.rotation.angle())
+    //                 + (axis.y * self.rotation.angle())
+    //                 + (axis.z * self.rotation.angle()),
+    //         )
+    //     } else {
+    //         None
+    //     }
+    // }
 }
 
 pub enum DeviceType {
