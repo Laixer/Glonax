@@ -444,7 +444,13 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         }
                     }
 
-                    log::debug!("Done: {}", done);
+                    if done {
+                        client.send_motion(glonax::core::Motion::StopAll).await?;
+
+                        log::info!("Press enter to continue");
+                        std::io::stdin().read_line(&mut String::new())?;
+                        break;
+                    }
 
                     if !done {
                         let mut motion_list = vec![];
