@@ -324,6 +324,11 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         projection_point.z
     );
 
+    log::info!("Press enter to continue");
+    std::io::stdin().read_line(&mut String::new())?;
+
+    // return Ok(());
+
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
         .write(true)
@@ -452,112 +457,119 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         break;
                     }
 
-                    if !done {
-                        let mut motion_list = vec![];
+                    let mut motion_list = vec![];
 
-                        for (joint, rot_error) in &error_chain {
-                            if joint.name() == "frame" && rot_error.axis().is_some() {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
-                                let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
+                    for (joint, rot_error) in &error_chain {
+                        if joint.name() == "frame" && rot_error.axis().is_some() {
+                            let axis = rot_error.axis().unwrap();
+                            let axis_rot_error_angle = (axis.x * rot_error.angle())
+                                + (axis.y * rot_error.angle())
+                                + (axis.z * rot_error.angle());
+                            let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
 
-                                if rot_error.angle() > 0.01 {
-                                    log::debug!(
-                                        " * Frame error angle        {:5.2}rad {:5.2}° Power: {}",
-                                        axis_rot_error_angle,
-                                        glonax::core::rad_to_deg(axis_rot_error_angle),
-                                        axis_rot_error_power
-                                    );
+                            if rot_error.angle() > 0.01 {
+                                log::debug!(
+                                    " * Frame error angle        {:5.2}rad {:5.2}° Power: {}",
+                                    axis_rot_error_angle,
+                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    axis_rot_error_power
+                                );
 
-                                    motion_list.push(glonax::core::Motion::new(
-                                        glonax::core::Actuator::Slew,
-                                        axis_rot_error_power as i16,
-                                    ));
-                                } else {
-                                    log::debug!(" * Frame error angle        -");
-                                }
-                            } else if joint.name() == "boom" && rot_error.axis().is_some() {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
-                                let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
-
-                                if rot_error.angle() > 0.01 {
-                                    log::debug!(
-                                        " * Boom error angle         {:5.2}rad {:5.2}° Power: {}",
-                                        axis_rot_error_angle,
-                                        glonax::core::rad_to_deg(axis_rot_error_angle),
-                                        axis_rot_error_power
-                                    );
-
-                                    motion_list.push(glonax::core::Motion::new(
-                                        glonax::core::Actuator::Boom,
-                                        axis_rot_error_power as i16,
-                                    ));
-                                } else {
-                                    log::debug!(" * Boom error angle         -");
-                                }
-                            } else if joint.name() == "arm" && rot_error.axis().is_some() {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
-                                let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
-
-                                if rot_error.angle() > 0.01 {
-                                    log::debug!(
-                                        " * Arm error angle          {:5.2}rad {:5.2}° Power: {}",
-                                        axis_rot_error_angle,
-                                        glonax::core::rad_to_deg(axis_rot_error_angle),
-                                        axis_rot_error_power
-                                    );
-
-                                    motion_list.push(glonax::core::Motion::new(
-                                        glonax::core::Actuator::Arm,
-                                        axis_rot_error_power as i16,
-                                    ));
-                                } else {
-                                    log::debug!(" * Arm error angle          -");
-                                }
-                            } else if joint.name() == "attachment" && rot_error.axis().is_some() {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
-                                let axis_rot_error_power = frame_power.power(axis_rot_error_angle);
-
-                                if rot_error.angle() > 0.01 {
-                                    log::debug!(
-                                        " * Attachment error angle   {:5.2}rad {:5.2}° Power: {}",
-                                        axis_rot_error_angle,
-                                        glonax::core::rad_to_deg(axis_rot_error_angle),
-                                        axis_rot_error_power
-                                    );
-
-                                    motion_list.push(glonax::core::Motion::new(
-                                        glonax::core::Actuator::Attachment,
-                                        axis_rot_error_power as i16,
-                                    ));
-                                } else {
-                                    log::debug!(" * Attachment error angle   -");
-                                }
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Slew,
+                                    axis_rot_error_power as i16,
+                                ));
+                            } else {
+                                log::debug!(" * Frame error angle        -");
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Slew,
+                                    0_i16,
+                                ));
                             }
-                        }
+                        } else if joint.name() == "boom" && rot_error.axis().is_some() {
+                            let axis = rot_error.axis().unwrap();
+                            let axis_rot_error_angle = (axis.x * rot_error.angle())
+                                + (axis.y * rot_error.angle())
+                                + (axis.z * rot_error.angle());
+                            let axis_rot_error_power = boom_power.power(axis_rot_error_angle);
 
-                        for motion in motion_list {
-                            client.send_motion(motion).await?;
+                            if rot_error.angle() > 0.01 {
+                                log::debug!(
+                                    " * Boom error angle         {:5.2}rad {:5.2}° Power: {}",
+                                    axis_rot_error_angle,
+                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    axis_rot_error_power
+                                );
+
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Boom,
+                                    axis_rot_error_power as i16,
+                                ));
+                            } else {
+                                log::debug!(" * Boom error angle         -");
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Boom,
+                                    0_i16,
+                                ));
+                            }
+                        } else if joint.name() == "arm" && rot_error.axis().is_some() {
+                            let axis = rot_error.axis().unwrap();
+                            let axis_rot_error_angle = (axis.x * rot_error.angle())
+                                + (axis.y * rot_error.angle())
+                                + (axis.z * rot_error.angle());
+                            let axis_rot_error_power = arm_power.power(axis_rot_error_angle);
+
+                            if rot_error.angle() > 0.01 {
+                                log::debug!(
+                                    " * Arm error angle          {:5.2}rad {:5.2}° Power: {}",
+                                    axis_rot_error_angle,
+                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    axis_rot_error_power
+                                );
+
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Arm,
+                                    axis_rot_error_power as i16,
+                                ));
+                            } else {
+                                log::debug!(" * Arm error angle          -");
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Arm,
+                                    0_i16,
+                                ));
+                            }
+                        } else if joint.name() == "attachment" && rot_error.axis().is_some() {
+                            let axis = rot_error.axis().unwrap();
+                            let axis_rot_error_angle = (axis.x * rot_error.angle())
+                                + (axis.y * rot_error.angle())
+                                + (axis.z * rot_error.angle());
+                            let axis_rot_error_power = attachment_power.power(axis_rot_error_angle);
+
+                            if rot_error.angle() > 0.01 {
+                                log::debug!(
+                                    " * Attachment error angle   {:5.2}rad {:5.2}° Power: {}",
+                                    axis_rot_error_angle,
+                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    axis_rot_error_power
+                                );
+
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Attachment,
+                                    axis_rot_error_power as i16,
+                                ));
+                            } else {
+                                log::debug!(" * Attachment error angle   -");
+                                motion_list.push(glonax::core::Motion::new(
+                                    glonax::core::Actuator::Attachment,
+                                    0_i16,
+                                ));
+                            }
                         }
                     }
 
-                    // let effector_point = (frame_joint.origin() * Rotation3::from_yaw(frame_yaw))
-                    //     * (boom_joint.origin() * Rotation3::from_pitch(boom_pitch))
-                    //     * (arm_joint.origin() * Rotation3::from_pitch(arm_pitch))
-                    //     * (attachment_joint.origin() * Rotation3::from_pitch(attachment_pitch))
-                    //     * effector_joint.origin()
-                    //     * point;
+                    for motion in motion_list {
+                        client.send_motion(motion).await?;
+                    }
                 }
             }
         }
