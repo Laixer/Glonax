@@ -4,7 +4,7 @@ use nalgebra::{IsometryMatrix3, Point3, Rotation3, Translation3};
 
 const DEFAULT_TOLERANCE: f32 = 0.01;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum JointType {
     /// A joint that provides one degree of freedom about a fixed axis of rotation.
     Revolute,
@@ -88,6 +88,11 @@ impl Joint {
     #[inline]
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    #[inline]
+    pub fn ty(&self) -> &JointType {
+        &self.ty
     }
 
     #[inline]
@@ -256,6 +261,17 @@ impl std::fmt::Debug for Chain<'_> {
             "{s} Endpoint [{:.2}, {:.2}, {:.2}]",
             point.x, point.y, point.z
         )
+    }
+}
+
+impl Clone for Chain<'_> {
+    fn clone(&self) -> Self {
+        let mut this = Self {
+            robot: self.robot,
+            joint_state: self.joint_state.clone(),
+        };
+        this.reset();
+        this
     }
 }
 
