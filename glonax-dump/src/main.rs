@@ -322,7 +322,26 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     ///////////////////////////////////////////
 
-    let targets = [na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595)];
+    struct Target {
+        point: na::Point3<f32>,
+        orientation: na::Rotation3<f32>,
+    }
+
+    impl Target {
+        fn new(point: na::Point3<f32>, orientation: na::Rotation3<f32>) -> Self {
+            Self { point, orientation }
+        }
+    }
+
+    // let targets = [Target::new(
+    //     na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
+    //     na::Rotation3::identity(),
+    // )];
+
+    let targets = [Target::new(
+        na::Point3::new(5.56, 0.0, 1.65),
+        na::Rotation3::from_euler_angles(0.0, 2.3911, 0.0),
+    )];
 
     // let targets = [
     //     na::Point3::new(5.56, 0.00, 1.65),
@@ -342,16 +361,19 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         client.send_motion(Motion::ResumeAll).await?;
 
         log::debug!(
-            "Target point:       [{:.2}, {:.2}, {:.2}]",
-            target.x,
-            target.y,
-            target.z
+            "Target point:       ({:.2}, {:.2}, {:.2}) [{:.2}, {:.2}, {:.2}]",
+            target.point.x,
+            target.point.y,
+            target.point.z,
+            target.orientation.euler_angles().0,
+            target.orientation.euler_angles().1,
+            target.orientation.euler_angles().2
         );
 
         ///////////////////////////////////
         log::debug!("IK");
 
-        let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.xy().coords);
+        let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.point.xy().coords);
 
         log::debug!(
             "Angle θ1           {:5.2}rad {:5.2}°",
@@ -364,13 +386,13 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         let lv = na::distance(&na::Point2::new(0.0, 0.0), &offset);
         log::debug!("Vector L:           {:.2}", lv);
 
-        let l1 = na::distance(&na::Point2::new(0.0, 0.0), &target.xy());
+        let l1 = na::distance(&na::Point2::new(0.0, 0.0), &target.point.xy());
         log::debug!("L1 distance:        {:.2}", l1);
-        let l4 = na::distance(&offset, &target.xy());
+        let l4 = na::distance(&offset, &target.point.xy());
         log::debug!("L4 distance:        {:.2}", l4);
 
         let offset = na::Point3::new(offset.x, offset.y, 0.595 + 1.295);
-        let l5 = na::distance(&offset, &target);
+        let l5 = na::distance(&offset, &target.point);
         log::debug!("L5 distance:        {:.2}", l5);
 
         // let q = target - offset;
@@ -425,7 +447,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
         let solver = InverseKinematics::new(6.0, 2.97);
 
-        let (p_frame_yaw, p_boom_pitch, p_arm_pitch) = solver.solve(target).unwrap();
+        let (p_frame_yaw, p_boom_pitch, p_arm_pitch) = solver.solve(target.point).unwrap();
         log::debug!(
             "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
             p_frame_yaw,
@@ -455,7 +477,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         ]);
 
         let projection_point = projection_chain.world_transformation() * na::Point3::origin();
-        if target.coords.norm() - projection_point.coords.norm() > kinematic_epsilon {
+        if target.point.coords.norm() - projection_point.coords.norm() > kinematic_epsilon {
             log::error!(
                 "Projection point:   [{:.2}, {:.2}, {:.2}]",
                 projection_point.x,
