@@ -309,12 +309,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     log::debug!("Configured: {}", robot);
 
-    // let frame_joint = robot.joint_by_name("frame").unwrap();
-    // let boom_joint = robot.joint_by_name("boom").unwrap();
-    // let arm_joint = robot.joint_by_name("arm").unwrap();
-    // let attachment_joint = robot.joint_by_name("attachment").unwrap();
-    // let effector_joint = robot.joint_by_name("effector").unwrap();
-
     let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
     let boom_encoder = robot.device_by_name("boom_encoder").unwrap();
     let arm_encoder = robot.device_by_name("arm_encoder").unwrap();
@@ -363,7 +357,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     // log::debug!("Listening for signals");
 
-    ///////////////////////////////////////////
     ///////////////////////////////////////////
 
     let targets = [na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595)];
@@ -480,10 +473,22 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             glonax::core::rad_to_deg(p_arm_pitch)
         );
 
+        let rel_pitch_attachment = 0.0;
+        let abs_pitch_attachment = -p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
+
+        log::debug!(
+            "Attachment pitch:  {:5.2}rad {:5.2}°",
+            abs_pitch_attachment,
+            glonax::core::rad_to_deg(abs_pitch_attachment)
+        );
+
+        ///////////////////////////////////
+
         projection_chain.set_joint_positions(vec![
             Rotation3::from_yaw(p_frame_yaw),
             Rotation3::from_pitch((-p_boom_pitch) + glonax::core::deg_to_rad(59.35)),
             Rotation3::from_pitch(p_arm_pitch),
+            Rotation3::from_pitch(rel_pitch_attachment),
         ]);
 
         // log::debug!(
