@@ -216,7 +216,8 @@ impl<'a> Chain<'a> {
         nalgebra::distance(&lhs_point, &rhs_point)
     }
 
-    pub fn error(&self, rhs: &Self) -> Vec<(&String, Rotation3<f32>)> {
+    // TODO: Maybe return new chain
+    pub fn error(&self, rhs: &Self) -> Vec<(&String, f32)> {
         let mut error_vec = vec![];
 
         for (joint_name, lhs_rotation, rhs_rotation) in self
@@ -226,7 +227,12 @@ impl<'a> Chain<'a> {
             .filter(|(lhs, rhs)| lhs.0 == rhs.0 && lhs.1.is_some() && rhs.1.is_some())
             .map(|((name, lhs), (_, rhs))| (name, lhs.unwrap(), rhs.unwrap()))
         {
-            error_vec.push((joint_name, lhs_rotation.rotation_to(&rhs_rotation)));
+            let rotation_error = lhs_rotation.rotation_to(&rhs_rotation);
+            let rotation_axis = rotation_error.axis().unwrap();
+            let rotation_error_angle = (rotation_axis.x * rotation_error.angle())
+                + (rotation_axis.y * rotation_error.angle())
+                + (rotation_axis.z * rotation_error.angle());
+            error_vec.push((joint_name, rotation_error_angle));
         }
 
         error_vec

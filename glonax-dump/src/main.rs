@@ -93,7 +93,7 @@ impl MotionProfile {
         }
     }
 
-    pub fn power(&self, value: f32) -> i32 {
+    pub fn power(&self, value: f32) -> i16 {
         if self.inverse {
             self.proportional_power_inverse(value)
         } else {
@@ -101,27 +101,27 @@ impl MotionProfile {
         }
     }
 
-    pub fn proportional_power(&self, value: f32) -> i32 {
+    pub fn proportional_power(&self, value: f32) -> i16 {
         if value.abs() > self.lower_bound {
             let power = self.offset + (value.abs() * self.scale).min(32_767.0 - self.offset);
             if value < 0.0 {
-                -power as i32
+                -power as i16
             } else {
-                power as i32
+                power as i16
             }
         } else {
             0
         }
     }
 
-    pub fn proportional_power_inverse(&self, value: f32) -> i32 {
+    pub fn proportional_power_inverse(&self, value: f32) -> i16 {
         if value.abs() > self.lower_bound {
             let power = value * self.scale;
 
             if value > 0.0 {
-                (-power.max(-(32_767.0 - self.offset)) - self.offset) as i32
+                (-power.max(-(32_767.0 - self.offset)) - self.offset) as i16
             } else {
-                (-power.min(32_767.0 - self.offset) + self.offset) as i32
+                (-power.min(32_767.0 - self.offset) + self.offset) as i16
             }
         } else {
             0
@@ -578,43 +578,34 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                         let mut motion_list = vec![];
 
-                        for (joint_name, rot_error) in
-                            error_chain.iter().filter(|(_, e)| e.axis().is_some())
-                        {
-                            if joint_name == &&"frame" {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())// TODO: From robot config
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
+                        for (joint_name, error_angle) in error_chain {
+                            if joint_name == &"frame" {
+                                let error_angle_optimized =
+                                    if frame_joint.ty() == &JointType::Continuous {
+                                        glonax::core::geometry::shortest_rotation(error_angle)
+                                    } else {
+                                        error_angle
+                                    };
 
-                                let axis_rot_error_angle_optimized = if frame_joint.ty()
-                                    == &JointType::Continuous
-                                {
-                                    glonax::core::geometry::shortest_rotation(axis_rot_error_angle)
-                                } else {
-                                    axis_rot_error_angle
-                                };
-
-                                let axis_rot_error_power =
-                                    frame_power.power(axis_rot_error_angle_optimized); // TODO: From robot config
+                                let error_angle_power = frame_power.power(error_angle_optimized); // TODO: From robot config
 
                                 log::debug!(
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     joint_name,
-                                    axis_rot_error_angle_optimized,
-                                    rad_to_deg(axis_rot_error_angle_optimized),
-                                    axis_rot_error_power,
-                                    if rot_error.angle() > frame_joint.tolerance() {
+                                    error_angle_optimized,
+                                    rad_to_deg(error_angle_optimized),
+                                    error_angle_power,
+                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
                                         "Moving"
                                     } else {
                                         "Locked"
                                     }
                                 );
 
-                                if rot_error.angle() > frame_joint.tolerance() {
+                                if error_angle_optimized.abs() > boom_joint.tolerance() {
                                     motion_list.push(Motion::new(
                                         glonax::core::Actuator::Slew, // TODO: From robot config
-                                        axis_rot_error_power as i16,
+                                        error_angle_power,
                                     ));
                                     done = false;
                                 } else {
@@ -623,40 +614,33 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                         Motion::POWER_NEUTRAL,
                                     ));
                                 }
-                            } else if joint_name == &&"boom" {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())  // TODO: From robot config
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
+                            } else if joint_name == &"boom" {
+                                let error_angle_optimized =
+                                    if boom_joint.ty() == &JointType::Continuous {
+                                        glonax::core::geometry::shortest_rotation(error_angle)
+                                    } else {
+                                        error_angle
+                                    };
 
-                                let axis_rot_error_angle_optimized = if boom_joint.ty()
-                                    == &JointType::Continuous
-                                {
-                                    glonax::core::geometry::shortest_rotation(axis_rot_error_angle)
-                                } else {
-                                    axis_rot_error_angle
-                                };
-
-                                let axis_rot_error_power =
-                                    boom_power.power(axis_rot_error_angle_optimized); // TODO: From robot config
+                                let error_angle_power = boom_power.power(error_angle_optimized); // TODO: From robot config
 
                                 log::debug!(
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     joint_name,
-                                    axis_rot_error_angle_optimized,
-                                    rad_to_deg(axis_rot_error_angle_optimized),
-                                    axis_rot_error_power,
-                                    if rot_error.angle() > boom_joint.tolerance() {
+                                    error_angle_optimized,
+                                    rad_to_deg(error_angle_optimized),
+                                    error_angle_power,
+                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
                                         "Moving"
                                     } else {
                                         "Locked"
                                     }
                                 );
 
-                                if rot_error.angle() > boom_joint.tolerance() {
+                                if error_angle_optimized.abs() > boom_joint.tolerance() {
                                     motion_list.push(Motion::new(
                                         glonax::core::Actuator::Boom, // TODO: From robot config
-                                        axis_rot_error_power as i16,
+                                        error_angle_power,
                                     ));
                                     done = false;
                                 } else {
@@ -665,40 +649,33 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                         Motion::POWER_NEUTRAL,
                                     ));
                                 }
-                            } else if joint_name == &&"arm" {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
+                            } else if joint_name == &"arm" {
+                                let error_angle_optimized =
+                                    if arm_joint.ty() == &JointType::Continuous {
+                                        glonax::core::geometry::shortest_rotation(error_angle)
+                                    } else {
+                                        error_angle
+                                    };
 
-                                let axis_rot_error_angle_optimized = if arm_joint.ty()
-                                    == &JointType::Continuous
-                                {
-                                    glonax::core::geometry::shortest_rotation(axis_rot_error_angle)
-                                } else {
-                                    axis_rot_error_angle
-                                };
-
-                                let axis_rot_error_power =
-                                    arm_power.power(axis_rot_error_angle_optimized);
+                                let error_angle_power = arm_power.power(error_angle_optimized);
 
                                 log::debug!(
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     joint_name,
-                                    axis_rot_error_angle_optimized,
-                                    rad_to_deg(axis_rot_error_angle_optimized),
-                                    axis_rot_error_power,
-                                    if rot_error.angle() > arm_joint.tolerance() {
+                                    error_angle_optimized,
+                                    rad_to_deg(error_angle_optimized),
+                                    error_angle_power,
+                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
                                         "Moving"
                                     } else {
                                         "Locked"
                                     }
                                 );
 
-                                if rot_error.angle() > arm_joint.tolerance() {
+                                if error_angle_optimized.abs() > boom_joint.tolerance() {
                                     motion_list.push(Motion::new(
                                         glonax::core::Actuator::Arm,
-                                        axis_rot_error_power as i16,
+                                        error_angle_power,
                                     ));
                                     done = false;
                                 } else {
@@ -707,40 +684,34 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                         Motion::POWER_NEUTRAL,
                                     ));
                                 }
-                            } else if joint_name == &&"attachment" {
-                                let axis = rot_error.axis().unwrap();
-                                let axis_rot_error_angle = (axis.x * rot_error.angle())
-                                    + (axis.y * rot_error.angle())
-                                    + (axis.z * rot_error.angle());
+                            } else if joint_name == &"attachment" {
+                                let error_angle_optimized =
+                                    if attachment_joint.ty() == &JointType::Continuous {
+                                        glonax::core::geometry::shortest_rotation(error_angle)
+                                    } else {
+                                        error_angle
+                                    };
 
-                                let axis_rot_error_angle_optimized = if attachment_joint.ty()
-                                    == &JointType::Continuous
-                                {
-                                    glonax::core::geometry::shortest_rotation(axis_rot_error_angle)
-                                } else {
-                                    axis_rot_error_angle
-                                };
-
-                                let axis_rot_error_power =
-                                    attachment_power.power(axis_rot_error_angle_optimized);
+                                let error_angle_power =
+                                    attachment_power.power(error_angle_optimized);
 
                                 log::debug!(
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     joint_name,
-                                    axis_rot_error_angle_optimized,
-                                    rad_to_deg(axis_rot_error_angle_optimized),
-                                    axis_rot_error_power,
-                                    if rot_error.angle() > attachment_joint.tolerance() {
+                                    error_angle_optimized,
+                                    rad_to_deg(error_angle_optimized),
+                                    error_angle_power,
+                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
                                         "Moving"
                                     } else {
                                         "Locked"
                                     }
                                 );
 
-                                if rot_error.angle() > attachment_joint.tolerance() {
+                                if error_angle_optimized.abs() > boom_joint.tolerance() {
                                     motion_list.push(Motion::new(
                                         glonax::core::Actuator::Attachment,
-                                        axis_rot_error_power as i16,
+                                        error_angle_power,
                                     ));
                                     done = false;
                                 } else {
