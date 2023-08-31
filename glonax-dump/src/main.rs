@@ -205,7 +205,9 @@ async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net
 
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     use glonax::core::{deg_to_rad, rad_to_deg, Motion};
-    use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
+    use glonax::robot::{
+        Device, DeviceType, Joint, JointType, MotionProfile, RobotBuilder, RobotType,
+    };
 
     let kinematic_epsilon = 0.0001;
 
@@ -233,44 +235,57 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             DeviceType::EncoderAbsoluteSingleTurn,
         ))
         .add_joint(Joint::new("undercarriage", JointType::Fixed))
-        .add_joint(Joint::new("frame", JointType::Continuous).set_height(1.295))
         .add_joint(
-            Joint::new("boom", JointType::Revolute)
-                .set_origin_translation(0.16, 0.0, 0.595)
-                .set_pitch(deg_to_rad(-59.35))
-                .set_bounds(deg_to_rad(-59.35), deg_to_rad(45.0)),
+            Joint::with_actuator(
+                "frame",
+                JointType::Continuous,
+                glonax::core::Actuator::Slew,
+                MotionProfile::new(7_000.0, 12_000.0, 0.01, false),
+            )
+            .set_height(1.295),
         )
         .add_joint(
-            Joint::new("arm", JointType::Revolute)
-                .set_length(6.0)
-                .set_bounds(deg_to_rad(38.96), deg_to_rad(158.14)),
+            Joint::with_actuator(
+                "boom",
+                JointType::Revolute,
+                glonax::core::Actuator::Boom,
+                MotionProfile::new(15_000.0, 12_000.0, 0.01, false),
+            )
+            .set_origin_translation(0.16, 0.0, 0.595)
+            .set_pitch(deg_to_rad(-59.35))
+            .set_bounds(deg_to_rad(-59.35), deg_to_rad(45.0)),
         )
         .add_joint(
-            Joint::new("attachment", JointType::Revolute)
-                .set_length(2.97)
-                .set_pitch(deg_to_rad(-55.0))
-                .set_bounds(deg_to_rad(-55.0), deg_to_rad(125.0))
-                .set_tolerance(0.05),
+            Joint::with_actuator(
+                "arm",
+                JointType::Revolute,
+                glonax::core::Actuator::Arm,
+                MotionProfile::new(15_000.0, 12_000.0, 0.01, true),
+            )
+            .set_length(6.0)
+            .set_bounds(deg_to_rad(38.96), deg_to_rad(158.14)),
+        )
+        .add_joint(
+            Joint::with_actuator(
+                "attachment",
+                JointType::Revolute,
+                glonax::core::Actuator::Attachment,
+                MotionProfile::new(15_000.0, 12_000.0, 0.05, false),
+            )
+            .set_length(2.97)
+            .set_pitch(deg_to_rad(-55.0))
+            .set_bounds(deg_to_rad(-55.0), deg_to_rad(125.0))
+            .set_tolerance(0.05),
         )
         .add_joint(Joint::new("effector", JointType::Fixed).set_length(1.5))
         .build();
 
     log::debug!("Configured: {}", robot);
 
-    let frame_joint = robot.joint_by_name("frame").unwrap();
-    let boom_joint = robot.joint_by_name("boom").unwrap();
-    let arm_joint = robot.joint_by_name("arm").unwrap();
-    let attachment_joint = robot.joint_by_name("attachment").unwrap();
-
     let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
     let boom_encoder = robot.device_by_name("boom_encoder").unwrap();
     let arm_encoder = robot.device_by_name("arm_encoder").unwrap();
     let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap();
-
-    let frame_power = MotionProfile::new(7_000.0, 12_000.0, 0.01, false);
-    let boom_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, false);
-    let arm_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, true);
-    let attachment_power = MotionProfile::new(15_000.0, 12_000.0, 0.01, false);
 
     let mut perception_chain = glonax::robot::Chain::new(&robot);
     perception_chain
@@ -525,148 +540,40 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                         let mut motion_list = vec![];
 
-                        for (joint_name, error_angle) in error_chain {
-                            if joint_name == &"frame" {
-                                let error_angle_optimized =
-                                    if frame_joint.ty() == &JointType::Continuous {
-                                        glonax::core::geometry::shortest_rotation(error_angle)
-                                    } else {
-                                        error_angle
-                                    };
+                        for (joint, error_angle) in error_chain {
+                            let error_angle_optimized = if joint.ty() == &JointType::Continuous {
+                                glonax::core::geometry::shortest_rotation(error_angle)
+                            } else {
+                                error_angle
+                            };
 
-                                let error_angle_power = frame_power.power(error_angle_optimized); // TODO: From robot config
+                            let error_angle_power =
+                                joint.profile().unwrap().power(error_angle_optimized);
 
-                                log::debug!(
-                                    " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
-                                    joint_name,
-                                    error_angle_optimized,
-                                    rad_to_deg(error_angle_optimized),
-                                    error_angle_power,
-                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                        "Moving"
-                                    } else {
-                                        "Locked"
-                                    }
-                                );
-
-                                if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Slew, // TODO: From robot config
-                                        error_angle_power,
-                                    ));
-                                    done = false;
+                            log::debug!(
+                                " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
+                                joint.name(),
+                                error_angle_optimized,
+                                rad_to_deg(error_angle_optimized),
+                                error_angle_power,
+                                if error_angle_optimized.abs() > joint.tolerance() {
+                                    "Moving"
                                 } else {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Slew, // TODO: From robot config
-                                        Motion::POWER_NEUTRAL,
-                                    ));
+                                    "Locked"
                                 }
-                            } else if joint_name == &"boom" {
-                                let error_angle_optimized =
-                                    if boom_joint.ty() == &JointType::Continuous {
-                                        glonax::core::geometry::shortest_rotation(error_angle)
-                                    } else {
-                                        error_angle
-                                    };
+                            );
 
-                                let error_angle_power = boom_power.power(error_angle_optimized); // TODO: From robot config
-
-                                log::debug!(
-                                    " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
-                                    joint_name,
-                                    error_angle_optimized,
-                                    rad_to_deg(error_angle_optimized),
+                            if error_angle_optimized.abs() > joint.tolerance() {
+                                motion_list.push(Motion::new(
+                                    joint.actuator().unwrap(),
                                     error_angle_power,
-                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                        "Moving"
-                                    } else {
-                                        "Locked"
-                                    }
-                                );
-
-                                if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Boom, // TODO: From robot config
-                                        error_angle_power,
-                                    ));
-                                    done = false;
-                                } else {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Boom, // TODO: From robot config
-                                        Motion::POWER_NEUTRAL,
-                                    ));
-                                }
-                            } else if joint_name == &"arm" {
-                                let error_angle_optimized =
-                                    if arm_joint.ty() == &JointType::Continuous {
-                                        glonax::core::geometry::shortest_rotation(error_angle)
-                                    } else {
-                                        error_angle
-                                    };
-
-                                let error_angle_power = arm_power.power(error_angle_optimized);
-
-                                log::debug!(
-                                    " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
-                                    joint_name,
-                                    error_angle_optimized,
-                                    rad_to_deg(error_angle_optimized),
-                                    error_angle_power,
-                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                        "Moving"
-                                    } else {
-                                        "Locked"
-                                    }
-                                );
-
-                                if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Arm,
-                                        error_angle_power,
-                                    ));
-                                    done = false;
-                                } else {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Arm,
-                                        Motion::POWER_NEUTRAL,
-                                    ));
-                                }
-                            } else if joint_name == &"attachment" {
-                                let error_angle_optimized =
-                                    if attachment_joint.ty() == &JointType::Continuous {
-                                        glonax::core::geometry::shortest_rotation(error_angle)
-                                    } else {
-                                        error_angle
-                                    };
-
-                                let error_angle_power =
-                                    attachment_power.power(error_angle_optimized);
-
-                                log::debug!(
-                                    " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
-                                    joint_name,
-                                    error_angle_optimized,
-                                    rad_to_deg(error_angle_optimized),
-                                    error_angle_power,
-                                    if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                        "Moving"
-                                    } else {
-                                        "Locked"
-                                    }
-                                );
-
-                                if error_angle_optimized.abs() > boom_joint.tolerance() {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Attachment,
-                                        error_angle_power,
-                                    ));
-                                    done = false;
-                                } else {
-                                    motion_list.push(Motion::new(
-                                        glonax::core::Actuator::Attachment,
-                                        Motion::POWER_NEUTRAL,
-                                    ));
-                                }
+                                ));
+                                done = false;
+                            } else {
+                                motion_list.push(Motion::new(
+                                    joint.actuator().unwrap(),
+                                    Motion::POWER_NEUTRAL,
+                                ));
                             }
                         }
 

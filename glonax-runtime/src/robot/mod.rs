@@ -71,13 +71,14 @@ pub enum JointType {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
 pub struct Joint {
     name: String,
     ty: JointType,
     origin: IsometryMatrix3<f32>,
     bounds: (f32, f32),
     tolerance: f32,
+    actuator: Option<crate::core::Actuator>,
+    profile: Option<MotionProfile>,
 }
 
 impl Joint {
@@ -89,6 +90,25 @@ impl Joint {
             origin: IsometryMatrix3::identity(),
             bounds: (-f32::INFINITY, f32::INFINITY),
             tolerance: DEFAULT_TOLERANCE,
+            actuator: None,
+            profile: None,
+        }
+    }
+
+    pub fn with_actuator(
+        name: impl ToString,
+        ty: JointType,
+        actuator: crate::core::Actuator,
+        profile: MotionProfile,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            ty,
+            origin: IsometryMatrix3::identity(),
+            bounds: (-f32::INFINITY, f32::INFINITY),
+            tolerance: DEFAULT_TOLERANCE,
+            actuator: Some(actuator),
+            profile: Some(profile),
         }
     }
 
@@ -159,17 +179,20 @@ impl Joint {
         self.tolerance
     }
 
-    // pub fn rotation_angle(&self) -> Option<f32> {
-    //     if let Some(axis) = self.rotation.axis() {
-    //         Some(
-    //             (axis.x * self.rotation.angle())
-    //                 + (axis.y * self.rotation.angle())
-    //                 + (axis.z * self.rotation.angle()),
-    //         )
-    //     } else {
-    //         None
-    //     }
-    // }
+    #[inline]
+    pub fn bounds(&self) -> (f32, f32) {
+        self.bounds
+    }
+
+    #[inline]
+    pub fn actuator(&self) -> Option<crate::core::Actuator> {
+        self.actuator
+    }
+
+    #[inline]
+    pub fn profile(&self) -> Option<&MotionProfile> {
+        self.profile.as_ref()
+    }
 }
 
 pub enum DeviceType {
@@ -228,11 +251,6 @@ impl<'a> Chain<'a> {
         self
     }
 
-    pub fn add_joint(&mut self, joint: Joint) -> &mut Self {
-        self.joint_state.push((joint.name.clone(), None));
-        self
-    }
-
     pub fn set_joint_position(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
         self.joint_state
             .iter_mut()
@@ -271,7 +289,7 @@ impl<'a> Chain<'a> {
     }
 
     // TODO: Maybe return new chain
-    pub fn error(&self, rhs: &Self) -> Vec<(&String, f32)> {
+    pub fn error(&self, rhs: &Self) -> Vec<(&Joint, f32)> {
         let mut error_vec = vec![];
 
         for (joint_name, lhs_rotation, rhs_rotation) in self
@@ -281,12 +299,15 @@ impl<'a> Chain<'a> {
             .filter(|(lhs, rhs)| lhs.0 == rhs.0 && lhs.1.is_some() && rhs.1.is_some())
             .map(|((name, lhs), (_, rhs))| (name, lhs.unwrap(), rhs.unwrap()))
         {
+            let joint = self.robot.joint_by_name(joint_name).unwrap();
+
             let rotation_error = lhs_rotation.rotation_to(&rhs_rotation);
             let rotation_axis = rotation_error.axis().unwrap();
             let rotation_error_angle = (rotation_axis.x * rotation_error.angle())
                 + (rotation_axis.y * rotation_error.angle())
                 + (rotation_axis.z * rotation_error.angle());
-            error_vec.push((joint_name, rotation_error_angle));
+
+            error_vec.push((joint, rotation_error_angle));
         }
 
         error_vec
