@@ -76,59 +76,6 @@ impl InverseKinematics {
     }
 }
 
-struct MotionProfile {
-    scale: f32,
-    offset: f32,
-    lower_bound: f32,
-    inverse: bool,
-}
-
-impl MotionProfile {
-    pub fn new(scale: f32, offset: f32, lower_bound: f32, inverse: bool) -> Self {
-        Self {
-            scale,
-            offset,
-            lower_bound,
-            inverse,
-        }
-    }
-
-    pub fn power(&self, value: f32) -> i16 {
-        if self.inverse {
-            self.proportional_power_inverse(value)
-        } else {
-            self.proportional_power(value)
-        }
-    }
-
-    pub fn proportional_power(&self, value: f32) -> i16 {
-        if value.abs() > self.lower_bound {
-            let power = self.offset + (value.abs() * self.scale).min(32_767.0 - self.offset);
-            if value < 0.0 {
-                -power as i16
-            } else {
-                power as i16
-            }
-        } else {
-            0
-        }
-    }
-
-    pub fn proportional_power_inverse(&self, value: f32) -> i16 {
-        if value.abs() > self.lower_bound {
-            let power = value * self.scale;
-
-            if value > 0.0 {
-                (-power.max(-(32_767.0 - self.offset)) - self.offset) as i16
-            } else {
-                (-power.min(32_767.0 - self.offset) + self.offset) as i16
-            }
-        } else {
-            0
-        }
-    }
-}
-
 // TODO: move to core
 trait EulerAngles {
     fn from_roll(roll: f32) -> Self;
