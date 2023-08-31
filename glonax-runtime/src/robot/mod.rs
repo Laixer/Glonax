@@ -38,22 +38,39 @@ impl Joint {
         }
     }
 
+    pub fn set_height(mut self, height: f32) -> Self {
+        self.origin.translation =
+            Translation3::new(self.origin.translation.x, self.origin.translation.y, height);
+        self
+    }
+
+    pub fn set_length(mut self, length: f32) -> Self {
+        self.origin.translation =
+            Translation3::new(length, self.origin.translation.y, self.origin.translation.z);
+        self
+    }
+
+    pub fn set_yaw(mut self, yaw: f32) -> Self {
+        self.origin.rotation = Rotation3::from_euler_angles(0.0, 0.0, yaw);
+        self
+    }
+
+    pub fn set_pitch(mut self, pitch: f32) -> Self {
+        self.origin.rotation = Rotation3::from_euler_angles(0.0, pitch, 0.0);
+        self
+    }
+
     pub fn set_origin_translation(mut self, origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
         self.origin.translation = Translation3::new(origin_x, origin_y, origin_z);
         self
     }
 
-    pub fn set_origin_yaw(mut self, yaw: f32) -> Self {
-        self.origin.translation = Translation3::new(yaw, 0.0, 0.0);
-        self
-    }
-
-    pub fn set_origin_pitch(mut self, pitch: f32) -> Self {
-        self.origin.translation = Translation3::new(0.0, pitch, 0.0);
-        self
-    }
-
-    pub fn set_origin_rotation(mut self, origin_roll: f32, origin_pitch: f32, origin_yaw: f32) -> Self {
+    pub fn set_origin_rotation(
+        mut self,
+        origin_roll: f32,
+        origin_pitch: f32,
+        origin_yaw: f32,
+    ) -> Self {
         self.origin.rotation = Rotation3::from_euler_angles(origin_roll, origin_pitch, origin_yaw);
         self
     }

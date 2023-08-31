@@ -287,28 +287,26 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             DeviceType::EncoderAbsoluteSingleTurn,
         ))
         .add_joint(Joint::new("undercarriage", JointType::Fixed))
-        .add_joint(
-            Joint::new("frame", JointType::Continuous).set_origin_translation(0.0, 0.0, 1.295),
-        )
+        .add_joint(Joint::new("frame", JointType::Continuous).set_height(1.295))
         .add_joint(
             Joint::new("boom", JointType::Revolute)
                 .set_origin_translation(0.16, 0.0, 0.595)
-                .set_origin_pitch(deg_to_rad(-59.35))
+                .set_pitch(deg_to_rad(-59.35))
                 .set_bounds(deg_to_rad(-59.35), deg_to_rad(45.0)),
         )
         .add_joint(
             Joint::new("arm", JointType::Revolute)
-                .set_origin_translation(6.0, 0.0, 0.0)
+                .set_length(6.0)
                 .set_bounds(deg_to_rad(38.96), deg_to_rad(158.14)),
         )
         .add_joint(
             Joint::new("attachment", JointType::Revolute)
-                .set_origin_translation(2.97, 0.0, 0.0)
-                .set_origin_pitch(deg_to_rad(-55.0))
+                .set_length(2.97)
+                .set_pitch(deg_to_rad(-55.0))
                 .set_bounds(deg_to_rad(-55.0), deg_to_rad(125.0))
                 .set_tolerance(0.05),
         )
-        .add_joint(Joint::new("effector", JointType::Fixed).set_origin_translation(1.5, 0.0, 0.0))
+        .add_joint(Joint::new("effector", JointType::Fixed).set_length(1.5))
         .build();
 
     log::debug!("Configured: {}", robot);
