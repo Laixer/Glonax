@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use nalgebra::{IsometryMatrix3, Point3, Rotation3, Translation3};
 
+const DEFAULT_TOLERANCE: f32 = 0.01;
+
 #[derive(Clone)]
 pub enum JointType {
     /// A joint that provides one degree of freedom about a fixed axis of rotation.
@@ -21,6 +23,7 @@ pub struct Joint {
     ty: JointType,
     origin: IsometryMatrix3<f32>,
     bounds: (f32, f32),
+    tolerance: f32,
 }
 
 impl Joint {
@@ -31,21 +34,37 @@ impl Joint {
             ty,
             origin: IsometryMatrix3::identity(),
             bounds: (-f32::INFINITY, f32::INFINITY),
+            tolerance: DEFAULT_TOLERANCE,
         }
     }
 
-    pub fn origin_translation(mut self, origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
+    pub fn set_origin_translation(mut self, origin_x: f32, origin_y: f32, origin_z: f32) -> Self {
         self.origin.translation = Translation3::new(origin_x, origin_y, origin_z);
         self
     }
 
-    pub fn origin_rotation(mut self, origin_roll: f32, origin_pitch: f32, origin_yaw: f32) -> Self {
+    pub fn set_origin_yaw(mut self, yaw: f32) -> Self {
+        self.origin.translation = Translation3::new(yaw, 0.0, 0.0);
+        self
+    }
+
+    pub fn set_origin_pitch(mut self, pitch: f32) -> Self {
+        self.origin.translation = Translation3::new(0.0, pitch, 0.0);
+        self
+    }
+
+    pub fn set_origin_rotation(mut self, origin_roll: f32, origin_pitch: f32, origin_yaw: f32) -> Self {
         self.origin.rotation = Rotation3::from_euler_angles(origin_roll, origin_pitch, origin_yaw);
         self
     }
 
     pub fn set_bounds(mut self, lower: f32, upper: f32) -> Self {
         self.bounds = (lower, upper);
+        self
+    }
+
+    pub fn set_tolerance(mut self, tolerance: f32) -> Self {
+        self.tolerance = tolerance;
         self
     }
 
@@ -57,6 +76,11 @@ impl Joint {
     #[inline]
     pub fn origin(&self) -> &IsometryMatrix3<f32> {
         &self.origin
+    }
+
+    #[inline]
+    pub fn tolerance(&self) -> f32 {
+        self.tolerance
     }
 
     // pub fn rotation_angle(&self) -> Option<f32> {
@@ -173,16 +197,14 @@ impl<'a> Chain<'a> {
     pub fn error(&self, rhs: &Self) -> Vec<(&String, Rotation3<f32>)> {
         let mut error_vec = vec![];
 
-        for ((lhs_joint_name, lhs_rotation), (_, rhs_rotation)) in self
+        for (joint_name, lhs_rotation, rhs_rotation) in self
             .joint_state
             .iter()
             .zip(&rhs.joint_state)
             .filter(|(lhs, rhs)| lhs.0 == rhs.0 && lhs.1.is_some() && rhs.1.is_some())
+            .map(|((name, lhs), (_, rhs))| (name, lhs.unwrap(), rhs.unwrap()))
         {
-            error_vec.push((
-                lhs_joint_name,
-                lhs_rotation.unwrap().rotation_to(&rhs_rotation.unwrap()),
-            ));
+            error_vec.push((joint_name, lhs_rotation.rotation_to(&rhs_rotation)));
         }
 
         error_vec

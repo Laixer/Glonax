@@ -257,6 +257,7 @@ async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net
 }
 
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
+    use glonax::core::{deg_to_rad, rad_to_deg};
     use glonax::robot::{Device, DeviceType, Joint, JointType, RobotBuilder, RobotType};
 
     let kinematic_epsilon = 0.0001;
@@ -286,25 +287,28 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             DeviceType::EncoderAbsoluteSingleTurn,
         ))
         .add_joint(Joint::new("undercarriage", JointType::Fixed))
-        .add_joint(Joint::new("frame", JointType::Continuous).origin_translation(0.0, 0.0, 1.295))
+        .add_joint(
+            Joint::new("frame", JointType::Continuous).set_origin_translation(0.0, 0.0, 1.295),
+        )
         .add_joint(
             Joint::new("boom", JointType::Revolute)
-                .origin_translation(0.16, 0.0, 0.595)
-                .origin_rotation(0.0, glonax::core::deg_to_rad(-59.35), 0.0)
-                .set_bounds(-1.047, 0.785),
+                .set_origin_translation(0.16, 0.0, 0.595)
+                .set_origin_pitch(deg_to_rad(-59.35))
+                .set_bounds(deg_to_rad(-59.35), deg_to_rad(45.0)),
         )
         .add_joint(
             Joint::new("arm", JointType::Revolute)
-                .origin_translation(6.0, 0.0, 0.0)
-                .set_bounds(0.68, 2.76),
+                .set_origin_translation(6.0, 0.0, 0.0)
+                .set_bounds(deg_to_rad(38.96), deg_to_rad(158.14)),
         )
         .add_joint(
             Joint::new("attachment", JointType::Revolute)
-                .origin_translation(2.97, 0.0, 0.0)
-                .origin_rotation(0.0, glonax::core::deg_to_rad(-55.0), 0.0)
-                .set_bounds(-0.962, 2.19),
+                .set_origin_translation(2.97, 0.0, 0.0)
+                .set_origin_pitch(deg_to_rad(-55.0))
+                .set_bounds(deg_to_rad(-55.0), deg_to_rad(125.0))
+                .set_tolerance(0.05),
         )
-        .add_joint(Joint::new("effector", JointType::Fixed).origin_translation(1.5, 0.0, 0.0))
+        .add_joint(Joint::new("effector", JointType::Fixed).set_origin_translation(1.5, 0.0, 0.0))
         .build();
 
     log::debug!("Configured: {}", robot);
@@ -393,7 +397,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::debug!(
             "Angle θ1           {:5.2}rad {:5.2}°",
             rot.angle(),
-            glonax::core::rad_to_deg(rot.angle() as f32)
+            rad_to_deg(rot.angle() as f32)
         );
 
         let offset = rot * na::Point2::new(0.16, 0.0);
@@ -418,7 +422,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         //     "Angle θ2p1          {:?} {:?} {:?}",
         //     rot.axis(),
         //     rot.angle(),
-        //     glonax::core::rad_to_deg(rot.angle() as f32)
+        //     rad_to_deg(rot.angle() as f32)
         // );
 
         // let q = target - offset;
@@ -429,7 +433,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         // log::debug!(
         //     "Angle θ2p1          {:?} {:?}",
         //     rot.angle(),
-        //     glonax::core::rad_to_deg(rot.angle() as f32)
+        //     rad_to_deg(rot.angle() as f32)
         // );
 
         // let l5 = na::distance(&na::Point2::new(0.16, 0.0), &target.xz());
@@ -442,7 +446,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         // log::debug!(
         //     "Angle (θp2): {:5.2}rad {:5.2}°",
         //     theta_2p2,
-        //     glonax::core::rad_to_deg(theta_2p2)
+        //     rad_to_deg(theta_2p2)
         // );
 
         // let theta_3 = std::f32::consts::PI
@@ -452,7 +456,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         // log::debug!(
         //     "Angle (θ3): {:5.2}rad {:5.2}°",
         //     theta_3,
-        //     glonax::core::rad_to_deg(theta_3)
+        //     rad_to_deg(theta_3)
         // );
 
         // return Ok(());
@@ -466,11 +470,11 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::debug!(
             "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
             p_frame_yaw,
-            glonax::core::rad_to_deg(p_frame_yaw),
+            rad_to_deg(p_frame_yaw),
             p_boom_pitch,
-            glonax::core::rad_to_deg(p_boom_pitch),
+            rad_to_deg(p_boom_pitch),
             p_arm_pitch,
-            glonax::core::rad_to_deg(p_arm_pitch)
+            rad_to_deg(p_arm_pitch)
         );
 
         let rel_pitch_attachment = 0.0;
@@ -479,14 +483,14 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::debug!(
             "Attachment pitch:  {:5.2}rad {:5.2}°",
             abs_pitch_attachment,
-            glonax::core::rad_to_deg(abs_pitch_attachment)
+            rad_to_deg(abs_pitch_attachment)
         );
 
         ///////////////////////////////////
 
         projection_chain.set_joint_positions(vec![
             Rotation3::from_yaw(p_frame_yaw),
-            Rotation3::from_pitch((-p_boom_pitch) + glonax::core::deg_to_rad(59.35)),
+            Rotation3::from_pitch((-p_boom_pitch) + deg_to_rad(59.35)),
             Rotation3::from_pitch(p_arm_pitch),
             Rotation3::from_pitch(rel_pitch_attachment),
         ]);
@@ -496,7 +500,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         //     projection_chain
         //         .joint_rotation_angle("frame")
         //         .unwrap_or_default(),
-        //     glonax::core::rad_to_deg(
+        //     rad_to_deg(
         //         projection_chain
         //             .joint_rotation_angle("frame")
         //             .unwrap_or_default()
@@ -504,7 +508,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         //     projection_chain
         //         .joint_rotation_angle("boom")
         //         .unwrap_or_default(),
-        //     glonax::core::rad_to_deg(
+        //     rad_to_deg(
         //         projection_chain
         //             .joint_rotation_angle("boom")
         //             .unwrap_or_default()
@@ -512,7 +516,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         //     projection_chain
         //         .joint_rotation_angle("arm")
         //         .unwrap_or_default(),
-        //     glonax::core::rad_to_deg(
+        //     rad_to_deg(
         //         projection_chain
         //             .joint_rotation_angle("arm")
         //             .unwrap_or_default()
@@ -612,7 +616,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     "Frame",
                                     axis_rot_error_angle_optimized,
-                                    glonax::core::rad_to_deg(axis_rot_error_angle_optimized),
+                                    rad_to_deg(axis_rot_error_angle_optimized),
                                     axis_rot_error_power,
                                     if rot_error.angle() > angular_tolerance {
                                         "Moving"
@@ -643,7 +647,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     "Boom",
                                     axis_rot_error_angle,
-                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    rad_to_deg(axis_rot_error_angle),
                                     axis_rot_error_power,
                                     if rot_error.angle() > angular_tolerance {
                                         "Moving"
@@ -674,7 +678,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     "Arm",
                                     axis_rot_error_angle,
-                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    rad_to_deg(axis_rot_error_angle),
                                     axis_rot_error_power,
                                     if rot_error.angle() > angular_tolerance {
                                         "Moving"
@@ -706,7 +710,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                     "Attachment",
                                     axis_rot_error_angle,
-                                    glonax::core::rad_to_deg(axis_rot_error_angle),
+                                    rad_to_deg(axis_rot_error_angle),
                                     axis_rot_error_power,
                                     if rot_error.angle() > angular_tolerance {
                                         "Moving"
