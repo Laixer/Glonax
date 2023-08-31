@@ -223,6 +223,41 @@ impl Device {
     }
 }
 
+pub struct JointDiff<'a> {
+    pub joint: &'a Joint,
+    pub rotation: Rotation3<f32>,
+}
+
+impl<'a> JointDiff<'a> {
+    pub fn error_angle(&self) -> f32 {
+        let rotation_axis = self.rotation.axis().unwrap();
+
+        (rotation_axis.x * self.rotation.angle())
+            + (rotation_axis.y * self.rotation.angle())
+            + (rotation_axis.z * self.rotation.angle())
+    }
+
+    pub fn error_angle_optimized(&self) -> f32 {
+        if self.joint.ty() == &JointType::Continuous {
+            crate::core::geometry::shortest_rotation(self.error_angle())
+        } else {
+            self.error_angle()
+        }
+    }
+
+    pub fn is_below_tolerance(&self) -> bool {
+        self.error_angle_optimized().abs() < self.joint.tolerance()
+    }
+
+    pub fn actuator_motion(&self) -> crate::core::Motion {
+        let error_angle_optimized = self.error_angle_optimized();
+
+        let error_angle_power = self.joint.profile().unwrap().power(error_angle_optimized);
+
+        crate::core::Motion::new(self.joint.actuator().unwrap(), error_angle_power)
+    }
+}
+
 pub struct Chain<'a> {
     robot: &'a Robot,
     joint_state: Vec<(String, Option<Rotation3<f32>>)>,
@@ -288,8 +323,7 @@ impl<'a> Chain<'a> {
         nalgebra::distance(&lhs_point, &rhs_point)
     }
 
-    // TODO: Maybe return new chain
-    pub fn error(&self, rhs: &Self) -> Vec<(&Joint, f32)> {
+    pub fn error(&self, rhs: &Self) -> Vec<JointDiff> {
         let mut error_vec = vec![];
 
         for (joint_name, lhs_rotation, rhs_rotation) in self
@@ -301,13 +335,10 @@ impl<'a> Chain<'a> {
         {
             let joint = self.robot.joint_by_name(joint_name).unwrap();
 
-            let rotation_error = lhs_rotation.rotation_to(&rhs_rotation);
-            let rotation_axis = rotation_error.axis().unwrap();
-            let rotation_error_angle = (rotation_axis.x * rotation_error.angle())
-                + (rotation_axis.y * rotation_error.angle())
-                + (rotation_axis.z * rotation_error.angle());
-
-            error_vec.push((joint, rotation_error_angle));
+            error_vec.push(JointDiff {
+                joint,
+                rotation: lhs_rotation.rotation_to(&rhs_rotation),
+            });
         }
 
         error_vec

@@ -454,34 +454,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             Rotation3::from_pitch(rel_pitch_attachment),
         ]);
 
-        // log::debug!(
-        //     "Projection angles: {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
-        //     projection_chain
-        //         .joint_rotation_angle("frame")
-        //         .unwrap_or_default(),
-        //     rad_to_deg(
-        //         projection_chain
-        //             .joint_rotation_angle("frame")
-        //             .unwrap_or_default()
-        //     ),
-        //     projection_chain
-        //         .joint_rotation_angle("boom")
-        //         .unwrap_or_default(),
-        //     rad_to_deg(
-        //         projection_chain
-        //             .joint_rotation_angle("boom")
-        //             .unwrap_or_default()
-        //     ),
-        //     projection_chain
-        //         .joint_rotation_angle("arm")
-        //         .unwrap_or_default(),
-        //     rad_to_deg(
-        //         projection_chain
-        //             .joint_rotation_angle("arm")
-        //             .unwrap_or_default()
-        //     ),
-        // );
-
         let projection_point = projection_chain.world_transformation() * na::Point3::origin();
         if target.coords.norm() - projection_point.coords.norm() > kinematic_epsilon {
             log::error!(
@@ -540,41 +512,45 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                         let mut motion_list = vec![];
 
-                        for (joint, error_angle) in error_chain {
-                            let error_angle_optimized = if joint.ty() == &JointType::Continuous {
-                                glonax::core::geometry::shortest_rotation(error_angle)
-                            } else {
-                                error_angle
-                            };
+                        for joint_diff in error_chain {
+                            let error_angle_optimized = joint_diff.error_angle_optimized();
 
-                            let error_angle_power =
-                                joint.profile().unwrap().power(error_angle_optimized);
+                            let error_angle_power = joint_diff
+                                .joint
+                                .profile()
+                                .unwrap()
+                                .power(error_angle_optimized);
 
                             log::debug!(
                                 " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
-                                joint.name(),
+                                joint_diff.joint.name(),
                                 error_angle_optimized,
                                 rad_to_deg(error_angle_optimized),
                                 error_angle_power,
-                                if error_angle_optimized.abs() > joint.tolerance() {
-                                    "Moving"
-                                } else {
+                                if joint_diff.is_below_tolerance() {
                                     "Locked"
+                                } else {
+                                    "Moving"
                                 }
                             );
 
-                            if error_angle_optimized.abs() > joint.tolerance() {
-                                motion_list.push(Motion::new(
-                                    joint.actuator().unwrap(),
-                                    error_angle_power,
-                                ));
+                            if !joint_diff.is_below_tolerance() {
                                 done = false;
-                            } else {
-                                motion_list.push(Motion::new(
-                                    joint.actuator().unwrap(),
-                                    Motion::POWER_NEUTRAL,
-                                ));
                             }
+
+                            motion_list.push(joint_diff.actuator_motion());
+
+                            // if joint_diff.is_below_tolerance() {
+                            //     motion_list.push(Motion::new(
+                            //         joint_diff.joint.actuator().unwrap(),
+                            //         Motion::POWER_NEUTRAL,
+                            //     ));
+                            // } else {
+                            //     motion_list.push(Motion::new(
+                            //         joint_diff.joint.actuator().unwrap(),
+                            //         error_angle_power,
+                            //     ));
+                            // }
                         }
 
                         for motion in motion_list {
