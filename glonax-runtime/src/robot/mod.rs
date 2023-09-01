@@ -229,30 +229,55 @@ pub struct JointDiff<'a> {
 }
 
 impl<'a> JointDiff<'a> {
-    pub fn error_angle(&self) -> f32 {
-        let rotation_axis = self.rotation.axis().unwrap();
+    pub fn error_angle(&self) -> Option<f32> {
+        self.rotation.axis().map(|axis| {
+            axis.x * self.rotation.angle()
+                + axis.y * self.rotation.angle()
+                + axis.z * self.rotation.angle()
+        })
 
-        (rotation_axis.x * self.rotation.angle())
-            + (rotation_axis.y * self.rotation.angle())
-            + (rotation_axis.z * self.rotation.angle())
+        // if let Some(rotation_axis) = self.rotation.axis() {
+        //     (rotation_axis.x * self.rotation.angle())
+        //         + (rotation_axis.y * self.rotation.angle())
+        //         + (rotation_axis.z * self.rotation.angle())
+        // } else {
+        //     0.0
+        // }
     }
 
-    pub fn error_angle_optimized(&self) -> f32 {
-        if self.joint.ty() == &JointType::Continuous {
-            crate::core::geometry::shortest_rotation(self.error_angle())
-        } else {
-            self.error_angle()
-        }
+    pub fn error_angle_optimized(&self) -> Option<f32> {
+        self.error_angle().map(|angle| {
+            if self.joint.ty() == &JointType::Continuous {
+                crate::core::geometry::shortest_rotation(angle)
+            } else {
+                angle
+            }
+        })
+
+        // if self.joint.ty() == &JointType::Continuous {
+        //     crate::core::geometry::shortest_rotation(self.error_angle())
+        // } else {
+        //     self.error_angle()
+        // }
     }
 
     pub fn is_below_tolerance(&self) -> bool {
-        self.error_angle_optimized().abs() < self.joint.tolerance()
+        self.error_angle_optimized()
+            .map_or(true, |angle| angle.abs() < self.joint.tolerance())
     }
 
     pub fn actuator_motion(&self) -> crate::core::Motion {
         let error_angle_optimized = self.error_angle_optimized();
 
-        let error_angle_power = self.joint.profile().unwrap().power(error_angle_optimized);
+        if error_angle_optimized.is_none() {
+            return crate::core::Motion::new(self.joint.actuator().unwrap(), 0_i16);
+        }
+
+        let error_angle_power = self
+            .joint
+            .profile()
+            .unwrap()
+            .power(error_angle_optimized.unwrap());
 
         crate::core::Motion::new(self.joint.actuator().unwrap(), error_angle_power)
     }
@@ -361,7 +386,7 @@ impl std::fmt::Debug for Chain<'_> {
 
         for (joint, rotation) in &self.joint_state {
             s.push_str(&format!(
-                "{}={:.2}rad/{:5.2}° ",
+                "{}={:.2}rad/{:.2}° ",
                 joint,
                 rotation.unwrap().angle(),
                 rotation.unwrap().angle().to_degrees()

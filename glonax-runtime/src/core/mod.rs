@@ -55,10 +55,32 @@ pub mod geometry {
         }
     }
 
+    /// Calculate the angle of a triangle using the law of cosines
+    pub fn law_of_cosines(a: f32, b: f32, c: f32) -> f32 {
+        let a2 = a.powi(2);
+        let b2 = b.powi(2);
+        let c2 = c.powi(2);
+
+        let numerator = a2 + b2 - c2;
+        let denominator = 2.0 * a * b;
+
+        (numerator / denominator).acos()
+    }
+
+    /// Convert degrees to radians
+    #[inline]
+    pub fn deg_to_rad<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
+        input * (std::f32::consts::PI / 180.0)
+    }
+
+    /// Convert radians to degrees
+    #[inline]
+    pub fn rad_to_deg<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
+        input * (180.0 / std::f32::consts::PI)
+    }
+
     #[cfg(test)]
     mod tests {
-        use crate::core::deg_to_rad;
-
         use super::*;
 
         #[test]
@@ -69,18 +91,6 @@ pub mod geometry {
             // TODO: More tests
         }
     }
-}
-
-/// Convert degrees to radians
-#[inline]
-pub fn deg_to_rad<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
-    input * (std::f32::consts::PI / 180.0)
-}
-
-/// Convert radians to degrees
-#[inline]
-pub fn rad_to_deg<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
-    input * (180.0 / std::f32::consts::PI)
 }
 
 #[cfg(test)]

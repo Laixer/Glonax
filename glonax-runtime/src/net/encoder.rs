@@ -119,7 +119,7 @@ impl std::fmt::Display for EncoderMessage {
             "Position: {:>5} {:>6.2}rad {:>6.2}°; Speed {:>5}; State: {}",
             self.position,
             self.position as f32 / 1000.0,
-            crate::core::rad_to_deg(self.position as f32 / 1000.0),
+            crate::core::geometry::rad_to_deg(self.position as f32 / 1000.0),
             self.speed,
             self.state
                 .as_ref()

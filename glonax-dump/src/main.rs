@@ -23,6 +23,8 @@ impl InverseKinematics {
     }
 
     fn solve(&self, target: nalgebra::Point3<f32>) -> Option<(f32, f32, f32)> {
+        use glonax::core::geometry::{law_of_cosines, rad_to_deg};
+
         let local_z = target.z - 0.595 - 1.295;
         log::debug!("Local Z:            {:.2}", local_z);
 
@@ -52,21 +54,18 @@ impl InverseKinematics {
         log::debug!(
             "theta_2p1:         {:5.2}rad {:5.2}° ",
             theta_2p1,
-            glonax::core::rad_to_deg(theta_2p1)
+            rad_to_deg(theta_2p1)
         );
         let theta_2p2 =
             ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
         log::debug!(
             "theta_2p2:         {:5.2}rad {:5.2}° ",
             theta_2p2,
-            glonax::core::rad_to_deg(theta_2p2)
+            rad_to_deg(theta_2p2)
         );
 
-        let theta_2 = local_z.atan2(l4)
-            + ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
-
-        let theta_3 = std::f32::consts::PI
-            - ((self.l1.powi(2) + self.l2.powi(2) - l5.powi(2)) / (2.0 * self.l1 * self.l2)).acos();
+        let theta_2 = local_z.atan2(l4) + law_of_cosines(self.l1, l5, self.l2);
+        let theta_3 = std::f32::consts::PI - law_of_cosines(self.l1, self.l2, l5);
 
         if l5 >= self.l1 + self.l2 {
             None
@@ -204,7 +203,8 @@ async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net
 }
 
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
-    use glonax::core::{deg_to_rad, rad_to_deg, Motion};
+    use glonax::core::geometry::{deg_to_rad, rad_to_deg};
+    use glonax::core::Motion;
     use glonax::robot::{
         Device, DeviceType, Joint, JointType, MotionProfile, RobotBuilder, RobotType,
     };
@@ -333,26 +333,48 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     }
 
-    // let targets = [Target::new(
-    //     na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
-    //     na::Rotation3::identity(),
-    // )];
-
     let targets = [Target::new(
-        na::Point3::new(5.56, 0.0, 1.65),
-        na::Rotation3::from_euler_angles(0.0, 2.3911, 0.0),
+        na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
+        na::Rotation3::identity(),
     )];
 
     // let targets = [
-    //     na::Point3::new(5.56, 0.00, 1.65),
-    //     na::Point3::new(6.27, 0.00, 3.58),
-    //     na::Point3::new(7.63, 0.00, 4.45),
-    //     na::Point3::new(8.05, 0.00, 2.19),
-    //     na::Point3::new(7.14, 0.00, 1.44),
-    //     na::Point3::new(5.85, 0.00, 1.85),
-    //     na::Point3::new(3.55, 4.60, 2.58),
-    //     na::Point3::new(4.85, 6.26, 1.96),
-    //     na::Point3::new(6.27, 0.00, 3.58),
+    //     Target::new(
+    //         na::Point3::new(5.56, 0.0, 1.65),
+    //         na::Rotation3::from_euler_angles(0.0, 2.3911, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(6.27, 0.00, 3.58),
+    //         na::Rotation3::from_euler_angles(0.0, 0.2792, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(7.63, 0.00, 4.45),
+    //         na::Rotation3::from_euler_angles(0.0, 0.4363, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(8.05, 0.00, 2.19),
+    //         na::Rotation3::from_euler_angles(0.0, 0.7330, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(7.14, 0.00, 1.44),
+    //         na::Rotation3::from_euler_angles(0.0, 2.2340, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(5.85, 0.00, 1.85),
+    //         na::Rotation3::from_euler_angles(0.0, 3.1415, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(3.55, 4.60, 2.58),
+    //         na::Rotation3::from_euler_angles(0.0, 3.0019, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(4.85, 6.26, 1.96),
+    //         na::Rotation3::from_euler_angles(0.0, 0.192, 0.0),
+    //     ),
+    //     Target::new(
+    //         na::Point3::new(6.27, 0.00, 3.58),
+    //         na::Rotation3::from_euler_angles(0.0, 0.2792, 0.0),
+    //     ),
     // ];
 
     for target in targets {
@@ -371,29 +393,29 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         );
 
         ///////////////////////////////////
-        log::debug!("IK");
+        // log::debug!("IK");
 
-        let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.point.xy().coords);
+        // let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.point.xy().coords);
 
-        log::debug!(
-            "Angle θ1           {:5.2}rad {:5.2}°",
-            rot.angle(),
-            rad_to_deg(rot.angle() as f32)
-        );
+        // log::debug!(
+        //     "Angle θ1           {:5.2}rad {:5.2}°",
+        //     rot.angle(),
+        //     rad_to_deg(rot.angle() as f32)
+        // );
 
-        let offset = rot * na::Point2::new(0.16, 0.0);
-        log::debug!("Vector point:       [{:.3}, {:.3}]", offset.x, offset.y);
-        let lv = na::distance(&na::Point2::new(0.0, 0.0), &offset);
-        log::debug!("Vector L:           {:.2}", lv);
+        // let offset = rot * na::Point2::new(0.16, 0.0);
+        // log::debug!("Vector point:       [{:.3}, {:.3}]", offset.x, offset.y);
+        // let lv = na::distance(&na::Point2::new(0.0, 0.0), &offset);
+        // log::debug!("Vector L:           {:.2}", lv);
 
-        let l1 = na::distance(&na::Point2::new(0.0, 0.0), &target.point.xy());
-        log::debug!("L1 distance:        {:.2}", l1);
-        let l4 = na::distance(&offset, &target.point.xy());
-        log::debug!("L4 distance:        {:.2}", l4);
+        // let l1 = na::distance(&na::Point2::new(0.0, 0.0), &target.point.xy());
+        // log::debug!("L1 distance:        {:.2}", l1);
+        // let l4 = na::distance(&offset, &target.point.xy());
+        // log::debug!("L4 distance:        {:.2}", l4);
 
-        let offset = na::Point3::new(offset.x, offset.y, 0.595 + 1.295);
-        let l5 = na::distance(&offset, &target.point);
-        log::debug!("L5 distance:        {:.2}", l5);
+        // let offset = na::Point3::new(offset.x, offset.y, 0.595 + 1.295);
+        // let l5 = na::distance(&offset, &target.point);
+        // log::debug!("L5 distance:        {:.2}", l5);
 
         // let q = target - offset;
         // log::debug!("Vector point:       [{:.3}, {:.3}, {:.3}]", q.x, q.y, q.z);
@@ -459,6 +481,14 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         );
 
         let rel_pitch_attachment = 0.0;
+        let abs_pitch_attachment = p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
+
+        log::debug!(
+            "Attachment pitch:  {:5.2}rad {:5.2}°",
+            abs_pitch_attachment,
+            rad_to_deg(abs_pitch_attachment)
+        );
+
         let abs_pitch_attachment = -p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
 
         log::debug!(
@@ -477,6 +507,20 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         ]);
 
         let projection_point = projection_chain.world_transformation() * na::Point3::origin();
+
+        log::debug!("Projection chain: {:?}", projection_chain);
+        // log::debug!("{:#?}", projection_chain.world_transformation().rotation.axis_angle() );
+
+        // let boom_pitch = 0.53;
+        // let arm_pitch = 0.53 + 1.57;//1.90;
+        // let total_pitch = -boom_pitch + arm_pitch + rel_pitch_attachment;
+
+        // log::debug!(
+        //     "Total pitch:       {:5.2}rad {:5.2}°",
+        //     total_pitch,
+        //     rad_to_deg(total_pitch)
+        // );
+
         if target.point.coords.norm() - projection_point.coords.norm() > kinematic_epsilon {
             log::error!(
                 "Projection point:   [{:.2}, {:.2}, {:.2}]",
@@ -535,7 +579,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         let mut motion_list = vec![];
 
                         for joint_diff in error_chain {
-                            let error_angle_optimized = joint_diff.error_angle_optimized();
+                            let error_angle_optimized = joint_diff.error_angle_optimized().unwrap_or(0.0);
 
                             let error_angle_power = joint_diff
                                 .joint

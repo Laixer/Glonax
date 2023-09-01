@@ -111,7 +111,7 @@ impl std::fmt::Display for Metric {
                     "Encoder 0x{:X?} Abs Angle: {:.2}rad {:.2}°",
                     node,
                     value,
-                    crate::core::rad_to_deg(*value)
+                    crate::core::geometry::rad_to_deg(*value)
                 )
             }
             Metric::EncoderRpm((node, value)) => write!(f, "Encoder 0x{:X?} RPM: {}", node, value),
