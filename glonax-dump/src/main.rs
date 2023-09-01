@@ -23,7 +23,7 @@ impl InverseKinematics {
     }
 
     fn solve(&self, target: nalgebra::Point3<f32>) -> Option<(f32, f32, f32)> {
-        use glonax::core::geometry::{law_of_cosines, rad_to_deg};
+        use glonax::core::geometry::law_of_cosines;
 
         let local_z = target.z - 0.595 - 1.295;
         log::debug!("Local Z:            {:.2}", local_z);
@@ -54,14 +54,14 @@ impl InverseKinematics {
         log::debug!(
             "theta_2p1:         {:5.2}rad {:5.2}° ",
             theta_2p1,
-            rad_to_deg(theta_2p1)
+            theta_2p1.to_degrees()
         );
         let theta_2p2 =
             ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
         log::debug!(
             "theta_2p2:         {:5.2}rad {:5.2}° ",
             theta_2p2,
-            rad_to_deg(theta_2p2)
+            theta_2p2.to_degrees()
         );
 
         let theta_2 = local_z.atan2(l4) + law_of_cosines(self.l1, l5, self.l2);
@@ -203,7 +203,6 @@ async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net
 }
 
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
-    use glonax::core::geometry::{deg_to_rad, rad_to_deg};
     use glonax::core::Motion;
     use glonax::robot::{
         Device, DeviceType, Joint, JointType, MotionProfile, RobotBuilder, RobotType,
@@ -252,8 +251,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 MotionProfile::new(15_000.0, 12_000.0, 0.01, false),
             )
             .set_origin_translation(0.16, 0.0, 0.595)
-            .set_pitch(deg_to_rad(-59.35))
-            .set_bounds(deg_to_rad(-59.35), deg_to_rad(45.0)),
+            .set_pitch(-59.35_f32.to_radians())
+            .set_bounds(-59.35_f32.to_radians(), 45.0_f32.to_radians()),
         )
         .add_joint(
             Joint::with_actuator(
@@ -263,7 +262,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 MotionProfile::new(15_000.0, 12_000.0, 0.01, true),
             )
             .set_length(6.0)
-            .set_bounds(deg_to_rad(38.96), deg_to_rad(158.14)),
+            .set_bounds(38.96_f32.to_radians(), 158.14_f32.to_radians()),
         )
         .add_joint(
             Joint::with_actuator(
@@ -273,8 +272,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 MotionProfile::new(15_000.0, 12_000.0, 0.05, false),
             )
             .set_length(2.97)
-            .set_pitch(deg_to_rad(-55.0))
-            .set_bounds(deg_to_rad(-55.0), deg_to_rad(125.0))
+            .set_pitch(-55.0_f32.to_radians())
+            .set_bounds(-55.0_f32.to_radians(), 125.0_f32.to_radians())
             .set_tolerance(0.05),
         )
         .add_joint(Joint::new("effector", JointType::Fixed).set_length(1.5))
@@ -473,35 +472,35 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::debug!(
             "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
             p_frame_yaw,
-            rad_to_deg(p_frame_yaw),
+            p_frame_yaw.to_degrees(),
             p_boom_pitch,
-            rad_to_deg(p_boom_pitch),
+            p_boom_pitch.to_degrees(),
             p_arm_pitch,
-            rad_to_deg(p_arm_pitch)
+            p_arm_pitch.to_degrees()
         );
 
         let rel_pitch_attachment = 0.0;
-        let abs_pitch_attachment = p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
+        // let abs_pitch_attachment = p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
 
-        log::debug!(
-            "Attachment pitch:  {:5.2}rad {:5.2}°",
-            abs_pitch_attachment,
-            rad_to_deg(abs_pitch_attachment)
-        );
+        // log::debug!(
+        //     "Attachment pitch:  {:5.2}rad {:5.2}°",
+        //     abs_pitch_attachment,
+        //     abs_pitch_attachment.to_degrees()
+        // );
 
         let abs_pitch_attachment = -p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
 
         log::debug!(
             "Attachment pitch:  {:5.2}rad {:5.2}°",
             abs_pitch_attachment,
-            rad_to_deg(abs_pitch_attachment)
+            abs_pitch_attachment.to_degrees()
         );
 
         ///////////////////////////////////
 
         projection_chain.set_joint_positions(vec![
             Rotation3::from_yaw(p_frame_yaw),
-            Rotation3::from_pitch((-p_boom_pitch) + deg_to_rad(59.35)),
+            Rotation3::from_pitch((-p_boom_pitch) + 59.35_f32.to_radians()),
             Rotation3::from_pitch(p_arm_pitch),
             Rotation3::from_pitch(rel_pitch_attachment),
         ]);
@@ -591,7 +590,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                 " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
                                 joint_diff.joint.name(),
                                 error_angle_optimized,
-                                rad_to_deg(error_angle_optimized),
+                                error_angle_optimized.to_degrees(),
                                 error_angle_power,
                                 if joint_diff.is_below_tolerance() {
                                     "Locked"

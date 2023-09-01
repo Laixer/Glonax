@@ -67,26 +67,14 @@ pub mod geometry {
         (numerator / denominator).acos()
     }
 
-    /// Convert degrees to radians
-    #[inline]
-    pub fn deg_to_rad<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
-        input * (std::f32::consts::PI / 180.0)
-    }
-
-    /// Convert radians to degrees
-    #[inline]
-    pub fn rad_to_deg<T: std::ops::Mul<f32, Output = T>>(input: T) -> T {
-        input * (180.0 / std::f32::consts::PI)
-    }
-
     #[cfg(test)]
     mod tests {
         use super::*;
 
         #[test]
         fn test_shortest_rotation() {
-            assert!(shortest_rotation(deg_to_rad(45.0)) < deg_to_rad(46.0));
-            assert!(shortest_rotation(deg_to_rad(179.0)) < deg_to_rad(180.0));
+            assert!(shortest_rotation(45.0_f32.to_radians()) < 46.0_f32.to_radians());
+            assert!(shortest_rotation(179.0_f32.to_radians()) < 180.0_f32.to_radians());
 
             // TODO: More tests
         }
