@@ -235,14 +235,6 @@ impl<'a> JointDiff<'a> {
                 + axis.y * self.rotation.angle()
                 + axis.z * self.rotation.angle()
         })
-
-        // if let Some(rotation_axis) = self.rotation.axis() {
-        //     (rotation_axis.x * self.rotation.angle())
-        //         + (rotation_axis.y * self.rotation.angle())
-        //         + (rotation_axis.z * self.rotation.angle())
-        // } else {
-        //     0.0
-        // }
     }
 
     pub fn error_angle_optimized(&self) -> Option<f32> {
@@ -253,12 +245,6 @@ impl<'a> JointDiff<'a> {
                 angle
             }
         })
-
-        // if self.joint.ty() == &JointType::Continuous {
-        //     crate::core::geometry::shortest_rotation(self.error_angle())
-        // } else {
-        //     self.error_angle()
-        // }
     }
 
     pub fn is_below_tolerance(&self) -> bool {
@@ -266,20 +252,18 @@ impl<'a> JointDiff<'a> {
             .map_or(true, |angle| angle.abs() < self.joint.tolerance())
     }
 
-    pub fn actuator_motion(&self) -> crate::core::Motion {
-        let error_angle_optimized = self.error_angle_optimized();
+    pub fn error_angle_power(&self) -> Option<i16> {
+        self.error_angle_optimized().map_or(None, |angle| {
+            self.joint.profile().map(|profile| profile.power(angle))
+        })
+    }
 
-        if error_angle_optimized.is_none() {
-            return crate::core::Motion::new(self.joint.actuator().unwrap(), 0_i16);
-        }
-
-        let error_angle_power = self
-            .joint
-            .profile()
-            .unwrap()
-            .power(error_angle_optimized.unwrap());
-
-        crate::core::Motion::new(self.joint.actuator().unwrap(), error_angle_power)
+    pub fn actuator_motion(&self) -> Option<crate::core::Motion> {
+        self.error_angle_power().map_or(None, |power| {
+            self.joint
+                .actuator()
+                .map(|actuator| crate::core::Motion::new(actuator, power))
+        })
     }
 }
 
@@ -374,30 +358,28 @@ impl std::fmt::Display for Chain<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let point = self.world_transformation() * Point3::origin();
 
-        write!(f, "[{:.2}, {:.2}, {:.2}]", point.x, point.y, point.z)
+        write!(f, "({:.2}, {:.2}, {:.2})", point.x, point.y, point.z)
     }
 }
 
 impl std::fmt::Debug for Chain<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let point = self.world_transformation() * Point3::origin();
-
         let mut s = String::new();
 
         for (joint, rotation) in &self.joint_state {
-            s.push_str(&format!(
-                "{}={:.2}rad/{:.2}° ",
-                joint,
-                rotation.unwrap().angle(),
-                rotation.unwrap().angle().to_degrees()
-            ));
+            if let Some(rotation) = rotation {
+                s.push_str(&format!(
+                    "{}={:.2}rad/{:.2}° ",
+                    joint,
+                    rotation.angle(),
+                    rotation.angle().to_degrees()
+                ));
+            } else {
+                s.push_str(&format!("{}=None ", joint));
+            }
         }
 
-        write!(
-            f,
-            "{s} Endpoint [{:.2}, {:.2}, {:.2}]",
-            point.x, point.y, point.z
-        )
+        write!(f, "{s} {}", self)
     }
 }
 

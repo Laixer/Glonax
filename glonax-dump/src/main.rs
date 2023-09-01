@@ -502,7 +502,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             Rotation3::from_yaw(p_frame_yaw),
             Rotation3::from_pitch((-p_boom_pitch) + 59.35_f32.to_radians()),
             Rotation3::from_pitch(p_arm_pitch),
-            Rotation3::from_pitch(rel_pitch_attachment),
+            // Rotation3::from_pitch(rel_pitch_attachment),
         ]);
 
         let projection_point = projection_chain.world_transformation() * na::Point3::origin();
@@ -578,7 +578,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         let mut motion_list = vec![];
 
                         for joint_diff in error_chain {
-                            let error_angle_optimized = joint_diff.error_angle_optimized().unwrap_or(0.0);
+                            let error_angle_optimized =
+                                joint_diff.error_angle_optimized().unwrap_or(0.0);
 
                             let error_angle_power = joint_diff
                                 .joint
@@ -603,19 +604,9 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                 done = false;
                             }
 
-                            motion_list.push(joint_diff.actuator_motion());
-
-                            // if joint_diff.is_below_tolerance() {
-                            //     motion_list.push(Motion::new(
-                            //         joint_diff.joint.actuator().unwrap(),
-                            //         Motion::POWER_NEUTRAL,
-                            //     ));
-                            // } else {
-                            //     motion_list.push(Motion::new(
-                            //         joint_diff.joint.actuator().unwrap(),
-                            //         error_angle_power,
-                            //     ));
-                            // }
+                            if let Some(motion) = joint_diff.actuator_motion() {
+                                motion_list.push(motion);
+                            }
                         }
 
                         for motion in motion_list {
