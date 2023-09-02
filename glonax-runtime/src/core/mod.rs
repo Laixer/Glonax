@@ -44,6 +44,8 @@ pub mod time {
 pub mod geometry {
     use std::f32::consts::PI;
 
+    use nalgebra::Rotation3;
+
     /// Calculate the shortest rotation between two points on a circle
     pub fn shortest_rotation(distance: f32) -> f32 {
         let dist_normal = (distance + (2.0 * PI)) % (2.0 * PI);
@@ -65,6 +67,29 @@ pub mod geometry {
         let denominator = 2.0 * a * b;
 
         (numerator / denominator).acos()
+    }
+
+    pub trait EulerAngles {
+        /// Create a rotation matrix from a roll angle.
+        fn from_roll(roll: f32) -> Self;
+        /// Create a rotation matrix from a pitch angle.
+        fn from_pitch(pitch: f32) -> Self;
+        /// Create a rotation matrix from a yaw angle.
+        fn from_yaw(pitch: f32) -> Self;
+    }
+
+    impl EulerAngles for Rotation3<f32> {
+        fn from_roll(roll: f32) -> Self {
+            Rotation3::from_euler_angles(roll, 0.0, 0.0)
+        }
+
+        fn from_pitch(pitch: f32) -> Self {
+            Rotation3::from_euler_angles(0.0, pitch, 0.0)
+        }
+
+        fn from_yaw(yaw: f32) -> Self {
+            Rotation3::from_euler_angles(0.0, 0.0, yaw)
+        }
     }
 
     #[cfg(test)]

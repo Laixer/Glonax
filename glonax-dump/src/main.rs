@@ -75,27 +75,6 @@ impl InverseKinematics {
     }
 }
 
-// TODO: move to core
-trait EulerAngles {
-    fn from_roll(roll: f32) -> Self;
-    fn from_pitch(pitch: f32) -> Self;
-    fn from_yaw(pitch: f32) -> Self;
-}
-
-impl EulerAngles for Rotation3<f32> {
-    fn from_roll(roll: f32) -> Self {
-        Rotation3::from_euler_angles(roll, 0.0, 0.0)
-    }
-
-    fn from_pitch(pitch: f32) -> Self {
-        Rotation3::from_euler_angles(0.0, pitch, 0.0)
-    }
-
-    fn from_yaw(yaw: f32) -> Self {
-        Rotation3::from_euler_angles(0.0, 0.0, yaw)
-    }
-}
-
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
@@ -203,6 +182,7 @@ async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net
 }
 
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
+    use glonax::core::geometry::EulerAngles;
     use glonax::core::Motion;
     use glonax::robot::{
         Device, DeviceType, Joint, JointType, MotionProfile, RobotBuilder, RobotType,
