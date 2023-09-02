@@ -543,27 +543,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         let mut motion_list = vec![];
 
                         for joint_diff in error_chain {
-                            let error_angle_optimized =
-                                joint_diff.error_angle_optimized().unwrap_or(0.0);
-
-                            let error_angle_power = joint_diff
-                                .joint
-                                .profile()
-                                .unwrap()
-                                .power(error_angle_optimized);
-
-                            log::debug!(
-                                " ⇒ {:<15} Error: {:5.2}rad {:6.2}°   Power: {:6}   State: {}",
-                                joint_diff.joint.name(),
-                                error_angle_optimized,
-                                error_angle_optimized.to_degrees(),
-                                error_angle_power,
-                                if joint_diff.is_below_tolerance() {
-                                    "Locked"
-                                } else {
-                                    "Moving"
-                                }
-                            );
+                            log::debug!(" ⇒ {:?}", joint_diff);
 
                             if let Some(motion) = joint_diff.actuator_motion() {
                                 motion_list.push(motion);

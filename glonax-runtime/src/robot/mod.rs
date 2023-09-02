@@ -267,6 +267,23 @@ impl<'a> JointDiff<'a> {
     }
 }
 
+impl std::fmt::Debug for JointDiff<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let angle = self.error_angle_optimized().unwrap_or(0.0);
+        let power = self.error_angle_power().unwrap_or(0);
+
+        write!(
+            f,
+            "{:<15} Error: {:5.2}rad {:7.2}°  Power: {:6} {:5.1}%",
+            self.joint.name(),
+            angle,
+            angle.to_degrees(),
+            power,
+            power as f32 / (crate::core::Motion::POWER_MAX as f32 / 100.0)
+        )
+    }
+}
+
 pub struct Chain<'a> {
     robot: &'a Robot,
     joint_state: Vec<(String, Option<Rotation3<f32>>)>,
