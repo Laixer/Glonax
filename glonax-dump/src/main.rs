@@ -199,6 +199,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     };
 
     let kinematic_epsilon = 0.0001;
+    let kinematic_control = true;
 
     let robot = RobotBuilder::new(config.instance.id.clone(), RobotType::Excavator)
         .model(config.instance.model.clone())
@@ -526,14 +527,14 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                             _ => {}
                         }
 
-                        if !perception_chain.is_ready() {
-                            continue;
-                        }
-
                         log::debug!("Perception chain: {:?}", perception_chain);
 
                         let distance = projection_chain.distance(&perception_chain);
                         log::debug!("Target distance: {:.2}m", distance);
+
+                        if !perception_chain.is_ready() || !kinematic_control {
+                            continue;
+                        }
 
                         let error_chain = perception_chain.error(&projection_chain);
 
@@ -564,16 +565,15 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                 }
                             );
 
-                            if !joint_diff.is_below_tolerance() {
-                                done = false;
-                            }
-
                             if let Some(motion) = joint_diff.actuator_motion() {
                                 motion_list.push(motion);
                             }
+
+                            done = joint_diff.is_below_tolerance() && done;
                         }
 
                         for motion in motion_list {
+                            // TODO: Send all commands at once
                             client.send_motion(motion).await?;
                         }
 
