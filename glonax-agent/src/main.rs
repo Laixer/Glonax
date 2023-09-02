@@ -31,7 +31,7 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let (instance, _) = net_recv_instance().await?;
+    let (instance, _) = glonax::channel::recv_instance().await?;
 
     let mut config = config::AgentConfig {
         interval: args.interval,
@@ -87,33 +87,6 @@ async fn main() -> anyhow::Result<()> {
     log::trace!("{:#?}", config);
 
     daemonize(&mut config).await
-}
-
-async fn net_recv_instance() -> anyhow::Result<(glonax::core::Instance, std::net::IpAddr)> {
-    let broadcast_addr = std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::UNSPECIFIED,
-        glonax::constants::DEFAULT_NETWORK_PORT,
-    );
-
-    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
-
-    let mut buffer = [0u8; 1024];
-
-    log::debug!("Waiting for instance announcement");
-
-    loop {
-        let (size, socket_addr) = socket.recv_from(&mut buffer).await?;
-        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
-            if frame.message == glonax::transport::frame::FrameMessage::Instance {
-                let instance =
-                    glonax::core::Instance::try_from(&buffer[frame.payload_range()]).unwrap();
-
-                log::info!("Instance announcement received: {}", instance);
-
-                return Ok((instance, socket_addr.ip()));
-            }
-        }
-    }
 }
 
 async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
