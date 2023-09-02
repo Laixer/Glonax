@@ -11,6 +11,17 @@ use nalgebra as na;
 
 mod config;
 
+struct Target {
+    point: na::Point3<f32>,
+    orientation: na::Rotation3<f32>,
+}
+
+impl Target {
+    fn new(point: na::Point3<f32>, orientation: na::Rotation3<f32>) -> Self {
+        Self { point, orientation }
+    }
+}
+
 // TODO: move to core::algorithm
 struct InverseKinematics {
     l1: f32,
@@ -22,13 +33,13 @@ impl InverseKinematics {
         Self { l1, l2 }
     }
 
-    fn solve(&self, target: nalgebra::Point3<f32>) -> Option<(f32, f32, f32)> {
+    fn solve(&self, target: &Target) -> std::result::Result<(f32, f32, f32, Option<f32>), ()> {
         use glonax::core::geometry::law_of_cosines;
 
-        let local_z = target.z - 0.595 - 1.295;
+        let local_z = target.point.z - 0.595 - 1.295;
         log::debug!("Local Z:            {:.2}", local_z);
 
-        let theta_1 = target.y.atan2(target.x);
+        let theta_1 = target.point.y.atan2(target.point.x);
 
         let offset = 0.16;
         let offset_x = offset * theta_1.cos();
@@ -36,10 +47,10 @@ impl InverseKinematics {
         // let offset_y = 0.0;
         let offset_y = offset * theta_1.sin();
 
-        log::debug!("Vector offset:      [{:.2}, {:.2}]", offset_x, offset_y);
+        log::debug!("Vector offset:      ({:.2}, {:.2})", offset_x, offset_y);
 
-        let local_x = target.x - offset_x;
-        let local_y = target.y - offset_y;
+        let local_x = target.point.x - offset_x;
+        let local_y = target.point.y - offset_y;
         log::debug!("Local X:            {:.2}", local_x);
         log::debug!("Local Y:            {:.2}", local_y);
 
@@ -50,16 +61,20 @@ impl InverseKinematics {
         let l5 = (l4.powi(2) + local_z.powi(2)).sqrt();
         log::debug!("Vector length L5:   {:.2}", l5);
 
+        if l5 >= self.l1 + self.l2 {
+            return Err(());
+        }
+
         let theta_2p1 = local_z.atan2(l4);
         log::debug!(
-            "theta_2p1:         {:5.2}rad {:5.2}° ",
+            "theta_2p1:         {:5.2}rad {:5.2}°",
             theta_2p1,
             theta_2p1.to_degrees()
         );
         let theta_2p2 =
             ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
         log::debug!(
-            "theta_2p2:         {:5.2}rad {:5.2}° ",
+            "theta_2p2:         {:5.2}rad {:5.2}°",
             theta_2p2,
             theta_2p2.to_degrees()
         );
@@ -67,11 +82,34 @@ impl InverseKinematics {
         let theta_2 = local_z.atan2(l4) + law_of_cosines(self.l1, l5, self.l2);
         let theta_3 = std::f32::consts::PI - law_of_cosines(self.l1, self.l2, l5);
 
-        if l5 >= self.l1 + self.l2 {
-            None
+        let theta_4 = if target.orientation.axis().is_some() {
+            let attach_target = target.orientation.angle();
+            log::debug!(
+                "Attachment target: {:5.2}rad {:5.2}°",
+                attach_target,
+                attach_target.to_degrees()
+            );
+
+            let abs_pitch_attachment = (-59.35_f32.to_radians() + theta_2) + theta_3;
+            log::debug!(
+                "Projected pitch:   {:5.2}rad {:5.2}°",
+                abs_pitch_attachment,
+                abs_pitch_attachment.to_degrees()
+            );
+
+            let rel_attachment_error = attach_target - abs_pitch_attachment; // - 55.0_f32.to_radians();
+            log::debug!(
+                "RelAttach error:   {:5.2}rad {:5.2}°",
+                rel_attachment_error,
+                rel_attachment_error.to_degrees()
+            );
+
+            Some(rel_attachment_error)
         } else {
-            Some((theta_1, theta_2, theta_3))
-        }
+            None
+        };
+
+        Ok((theta_1, theta_2, theta_3, theta_4))
     }
 }
 
@@ -269,20 +307,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     let mut buffer = [0u8; 1024];
 
-    // log::debug!("Listening for signals");
-
     ///////////////////////////////////////////
-
-    struct Target {
-        point: na::Point3<f32>,
-        orientation: na::Rotation3<f32>,
-    }
-
-    impl Target {
-        fn new(point: na::Point3<f32>, orientation: na::Rotation3<f32>) -> Self {
-            Self { point, orientation }
-        }
-    }
 
     let targets = [Target::new(
         na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
@@ -334,13 +359,16 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         client.send_motion(Motion::ResumeAll).await?;
 
         log::debug!(
-            "Target point:       ({:.2}, {:.2}, {:.2}) [{:.2}, {:.2}, {:.2}]",
+            "Target point:       ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
             target.point.x,
             target.point.y,
             target.point.z,
-            target.orientation.euler_angles().0,
-            target.orientation.euler_angles().1,
-            target.orientation.euler_angles().2
+            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()),
+            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()).to_degrees(),
+            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()),
+            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()).to_degrees(),
+            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()),
+            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()).to_degrees(),
         );
 
         ///////////////////////////////////
@@ -420,7 +448,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
         let solver = InverseKinematics::new(6.0, 2.97);
 
-        let (p_frame_yaw, p_boom_pitch, p_arm_pitch) = solver.solve(target.point).unwrap();
+        let (p_frame_yaw, p_boom_pitch, p_arm_pitch, p_attachment_pitch) =
+            solver.solve(&target).expect("IK failed");
         log::debug!(
             "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
             p_frame_yaw,
@@ -428,56 +457,39 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             p_boom_pitch,
             p_boom_pitch.to_degrees(),
             p_arm_pitch,
-            p_arm_pitch.to_degrees()
+            p_arm_pitch.to_degrees(),
         );
 
-        let rel_pitch_attachment = 0.0;
-        // let abs_pitch_attachment = p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
-
-        // log::debug!(
-        //     "Attachment pitch:  {:5.2}rad {:5.2}°",
-        //     abs_pitch_attachment,
-        //     abs_pitch_attachment.to_degrees()
-        // );
-
-        let abs_pitch_attachment = -p_boom_pitch + p_arm_pitch + rel_pitch_attachment;
-
-        log::debug!(
-            "Attachment pitch:  {:5.2}rad {:5.2}°",
-            abs_pitch_attachment,
-            abs_pitch_attachment.to_degrees()
-        );
+        if let Some(angle) = p_attachment_pitch {
+            log::debug!(
+                "IK angles:         {:5.2}rad {:5.2}°",
+                angle,
+                angle.to_degrees()
+            );
+        }
 
         ///////////////////////////////////
 
         projection_chain.set_joint_positions(vec![
             Rotation3::from_yaw(p_frame_yaw),
-            Rotation3::from_pitch((-p_boom_pitch) + 59.35_f32.to_radians()),
+            Rotation3::from_pitch(-p_boom_pitch + 59.35_f32.to_radians()),
             Rotation3::from_pitch(p_arm_pitch),
-            // Rotation3::from_pitch(rel_pitch_attachment),
         ]);
+
+        if let Some(angle) = p_attachment_pitch {
+            projection_chain.set_joint_position("attachment", Rotation3::from_pitch(angle));
+        }
 
         let projection_point = projection_chain.world_transformation() * na::Point3::origin();
 
         log::debug!("Projection chain: {:?}", projection_chain);
-        // log::debug!("{:#?}", projection_chain.world_transformation().rotation.axis_angle() );
 
-        // let boom_pitch = 0.53;
-        // let arm_pitch = 0.53 + 1.57;//1.90;
-        // let total_pitch = -boom_pitch + arm_pitch + rel_pitch_attachment;
-
-        // log::debug!(
-        //     "Total pitch:       {:5.2}rad {:5.2}°",
-        //     total_pitch,
-        //     rad_to_deg(total_pitch)
-        // );
-
-        if target.point.coords.norm() - projection_point.coords.norm() > kinematic_epsilon {
+        if (target.point.coords.norm() - projection_point.coords.norm()).abs() > kinematic_epsilon {
+            log::error!("Target norm: {}", target.point.coords.norm());
+            log::error!("Projection norm: {}", projection_point.coords.norm());
             log::error!(
-                "Projection point:   [{:.2}, {:.2}, {:.2}]",
-                projection_point.x,
-                projection_point.y,
-                projection_point.z
+                "Diff: {}",
+                target.point.coords.norm() - projection_point.coords.norm()
             );
             return Err(anyhow::anyhow!("IK error"));
         }
