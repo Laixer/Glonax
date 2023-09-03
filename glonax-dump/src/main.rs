@@ -6,8 +6,9 @@
 
 use clap::Parser;
 
-use na::Rotation3;
+use na::{Isometry3, Rotation3};
 use nalgebra as na;
+use parry3d::query::PointQuery;
 
 mod config;
 
@@ -356,49 +357,37 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     ///////////////////////////////////////////
 
-    let targets = [Target::new(
-        na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
-        na::Rotation3::identity(),
-    )];
+    // let targets = [Target::new(
+    //     na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
+    //     na::Rotation3::identity(),
+    // )];
 
-    // let targets = [
-    //     Target::new(
-    //         na::Point3::new(5.56, 0.0, 1.65),
-    //         na::Rotation3::from_euler_angles(0.0, 2.3911, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(6.27, 0.00, 3.58),
-    //         na::Rotation3::from_euler_angles(0.0, 0.2792, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(7.63, 0.00, 4.45),
-    //         na::Rotation3::from_euler_angles(0.0, 0.4363, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(8.05, 0.00, 2.19),
-    //         na::Rotation3::from_euler_angles(0.0, 0.7330, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(7.14, 0.00, 1.44),
-    //         na::Rotation3::from_euler_angles(0.0, 2.2340, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(5.85, 0.00, 1.85),
-    //         na::Rotation3::from_euler_angles(0.0, 3.1415, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(3.55, 4.60, 2.58),
-    //         na::Rotation3::from_euler_angles(0.0, 3.0019, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(4.85, 6.26, 1.96),
-    //         na::Rotation3::from_euler_angles(0.0, 0.192, 0.0),
-    //     ),
-    //     Target::new(
-    //         na::Point3::new(6.27, 0.00, 3.58),
-    //         na::Rotation3::from_euler_angles(0.0, 0.2792, 0.0),
-    //     ),
-    // ];
+    let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
+    let targets: Vec<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
+        .iter()
+        .map(|v| {
+            Target::new(
+                na::Point3::new(v[0], v[1], v[2]),
+                na::Rotation3::from_euler_angles(v[3], v[4], v[5]),
+            )
+        })
+        .collect();
+
+    for (idx, target) in targets.iter().enumerate() {
+        log::debug!(
+            "Target {:2}           ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
+            idx,
+            target.point.x,
+            target.point.y,
+            target.point.z,
+            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()),
+            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()).to_degrees(),
+            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()),
+            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()).to_degrees(),
+            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()),
+            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()).to_degrees(),
+        );
+    }
 
     for target in targets {
         projection_chain.reset();
@@ -421,13 +410,37 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         ///////////////////////////////////
         // log::debug!("IK");
 
-        // let rot = na::Rotation2::rotation_between(&na::Vector2::x(), &target.point.xy().coords);
+        // let rot = rot * Rotation3::from_pitch(10_f32.to_radians());
+
+        // let rot = Rotation3::from_yaw(90_f32.to_radians() );
+        // let rot = rot * Rotation3::from_pitch(40_f32.to_radians());
+
+        // let yy = na::UnitQuaternion::from_euler_angles(0.0, 40.0_f32.to_radians(), 0.0);
+        // let yy = yy * na::UnitQuaternion::from_euler_angles(0.0, 10_f32.to_radians(), 0.0);
+
+        // let yy = yy * na::UnitQuaternion::from_euler_angles(0.0, 0.0, 45_f32.to_radians());
+
+        // log::debug!("YY:           {}", yy);
+        // log::debug!("axis_angle:   {:?}", yy.axis_angle());
+        // log::debug!(
+        //     "YY theta:     {}    {:.2}",
+        //     yy.angle(),
+        //     yy.angle().to_degrees()
+        // );
+        // log::debug!("axis_angle:   {:?}", yy.euler_angles());
+
+        // log::debug!("{}", rot);
 
         // log::debug!(
-        //     "Angle θ1           {:5.2}rad {:5.2}°",
-        //     rot.angle(),
-        //     rad_to_deg(rot.angle() as f32)
+        //     "Angle        {:?}       {:.2}rad {:.2}°",
+        //     rot.axis().unwrap(),
+        //     rot.axis().unwrap().z * rot.axis().unwrap().y * rot.angle(),
+        //     rot.axis().unwrap().z * rot.axis().unwrap().y * rot.angle().to_degrees()
         // );
+
+        // let rot = na::Rotation3::rotation_between(&na::Vector3::new(1.0, 0.0, 0.0), &target.point.coords);
+
+        // log::debug!("Angle              {:#?}", rot);
 
         // let offset = rot * na::Point2::new(0.16, 0.0);
         // log::debug!("Vector point:       [{:.3}, {:.3}]", offset.x, offset.y);
