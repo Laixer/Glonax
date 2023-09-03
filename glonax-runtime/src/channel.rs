@@ -1,4 +1,7 @@
+use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
+
 use crate::{
+    constants,
     core::Instance,
     transport::frame::{Frame, FrameMessage},
     transport::Client,
@@ -9,11 +12,8 @@ pub trait SignalSource {
     fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>);
 }
 
-pub async fn recv_instance() -> std::io::Result<(Instance, std::net::IpAddr)> {
-    let broadcast_addr = std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::UNSPECIFIED,
-        crate::constants::DEFAULT_NETWORK_PORT,
-    );
+pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {
+    let broadcast_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, constants::DEFAULT_NETWORK_PORT);
 
     let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
 
@@ -29,14 +29,17 @@ pub async fn recv_instance() -> std::io::Result<(Instance, std::net::IpAddr)> {
 
                 log::info!("Instance announcement received: {}", instance);
 
-                return Ok((instance, socket_addr.ip()));
+                return Ok((
+                    instance,
+                    SocketAddr::new(socket_addr.ip(), constants::DEFAULT_NETWORK_PORT),
+                ));
             }
         }
     }
 }
 
 pub async fn signal_open_write() -> std::io::Result<Client<tokio::fs::File>> {
-    use crate::constants::FIFO_SIGNAL_FILE;
+    use constants::FIFO_SIGNAL_FILE;
 
     log::debug!("Waiting for FIFO connection: {}", FIFO_SIGNAL_FILE);
 

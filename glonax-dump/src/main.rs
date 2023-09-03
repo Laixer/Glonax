@@ -130,10 +130,7 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let (instance, ip) = glonax::channel::recv_instance().await?;
-
-    let address =
-        std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT).to_string();
+    let (instance, address) = glonax::channel::recv_instance().await?;
 
     let mut config = config::DumpConfig {
         address,
