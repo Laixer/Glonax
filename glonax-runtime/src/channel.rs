@@ -12,10 +12,17 @@ pub trait SignalSource {
     fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>);
 }
 
-pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {
-    let broadcast_addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, constants::DEFAULT_NETWORK_PORT);
+#[inline]
+pub async fn broadcast_bind() -> std::io::Result<tokio::net::UdpSocket> {
+    tokio::net::UdpSocket::bind(SocketAddrV4::new(
+        Ipv4Addr::UNSPECIFIED,
+        constants::DEFAULT_NETWORK_PORT,
+    ))
+    .await
+}
 
-    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
+pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {
+    let socket = broadcast_bind().await?;
 
     let mut buffer = [0u8; 1024];
 

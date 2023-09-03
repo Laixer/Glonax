@@ -169,12 +169,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         }
     });
 
-    let broadcast_addr = std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::UNSPECIFIED,
-        glonax::constants::DEFAULT_NETWORK_PORT,
-    );
-
-    let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
+    let socket = glonax::channel::broadcast_bind().await?;
 
     let mut buffer = [0u8; 1024];
 
