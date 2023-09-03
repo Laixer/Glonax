@@ -190,6 +190,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     let ecu_interface = config.interface.clone();
     tokio::spawn(async move {
+        use glonax::core::Motion;
         use glonax::net::{ActuatorService, J1939Network};
 
         log::debug!("Starting motion listener");
@@ -200,24 +201,32 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         while let Some(motion) = motion_rx.recv().await {
             match motion {
-                glonax::core::Motion::StopAll => {
+                Motion::StopAll => {
                     if let Err(e) = network.send_vectored(&service.lock()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
-                glonax::core::Motion::ResumeAll => {
+                Motion::ResumeAll => {
                     if let Err(e) = network.send_vectored(&service.unlock()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
-                glonax::core::Motion::StraightDrive(value) => {
+                Motion::ResetAll => {
+                    if let Err(e) = network.send_vectored(&service.lock()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
+                    if let Err(e) = network.send_vectored(&service.unlock()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
+                }
+                Motion::StraightDrive(value) => {
                     let frames = &service.drive_straight(value);
 
                     if let Err(e) = network.send_vectored(frames).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
-                glonax::core::Motion::Change(changes) => {
+                Motion::Change(changes) => {
                     let frames = &service.actuator_command(
                         changes
                             .iter()
@@ -308,8 +317,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::debug!("Signal broadcast shutdown");
     });
 
-    motion_tx.send(glonax::core::Motion::StopAll).await?;
-    motion_tx.send(glonax::core::Motion::ResumeAll).await?;
+    motion_tx.send(glonax::core::Motion::ResetAll).await?;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
 

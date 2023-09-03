@@ -395,7 +395,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         client.send_motion(Motion::ResumeAll).await?;
 
         log::debug!(
-            "Target point:       ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
+            "Target              ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
             target.point.x,
             target.point.y,
             target.point.z,

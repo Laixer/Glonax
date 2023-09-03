@@ -2,11 +2,11 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 const PROTO_TYPE_STOP_ALL: u8 = 0x00;
 const PROTO_TYPE_RESUME_ALL: u8 = 0x01;
+const PROTO_TYPE_RESET_ALL: u8 = 0x02;
 const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
 const PROTO_TYPE_CHANGE: u8 = 0x10;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(C)]
 pub enum Actuator {
     /// Boom actuator.
     Boom = 0,
@@ -41,7 +41,6 @@ impl TryFrom<u16> for Actuator {
 type MotionValueType = i16;
 
 #[derive(Clone, Debug)]
-#[repr(C)]
 pub struct ChangeSet {
     /// Actuator ID.
     pub actuator: Actuator,
@@ -50,12 +49,13 @@ pub struct ChangeSet {
 }
 
 #[derive(Clone, Debug)]
-#[repr(C)]
 pub enum Motion {
     /// Stop all motion until resumed.
     StopAll,
     /// Resume all motion.
     ResumeAll,
+    /// Reset the motion state machine.
+    ResetAll,
     /// Drive straight forward or backwards.
     StraightDrive(MotionValueType),
     /// Change motion on actuators.
@@ -88,6 +88,9 @@ impl Motion {
             Motion::ResumeAll => {
                 buf.put_u8(PROTO_TYPE_RESUME_ALL);
             }
+            Motion::ResetAll => {
+                buf.put_u8(PROTO_TYPE_RESET_ALL);
+            }
             Motion::StraightDrive(value) => {
                 buf.put_u8(PROTO_TYPE_STRAIGHT_DRIVE);
                 buf.put_i16(*value);
@@ -111,6 +114,7 @@ impl std::fmt::Display for Motion {
         match self {
             Motion::StopAll => write!(f, "Stop all"),
             Motion::ResumeAll => write!(f, "Resume all"),
+            Motion::ResetAll => write!(f, "Reset all"),
             Motion::StraightDrive(value) => write!(f, "Straight drive: {}", value),
             Motion::Change(changes) => {
                 write!(
@@ -143,6 +147,7 @@ impl TryFrom<&[u8]> for Motion {
         match buf.get_u8() {
             PROTO_TYPE_STOP_ALL => Ok(Motion::StopAll),
             PROTO_TYPE_RESUME_ALL => Ok(Motion::ResumeAll),
+            PROTO_TYPE_RESET_ALL => Ok(Motion::ResetAll),
             PROTO_TYPE_STRAIGHT_DRIVE => Ok(Motion::StraightDrive(buf.get_i16())),
             PROTO_TYPE_CHANGE => {
                 let count = buf.get_u8();
