@@ -5,6 +5,7 @@ use nalgebra::{IsometryMatrix3, Point3, Rotation3, Translation3};
 const DEFAULT_TOLERANCE: f32 = 0.01;
 
 // TODO: Move
+#[derive(Copy, Clone, Debug)]
 pub struct MotionProfile {
     scale: f32,
     offset: f32,
@@ -58,7 +59,7 @@ impl MotionProfile {
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum JointType {
     /// A joint that provides one degree of freedom about a fixed axis of rotation.
     Revolute,
@@ -70,7 +71,7 @@ pub enum JointType {
     Fixed,
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct Joint {
     name: String,
     ty: JointType,
@@ -195,12 +196,14 @@ impl Joint {
     }
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum DeviceType {
     EncoderAbsoluteMultiTurn,
     EncoderAbsoluteSingleTurn,
 }
 
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct Device {
     name: String,
     id: u8,
@@ -284,13 +287,13 @@ impl std::fmt::Debug for JointDiff<'_> {
     }
 }
 
-pub struct Chain<'a> {
-    robot: &'a Robot,
+pub struct Chain {
+    robot: Robot,
     joint_state: Vec<(String, Option<Rotation3<f32>>)>,
 }
 
-impl<'a> Chain<'a> {
-    pub fn new(robot: &'a Robot) -> Self {
+impl Chain {
+    pub fn new(robot: Robot) -> Self {
         Self {
             robot,
             joint_state: vec![],
@@ -371,7 +374,7 @@ impl<'a> Chain<'a> {
     }
 }
 
-impl std::fmt::Display for Chain<'_> {
+impl std::fmt::Display for Chain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let point = self.world_transformation() * Point3::origin();
 
@@ -379,7 +382,7 @@ impl std::fmt::Display for Chain<'_> {
     }
 }
 
-impl std::fmt::Debug for Chain<'_> {
+impl std::fmt::Debug for Chain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
@@ -400,10 +403,10 @@ impl std::fmt::Debug for Chain<'_> {
     }
 }
 
-impl Clone for Chain<'_> {
+impl Clone for Chain {
     fn clone(&self) -> Self {
         let mut this = Self {
-            robot: self.robot,
+            robot: self.robot.clone(),
             joint_state: self.joint_state.clone(),
         };
         this.reset();
@@ -411,7 +414,7 @@ impl Clone for Chain<'_> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum RobotType {
     Excavator,
     WheelLoader,
@@ -421,16 +424,15 @@ pub enum RobotType {
     Forestry,
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct Robot {
     instance: String, // TODO: Replace with UUID
     name: String,
     model: String,
     ty: RobotType,
     joints: Vec<Joint>,
-    chains: Vec<String>,
+    // chains: Vec<String>,
     devices: Vec<Device>,
-    position_state: Vec<f64>,
 }
 
 impl Robot {
@@ -467,9 +469,8 @@ pub struct RobotBuilder {
     model: String,
     ty: RobotType,
     joints: Vec<Joint>,
-    chains: Vec<String>,
+    // chains: Vec<String>,
     devices: Vec<Device>,
-    position_state: Vec<f64>,
 }
 
 impl RobotBuilder {
@@ -480,9 +481,8 @@ impl RobotBuilder {
             model: String::new(),
             ty,
             joints: Vec::new(),
-            chains: Vec::new(),
+            // chains: Vec::new(),
             devices: Vec::new(),
-            position_state: Vec::new(),
         }
     }
 
@@ -501,10 +501,10 @@ impl RobotBuilder {
         self
     }
 
-    pub fn add_chain(mut self, chain: String) -> Self {
-        self.chains.push(chain);
-        self
-    }
+    // pub fn add_chain(mut self, chain: String) -> Self {
+    //     self.chains.push(chain);
+    //     self
+    // }
 
     pub fn add_device(mut self, device: Device) -> Self {
         self.devices.push(device);
@@ -518,9 +518,7 @@ impl RobotBuilder {
             model: self.model,
             ty: self.ty,
             joints: self.joints,
-            chains: self.chains,
             devices: self.devices,
-            position_state: self.position_state,
         }
     }
 }

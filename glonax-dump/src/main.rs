@@ -260,8 +260,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 MotionProfile::new(15_000.0, 12_000.0, 0.05, false),
             )
             .set_length(2.97)
-            .set_pitch(-55.0_f32.to_radians())
-            .set_bounds(-55.0_f32.to_radians(), 125.0_f32.to_radians())
+            .set_pitch(-55_f32.to_radians())
+            .set_bounds(-55_f32.to_radians(), 125_f32.to_radians())
             .set_tolerance(0.05),
         )
         .add_joint(Joint::new("effector", JointType::Fixed).set_length(1.5))
@@ -269,12 +269,12 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     log::debug!("Configured: {}", robot);
 
-    let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
-    let boom_encoder = robot.device_by_name("boom_encoder").unwrap();
-    let arm_encoder = robot.device_by_name("arm_encoder").unwrap();
-    let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap();
+    // let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
+    // let boom_encoder = robot.device_by_name("boom_encoder").unwrap();
+    // let arm_encoder = robot.device_by_name("arm_encoder").unwrap();
+    // let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap();
 
-    let mut perception_chain = glonax::robot::Chain::new(&robot);
+    let mut perception_chain = glonax::robot::Chain::new(robot);
     perception_chain
         .add_link("frame")
         .add_link("boom")
@@ -282,6 +282,9 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         .add_link("attachment");
 
     let mut projection_chain = perception_chain.clone();
+
+    let perception_chain_shared = std::sync::Arc::new(tokio::sync::RwLock::new(perception_chain));
+    let perception_chain_shared_read = perception_chain_shared.clone();
 
     ///////////////////////////////////////////
 
@@ -296,9 +299,60 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     log::info!("Connected to {}", config.address);
 
-    let socket = glonax::channel::broadcast_bind().await?;
+    tokio::spawn(async move {
+        use glonax::core::{Metric, Signal};
+        use glonax::transport::frame::{Frame, FrameMessage};
 
-    let mut buffer = [0u8; 1024];
+        let socket = glonax::channel::broadcast_bind()
+            .await
+            .expect("Failed to bind to socket");
+
+        let mut buffer = [0u8; 1024];
+
+        log::debug!("Listening for signals");
+
+        loop {
+            let (size, _) = socket.recv_from(&mut buffer).await.unwrap();
+
+            if let Ok(frame) = Frame::try_from(&buffer[..size]) {
+                if frame.message == FrameMessage::Signal {
+                    let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
+
+                    if let Metric::EncoderAbsAngle((node, value)) = signal.metric {
+                        match node {
+                            node if 0x6A == node => {
+                                perception_chain_shared
+                                    .write()
+                                    .await
+                                    .set_joint_position("frame", Rotation3::from_yaw(value));
+                            }
+                            node if 0x6B == node => {
+                                perception_chain_shared
+                                    .write()
+                                    .await
+                                    .set_joint_position("boom", Rotation3::from_pitch(value));
+                            }
+                            node if 0x6C == node => {
+                                perception_chain_shared
+                                    .write()
+                                    .await
+                                    .set_joint_position("arm", Rotation3::from_pitch(value));
+                            }
+                            node if 0x6D == node => {
+                                perception_chain_shared
+                                    .write()
+                                    .await
+                                    .set_joint_position("attachment", Rotation3::from_pitch(value));
+                            }
+                            _ => {}
+                        }
+
+                        // log::debug!("Perception: {:?}", perception_chain_shared.read().await);
+                    }
+                }
+            }
+        }
+    });
 
     ///////////////////////////////////////////
 
@@ -490,73 +544,59 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::info!("Press enter to continue");
         std::io::stdin().read_line(&mut String::new())?;
 
-        // return Ok(());
+        let ground_plane = parry3d::shape::Cuboid::new(na::Vector3::new(10.0, 10.0, 1.0));
 
-        while let Ok((size, _)) = socket.recv_from(&mut buffer).await {
-            if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
-                if frame.message == glonax::transport::frame::FrameMessage::Signal {
-                    let signal =
-                        glonax::core::Signal::try_from(&buffer[frame.payload_range()]).unwrap();
+        loop {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-                    if let glonax::core::Metric::EncoderAbsAngle((node, value)) = signal.metric {
-                        match node {
-                            node if frame_encoder.id() == node => {
-                                perception_chain
-                                    .set_joint_position("frame", Rotation3::from_yaw(value));
-                            }
-                            node if boom_encoder.id() == node => {
-                                perception_chain
-                                    .set_joint_position("boom", Rotation3::from_pitch(value));
-                            }
-                            node if arm_encoder.id() == node => {
-                                perception_chain
-                                    .set_joint_position("arm", Rotation3::from_pitch(value));
-                            }
-                            node if attachment_encoder.id() == node => {
-                                perception_chain
-                                    .set_joint_position("attachment", Rotation3::from_pitch(value));
-                            }
-                            _ => {}
-                        }
+            {
+                let perception_chain = perception_chain_shared_read.read().await;
 
-                        log::debug!("Perception chain: {:?}", perception_chain);
+                log::debug!("Perception: {:?}", perception_chain);
 
-                        let distance = projection_chain.distance(&perception_chain);
-                        log::debug!("Target distance: {:.2}m", distance);
+                let distance = projection_chain.distance(&perception_chain);
+                log::debug!("Target distance:    {:.2}m", distance);
 
-                        if !perception_chain.is_ready() || !kinematic_control {
-                            continue;
-                        }
+                let effector_point = perception_chain.world_transformation() * na::Point3::origin();
 
-                        let error_chain = perception_chain.error(&projection_chain);
+                // let point_projection = ground_plane.project_local_point(&effector_point, true);
 
-                        let mut done = true;
+                let transform = Isometry3::from_parts(
+                    na::Translation3::new(0.0, 0.0, -1.0),
+                    na::UnitQuaternion::identity(),
+                );
 
-                        let mut motion_list = vec![];
+                let point_projection =
+                    ground_plane.project_point(&transform, &effector_point, true);
+                let distance = ground_plane.distance_to_point(&transform, &effector_point, true);
 
-                        for joint_diff in error_chain {
-                            log::debug!(" ⇒ {:?}", joint_diff);
+                log::debug!(
+                    "Ground              Contact: {}  Distance: {:.2}",
+                    point_projection.is_inside,
+                    distance
+                );
 
-                            if let Some(motion) = joint_diff.actuator_motion() {
-                                motion_list.push(motion);
-                            }
+                if !perception_chain.is_ready() || !kinematic_control {
+                    continue;
+                }
 
-                            done = joint_diff.is_below_tolerance() && done;
-                        }
+                let mut done = true;
 
-                        for motion in motion_list {
-                            // TODO: Send all commands at once
-                            client.send_motion(motion).await?;
-                        }
+                // TODO: Send all commands at once
+                for joint_diff in perception_chain.error(&projection_chain) {
+                    log::debug!(" ⇒ {:?}", joint_diff);
 
-                        if done {
-                            client.send_motion(Motion::StopAll).await?;
-
-                            log::info!("Press enter to continue");
-                            std::io::stdin().read_line(&mut String::new())?;
-                            break;
-                        }
+                    if let Some(motion) = joint_diff.actuator_motion() {
+                        // motion_list.push(motion);
+                        client.send_motion(motion).await?;
                     }
+
+                    done = joint_diff.is_below_tolerance() && done;
+                }
+
+                if done {
+                    client.send_motion(Motion::StopAll).await?;
+                    break;
                 }
             }
         }
