@@ -287,6 +287,9 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let perception_chain_shared = std::sync::Arc::new(tokio::sync::RwLock::new(perception_chain));
     let perception_chain_shared_read = perception_chain_shared.clone();
 
+    let last_update = std::sync::Arc::new(tokio::sync::RwLock::new(std::time::Instant::now()));
+    let last_update_read = last_update.clone();
+
     ///////////////////////////////////////////
 
     let mut client = glonax::transport::ConnectionOptions::new()
@@ -326,24 +329,28 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     .write()
                                     .await
                                     .set_joint_position("frame", Rotation3::from_yaw(value));
+                                *last_update.write().await = std::time::Instant::now();
                             }
                             node if 0x6B == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("boom", Rotation3::from_pitch(value));
+                                *last_update.write().await = std::time::Instant::now();
                             }
                             node if 0x6C == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("arm", Rotation3::from_pitch(value));
+                                *last_update.write().await = std::time::Instant::now();
                             }
                             node if 0x6D == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("attachment", Rotation3::from_pitch(value));
+                                *last_update.write().await = std::time::Instant::now();
                             }
                             _ => {}
                         }
@@ -562,55 +569,60 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
-            {
-                let perception_chain = perception_chain_shared_read.read().await;
+            let time_since_last_update = last_update_read.read().await.elapsed();
 
-                log::debug!("Perception: {:?}", perception_chain);
+            if time_since_last_update > std::time::Duration::from_millis(200) {
+                log::warn!("No update received for 200ms, stopping");
+                client.send_motion(Motion::StopAll).await?;
+                break;
+            }
 
-                let distance = projection_chain.distance(&perception_chain);
-                log::debug!("Target distance:    {:.2}m", distance);
+            let perception_chain = perception_chain_shared_read.read().await;
 
-                let effector_point = perception_chain.world_transformation() * na::Point3::origin();
+            log::debug!("Perception: {:?}", perception_chain);
 
-                // let point_projection = ground_plane.project_local_point(&effector_point, true);
+            let distance = projection_chain.distance(&perception_chain);
+            log::debug!("Target distance:    {:.2}m", distance);
 
-                let transform = Isometry3::from_parts(
-                    na::Translation3::new(0.0, 0.0, -1.0),
-                    na::UnitQuaternion::identity(),
-                );
+            let effector_point = perception_chain.world_transformation() * na::Point3::origin();
 
-                let point_projection =
-                    ground_plane.project_point(&transform, &effector_point, true);
-                let distance = ground_plane.distance_to_point(&transform, &effector_point, true);
+            // let point_projection = ground_plane.project_local_point(&effector_point, true);
 
-                log::debug!(
-                    "Ground              Contact: {}  Distance: {:.2}",
-                    point_projection.is_inside,
-                    distance
-                );
+            let transform = Isometry3::from_parts(
+                na::Translation3::new(0.0, 0.0, -1.0),
+                na::UnitQuaternion::identity(),
+            );
 
-                if !perception_chain.is_ready() || !kinematic_control {
-                    continue;
+            let point_projection = ground_plane.project_point(&transform, &effector_point, true);
+            let distance = ground_plane.distance_to_point(&transform, &effector_point, true);
+
+            log::debug!(
+                "Ground              Contact: {}  Distance: {:.2}",
+                point_projection.is_inside,
+                distance
+            );
+
+            if !perception_chain.is_ready() || !kinematic_control {
+                continue;
+            }
+
+            let mut done = true;
+
+            // TODO: Send all commands at once
+            for joint_diff in perception_chain.error(&projection_chain) {
+                log::debug!(" ⇒ {:?}", joint_diff);
+
+                if let Some(motion) = joint_diff.actuator_motion() {
+                    // motion_list.push(motion);
+                    client.send_motion(motion).await?;
                 }
 
-                let mut done = true;
+                done = joint_diff.is_below_tolerance() && done;
+            }
 
-                // TODO: Send all commands at once
-                for joint_diff in perception_chain.error(&projection_chain) {
-                    log::debug!(" ⇒ {:?}", joint_diff);
-
-                    if let Some(motion) = joint_diff.actuator_motion() {
-                        // motion_list.push(motion);
-                        client.send_motion(motion).await?;
-                    }
-
-                    done = joint_diff.is_below_tolerance() && done;
-                }
-
-                if done {
-                    client.send_motion(Motion::StopAll).await?;
-                    break;
-                }
+            if done {
+                client.send_motion(Motion::StopAll).await?;
+                break;
             }
         }
     }
