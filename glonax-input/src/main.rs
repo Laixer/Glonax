@@ -40,17 +40,22 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let address = match args.address {
-        Some(mut address) => {
+        Some(address) => {
+            let mut address = address.to_owned();
+
             if !address.contains(':') {
-                address.push_str(":30051");
+                address.push_str(":");
+                address.push_str(&glonax::constants::DEFAULT_NETWORK_PORT.to_string());
             }
 
-            address
+            std::net::ToSocketAddrs::to_socket_addrs(&address)?
+                .next()
+                .ok_or_else(|| anyhow::anyhow!("Failed to parse address"))?
         }
         None => {
             let (_, ip) = glonax::channel::recv_instance().await?;
 
-            std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT).to_string()
+            std::net::SocketAddr::new(ip, glonax::constants::DEFAULT_NETWORK_PORT)
         }
     };
 

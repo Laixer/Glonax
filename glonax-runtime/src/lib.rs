@@ -37,4 +37,6 @@ pub mod constants {
     pub const DEFAULT_NETWORK_PORT: u16 = 30051;
     /// Glonax default configuration path.
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
+    /// Signal FIFO file located in the working directory.
+    pub const FIFO_SIGNAL_FILE: &str = "signal";
 }

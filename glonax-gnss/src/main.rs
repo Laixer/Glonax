@@ -104,11 +104,7 @@ async fn daemonize(config: &config::GnssConfig) -> anyhow::Result<()> {
 
     let service = glonax::net::NMEAService::new();
 
-    log::debug!("Waiting for FIFO connection: {}", "signal");
-
-    let mut client = glonax::transport::Client::open_write("signal").await?;
-
-    log::debug!("Connected to FIFO: {}", "signal");
+    let mut client = glonax::channel::signal_open_write().await?;
 
     while let Some(line) = lines.next_line().await? {
         if let Some(message) = service.decode(line) {

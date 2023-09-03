@@ -97,11 +97,7 @@ async fn daemonize(config: &config::EcuConfig) -> anyhow::Result<()> {
 
     let mut engine_management_service = EngineManagementSystem::new(0x0);
 
-    log::debug!("Waiting for FIFO connection: {}", "signal");
-
-    let mut client = glonax::transport::Client::open_write("signal").await?;
-
-    log::debug!("Connected to FIFO: {}", "signal");
+    let mut client = glonax::channel::signal_open_write().await?;
 
     loop {
         router.listen().await?;

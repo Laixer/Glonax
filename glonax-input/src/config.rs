@@ -3,7 +3,7 @@ use glonax::{Configurable, GlobalConfig};
 #[derive(Clone, Debug)]
 pub(crate) struct InputConfig {
     /// Remote network address.
-    pub address: String,
+    pub address: std::net::SocketAddr,
     /// Input device.
     pub device: String,
     /// Configure failsafe mode.
