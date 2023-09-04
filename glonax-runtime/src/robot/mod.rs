@@ -4,16 +4,21 @@ use nalgebra::{IsometryMatrix3, Point3, Rotation3, Translation3};
 
 const DEFAULT_TOLERANCE: f32 = 0.01;
 
-// TODO: Move
+pub trait MotionProfile {
+    /// Return the power setting for a given error value.
+    fn power(&self, value: f32) -> i16;
+}
+
+// TODO: Rename to LinearMotionProfile
 #[derive(Copy, Clone, Debug)]
-pub struct MotionProfile {
+pub struct LinearMotionProfile {
     scale: f32,
     offset: f32,
     lower_bound: f32,
     inverse: bool,
 }
 
-impl MotionProfile {
+impl LinearMotionProfile {
     pub fn new(scale: f32, offset: f32, lower_bound: f32, inverse: bool) -> Self {
         Self {
             scale,
@@ -59,6 +64,12 @@ impl MotionProfile {
     }
 }
 
+impl MotionProfile for LinearMotionProfile {
+    fn power(&self, value: f32) -> i16 {
+        self.power(value)
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum JointType {
     /// A joint that provides one degree of freedom about a fixed axis of rotation.
@@ -79,7 +90,7 @@ pub struct Joint {
     bounds: (f32, f32),
     tolerance: f32,
     actuator: Option<crate::core::Actuator>,
-    profile: Option<MotionProfile>,
+    profile: Option<LinearMotionProfile>,
 }
 
 impl Joint {
@@ -100,7 +111,7 @@ impl Joint {
         name: impl ToString,
         ty: JointType,
         actuator: crate::core::Actuator,
-        profile: MotionProfile,
+        profile: LinearMotionProfile,
     ) -> Self {
         Self {
             name: name.to_string(),
@@ -191,7 +202,7 @@ impl Joint {
     }
 
     #[inline]
-    pub fn profile(&self) -> Option<&MotionProfile> {
+    pub fn profile(&self) -> Option<&LinearMotionProfile> {
         self.profile.as_ref()
     }
 }

@@ -1,5 +1,5 @@
 use glonax::robot::{
-    Device, DeviceType, Joint, JointType, MotionProfile, Robot, RobotBuilder, RobotType,
+    Device, DeviceType, Joint, JointType, LinearMotionProfile, Robot, RobotBuilder, RobotType,
 };
 
 pub(crate) fn excavator(config: &crate::config::DumpConfig) -> Robot {
@@ -32,7 +32,7 @@ pub(crate) fn excavator(config: &crate::config::DumpConfig) -> Robot {
                 "frame",
                 JointType::Continuous,
                 glonax::core::Actuator::Slew,
-                MotionProfile::new(7_000.0, 12_000.0, 0.01, false),
+                LinearMotionProfile::new(7_000.0, 12_000.0, 0.01, false),
             )
             .set_height(1.295),
         )
@@ -41,7 +41,7 @@ pub(crate) fn excavator(config: &crate::config::DumpConfig) -> Robot {
                 "boom",
                 JointType::Revolute,
                 glonax::core::Actuator::Boom,
-                MotionProfile::new(15_000.0, 12_000.0, 0.01, false),
+                LinearMotionProfile::new(15_000.0, 12_000.0, 0.01, false),
             )
             .set_origin_translation(0.16, 0.0, 0.595)
             .set_pitch(-59.35_f32.to_radians())
@@ -52,7 +52,7 @@ pub(crate) fn excavator(config: &crate::config::DumpConfig) -> Robot {
                 "arm",
                 JointType::Revolute,
                 glonax::core::Actuator::Arm,
-                MotionProfile::new(15_000.0, 12_000.0, 0.01, true),
+                LinearMotionProfile::new(15_000.0, 12_000.0, 0.01, true),
             )
             .set_length(6.0)
             .set_bounds(38.96_f32.to_radians(), 158.14_f32.to_radians()),
@@ -62,7 +62,7 @@ pub(crate) fn excavator(config: &crate::config::DumpConfig) -> Robot {
                 "attachment",
                 JointType::Revolute,
                 glonax::core::Actuator::Attachment,
-                MotionProfile::new(15_000.0, 12_000.0, 0.05, false),
+                LinearMotionProfile::new(15_000.0, 12_000.0, 0.05, false),
             )
             .set_length(2.97)
             .set_pitch(-55_f32.to_radians())
