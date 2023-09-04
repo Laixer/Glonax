@@ -12,13 +12,23 @@ pub trait SignalSource {
     fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>);
 }
 
+// TODO: Move into mod
+pub fn broadcast_address() -> SocketAddrV4 {
+    SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, constants::DEFAULT_NETWORK_PORT)
+}
+
+// TODO: Move into mod
 #[inline]
 pub async fn broadcast_bind() -> std::io::Result<tokio::net::UdpSocket> {
-    tokio::net::UdpSocket::bind(SocketAddrV4::new(
-        Ipv4Addr::UNSPECIFIED,
-        constants::DEFAULT_NETWORK_PORT,
-    ))
-    .await
+    tokio::net::UdpSocket::bind(broadcast_address()).await
+}
+
+// TODO: Move into mod
+#[inline]
+pub async fn any_bind() -> std::io::Result<tokio::net::UdpSocket> {
+    let socket = tokio::net::UdpSocket::bind("0.0.0.0:0").await?;
+    socket.set_broadcast(true).unwrap();
+    Ok(socket)
 }
 
 pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {

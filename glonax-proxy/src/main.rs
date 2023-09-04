@@ -97,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
-    use tokio::net::{TcpListener, UdpSocket};
+    use tokio::net::TcpListener;
 
     log::info!("Starting proxy services");
 
@@ -129,6 +129,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         }
     });
 
+    // TODO: Move into separate service
     let ecu_sender = signal_tx.clone();
     let ecu_interface = config.interface.clone();
     tokio::spawn(async move {
@@ -250,44 +251,89 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     let mut session_signal_rx = signal_rx;
     tokio::spawn(async move {
+        use glonax::transport::frame::{Frame, FrameMessage};
+        use std::time::Instant;
+
         log::debug!("Starting signal broadcast");
 
-        let socket = UdpSocket::bind("0.0.0.0:0").await.unwrap();
-        socket.set_broadcast(true).unwrap();
+        let socket = glonax::channel::any_bind().await.unwrap();
 
-        let broadcast_addr = std::net::SocketAddrV4::new(
-            std::net::Ipv4Addr::BROADCAST,
-            glonax::constants::DEFAULT_NETWORK_PORT,
-        );
+        let mut now = Instant::now();
 
-        let instance = glonax::core::Instance::new(
-            instance_id.clone(),
-            instance_model.clone(),
-            instance_name.clone(),
-        );
-        let payload = instance.to_bytes();
+        let mut signal_gnss_timeout = Instant::now();
+        let mut signal_encoder_0x6a_timeout = Instant::now();
+        let mut signal_encoder_0x6b_timeout = Instant::now();
+        let mut signal_encoder_0x6c_timeout = Instant::now();
+        let mut signal_encoder_0x6d_timeout = Instant::now();
+        let mut signal_engine_timeout = Instant::now();
 
-        let mut frame = glonax::transport::frame::Frame::new(
-            glonax::transport::frame::FrameMessage::Instance,
-            payload.len(),
-        );
-        frame.put(&payload[..]);
-
-        if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-            log::error!("Failed to send signal: {}", e);
-        }
-
-        let mut now = std::time::Instant::now();
         while let Some(signal) = session_signal_rx.recv().await {
+            match signal.metric {
+                glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
+                    let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
+
+                    if memory_usage > 90.0 {
+                        log::warn!("Memory usage is above 90%: {:.2}%", memory_usage);
+                    }
+                }
+                glonax::core::Metric::GnssLatLong(_) => {
+                    signal_gnss_timeout = Instant::now();
+                }
+                glonax::core::Metric::EncoderAbsAngle((node, _)) => match node {
+                    0x6A => {
+                        signal_encoder_0x6a_timeout = Instant::now();
+                    }
+                    0x6B => {
+                        signal_encoder_0x6b_timeout = Instant::now();
+                    }
+                    0x6C => {
+                        signal_encoder_0x6c_timeout = Instant::now();
+                    }
+                    0x6D => {
+                        signal_encoder_0x6d_timeout = Instant::now();
+                    }
+                    _ => {}
+                },
+                glonax::core::Metric::EngineRpm(_) => {
+                    signal_engine_timeout = Instant::now();
+                }
+                _ => {}
+            }
+
+            if signal_gnss_timeout.elapsed().as_secs() > 60 {
+                log::warn!("GNSS signal timeout: no update in last 60 seconds");
+                signal_gnss_timeout = Instant::now();
+            }
+            if signal_encoder_0x6a_timeout.elapsed().as_secs() > 1 {
+                log::warn!("Encoder 0x6A signal timeout: no update in last 1 second");
+                signal_encoder_0x6a_timeout = Instant::now();
+            }
+            if signal_encoder_0x6b_timeout.elapsed().as_secs() > 1 {
+                log::warn!("Encoder 0x6B signal timeout: no update in last 1 second");
+                signal_encoder_0x6b_timeout = Instant::now();
+            }
+            if signal_encoder_0x6c_timeout.elapsed().as_secs() > 1 {
+                log::warn!("Encoder 0x6C signal timeout: no update in last 1 second");
+                signal_encoder_0x6c_timeout = Instant::now();
+            }
+            if signal_encoder_0x6d_timeout.elapsed().as_secs() > 1 {
+                log::warn!("Encoder 0x6D signal timeout: no update in last 1 second");
+                signal_encoder_0x6d_timeout = Instant::now();
+            }
+            if signal_engine_timeout.elapsed().as_secs() > 10 {
+                log::warn!("Engine signal timeout: no update in last 10 seconds");
+                signal_engine_timeout = Instant::now();
+            }
+
             let payload = signal.to_bytes();
 
-            let mut frame = glonax::transport::frame::Frame::new(
-                glonax::transport::frame::FrameMessage::Signal,
-                payload.len(),
-            );
+            let mut frame = Frame::new(FrameMessage::Signal, payload.len());
             frame.put(&payload[..]);
 
-            if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+            if let Err(e) = socket
+                .send_to(frame.as_ref(), glonax::channel::broadcast_address())
+                .await
+            {
                 log::error!("Failed to send signal: {}", e);
                 break;
             }
@@ -300,16 +346,16 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 );
                 let payload = instance.to_bytes();
 
-                let mut frame = glonax::transport::frame::Frame::new(
-                    glonax::transport::frame::FrameMessage::Instance,
-                    payload.len(),
-                );
+                let mut frame = Frame::new(FrameMessage::Instance, payload.len());
                 frame.put(&payload[..]);
 
-                if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+                if let Err(e) = socket
+                    .send_to(frame.as_ref(), glonax::channel::broadcast_address())
+                    .await
+                {
                     log::error!("Failed to send signal: {}", e);
                 } else {
-                    now = std::time::Instant::now();
+                    now = Instant::now();
                 }
             }
         }
