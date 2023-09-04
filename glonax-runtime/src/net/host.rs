@@ -31,7 +31,10 @@ impl crate::channel::SignalSource for HostService {
             self.system.used_memory(),
             self.system.total_memory(),
         ))));
-        signals.push(Signal::new(Metric::VmsSwapUsage(self.swap_used() as u64)));
+        signals.push(Signal::new(Metric::VmsSwapUsage((
+            self.system.used_swap(),
+            self.system.total_swap(),
+        ))));
         if self.system.uptime() % 10 == 0 {
             signals.push(Signal::new(Metric::VmsUptime(self.system.uptime())));
         }

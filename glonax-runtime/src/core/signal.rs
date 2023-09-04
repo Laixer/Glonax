@@ -26,10 +26,10 @@ pub enum Metric {
     VmsUptime(u64),
     /// VMS Timestamp in seconds.
     VmsTimestamp(chrono::DateTime<chrono::Utc>),
-    /// VMS Memory usage in percent.
+    /// VMS Memory total and used in bytes.
     VmsMemoryUsage((u64, u64)),
-    /// VMS Swap usage in percent.
-    VmsSwapUsage(u64),
+    /// VMS Swap total and used in bytes.
+    VmsSwapUsage((u64, u64)),
     /// VMS CPU load.
     VmsCpuLoad((f64, f64, f64)),
 
@@ -92,7 +92,14 @@ impl std::fmt::Display for Metric {
                     *memory_total as f64 / 1024.0 / 1024.0 / 1024.0
                 )
             }
-            Metric::VmsSwapUsage(value) => write!(f, "VMS Swap usage: {}%", value),
+            Metric::VmsSwapUsage((swap_used, swap_total)) => {
+                write!(
+                    f,
+                    "VMS Swap usage: {:.2}GB / {:.2}GB",
+                    *swap_used as f64 / 1024.0 / 1024.0 / 1024.0,
+                    *swap_total as f64 / 1024.0 / 1024.0 / 1024.0
+                )
+            }
             Metric::VmsCpuLoad((value_1, value_5, value_15)) => write!(
                 f,
                 "VMS CPU load: {:.1}%, {:.1}%, {:.1}%",
@@ -142,9 +149,10 @@ impl Signal {
                 buf.put_u64(value_used);
                 buf.put_u64(value_total);
             }
-            Metric::VmsSwapUsage(value) => {
+            Metric::VmsSwapUsage((value_used, value_total)) => {
                 buf.put_u16(PROTO_METRIC_VMS_SWAP_USAGE);
-                buf.put_u64(value);
+                buf.put_u64(value_used);
+                buf.put_u64(value_total);
             }
             Metric::VmsCpuLoad((value_1, value_5, value_15)) => {
                 buf.put_u16(PROTO_METRIC_VMS_CPU_LOAD);
@@ -219,7 +227,7 @@ impl TryFrom<&[u8]> for Signal {
                 Metric::VmsTimestamp(datetime)
             }
             PROTO_METRIC_VMS_MEMORY_USAGE => Metric::VmsMemoryUsage((buf.get_u64(), buf.get_u64())),
-            PROTO_METRIC_VMS_SWAP_USAGE => Metric::VmsSwapUsage(buf.get_u64()),
+            PROTO_METRIC_VMS_SWAP_USAGE => Metric::VmsSwapUsage((buf.get_u64(), buf.get_u64())),
             PROTO_METRIC_VMS_CPU_LOAD => {
                 Metric::VmsCpuLoad((buf.get_f64(), buf.get_f64(), buf.get_f64()))
             }

@@ -90,6 +90,8 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
+    use glonax::core::{Metric, Signal};
+    use glonax::transport::frame::{Frame, FrameMessage};
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -178,41 +180,42 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     loop {
         let (size, _) = socket.recv_from(&mut buffer).await?;
 
-        if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
-            if frame.message == glonax::transport::frame::FrameMessage::Signal {
-                let signal =
-                    glonax::core::Signal::try_from(&buffer[frame.payload_range()]).unwrap();
+        if let Ok(frame) = Frame::try_from(&buffer[..size]) {
+            if frame.message == FrameMessage::Signal {
+                let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
 
                 match signal.metric {
-                    glonax::core::Metric::VmsUptime(uptime) => {
+                    Metric::VmsUptime(uptime) => {
                         telemetrics.write().await.uptime = Some(uptime);
                     }
-                    glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
+                    Metric::VmsMemoryUsage((memory_used, memory_total)) => {
                         let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
 
                         telemetrics.write().await.memory = Some(memory_usage as u64);
                     }
-                    glonax::core::Metric::VmsSwapUsage(swap) => {
-                        telemetrics.write().await.swap = Some(swap);
+                    Metric::VmsSwapUsage((swap_used, swap_total)) => {
+                        let swap_usage = (swap_used as f64 / swap_total as f64) * 100.0;
+
+                        telemetrics.write().await.swap = Some(swap_usage as u64);
                     }
-                    glonax::core::Metric::VmsCpuLoad(cpu_load) => {
-                        telemetrics.write().await.cpu_1 = Some(cpu_load.0);
-                        telemetrics.write().await.cpu_5 = Some(cpu_load.1);
-                        telemetrics.write().await.cpu_15 = Some(cpu_load.2);
+                    Metric::VmsCpuLoad((cpu_load_1, cpu_load_5, cpu_load_15)) => {
+                        telemetrics.write().await.cpu_1 = Some(cpu_load_1);
+                        telemetrics.write().await.cpu_5 = Some(cpu_load_5);
+                        telemetrics.write().await.cpu_15 = Some(cpu_load_15);
                     }
-                    glonax::core::Metric::GnssLatLong(lat_long) => {
+                    Metric::GnssLatLong(lat_long) => {
                         telemetrics.write().await.location = Some(lat_long);
                     }
-                    glonax::core::Metric::GnssAltitude(altitude) => {
+                    Metric::GnssAltitude(altitude) => {
                         telemetrics.write().await.altitude = Some(altitude);
                     }
-                    glonax::core::Metric::GnssSpeed(speed) => {
+                    Metric::GnssSpeed(speed) => {
                         telemetrics.write().await.speed = Some(speed);
                     }
-                    glonax::core::Metric::GnssHeading(heading) => {
+                    Metric::GnssHeading(heading) => {
                         telemetrics.write().await.heading = Some(heading);
                     }
-                    glonax::core::Metric::GnssSatellites(satellites) => {
+                    Metric::GnssSatellites(satellites) => {
                         telemetrics.write().await.satellites = Some(satellites);
                     }
                     _ => {}
