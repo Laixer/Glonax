@@ -194,6 +194,34 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     use glonax::core::geometry::EulerAngles;
     use glonax::core::Motion;
 
+    // use parry3d::query::RayCast;
+
+    // let obstacle = parry3d::shape::Cuboid::new(na::Vector3::new(0.25, 0.25, 0.25));
+
+    // let transform = Isometry3::from_parts(
+    //     na::Translation3::new(0.0, 0.0, 0.25),
+    //     na::UnitQuaternion::identity(),
+    // );
+
+    // // let point = na::Point3::new(0.0, -5.0, 0.25);
+
+    // // let point_projection = obstacle.project_point(&transform, &point, true);
+    // // log::debug!("Point projection:   {:?}", point_projection);
+
+    // let ray = parry3d::query::Ray::new(
+    //     na::Point3::new(0.0, -5.0, 0.50),
+    //     na::Vector3::new(0.0, 1.0, 0.0),
+    // );
+
+    // log::debug!("Ray:                {:?}", ray);
+    // // log::debug!("Ray:                {:?}", ray.point_at(4.50));
+
+    // let ray_result = obstacle.cast_ray(&transform, &ray, 50.0, true);
+
+    // log::debug!("Time of impact:     {:?}", ray_result);
+
+    // return Ok(());
+
     let kinematic_epsilon = 0.0001;
     let kinematic_control = true;
 
@@ -505,7 +533,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         let ground_plane = parry3d::shape::Cuboid::new(na::Vector3::new(10.0, 10.0, 1.0));
 
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
 
             let time_since_last_update = last_update_read.read().await.elapsed();
 
@@ -527,20 +555,23 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let direction_vector = target.point - effector_point;
 
             log::debug!(
-                "Direction vector:   ({:.2}, {:.2}, {:.2})",
+                "Directional vector: ({:.2}, {:.2}, {:.2})",
                 direction_vector.x,
                 direction_vector.y,
                 direction_vector.z
             );
 
-            let target_ray = parry3d::query::Ray::new(
-                effector_point,
-                direction_vector
+            let target_ray = parry3d::query::Ray::new(effector_point, direction_vector / 10.0);
+
+            log::debug!(
+                "Ray:                ({:.2}, {:.2}, {:.2}) [{:.2}, {:.2}, {:.2}]",
+                target_ray.origin.x,
+                target_ray.origin.y,
+                target_ray.origin.z,
+                target_ray.dir.x,
+                target_ray.dir.y,
+                target_ray.dir.z
             );
-
-            log::debug!("Ray:                {:?}", target_ray);
-
-            // let point_projection = ground_plane.project_local_point(&effector_point, true);
 
             let transform = Isometry3::from_parts(
                 na::Translation3::new(0.0, 0.0, -1.0),
@@ -551,7 +582,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let distance = ground_plane.distance_to_point(&transform, &effector_point, true);
 
             log::debug!(
-                "Ground              Contact: {}  Distance: {:.2}",
+                "Ground              Contact: {} Distance: {:.2}m",
                 point_projection.is_inside,
                 distance
             );
