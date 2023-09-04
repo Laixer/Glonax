@@ -598,7 +598,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 log::debug!(" ⇒ {:?}", joint_diff);
 
                 if let Some(motion) = joint_diff.actuator_motion() {
-                    // motion_list.push(motion);
                     client.send_motion(motion).await?;
                 }
 

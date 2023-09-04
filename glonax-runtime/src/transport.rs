@@ -3,7 +3,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use crate::core::{Instance, Motion, Signal};
 
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
-const PROTO_VERSION: u8 = 0x01;
+const PROTO_VERSION: u8 = 0x02;
 
 // const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
 //     + std::mem::size_of::<u8>()
