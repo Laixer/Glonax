@@ -260,6 +260,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     .write()
                                     .await
                                     .set_joint_position("frame", Rotation3::from_yaw(value));
+                                // TODO: move to perception chain
                                 *last_update.write().await = std::time::Instant::now();
                             }
                             node if 0x6B == node => {
@@ -267,6 +268,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     .write()
                                     .await
                                     .set_joint_position("boom", Rotation3::from_pitch(value));
+                                // TODO: move to perception chain
                                 *last_update.write().await = std::time::Instant::now();
                             }
                             node if 0x6C == node => {
@@ -274,6 +276,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     .write()
                                     .await
                                     .set_joint_position("arm", Rotation3::from_pitch(value));
+                                // TODO: move to perception chain
                                 *last_update.write().await = std::time::Instant::now();
                             }
                             node if 0x6D == node => {
@@ -281,6 +284,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                     .write()
                                     .await
                                     .set_joint_position("attachment", Rotation3::from_pitch(value));
+                                // TODO: move to perception chain
                                 *last_update.write().await = std::time::Instant::now();
                             }
                             _ => {}
@@ -475,7 +479,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         ]);
 
         if let Some(angle) = p_attachment_pitch {
-            projection_chain.set_joint_position("attachment", Rotation3::from_pitch(angle));
+            projection_chain.set_joint_position(
+                "attachment",
+                Rotation3::from_pitch(angle - 55_f32.to_radians()),
+            );
         }
 
         let projection_point = projection_chain.world_transformation() * na::Point3::origin();

@@ -397,17 +397,40 @@ impl std::fmt::Debug for Chain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        for (joint, rotation) in &self.joint_state {
-            if let Some(rotation) = rotation {
-                s.push_str(&format!(
-                    "{}={:.2}rad/{:.2}° ",
-                    joint,
-                    rotation.angle(),
-                    rotation.angle().to_degrees()
-                ));
-            } else {
-                s.push_str(&format!("{}=None ", joint));
-            }
+        for (joint_name, lhs_rotation, rhs_rotation) in
+            self.joint_state.iter().map(|(name, lhs)| {
+                let rhs_rotation = self.robot.joint_by_name(&name).unwrap().origin().rotation;
+
+                (name.to_string(), lhs.unwrap(), rhs_rotation)
+            })
+        {
+            let chain_angle = lhs_rotation
+                .axis()
+                .map(|axis| {
+                    axis.x * lhs_rotation.angle()
+                        + axis.y * lhs_rotation.angle()
+                        + axis.z * lhs_rotation.angle()
+                })
+                .unwrap_or_default();
+
+            let relative_rotation = lhs_rotation * rhs_rotation;
+            let joint_angle = relative_rotation
+                .axis()
+                .map(|axis| {
+                    axis.x * relative_rotation.angle()
+                        + axis.y * relative_rotation.angle()
+                        + axis.z * relative_rotation.angle()
+                })
+                .unwrap_or_default();
+
+            s.push_str(&format!(
+                "{}={:.2}rad/{:.2}° [{:.2}rad/{:.2}°] ",
+                joint_name,
+                chain_angle,
+                chain_angle.to_degrees(),
+                joint_angle,
+                joint_angle.to_degrees(),
+            ));
         }
 
         write!(f, "{s} {}", self)
