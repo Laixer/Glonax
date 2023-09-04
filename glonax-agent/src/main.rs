@@ -9,7 +9,6 @@ use clap::Parser;
 mod config;
 
 const HOST: &str = "https://cymbion-oybqn.ondigitalocean.app";
-const VERSION: &str = "102";
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
@@ -114,7 +113,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     }
 
     let telemetrics = Arc::new(RwLock::new(Telemetry {
-        version: VERSION.to_string(),
+        version: glonax::constants::VERSION.to_string(),
         status: "HEALTHY".to_string(),
         name: config.instance.name.clone(),
         location: None,
