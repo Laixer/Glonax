@@ -8,7 +8,7 @@ use clap::Parser;
 
 use na::{Isometry3, Rotation3};
 use nalgebra as na;
-use parry3d::query::PointQuery;
+use parry3d::query::{PointQuery, RayCast};
 
 mod config;
 mod robot;
@@ -523,6 +523,22 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             log::debug!("Target distance:    {:.2}m", distance);
 
             let effector_point = perception_chain.world_transformation() * na::Point3::origin();
+
+            let direction_vector = target.point - effector_point;
+
+            log::debug!(
+                "Direction vector:   ({:.2}, {:.2}, {:.2})",
+                direction_vector.x,
+                direction_vector.y,
+                direction_vector.z
+            );
+
+            let target_ray = parry3d::query::Ray::new(
+                effector_point,
+                direction_vector
+            );
+
+            log::debug!("Ray:                {:?}", target_ray);
 
             // let point_projection = ground_plane.project_local_point(&effector_point, true);
 

@@ -397,8 +397,11 @@ impl std::fmt::Debug for Chain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        for (joint_name, lhs_rotation, rhs_rotation) in
-            self.joint_state.iter().map(|(name, lhs)| {
+        for (joint_name, lhs_rotation, rhs_rotation) in self
+            .joint_state
+            .iter()
+            .filter(|(_, lhs_rotation)| lhs_rotation.is_some())
+            .map(|(name, lhs)| {
                 let rhs_rotation = self.robot.joint_by_name(&name).unwrap().origin().rotation;
 
                 (name.to_string(), lhs.unwrap(), rhs_rotation)
