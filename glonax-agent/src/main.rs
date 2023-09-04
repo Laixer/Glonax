@@ -89,8 +89,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
-    use glonax::core::{Metric, Signal};
-    use glonax::transport::frame::{Frame, FrameMessage};
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -113,7 +111,12 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     }
 
     let telemetrics = Arc::new(RwLock::new(Telemetry {
-        version: glonax::constants::VERSION.to_string(),
+        version: format!(
+            "{}{}{}",
+            glonax::constants::VERSION_MAJOR,
+            glonax::constants::VERSION_MINOR,
+            glonax::constants::VERSION_PATCH
+        ),
         status: "HEALTHY".to_string(),
         name: config.instance.name.clone(),
         location: None,
@@ -130,96 +133,100 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     }));
 
     let telemetrics_clone = telemetrics.clone();
-    let instance_clone = config.instance.clone();
-
-    let interval = config.interval;
 
     tokio::spawn(async move {
-        log::debug!("Starting host service");
+        use glonax::core::{Metric, Signal};
+        use glonax::transport::frame::{Frame, FrameMessage};
 
-        let url = reqwest::Url::parse(HOST).unwrap();
+        let socket = glonax::channel::broadcast_bind()
+            .await
+            .expect("Failed to bind to socket");
 
-        let client = reqwest::Client::builder()
-            .user_agent("glonax-agent/0.1.0")
-            .timeout(std::time::Duration::from_secs(5))
-            .https_only(true)
-            .build()
-            .unwrap();
+        let mut buffer = [0u8; 1024];
 
-        let request_url = url
-            .join(&format!("api/v1/{}/probe", instance_clone.id))
-            .unwrap();
+        log::debug!("Listening for signals");
 
         loop {
-            let data = { telemetrics_clone.read().await.clone() };
+            let (size, _) = socket.recv_from(&mut buffer).await.unwrap();
 
-            let response = client
-                .post(request_url.clone())
-                .json(&data)
-                .send()
-                .await
-                .unwrap();
+            if let Ok(frame) = Frame::try_from(&buffer[..size]) {
+                if frame.message == FrameMessage::Signal {
+                    let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
 
-            if response.status() == 200 {
-                log::info!("Probe sent successfully");
-            } else {
-                log::error!("Probe failed, status: {}", response.status());
-            }
+                    match signal.metric {
+                        Metric::VmsUptime(uptime) => {
+                            telemetrics.write().await.uptime = Some(uptime);
+                        }
+                        Metric::VmsMemoryUsage((memory_used, memory_total)) => {
+                            let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
 
-            tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
-        }
-    });
+                            telemetrics.write().await.memory = Some(memory_usage as u64);
+                        }
+                        Metric::VmsSwapUsage((swap_used, swap_total)) => {
+                            let swap_usage = (swap_used as f64 / swap_total as f64) * 100.0;
 
-    let socket = glonax::channel::broadcast_bind().await?;
-
-    let mut buffer = [0u8; 1024];
-
-    log::debug!("Listening for signals");
-
-    loop {
-        let (size, _) = socket.recv_from(&mut buffer).await?;
-
-        if let Ok(frame) = Frame::try_from(&buffer[..size]) {
-            if frame.message == FrameMessage::Signal {
-                let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
-
-                match signal.metric {
-                    Metric::VmsUptime(uptime) => {
-                        telemetrics.write().await.uptime = Some(uptime);
+                            telemetrics.write().await.swap = Some(swap_usage as u64);
+                        }
+                        Metric::VmsCpuLoad((cpu_load_1, cpu_load_5, cpu_load_15)) => {
+                            telemetrics.write().await.cpu_1 = Some(cpu_load_1);
+                            telemetrics.write().await.cpu_5 = Some(cpu_load_5);
+                            telemetrics.write().await.cpu_15 = Some(cpu_load_15);
+                        }
+                        Metric::GnssLatLong(lat_long) => {
+                            telemetrics.write().await.location = Some(lat_long);
+                        }
+                        Metric::GnssAltitude(altitude) => {
+                            telemetrics.write().await.altitude = Some(altitude);
+                        }
+                        Metric::GnssSpeed(speed) => {
+                            telemetrics.write().await.speed = Some(speed);
+                        }
+                        Metric::GnssHeading(heading) => {
+                            telemetrics.write().await.heading = Some(heading);
+                        }
+                        Metric::GnssSatellites(satellites) => {
+                            telemetrics.write().await.satellites = Some(satellites);
+                        }
+                        _ => {}
                     }
-                    Metric::VmsMemoryUsage((memory_used, memory_total)) => {
-                        let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
-
-                        telemetrics.write().await.memory = Some(memory_usage as u64);
-                    }
-                    Metric::VmsSwapUsage((swap_used, swap_total)) => {
-                        let swap_usage = (swap_used as f64 / swap_total as f64) * 100.0;
-
-                        telemetrics.write().await.swap = Some(swap_usage as u64);
-                    }
-                    Metric::VmsCpuLoad((cpu_load_1, cpu_load_5, cpu_load_15)) => {
-                        telemetrics.write().await.cpu_1 = Some(cpu_load_1);
-                        telemetrics.write().await.cpu_5 = Some(cpu_load_5);
-                        telemetrics.write().await.cpu_15 = Some(cpu_load_15);
-                    }
-                    Metric::GnssLatLong(lat_long) => {
-                        telemetrics.write().await.location = Some(lat_long);
-                    }
-                    Metric::GnssAltitude(altitude) => {
-                        telemetrics.write().await.altitude = Some(altitude);
-                    }
-                    Metric::GnssSpeed(speed) => {
-                        telemetrics.write().await.speed = Some(speed);
-                    }
-                    Metric::GnssHeading(heading) => {
-                        telemetrics.write().await.heading = Some(heading);
-                    }
-                    Metric::GnssSatellites(satellites) => {
-                        telemetrics.write().await.satellites = Some(satellites);
-                    }
-                    _ => {}
                 }
             }
         }
+    });
+
+    log::debug!("Starting host service");
+
+    let url = reqwest::Url::parse(HOST).unwrap();
+
+    let client = reqwest::Client::builder()
+        .user_agent("glonax-agent/0.1.0")
+        .timeout(std::time::Duration::from_secs(5))
+        .https_only(true)
+        .build()
+        .unwrap();
+
+    let request_url = url
+        .join(&format!("api/v1/{}/probe", config.instance.id))
+        .unwrap();
+
+    loop {
+        let response = {
+            let data = telemetrics_clone.read().await;
+
+            client
+                .post(request_url.clone())
+                .json(&*data)
+                .send()
+                .await
+                .unwrap()
+        };
+
+        if response.status() == 200 {
+            log::info!("Probe sent successfully");
+        } else {
+            log::error!("Probe failed, status: {}", response.status());
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(config.interval)).await;
     }
 }
