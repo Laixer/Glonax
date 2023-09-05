@@ -24,9 +24,9 @@ impl Target {
         Self { point, orientation }
     }
 
-    fn from_point(point: Point3<f32>) -> Self {
+    fn from_point(x: f32, y: f32, z: f32) -> Self {
         Self {
-            point,
+            point: Point3::new(x, y, z),
             orientation: UnitQuaternion::identity(),
         }
     }
@@ -360,11 +360,11 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     });
 
-    let base_target = Target::from_point(Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595));
+    let base_target = Target::from_point(5.21 + 0.16, 0.0, 1.295 + 0.595);
 
     let targets = [Target::new(
         base_target.point,
-        UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 45_f32.to_radians(), 0.0),
+        UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 0_f32.to_radians(), 0.0),
     )];
 
     // let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
@@ -440,10 +440,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         std::io::stdin().read_line(&mut String::new())?;
 
         let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
-        let ground_transform = Isometry3::from_parts(
-            na::Translation3::new(0.0, 0.0, -1.0),
-            na::UnitQuaternion::identity(),
-        );
+        let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
+
+        let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
+        let bucket_transform = Isometry3::translation(0.75, 0.0, 0.25);
 
         client.send_motion(Motion::ResumeAll).await?;
 
@@ -467,6 +467,36 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             log::debug!("Target distance:   {:.2}m", distance);
 
             let effector_point = perception_chain.world_transformation() * na::Point3::origin();
+
+            let world_transformation = perception_chain.world_transformation() * bucket_transform;
+
+            let res = parry3d::query::closest_points(
+                &ground_transform,
+                &ground_plane,
+                &world_transformation,
+                &bucket_geometry,
+                50.0,
+            );
+
+            if let Ok(points) = res {
+                match points {
+                    parry3d::query::ClosestPoints::Intersecting => {
+                        log::debug!("Ground             Intersecting")
+                    }
+                    parry3d::query::ClosestPoints::WithinMargin(p1, p2) => log::debug!(
+                        "Ground             WithinMargin ({:.2}, {:.2}, {:.2}) - ({:.2}, {:.2}, {:.2})",
+                        p1.x,
+                        p1.y,
+                        p1.z,
+                        p2.x,
+                        p2.y,
+                        p2.z
+                    ),
+                    parry3d::query::ClosestPoints::Disjoint => {
+                        log::debug!("Ground             Disjoint")
+                    }
+                }
+            }
 
             // let direction_vector = target.point - effector_point;
 
