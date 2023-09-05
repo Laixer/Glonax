@@ -301,6 +301,7 @@ impl std::fmt::Debug for JointDiff<'_> {
 pub struct Chain {
     robot: Robot,
     joint_state: Vec<(String, Option<Rotation3<f32>>)>,
+    last_update: std::time::Instant,
 }
 
 impl Chain {
@@ -308,11 +309,16 @@ impl Chain {
         Self {
             robot,
             joint_state: vec![],
+            last_update: std::time::Instant::now(),
         }
     }
 
     pub fn is_ready(&self) -> bool {
         self.joint_state.iter().all(|(_, joint)| joint.is_some())
+    }
+
+    pub fn last_update(&self) -> std::time::Instant {
+        self.last_update
     }
 
     pub fn reset(&mut self) {
@@ -332,12 +338,14 @@ impl Chain {
             .find(|(joint_name, _)| joint_name == &name.to_string())
             .unwrap()
             .1 = Some(rotation);
+        self.last_update = std::time::Instant::now();
     }
 
     pub fn set_joint_positions(&mut self, rotations: Vec<Rotation3<f32>>) {
         for ((_, state), rotation) in self.joint_state.iter_mut().zip(rotations) {
             *state = Some(rotation);
         }
+        self.last_update = std::time::Instant::now();
     }
 
     pub fn world_transformation(&self) -> IsometryMatrix3<f32> {
@@ -445,6 +453,7 @@ impl Clone for Chain {
         let mut this = Self {
             robot: self.robot.clone(),
             joint_state: self.joint_state.clone(),
+            last_update: std::time::Instant::now(),
         };
         this.reset();
         this
