@@ -9,6 +9,7 @@ mod instance;
 mod motion;
 mod signal;
 
+// TODO: Move into lib.rs
 /// Level trait.
 pub trait Level {
     /// Return the value of self above the lower threshold.
@@ -26,6 +27,7 @@ impl Level for i16 {
     }
 }
 
+// TODO: Move into lib.rs
 pub mod time {
     use std::time::{Duration, SystemTime};
 
@@ -42,9 +44,8 @@ pub mod time {
 }
 
 pub mod geometry {
+    use nalgebra::{Rotation3, UnitQuaternion};
     use std::f32::consts::PI;
-
-    use nalgebra::Rotation3;
 
     /// Calculate the shortest rotation between two points on a circle
     pub fn shortest_rotation(distance: f32) -> f32 {
@@ -89,6 +90,20 @@ pub mod geometry {
 
         fn from_yaw(yaw: f32) -> Self {
             Rotation3::from_euler_angles(0.0, 0.0, yaw)
+        }
+    }
+
+    impl EulerAngles for UnitQuaternion<f32> {
+        fn from_roll(roll: f32) -> Self {
+            UnitQuaternion::from_euler_angles(roll, 0.0, 0.0)
+        }
+
+        fn from_pitch(pitch: f32) -> Self {
+            UnitQuaternion::from_euler_angles(0.0, pitch, 0.0)
+        }
+
+        fn from_yaw(yaw: f32) -> Self {
+            UnitQuaternion::from_euler_angles(0.0, 0.0, yaw)
         }
     }
 

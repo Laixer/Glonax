@@ -24,6 +24,7 @@ pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::Error;
 pub use self::runtime::RuntimeContext;
 
+// TODO: Rename to consts
 pub mod constants {
     /// Glonax runtime version.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");

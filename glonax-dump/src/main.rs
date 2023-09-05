@@ -6,7 +6,7 @@
 
 use clap::Parser;
 
-use na::{Isometry3, Rotation3};
+use na::{Isometry3, Point3, UnitQuaternion};
 use nalgebra as na;
 use parry3d::query::PointQuery;
 use parry3d::shape::Cuboid;
@@ -15,13 +15,20 @@ mod config;
 mod robot;
 
 struct Target {
-    point: na::Point3<f32>,
-    orientation: na::Rotation3<f32>,
+    pub point: Point3<f32>,
+    pub orientation: UnitQuaternion<f32>,
 }
 
 impl Target {
-    fn new(point: na::Point3<f32>, orientation: na::Rotation3<f32>) -> Self {
+    fn new(point: Point3<f32>, orientation: UnitQuaternion<f32>) -> Self {
         Self { point, orientation }
+    }
+
+    fn from_point(point: Point3<f32>) -> Self {
+        Self {
+            point,
+            orientation: UnitQuaternion::identity(),
+        }
     }
 }
 
@@ -40,7 +47,7 @@ impl InverseKinematics {
         use glonax::core::geometry::law_of_cosines;
 
         let local_z = target.point.z - 0.595 - 1.295;
-        log::debug!("Local Z:            {:.2}", local_z);
+        log::debug!(" IK Local Z:        {:.2}", local_z);
 
         let theta_1 = target.point.y.atan2(target.point.x);
 
@@ -50,19 +57,19 @@ impl InverseKinematics {
         // let offset_y = 0.0;
         let offset_y = offset * theta_1.sin();
 
-        log::debug!("Vector offset:      ({:.2}, {:.2})", offset_x, offset_y);
+        log::debug!(" IK Vector offset:  ({:.2}, {:.2})", offset_x, offset_y);
 
         let local_x = target.point.x - offset_x;
         let local_y = target.point.y - offset_y;
-        log::debug!("Local X:            {:.2}", local_x);
-        log::debug!("Local Y:            {:.2}", local_y);
+        log::debug!(" IK Local X:        {:.2}", local_x);
+        log::debug!(" IK Local Y:        {:.2}", local_y);
 
         // L4 is the leg between the origin and the target projected on the XY plane (ground).
         let l4 = (local_x.powi(2) + local_y.powi(2)).sqrt();
-        log::debug!("Vector length L4:   {:.2}", l4);
+        log::debug!(" IK Vector length L4: {:.2}", l4);
         // L5 is the leg between the origin and the target (vector).
         let l5 = (l4.powi(2) + local_z.powi(2)).sqrt();
-        log::debug!("Vector length L5:   {:.2}", l5);
+        log::debug!(" IK Vector length L5: {:.2}", l5);
 
         if l5 >= self.l1 + self.l2 {
             return Err(());
@@ -70,14 +77,14 @@ impl InverseKinematics {
 
         let theta_2p1 = local_z.atan2(l4);
         log::debug!(
-            "theta_2p1:         {:5.2}rad {:5.2}°",
+            " IK theta_2p1:      {:5.2}rad {:5.2}°",
             theta_2p1,
             theta_2p1.to_degrees()
         );
         let theta_2p2 =
             ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
         log::debug!(
-            "theta_2p2:         {:5.2}rad {:5.2}°",
+            " IK theta_2p2:      {:5.2}rad {:5.2}°",
             theta_2p2,
             theta_2p2.to_degrees()
         );
@@ -247,8 +254,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let perception_chain_shared = std::sync::Arc::new(tokio::sync::RwLock::new(perception_chain));
     let perception_chain_shared_read = perception_chain_shared.clone();
 
-    ///////////////////////////////////////////
-
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
         .write(true)
@@ -285,25 +290,25 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                                 perception_chain_shared
                                     .write()
                                     .await
-                                    .set_joint_position("frame", Rotation3::from_yaw(value));
+                                    .set_joint_position("frame", UnitQuaternion::from_yaw(value));
                             }
                             node if boom_encoder.id() == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
-                                    .set_joint_position("boom", Rotation3::from_pitch(value));
+                                    .set_joint_position("boom", UnitQuaternion::from_pitch(value));
                             }
                             node if arm_encoder.id() == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
-                                    .set_joint_position("arm", Rotation3::from_pitch(value));
+                                    .set_joint_position("arm", UnitQuaternion::from_pitch(value));
                             }
                             node if attachment_encoder.id() == node => {
-                                perception_chain_shared
-                                    .write()
-                                    .await
-                                    .set_joint_position("attachment", Rotation3::from_pitch(value));
+                                perception_chain_shared.write().await.set_joint_position(
+                                    "attachment",
+                                    UnitQuaternion::from_pitch(value),
+                                );
                             }
                             _ => {}
                         }
@@ -315,23 +320,20 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     });
 
-    ///////////////////////////////////////////
+    let base_target = Target::from_point(Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595));
 
-    // let targets = [Target::new(
-    //     na::Point3::new(5.21 + 0.16, 2.50, 1.295 + 0.595),
-    //     na::Rotation3::identity(),
-    // )];
+    let targets = [base_target];
 
-    let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
-    let targets: Vec<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
-        .iter()
-        .map(|v| {
-            Target::new(
-                na::Point3::new(v[0], v[1], v[2]),
-                na::Rotation3::from_euler_angles(v[3], v[4], v[5]),
-            )
-        })
-        .collect();
+    // let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
+    // let targets: Vec<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
+    //     .iter()
+    //     .map(|v| {
+    //         Target::new(
+    //             Point3::new(v[0], v[1], v[2]),
+    //             UnitQuaternion::from_euler_angles(v[3], v[4], v[5]),
+    //         )
+    //     })
+    //     .collect();
 
     for (idx, target) in targets.iter().enumerate() {
         log::debug!(
@@ -352,10 +354,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     for target in targets {
         projection_chain.reset();
 
-        client.send_motion(Motion::ResumeAll).await?;
-
         log::debug!(
-            "Target              ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
+            "Current target      ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
             target.point.x,
             target.point.y,
             target.point.z,
@@ -366,8 +366,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()),
             target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()).to_degrees(),
         );
-
-        ///////////////////////////////////
 
         let solver = InverseKinematics::new(6.0, 2.97);
 
@@ -391,18 +389,16 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             );
         }
 
-        ///////////////////////////////////
-
         projection_chain.set_joint_positions(vec![
-            Rotation3::from_yaw(p_frame_yaw),
-            Rotation3::from_pitch(-p_boom_pitch + 59.35_f32.to_radians()),
-            Rotation3::from_pitch(p_arm_pitch),
+            UnitQuaternion::from_yaw(p_frame_yaw),
+            UnitQuaternion::from_pitch(-p_boom_pitch + 59.35_f32.to_radians()),
+            UnitQuaternion::from_pitch(p_arm_pitch),
         ]);
 
         if let Some(angle) = p_attachment_pitch {
             projection_chain.set_joint_position(
                 "attachment",
-                Rotation3::from_pitch(angle - 55_f32.to_radians()),
+                UnitQuaternion::from_pitch(angle - 55_f32.to_radians()),
             );
         }
 
@@ -430,6 +426,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             na::UnitQuaternion::identity(),
         );
 
+        client.send_motion(Motion::ResumeAll).await?;
+
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(25)).await;
 
@@ -444,7 +442,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             log::debug!("Perception: {:?}", perception_chain);
 
             let distance = projection_chain.distance(&perception_chain);
-            log::debug!("Target distance:    {:.2}m", distance);
+            log::debug!("Target distance:   {:.2}m", distance);
 
             let effector_point = perception_chain.world_transformation() * na::Point3::origin();
 
@@ -474,7 +472,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let distance = ground_plane.distance_to_point(&ground_transform, &effector_point, true);
 
             log::debug!(
-                "Ground              Contact: {} Distance: {:.2}m",
+                "Ground             Contact: {} Distance: {:.2}m",
                 point_projection.is_inside,
                 distance
             );

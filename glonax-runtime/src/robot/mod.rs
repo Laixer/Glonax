@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use nalgebra::{IsometryMatrix3, Point3, Rotation3, Translation3};
+use nalgebra::{Isometry3, Point3, Translation3, UnitQuaternion};
 
 const DEFAULT_TOLERANCE: f32 = 0.01;
 
@@ -86,7 +86,7 @@ pub enum JointType {
 pub struct Joint {
     name: String,
     ty: JointType,
-    origin: IsometryMatrix3<f32>,
+    origin: Isometry3<f32>,
     bounds: (f32, f32),
     tolerance: f32,
     actuator: Option<crate::core::Actuator>,
@@ -99,7 +99,7 @@ impl Joint {
         Self {
             name: name.to_string(),
             ty,
-            origin: IsometryMatrix3::identity(),
+            origin: Isometry3::identity(),
             bounds: (-f32::INFINITY, f32::INFINITY),
             tolerance: DEFAULT_TOLERANCE,
             actuator: None,
@@ -116,7 +116,7 @@ impl Joint {
         Self {
             name: name.to_string(),
             ty,
-            origin: IsometryMatrix3::identity(),
+            origin: Isometry3::identity(),
             bounds: (-f32::INFINITY, f32::INFINITY),
             tolerance: DEFAULT_TOLERANCE,
             actuator: Some(actuator),
@@ -137,12 +137,12 @@ impl Joint {
     }
 
     pub fn set_yaw(mut self, yaw: f32) -> Self {
-        self.origin.rotation = Rotation3::from_euler_angles(0.0, 0.0, yaw);
+        self.origin.rotation = UnitQuaternion::from_euler_angles(0.0, 0.0, yaw);
         self
     }
 
     pub fn set_pitch(mut self, pitch: f32) -> Self {
-        self.origin.rotation = Rotation3::from_euler_angles(0.0, pitch, 0.0);
+        self.origin.rotation = UnitQuaternion::from_euler_angles(0.0, pitch, 0.0);
         self
     }
 
@@ -157,7 +157,8 @@ impl Joint {
         origin_pitch: f32,
         origin_yaw: f32,
     ) -> Self {
-        self.origin.rotation = Rotation3::from_euler_angles(origin_roll, origin_pitch, origin_yaw);
+        self.origin.rotation =
+            UnitQuaternion::from_euler_angles(origin_roll, origin_pitch, origin_yaw);
         self
     }
 
@@ -182,7 +183,7 @@ impl Joint {
     }
 
     #[inline]
-    pub fn origin(&self) -> &IsometryMatrix3<f32> {
+    pub fn origin(&self) -> &Isometry3<f32> {
         &self.origin
     }
 
@@ -239,7 +240,7 @@ impl Device {
 
 pub struct JointDiff<'a> {
     pub joint: &'a Joint,
-    pub rotation: Rotation3<f32>,
+    pub rotation: UnitQuaternion<f32>,
 }
 
 impl<'a> JointDiff<'a> {
@@ -300,7 +301,8 @@ impl std::fmt::Debug for JointDiff<'_> {
 
 pub struct Chain {
     robot: Robot,
-    joint_state: Vec<(String, Option<Rotation3<f32>>)>,
+    joint_state: Vec<(String, Option<UnitQuaternion<f32>>)>,
+    previous_state: Vec<(String, Option<UnitQuaternion<f32>>)>,
     last_update: std::time::Instant,
 }
 
@@ -309,6 +311,7 @@ impl Chain {
         Self {
             robot,
             joint_state: vec![],
+            previous_state: vec![],
             last_update: std::time::Instant::now(),
         }
     }
@@ -325,31 +328,41 @@ impl Chain {
         for (_, joint) in &mut self.joint_state {
             *joint = None;
         }
+        for (_, joint) in &mut self.previous_state {
+            *joint = None;
+        }
     }
 
     pub fn add_link(&mut self, link: impl ToString) -> &mut Self {
         self.joint_state.push((link.to_string(), None));
+        self.previous_state.push((link.to_string(), None));
         self
     }
 
-    pub fn set_joint_position(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
-        self.joint_state
-            .iter_mut()
-            .find(|(joint_name, _)| joint_name == &name.to_string())
-            .unwrap()
-            .1 = Some(rotation);
+    pub fn set_joint_position(&mut self, name: impl ToString, rotation: UnitQuaternion<f32>) {
+        let joint_idx = self
+            .joint_state
+            .iter()
+            .position(|(joint_name, _)| joint_name == &name.to_string())
+            .unwrap();
+
+        self.previous_state[joint_idx].1 = self.joint_state[joint_idx].1;
+        self.joint_state[joint_idx].1 = Some(rotation);
+
         self.last_update = std::time::Instant::now();
     }
 
-    pub fn set_joint_positions(&mut self, rotations: Vec<Rotation3<f32>>) {
-        for ((_, state), rotation) in self.joint_state.iter_mut().zip(rotations) {
-            *state = Some(rotation);
+    pub fn set_joint_positions(&mut self, rotations: Vec<UnitQuaternion<f32>>) {
+        for (joint_idx, rotation) in rotations.iter().enumerate() {
+            self.previous_state[joint_idx].1 = self.joint_state[joint_idx].1;
+            self.joint_state[joint_idx].1 = Some(*rotation);
         }
+
         self.last_update = std::time::Instant::now();
     }
 
-    pub fn world_transformation(&self) -> IsometryMatrix3<f32> {
-        let mut pose = IsometryMatrix3::identity();
+    pub fn world_transformation(&self) -> Isometry3<f32> {
+        let mut pose = Isometry3::identity();
 
         for (joint_name, rotation) in &self.joint_state {
             let joint = self.robot.joint_by_name(joint_name).unwrap();
@@ -453,6 +466,7 @@ impl Clone for Chain {
         let mut this = Self {
             robot: self.robot.clone(),
             joint_state: self.joint_state.clone(),
+            previous_state: self.previous_state.clone(),
             last_update: std::time::Instant::now(),
         };
         this.reset();
@@ -477,7 +491,6 @@ pub struct Robot {
     model: String,
     ty: RobotType,
     joints: Vec<Joint>,
-    // chains: Vec<String>,
     devices: Vec<Device>,
 }
 
@@ -515,7 +528,6 @@ pub struct RobotBuilder {
     model: String,
     ty: RobotType,
     joints: Vec<Joint>,
-    // chains: Vec<String>,
     devices: Vec<Device>,
 }
 
@@ -527,7 +539,6 @@ impl RobotBuilder {
             model: String::new(),
             ty,
             joints: Vec::new(),
-            // chains: Vec::new(),
             devices: Vec::new(),
         }
     }
@@ -546,11 +557,6 @@ impl RobotBuilder {
         self.joints.push(joint);
         self
     }
-
-    // pub fn add_chain(mut self, chain: String) -> Self {
-    //     self.chains.push(chain);
-    //     self
-    // }
 
     pub fn add_device(mut self, device: Device) -> Self {
         self.devices.push(device);
