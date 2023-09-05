@@ -39,13 +39,8 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let address = args.address.map_or(
-        glonax::channel::recv_instance()
-            .await
-            .map(|(_, address)| address),
-        |address| {
-            let mut address = address.to_owned();
-
+    let address = match args.address {
+        Some(mut address) => {
             if !address.contains(':') {
                 address.push_str(":");
                 address.push_str(&glonax::constants::DEFAULT_NETWORK_PORT.to_string());
@@ -53,9 +48,12 @@ async fn main() -> anyhow::Result<()> {
 
             Ok(std::net::ToSocketAddrs::to_socket_addrs(&address)?
                 .next()
-                .expect("Failed to parse address"))
-        },
-    )?;
+                .unwrap())
+        }
+        None => glonax::channel::recv_instance()
+            .await
+            .map(|(_, address)| address),
+    }?;
 
     let mut config = config::InputConfig {
         address,
