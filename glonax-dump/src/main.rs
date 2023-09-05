@@ -8,7 +8,8 @@ use clap::Parser;
 
 use na::{Isometry3, Rotation3};
 use nalgebra as na;
-use parry3d::query::{PointQuery, RayCast};
+use parry3d::query::PointQuery;
+use parry3d::shape::Cuboid;
 
 mod config;
 mod robot;
@@ -229,10 +230,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     log::debug!("Configured: {}", robot);
 
-    // let frame_encoder = robot.device_by_name("frame_encoder").unwrap();
-    // let boom_encoder = robot.device_by_name("boom_encoder").unwrap();
-    // let arm_encoder = robot.device_by_name("arm_encoder").unwrap();
-    // let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap();
+    let frame_encoder = robot.device_by_name("frame_encoder").unwrap().clone();
+    let boom_encoder = robot.device_by_name("boom_encoder").unwrap().clone();
+    let arm_encoder = robot.device_by_name("arm_encoder").unwrap().clone();
+    let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap().clone();
 
     let mut perception_chain = glonax::robot::Chain::new(robot);
     perception_chain
@@ -245,9 +246,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     let perception_chain_shared = std::sync::Arc::new(tokio::sync::RwLock::new(perception_chain));
     let perception_chain_shared_read = perception_chain_shared.clone();
-
-    let last_update = std::sync::Arc::new(tokio::sync::RwLock::new(std::time::Instant::now()));
-    let last_update_read = last_update.clone();
 
     ///////////////////////////////////////////
 
@@ -283,42 +281,34 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                     if let Metric::EncoderAbsAngle((node, value)) = signal.metric {
                         match node {
-                            node if 0x6A == node => {
+                            node if frame_encoder.id() == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("frame", Rotation3::from_yaw(value));
-                                // TODO: move to perception chain
-                                *last_update.write().await = std::time::Instant::now();
                             }
-                            node if 0x6B == node => {
+                            node if boom_encoder.id() == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("boom", Rotation3::from_pitch(value));
-                                // TODO: move to perception chain
-                                *last_update.write().await = std::time::Instant::now();
                             }
-                            node if 0x6C == node => {
+                            node if arm_encoder.id() == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("arm", Rotation3::from_pitch(value));
-                                // TODO: move to perception chain
-                                *last_update.write().await = std::time::Instant::now();
                             }
-                            node if 0x6D == node => {
+                            node if attachment_encoder.id() == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("attachment", Rotation3::from_pitch(value));
-                                // TODO: move to perception chain
-                                *last_update.write().await = std::time::Instant::now();
                             }
                             _ => {}
                         }
 
-                        // log::debug!("Perception: {:?}", perception_chain_shared.read().await);
+                        log::trace!("Perception: {:?}", perception_chain_shared.read().await);
                     }
                 }
             }
@@ -378,103 +368,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         );
 
         ///////////////////////////////////
-        // log::debug!("IK");
-
-        // let rot = rot * Rotation3::from_pitch(10_f32.to_radians());
-
-        // let rot = Rotation3::from_yaw(90_f32.to_radians() );
-        // let rot = rot * Rotation3::from_pitch(40_f32.to_radians());
-
-        // let yy = na::UnitQuaternion::from_euler_angles(0.0, 40.0_f32.to_radians(), 0.0);
-        // let yy = yy * na::UnitQuaternion::from_euler_angles(0.0, 10_f32.to_radians(), 0.0);
-
-        // let yy = yy * na::UnitQuaternion::from_euler_angles(0.0, 0.0, 45_f32.to_radians());
-
-        // log::debug!("YY:           {}", yy);
-        // log::debug!("axis_angle:   {:?}", yy.axis_angle());
-        // log::debug!(
-        //     "YY theta:     {}    {:.2}",
-        //     yy.angle(),
-        //     yy.angle().to_degrees()
-        // );
-        // log::debug!("axis_angle:   {:?}", yy.euler_angles());
-
-        // log::debug!("{}", rot);
-
-        // log::debug!(
-        //     "Angle        {:?}       {:.2}rad {:.2}°",
-        //     rot.axis().unwrap(),
-        //     rot.axis().unwrap().z * rot.axis().unwrap().y * rot.angle(),
-        //     rot.axis().unwrap().z * rot.axis().unwrap().y * rot.angle().to_degrees()
-        // );
-
-        // let rot = na::Rotation3::rotation_between(&na::Vector3::new(1.0, 0.0, 0.0), &target.point.coords);
-
-        // log::debug!("Angle              {:#?}", rot);
-
-        // let offset = rot * na::Point2::new(0.16, 0.0);
-        // log::debug!("Vector point:       [{:.3}, {:.3}]", offset.x, offset.y);
-        // let lv = na::distance(&na::Point2::new(0.0, 0.0), &offset);
-        // log::debug!("Vector L:           {:.2}", lv);
-
-        // let l1 = na::distance(&na::Point2::new(0.0, 0.0), &target.point.xy());
-        // log::debug!("L1 distance:        {:.2}", l1);
-        // let l4 = na::distance(&offset, &target.point.xy());
-        // log::debug!("L4 distance:        {:.2}", l4);
-
-        // let offset = na::Point3::new(offset.x, offset.y, 0.595 + 1.295);
-        // let l5 = na::distance(&offset, &target.point);
-        // log::debug!("L5 distance:        {:.2}", l5);
-
-        // let q = target - offset;
-        // log::debug!("Vector point:       [{:.3}, {:.3}, {:.3}]", q.x, q.y, q.z);
-
-        // let rot = na::Rotation3::rotation_between(&na::Vector3::new(1.0,0.0, 0.0), &na::Vector3::new(5.226, 2.491, 0.010) ).unwrap();
-        // log::debug!(
-        //     "Angle θ2p1          {:?} {:?} {:?}",
-        //     rot.axis(),
-        //     rot.angle(),
-        //     rad_to_deg(rot.angle() as f32)
-        // );
-
-        // let q = target - offset;
-
-        // log::debug!("Vector point:       [{:.3}, {:.3}, {:.3}]", q.x, q.y, q.z);
-
-        // let rot = na::Rotation2::rotation_between(&na::Vector2::new(1.0,0.01), &na::Vector2::new(5.226,0.2) );
-        // log::debug!(
-        //     "Angle θ2p1          {:?} {:?}",
-        //     rot.angle(),
-        //     rad_to_deg(rot.angle() as f32)
-        // );
-
-        // let l5 = na::distance(&na::Point2::new(0.16, 0.0), &target.xz());
-        // log::debug!("L5 distance: {:.2}", l5);
-
-        // let theta_2p2 = ((6.0_f32.powi(2) + (l5 as f32).powi(2) - 2.97_f32.powi(2))
-        //     / (2.0 * 6.0_f32 * (l5 as f32)))
-        //     .acos();
-
-        // log::debug!(
-        //     "Angle (θp2): {:5.2}rad {:5.2}°",
-        //     theta_2p2,
-        //     rad_to_deg(theta_2p2)
-        // );
-
-        // let theta_3 = std::f32::consts::PI
-        //     - ((6.0_f32.powi(2) + 2.97_f32.powi(2) - (l5 as f32).powi(2)) / (2.0 * 6.0_f32 * 2.97_f32))
-        //         .acos();
-
-        // log::debug!(
-        //     "Angle (θ3): {:5.2}rad {:5.2}°",
-        //     theta_3,
-        //     rad_to_deg(theta_3)
-        // );
-
-        // return Ok(());
-
-        ///////////////////////////////////
-        log::debug!("IK2");
 
         let solver = InverseKinematics::new(6.0, 2.97);
 
@@ -530,20 +423,23 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::info!("Press enter to continue");
         std::io::stdin().read_line(&mut String::new())?;
 
-        let ground_plane = parry3d::shape::Cuboid::new(na::Vector3::new(10.0, 10.0, 1.0));
+        let ground_plane = Cuboid::new(na::Vector3::new(10.0, 10.0, 1.0));
+
+        let ground_transform = Isometry3::from_parts(
+            na::Translation3::new(0.0, 0.0, -1.0),
+            na::UnitQuaternion::identity(),
+        );
 
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(25)).await;
 
-            let time_since_last_update = last_update_read.read().await.elapsed();
+            let perception_chain = perception_chain_shared_read.read().await;
 
-            if time_since_last_update > std::time::Duration::from_millis(200) {
+            if perception_chain.last_update().elapsed() > std::time::Duration::from_millis(200) {
                 log::warn!("No update received for 200ms, stopping");
                 client.send_motion(Motion::StopAll).await?;
                 break;
             }
-
-            let perception_chain = perception_chain_shared_read.read().await;
 
             log::debug!("Perception: {:?}", perception_chain);
 
@@ -552,34 +448,30 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             let effector_point = perception_chain.world_transformation() * na::Point3::origin();
 
-            let direction_vector = target.point - effector_point;
+            // let direction_vector = target.point - effector_point;
 
-            log::debug!(
-                "Directional vector: ({:.2}, {:.2}, {:.2})",
-                direction_vector.x,
-                direction_vector.y,
-                direction_vector.z
-            );
+            // log::debug!(
+            //     "Directional vector: ({:.2}, {:.2}, {:.2})",
+            //     direction_vector.x,
+            //     direction_vector.y,
+            //     direction_vector.z
+            // );
 
-            let target_ray = parry3d::query::Ray::new(effector_point, direction_vector / 10.0);
+            // let target_ray = parry3d::query::Ray::new(effector_point, direction_vector / 10.0);
 
-            log::debug!(
-                "Ray:                ({:.2}, {:.2}, {:.2}) [{:.2}, {:.2}, {:.2}]",
-                target_ray.origin.x,
-                target_ray.origin.y,
-                target_ray.origin.z,
-                target_ray.dir.x,
-                target_ray.dir.y,
-                target_ray.dir.z
-            );
+            // log::debug!(
+            //     "Ray:                ({:.2}, {:.2}, {:.2}) [{:.2}, {:.2}, {:.2}]",
+            //     target_ray.origin.x,
+            //     target_ray.origin.y,
+            //     target_ray.origin.z,
+            //     target_ray.dir.x,
+            //     target_ray.dir.y,
+            //     target_ray.dir.z
+            // );
 
-            let transform = Isometry3::from_parts(
-                na::Translation3::new(0.0, 0.0, -1.0),
-                na::UnitQuaternion::identity(),
-            );
-
-            let point_projection = ground_plane.project_point(&transform, &effector_point, true);
-            let distance = ground_plane.distance_to_point(&transform, &effector_point, true);
+            let point_projection =
+                ground_plane.project_point(&ground_transform, &effector_point, true);
+            let distance = ground_plane.distance_to_point(&ground_transform, &effector_point, true);
 
             log::debug!(
                 "Ground              Contact: {} Distance: {:.2}m",
