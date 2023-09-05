@@ -8,7 +8,6 @@ use clap::Parser;
 
 use na::{Isometry3, Point3, UnitQuaternion, Vector3};
 use nalgebra as na;
-use parry3d::query::PointQuery;
 use parry3d::shape::Cuboid;
 
 mod config;
@@ -466,68 +465,83 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let distance = projection_chain.distance(&perception_chain);
             log::debug!("Target distance:   {:.2}m", distance);
 
-            let effector_point = perception_chain.world_transformation() * na::Point3::origin();
+            // let effector_point = perception_chain.world_transformation() * na::Point3::origin();
+
+            // let res = parry3d::query::closest_points(
+            //     &ground_transform,
+            //     &ground_plane,
+            //     &world_transformation,
+            //     &bucket_geometry,
+            //     20.0,
+            // );
+
+            // if let Ok(points) = res {
+            //     match points {
+            //         parry3d::query::ClosestPoints::Intersecting => {
+            //             log::debug!("Ground             Intersecting")
+            //         }
+            //         parry3d::query::ClosestPoints::WithinMargin(p1, p2) => log::debug!(
+            //             "Ground             WithinMargin ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
+            //             p1.x,
+            //             p1.y,
+            //             p1.z,
+            //             p2.x,
+            //             p2.y,
+            //             p2.z
+            //         ),
+            //         parry3d::query::ClosestPoints::Disjoint => {
+            //             log::debug!("Ground             Disjoint")
+            //         }
+            //     }
+            // }
+
+            let mut has_contact = false;
 
             let world_transformation = perception_chain.world_transformation() * bucket_transform;
 
-            let res = parry3d::query::closest_points(
-                &ground_transform,
-                &ground_plane,
-                &world_transformation,
-                &bucket_geometry,
-                50.0,
-            );
+            for (collider_transform, collider_geom) in [(&ground_transform, &ground_plane)] {
+                let res = parry3d::query::contact(
+                    collider_transform,
+                    collider_geom,
+                    &world_transformation,
+                    &bucket_geometry,
+                    1.0,
+                );
 
-            if let Ok(points) = res {
-                match points {
-                    parry3d::query::ClosestPoints::Intersecting => {
-                        log::debug!("Ground             Intersecting")
-                    }
-                    parry3d::query::ClosestPoints::WithinMargin(p1, p2) => log::debug!(
-                        "Ground             WithinMargin ({:.2}, {:.2}, {:.2}) - ({:.2}, {:.2}, {:.2})",
-                        p1.x,
-                        p1.y,
-                        p1.z,
-                        p2.x,
-                        p2.y,
-                        p2.z
-                    ),
-                    parry3d::query::ClosestPoints::Disjoint => {
-                        log::debug!("Ground             Disjoint")
+                if let Ok(contact) = res {
+                    if let Some(contact) = contact {
+                        has_contact = true;
+
+                        log::warn!(
+                            "                        Effector is in obstacle prediction zone"
+                        );
+
+                        if contact.dist < 0.30 {
+                            log::warn!("                        Effector is too close to obstacle");
+                        }
+
+                        log::debug!("Collider           Distance: {:.2}m", contact.dist);
+                        log::debug!("Collider           ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
+                            contact.point1.x,
+                            contact.point1.y,
+                            contact.point1.z,
+                            contact.point2.x,
+                            contact.point2.y,
+                            contact.point2.z
+                        );
                     }
                 }
             }
 
-            // let direction_vector = target.point - effector_point;
+            // let point_projection =
+            //     ground_plane.project_point(&ground_transform, &effector_point, true);
+            // let distance = ground_plane.distance_to_point(&ground_transform, &effector_point, true);
 
             // log::debug!(
-            //     "Directional vector: ({:.2}, {:.2}, {:.2})",
-            //     direction_vector.x,
-            //     direction_vector.y,
-            //     direction_vector.z
+            //     "Ground             Contact: {} Distance: {:.2}m",
+            //     point_projection.is_inside,
+            //     distance
             // );
-
-            // let target_ray = parry3d::query::Ray::new(effector_point, direction_vector / 10.0);
-
-            // log::debug!(
-            //     "Ray:                ({:.2}, {:.2}, {:.2}) [{:.2}, {:.2}, {:.2}]",
-            //     target_ray.origin.x,
-            //     target_ray.origin.y,
-            //     target_ray.origin.z,
-            //     target_ray.dir.x,
-            //     target_ray.dir.y,
-            //     target_ray.dir.z
-            // );
-
-            let point_projection =
-                ground_plane.project_point(&ground_transform, &effector_point, true);
-            let distance = ground_plane.distance_to_point(&ground_transform, &effector_point, true);
-
-            log::debug!(
-                "Ground             Contact: {} Distance: {:.2}m",
-                point_projection.is_inside,
-                distance
-            );
 
             if !perception_chain.is_ready() || !kinematic_control {
                 continue;
@@ -536,7 +550,9 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let mut done = true;
 
             // TODO: Send all commands at once
-            for joint_diff in perception_chain.error(&projection_chain) {
+            for mut joint_diff in perception_chain.error(&projection_chain) {
+                joint_diff.power_limit = if has_contact { Some(20_000) } else { None };
+
                 log::debug!(" ⇒ {:?}", joint_diff);
 
                 if let Some(motion) = joint_diff.actuator_motion() {

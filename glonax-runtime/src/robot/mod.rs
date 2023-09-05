@@ -241,6 +241,7 @@ impl Device {
 pub struct JointDiff<'a> {
     pub joint: &'a Joint,
     pub rotation: UnitQuaternion<f32>,
+    pub power_limit: Option<i16>,
 }
 
 impl<'a> JointDiff<'a> {
@@ -269,7 +270,13 @@ impl<'a> JointDiff<'a> {
 
     pub fn error_angle_power(&self) -> Option<i16> {
         self.error_angle_optimized().map_or(None, |angle| {
-            self.joint.profile().map(|profile| profile.power(angle))
+            if let Some(power_limit) = self.power_limit {
+                self.joint
+                    .profile()
+                    .map(|profile| profile.power(angle).max(-power_limit).min(power_limit))
+            } else {
+                self.joint.profile().map(|profile| profile.power(angle))
+            }
         })
     }
 
@@ -328,16 +335,10 @@ impl Chain {
     #[deprecated]
     pub fn abs_pitch(&self) -> Option<f32> {
         if self.joint_state[1].1.is_some() && self.joint_state[2].1.is_some() {
-            let theta_2 = self.joint_state[1].1.unwrap().axis().unwrap().y * self.joint_state[1].1.unwrap().angle();
-            let theta_3 = self.joint_state[2].1.unwrap().axis().unwrap().y * self.joint_state[2].1.unwrap().angle();
-
-            // self.rotation.axis().map(|axis| {
-            //     axis.x * self.rotation.angle()
-            //         + axis.y * self.rotation.angle()
-            //         + axis.z * self.rotation.angle()
-            // })
-
-            // let abs_pitch_attachment = (-59.35_f32.to_radians() + theta_2) + theta_3;
+            let theta_2 = self.joint_state[1].1.unwrap().axis().unwrap().y
+                * self.joint_state[1].1.unwrap().angle();
+            let theta_3 = self.joint_state[2].1.unwrap().axis().unwrap().y
+                * self.joint_state[2].1.unwrap().angle();
 
             let abs_pitch_arm = (-59.35_f32.to_radians() + theta_2) + theta_3;
             Some(abs_pitch_arm)
@@ -416,11 +417,10 @@ impl Chain {
             .filter(|(lhs, rhs)| lhs.0 == rhs.0 && lhs.1.is_some() && rhs.1.is_some())
             .map(|((name, lhs), (_, rhs))| (name, lhs.unwrap(), rhs.unwrap()))
         {
-            let joint = self.robot.joint_by_name(joint_name).unwrap();
-
             error_vec.push(JointDiff {
-                joint,
+                joint: self.robot.joint_by_name(joint_name).unwrap(),
                 rotation: lhs_rotation.rotation_to(&rhs_rotation),
+                power_limit: None,
             });
         }
 
