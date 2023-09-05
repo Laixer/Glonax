@@ -86,8 +86,6 @@ impl InverseKinematics {
 
         let offset = 0.16;
         let offset_x = offset * theta_1.cos();
-        // let offset_x = 0.0;
-        // let offset_y = 0.0;
         let offset_y = offset * theta_1.sin();
 
         log::debug!(" IK Vector offset:  ({:.2}, {:.2})", offset_x, offset_y);
@@ -140,7 +138,7 @@ impl InverseKinematics {
                 abs_pitch_attachment.to_degrees()
             );
 
-            let rel_attachment_error = attach_target - abs_pitch_attachment; // - 55.0_f32.to_radians();
+            let rel_attachment_error = attach_target - abs_pitch_attachment;
             log::debug!(
                 "RelAttach error:   {:5.2}rad {:5.2}°",
                 rel_attachment_error,
@@ -357,7 +355,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     let base_target = Target::from_point(Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595));
 
-    let targets = [base_target];
+    let targets = [Target::new(
+        base_target.point,
+        UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 45_f32.to_radians(), 0.0),
+    )];
 
     // let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
     // let targets: Vec<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
@@ -410,7 +411,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         if let Some(angle) = p_attachment_pitch {
             projection_chain.set_joint_position(
                 "attachment",
-                UnitQuaternion::from_pitch(angle - 55_f32.to_radians()),
+                UnitQuaternion::from_pitch(angle + 55_f32.to_radians()),
             );
         }
 
