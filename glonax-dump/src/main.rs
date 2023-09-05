@@ -459,6 +459,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             log::debug!("Perception: {:?}", perception_chain);
 
+            if let Some(abs_pitch) = perception_chain.abs_pitch() {
+                log::debug!("Absolute pitch:    {:.2}°", abs_pitch.to_degrees());
+            }
+
             let distance = projection_chain.distance(&perception_chain);
             log::debug!("Target distance:   {:.2}m", distance);
 

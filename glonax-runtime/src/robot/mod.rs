@@ -324,6 +324,28 @@ impl Chain {
         self.last_update
     }
 
+    // TODO: HACK: XXX: REMOVE: This is a temporary hack to get the absolute pitch of the arm
+    #[deprecated]
+    pub fn abs_pitch(&self) -> Option<f32> {
+        if self.joint_state[1].1.is_some() && self.joint_state[2].1.is_some() {
+            let theta_2 = self.joint_state[1].1.unwrap().axis().unwrap().y * self.joint_state[1].1.unwrap().angle();
+            let theta_3 = self.joint_state[2].1.unwrap().axis().unwrap().y * self.joint_state[2].1.unwrap().angle();
+
+            // self.rotation.axis().map(|axis| {
+            //     axis.x * self.rotation.angle()
+            //         + axis.y * self.rotation.angle()
+            //         + axis.z * self.rotation.angle()
+            // })
+
+            // let abs_pitch_attachment = (-59.35_f32.to_radians() + theta_2) + theta_3;
+
+            let abs_pitch_arm = (-59.35_f32.to_radians() + theta_2) + theta_3;
+            Some(abs_pitch_arm)
+        } else {
+            None
+        }
+    }
+
     pub fn reset(&mut self) {
         for (_, joint) in &mut self.joint_state {
             *joint = None;
