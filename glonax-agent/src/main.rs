@@ -18,6 +18,9 @@ struct Args {
     /// Probe interval in seconds.
     #[arg(short, long, default_value_t = 60)]
     interval: u64,
+    /// Send a probe to remote host.
+    #[arg(long)]
+    no_probe: bool,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -34,6 +37,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut config = config::AgentConfig {
         interval: args.interval,
+        probe: !args.no_probe,
         instance,
         global: glonax::GlobalConfig::default(),
     };
@@ -215,22 +219,24 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         .unwrap();
 
     loop {
-        let response = {
+        if config.probe {
             let data = telemetrics_clone.read().await;
 
-            client
+            let response = client
                 .post(request_url.clone())
                 .json(&*data)
                 .send()
                 .await
-                .unwrap()
+                .unwrap();
+
+            if response.status() == 200 {
+                log::info!("Probe sent successfully");
+            } else {
+                log::error!("Probe failed, status: {}", response.status());
+            }
         };
 
-        if response.status() == 200 {
-            log::info!("Probe sent successfully");
-        } else {
-            log::error!("Probe failed, status: {}", response.status());
-        }
+        log::trace!("{:#?}", telemetrics_clone.read().await);
 
         tokio::time::sleep(std::time::Duration::from_secs(config.interval)).await;
     }
