@@ -6,7 +6,7 @@
 
 use clap::Parser;
 
-use na::{Isometry3, Point3, UnitQuaternion};
+use na::{Isometry3, Point3, UnitQuaternion, Vector3};
 use nalgebra as na;
 use parry3d::query::PointQuery;
 use parry3d::shape::Cuboid;
@@ -145,6 +145,12 @@ impl InverseKinematics {
                 rel_attachment_error.to_degrees()
             );
 
+            if rel_attachment_error < -55.0_f32.to_radians() {
+                log::warn!("Attachment pitch is below lower bound");
+            } else if rel_attachment_error > 125.0_f32.to_radians() {
+                log::warn!("Attachment pitch is above upper bound");
+            }
+
             Some(rel_attachment_error)
         } else {
             None
@@ -263,6 +269,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     let kinematic_epsilon = 0.0001;
     let kinematic_control = true;
+    let kinematic_interval = std::time::Duration::from_millis(25);
 
     let robot = robot::excavator(&config);
 
@@ -432,8 +439,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::info!("Press enter to continue");
         std::io::stdin().read_line(&mut String::new())?;
 
-        let ground_plane = Cuboid::new(na::Vector3::new(10.0, 10.0, 1.0));
-
+        let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
         let ground_transform = Isometry3::from_parts(
             na::Translation3::new(0.0, 0.0, -1.0),
             na::UnitQuaternion::identity(),
@@ -442,10 +448,9 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         client.send_motion(Motion::ResumeAll).await?;
 
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+            tokio::time::sleep(kinematic_interval).await;
 
             let perception_chain = perception_chain_shared_read.read().await;
-
             if perception_chain.last_update().elapsed() > std::time::Duration::from_millis(200) {
                 log::warn!("No update received for 200ms, stopping");
                 client.send_motion(Motion::StopAll).await?;
