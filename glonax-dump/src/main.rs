@@ -443,7 +443,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
 
         let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
-        let bucket_transform = Isometry3::translation(0.75, 0.0, 0.25);
+        let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
 
         client.send_motion(Motion::ResumeAll).await?;
 
