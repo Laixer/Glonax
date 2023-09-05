@@ -32,6 +32,39 @@ impl Target {
     }
 }
 
+impl std::fmt::Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
+            self.point.x,
+            self.point.y,
+            self.point.z,
+            self.orientation
+                .axis()
+                .map_or(0.0, |axis| axis.x * self.orientation.angle()),
+            self.orientation
+                .axis()
+                .map_or(0.0, |axis| axis.x * self.orientation.angle())
+                .to_degrees(),
+            self.orientation
+                .axis()
+                .map_or(0.0, |axis| axis.y * self.orientation.angle()),
+            self.orientation
+                .axis()
+                .map_or(0.0, |axis| axis.y * self.orientation.angle())
+                .to_degrees(),
+            self.orientation
+                .axis()
+                .map_or(0.0, |axis| axis.z * self.orientation.angle()),
+            self.orientation
+                .axis()
+                .map_or(0.0, |axis| axis.z * self.orientation.angle())
+                .to_degrees(),
+        )
+    }
+}
+
 // TODO: move to core::algorithm
 struct InverseKinematics {
     l1: f32,
@@ -265,6 +298,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     log::info!("Connected to {}", config.address);
 
+    client.send_motion(Motion::StopAll).await?;
+
     tokio::spawn(async move {
         use glonax::core::{Metric, Signal};
         use glonax::transport::frame::{Frame, FrameMessage};
@@ -336,36 +371,13 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     //     .collect();
 
     for (idx, target) in targets.iter().enumerate() {
-        log::debug!(
-            "Target {:2}           ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
-            idx,
-            target.point.x,
-            target.point.y,
-            target.point.z,
-            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()),
-            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()).to_degrees(),
-            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()),
-            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()).to_degrees(),
-            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()),
-            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()).to_degrees(),
-        );
+        log::debug!(" * Target {:2}    {}", idx, target);
     }
 
     for target in targets {
         projection_chain.reset();
 
-        log::debug!(
-            "Current target      ({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
-            target.point.x,
-            target.point.y,
-            target.point.z,
-            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()),
-            target.orientation.axis().map_or(0.0, |axis| axis.x * target.orientation.angle()).to_degrees(),
-            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()),
-            target.orientation.axis().map_or(0.0, |axis| axis.y * target.orientation.angle()).to_degrees(),
-            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()),
-            target.orientation.axis().map_or(0.0, |axis| axis.z * target.orientation.angle()).to_degrees(),
-        );
+        log::debug!("Current target      {}", target);
 
         let solver = InverseKinematics::new(6.0, 2.97);
 
