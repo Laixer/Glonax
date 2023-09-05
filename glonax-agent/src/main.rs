@@ -111,6 +111,62 @@ struct Telemetry {
     rpm: Option<u16>,
 }
 
+impl std::fmt::Display for Telemetry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut status = self.status.clone();
+
+        if let Some(uptime) = self.uptime {
+            status.push_str(&format!(" Uptime: {}s", uptime));
+        }
+
+        if let Some(memory) = self.memory {
+            status.push_str(&format!(" Memory: {}%", memory));
+        }
+
+        if let Some(swap) = self.swap {
+            status.push_str(&format!(" Swap: {}%", swap));
+        }
+
+        if let Some(cpu_1) = self.cpu_1 {
+            status.push_str(&format!(" CPU 1: {}%", cpu_1));
+        }
+
+        if let Some(cpu_5) = self.cpu_5 {
+            status.push_str(&format!(" CPU 5: {}%", cpu_5));
+        }
+
+        if let Some(cpu_15) = self.cpu_15 {
+            status.push_str(&format!(" CPU 15: {}%", cpu_15));
+        }
+
+        if let Some((value_lat, value_long)) = self.location {
+            status.push_str(&format!(" Location: ({:.5}, {:.5})", value_lat, value_long));
+        }
+
+        if let Some(altitude) = self.altitude {
+            status.push_str(&format!(" Altitude: {:.1}m", altitude));
+        }
+
+        if let Some(speed) = self.speed {
+            status.push_str(&format!(" Speed: {:.1}m/s", speed));
+        }
+
+        if let Some(heading) = self.heading {
+            status.push_str(&format!(" Heading: {:.1}°", heading));
+        }
+
+        if let Some(satellites) = self.satellites {
+            status.push_str(&format!(" Satellites: {}", satellites));
+        }
+
+        if let Some(rpm) = self.rpm {
+            status.push_str(&format!(" RPM: {}", rpm));
+        }
+
+        write!(f, "{}", status)
+    }
+}
+
 async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -236,7 +292,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             }
         };
 
-        log::trace!("{:#?}", telemetrics_clone.read().await);
+        log::trace!("{}", telemetrics_clone.read().await);
 
         tokio::time::sleep(std::time::Duration::from_secs(config.interval)).await;
     }

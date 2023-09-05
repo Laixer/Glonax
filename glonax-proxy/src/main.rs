@@ -105,6 +105,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     log::info!("Instance Model: {}", config.instance.model);
     log::info!("Instance Name: {}", config.instance.name);
 
+    if config.instance.id.starts_with("00000000") {
+        log::warn!("Instance ID is not set or invalid");
+    }
+
     let (signal_tx, signal_rx) = tokio::sync::mpsc::channel(16);
     let (motion_tx, mut motion_rx) = tokio::sync::mpsc::channel(16);
 
@@ -309,8 +313,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 _ => {}
             }
 
-            if signal_gnss_timeout.elapsed().as_secs() > 60 {
-                log::warn!("GNSS signal timeout: no update in last 60 seconds");
+            if signal_gnss_timeout.elapsed().as_secs() > 5 {
+                log::warn!("GNSS signal timeout: no update in last 5 seconds");
                 signal_gnss_timeout = Instant::now();
             }
             if signal_encoder_0x6a_timeout.elapsed().as_secs() > 1 {
@@ -329,8 +333,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 log::warn!("Encoder 0x6D signal timeout: no update in last 1 second");
                 signal_encoder_0x6d_timeout = Instant::now();
             }
-            if signal_engine_timeout.elapsed().as_secs() > 10 {
-                log::warn!("Engine signal timeout: no update in last 10 seconds");
+            if signal_engine_timeout.elapsed().as_secs() > 5 {
+                log::warn!("Engine signal timeout: no update in last 5 seconds");
                 signal_engine_timeout = Instant::now();
             }
 
