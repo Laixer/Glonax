@@ -88,27 +88,28 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&mut config).await
 }
 
+#[derive(Debug, Clone, serde_derive::Serialize)]
+struct Telemetry {
+    version: String,
+    status: String,
+    name: String,
+    location: Option<(f32, f32)>,
+    altitude: Option<f32>,
+    speed: Option<f32>,
+    heading: Option<f32>,
+    satellites: Option<u8>,
+    memory: Option<u64>,
+    swap: Option<u64>,
+    cpu_1: Option<f64>,
+    cpu_5: Option<f64>,
+    cpu_15: Option<f64>,
+    uptime: Option<u64>,
+    rpm: Option<u16>,
+}
+
 async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
-
-    #[derive(Debug, Clone, serde_derive::Serialize)]
-    struct Telemetry {
-        version: String,
-        status: String,
-        name: String,
-        location: Option<(f32, f32)>,
-        altitude: Option<f32>,
-        speed: Option<f32>,
-        heading: Option<f32>,
-        satellites: Option<u8>,
-        memory: Option<u64>,
-        swap: Option<u64>,
-        cpu_1: Option<f64>,
-        cpu_5: Option<f64>,
-        cpu_15: Option<f64>,
-        uptime: Option<u64>,
-    }
 
     let telemetrics = Arc::new(RwLock::new(Telemetry {
         version: format!(
@@ -130,6 +131,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         cpu_5: None,
         cpu_15: None,
         uptime: None,
+        rpm: None,
     }));
 
     let telemetrics_clone = telemetrics.clone();
@@ -186,6 +188,9 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
                         }
                         Metric::GnssSatellites(satellites) => {
                             telemetrics.write().await.satellites = Some(satellites);
+                        }
+                        Metric::EngineRpm(rpm) => {
+                            telemetrics.write().await.rpm = Some(rpm);
                         }
                         _ => {}
                     }
