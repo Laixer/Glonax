@@ -13,14 +13,13 @@ pub trait SignalSource {
 }
 
 // TODO: Move into mod
-pub fn broadcast_address() -> SocketAddrV4 {
-    SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, constants::DEFAULT_NETWORK_PORT)
-}
-
-// TODO: Move into mod
 #[inline]
 pub async fn broadcast_bind() -> std::io::Result<tokio::net::UdpSocket> {
-    tokio::net::UdpSocket::bind(broadcast_address()).await
+    tokio::net::UdpSocket::bind(SocketAddrV4::new(
+        Ipv4Addr::UNSPECIFIED,
+        constants::DEFAULT_NETWORK_PORT,
+    ))
+    .await
 }
 
 // TODO: Move into mod

@@ -101,6 +101,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     log::info!("Starting proxy services");
 
+    log::info!("Instance ID: {}", config.instance.id);
+    log::info!("Instance Model: {}", config.instance.model);
+    log::info!("Instance Name: {}", config.instance.name);
+
     let (signal_tx, signal_rx) = tokio::sync::mpsc::channel(16);
     let (motion_tx, mut motion_rx) = tokio::sync::mpsc::channel(16);
 
@@ -260,6 +264,11 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         let mut now = Instant::now();
 
+        let broadcast_addr = std::net::SocketAddrV4::new(
+            std::net::Ipv4Addr::BROADCAST,
+            glonax::constants::DEFAULT_NETWORK_PORT,
+        );
+
         let mut signal_gnss_timeout = Instant::now();
         let mut signal_encoder_0x6a_timeout = Instant::now();
         let mut signal_encoder_0x6b_timeout = Instant::now();
@@ -330,10 +339,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             let mut frame = Frame::new(FrameMessage::Signal, payload.len());
             frame.put(&payload[..]);
 
-            if let Err(e) = socket
-                .send_to(frame.as_ref(), glonax::channel::broadcast_address())
-                .await
-            {
+            if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
                 log::error!("Failed to send signal: {}", e);
                 break;
             }
@@ -349,10 +355,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 let mut frame = Frame::new(FrameMessage::Instance, payload.len());
                 frame.put(&payload[..]);
 
-                if let Err(e) = socket
-                    .send_to(frame.as_ref(), glonax::channel::broadcast_address())
-                    .await
-                {
+                if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
                     log::error!("Failed to send signal: {}", e);
                 } else {
                     now = Instant::now();
@@ -366,6 +369,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     motion_tx.send(glonax::core::Motion::ResetAll).await?;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
+
+    log::debug!("Waiting for connection to {}", config.address);
 
     let listener = TcpListener::bind(config.address.clone()).await?;
 
