@@ -219,9 +219,10 @@ impl TryFrom<&[u8]> for Signal {
         let metric = match buf.get_u16() {
             PROTO_METRIC_VMS_UPTIME => Metric::VmsUptime(buf.get_u64()),
             PROTO_METRIC_VMS_TIMESTAMP => {
-                let datetime = chrono::DateTime::<chrono::Utc>::from_utc(
-                    chrono::NaiveDateTime::from_timestamp_opt(buf.get_i64(), 0).unwrap(),
-                    chrono::Utc,
+                use chrono::prelude::*;
+
+                let datetime = Utc.from_utc_datetime(
+                    &NaiveDateTime::from_timestamp_opt(buf.get_i64(), 0).unwrap(),
                 );
 
                 Metric::VmsTimestamp(datetime)
