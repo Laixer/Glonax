@@ -244,34 +244,7 @@ async fn main() -> anyhow::Result<()> {
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     use glonax::core::geometry::EulerAngles;
     use glonax::core::Motion;
-
-    // use parry3d::query::RayCast;
-
-    // let obstacle = parry3d::shape::Cuboid::new(na::Vector3::new(0.25, 0.25, 0.25));
-
-    // let transform = Isometry3::from_parts(
-    //     na::Translation3::new(0.0, 0.0, 0.25),
-    //     na::UnitQuaternion::identity(),
-    // );
-
-    // // let point = na::Point3::new(0.0, -5.0, 0.25);
-
-    // // let point_projection = obstacle.project_point(&transform, &point, true);
-    // // log::debug!("Point projection:   {:?}", point_projection);
-
-    // let ray = parry3d::query::Ray::new(
-    //     na::Point3::new(0.0, -5.0, 0.50),
-    //     na::Vector3::new(0.0, 1.0, 0.0),
-    // );
-
-    // log::debug!("Ray:                {:?}", ray);
-    // // log::debug!("Ray:                {:?}", ray.point_at(4.50));
-
-    // let ray_result = obstacle.cast_ray(&transform, &ray, 50.0, true);
-
-    // log::debug!("Time of impact:     {:?}", ray_result);
-
-    // return Ok(());
+    use std::collections::VecDeque;
 
     let kinematic_epsilon = 0.0001;
     let kinematic_control = true;
@@ -366,8 +339,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     });
 
-    use std::collections::VecDeque;
-
     let mut targets = VecDeque::from([
         Target::new(
             Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595),
@@ -394,6 +365,15 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::debug!(" * Target {:2}    {}", idx, target);
     }
 
+    let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
+    let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
+
+    let obst0_box = Cuboid::new(Vector3::new(2.5, 0.25, 0.5));
+    let obst0_transform = Isometry3::translation(3.0, 2.0, 0.5);
+
+    let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
+    let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
+
     loop {
         projection_chain.reset();
 
@@ -405,73 +385,68 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
         let target = targets.pop_front().unwrap();
 
-        log::debug!("Current target      {}", target);
-        log::debug!("Is interpolation:   {}", target.interpolation);
+        {
+            log::debug!("Current target      {}", target);
+            log::debug!("Is interpolation:   {}", target.interpolation);
 
-        let solver = InverseKinematics::new(6.0, 2.97);
+            let solver = InverseKinematics::new(6.0, 2.97);
 
-        let (p_frame_yaw, p_boom_pitch, p_arm_pitch, p_attachment_pitch) =
-            solver.solve(&target).expect("IK failed");
-        log::debug!(
-            "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
-            p_frame_yaw,
-            p_frame_yaw.to_degrees(),
-            p_boom_pitch,
-            p_boom_pitch.to_degrees(),
-            p_arm_pitch,
-            p_arm_pitch.to_degrees(),
-        );
-
-        if let Some(angle) = p_attachment_pitch {
+            let (p_frame_yaw, p_boom_pitch, p_arm_pitch, p_attachment_pitch) =
+                solver.solve(&target).expect("IK failed");
             log::debug!(
-                "IK angles:         {:5.2}rad {:5.2}°",
-                angle,
-                angle.to_degrees()
+                "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
+                p_frame_yaw,
+                p_frame_yaw.to_degrees(),
+                p_boom_pitch,
+                p_boom_pitch.to_degrees(),
+                p_arm_pitch,
+                p_arm_pitch.to_degrees(),
             );
-        }
 
-        projection_chain.set_joint_positions(vec![
-            UnitQuaternion::from_yaw(p_frame_yaw),
-            UnitQuaternion::from_pitch(-p_boom_pitch + 59.35_f32.to_radians()),
-            UnitQuaternion::from_pitch(p_arm_pitch),
-        ]);
+            if let Some(angle) = p_attachment_pitch {
+                log::debug!(
+                    "IK angles:         {:5.2}rad {:5.2}°",
+                    angle,
+                    angle.to_degrees()
+                );
+            }
 
-        if let Some(angle) = p_attachment_pitch {
-            projection_chain.set_joint_position(
-                "attachment",
-                UnitQuaternion::from_pitch(angle + 55_f32.to_radians()),
-            );
-        }
+            projection_chain.set_joint_positions(vec![
+                UnitQuaternion::from_yaw(p_frame_yaw),
+                UnitQuaternion::from_pitch(-p_boom_pitch + 59.35_f32.to_radians()),
+                UnitQuaternion::from_pitch(p_arm_pitch),
+            ]);
 
-        let projection_point = projection_chain.world_transformation() * na::Point3::origin();
+            if let Some(angle) = p_attachment_pitch {
+                projection_chain.set_joint_position(
+                    "attachment",
+                    UnitQuaternion::from_pitch(angle + 55_f32.to_radians()),
+                );
+            }
 
-        log::debug!("Projection chain: {:?}", projection_chain);
+            let projection_point = projection_chain.world_transformation() * na::Point3::origin();
 
-        if (target.point.coords.norm() - projection_point.coords.norm()).abs() > kinematic_epsilon {
-            log::error!("Target norm: {}", target.point.coords.norm());
-            log::error!("Projection norm: {}", projection_point.coords.norm());
-            log::error!(
-                "Diff: {}",
-                target.point.coords.norm() - projection_point.coords.norm()
-            );
-            return Err(anyhow::anyhow!("IK error"));
+            log::debug!("Projection chain: {:?}", projection_chain);
+
+            if (target.point.coords.norm() - projection_point.coords.norm()).abs()
+                > kinematic_epsilon
+            {
+                log::error!("Target norm: {}", target.point.coords.norm());
+                log::error!("Projection norm: {}", projection_point.coords.norm());
+                log::error!(
+                    "Diff: {}",
+                    target.point.coords.norm() - projection_point.coords.norm()
+                );
+                return Err(anyhow::anyhow!("IK error"));
+            }
         }
 
         log::info!("Press enter to continue");
         std::io::stdin().read_line(&mut String::new())?;
 
-        let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
-        let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
-
-        let obst0_box = Cuboid::new(Vector3::new(2.5, 0.25, 0.5));
-        let obst0_transform = Isometry3::translation(3.0, 2.0, 0.5);
-
-        let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
-        let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
-
         client.send_motion(Motion::ResumeAll).await?;
 
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
         loop {
             tokio::time::sleep(kinematic_interval).await;
@@ -520,12 +495,12 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         //     "                        Effector is in obstacle prediction zone"
                         // );
 
-                        if contact.dist.abs() < 0.45 && !target.interpolation {
+                        if contact.dist.abs() < 0.40 && !target.interpolation {
                             log::warn!("                        Effector needs repositioning");
                             needs_reposition = true;
                         }
 
-                        if contact.dist.abs() < 0.25 {
+                        if contact.dist.abs() < 0.15 {
                             log::warn!("                        Effector is too close to obstacle");
                             has_contact = true;
                         }
@@ -546,8 +521,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             if !perception_chain.is_ready() || !kinematic_control {
                 continue;
             }
-
-            let mut done = true;
 
             if needs_reposition && !target.interpolation {
                 client.send_motion(Motion::StopAll).await?;
@@ -580,6 +553,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 client.send_motion(Motion::StopAll).await?;
                 break;
             }
+
+            let mut done = true;
 
             // TODO: Send all commands at once
             for mut joint_diff in perception_chain.error(&projection_chain) {
