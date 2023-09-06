@@ -13,20 +13,27 @@ use parry3d::shape::Cuboid;
 mod config;
 mod robot;
 
+#[derive(Clone, Copy)]
 struct Target {
     pub point: Point3<f32>,
     pub orientation: UnitQuaternion<f32>,
+    pub interpolation: bool,
 }
 
 impl Target {
     fn new(point: Point3<f32>, orientation: UnitQuaternion<f32>) -> Self {
-        Self { point, orientation }
+        Self {
+            point,
+            orientation,
+            interpolation: false,
+        }
     }
 
     fn from_point(x: f32, y: f32, z: f32) -> Self {
         Self {
             point: Point3::new(x, y, z),
             orientation: UnitQuaternion::identity(),
+            interpolation: false,
         }
     }
 }
@@ -359,12 +366,18 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     });
 
-    let base_target = Target::from_point(5.21 + 0.16, 0.0, 1.295 + 0.595);
+    use std::collections::VecDeque;
 
-    let targets = [Target::new(
-        base_target.point,
-        UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 0_f32.to_radians(), 0.0),
-    )];
+    let mut targets = VecDeque::from([
+        Target::new(
+            Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595),
+            UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 60_f32.to_radians(), 0.0),
+        ),
+        Target::new(
+            Point3::new(5.21 + 0.16, 5.0, 1.295 + 0.595),
+            UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 60_f32.to_radians(), 0.0),
+        ),
+    ]);
 
     // let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
     // let targets: Vec<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
@@ -381,10 +394,19 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         log::debug!(" * Target {:2}    {}", idx, target);
     }
 
-    for target in targets {
+    loop {
         projection_chain.reset();
 
+        if targets.is_empty() {
+            log::info!("All targets reached");
+
+            break;
+        }
+
+        let target = targets.pop_front().unwrap();
+
         log::debug!("Current target      {}", target);
+        log::debug!("Is interpolation:   {}", target.interpolation);
 
         let solver = InverseKinematics::new(6.0, 2.97);
 
@@ -441,10 +463,15 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
         let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
 
+        let obst0_box = Cuboid::new(Vector3::new(2.5, 0.25, 0.5));
+        let obst0_transform = Isometry3::translation(3.0, 2.0, 0.5);
+
         let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
         let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
 
         client.send_motion(Motion::ResumeAll).await?;
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
         loop {
             tokio::time::sleep(kinematic_interval).await;
@@ -465,41 +492,18 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let distance = projection_chain.distance(&perception_chain);
             log::debug!("Target distance:   {:.2}m", distance);
 
-            // let effector_point = perception_chain.world_transformation() * na::Point3::origin();
-
-            // let res = parry3d::query::closest_points(
-            //     &ground_transform,
-            //     &ground_plane,
-            //     &world_transformation,
-            //     &bucket_geometry,
-            //     20.0,
-            // );
-
-            // if let Ok(points) = res {
-            //     match points {
-            //         parry3d::query::ClosestPoints::Intersecting => {
-            //             log::debug!("Ground             Intersecting")
-            //         }
-            //         parry3d::query::ClosestPoints::WithinMargin(p1, p2) => log::debug!(
-            //             "Ground             WithinMargin ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
-            //             p1.x,
-            //             p1.y,
-            //             p1.z,
-            //             p2.x,
-            //             p2.y,
-            //             p2.z
-            //         ),
-            //         parry3d::query::ClosestPoints::Disjoint => {
-            //             log::debug!("Ground             Disjoint")
-            //         }
-            //     }
-            // }
-
+            let mut contact_zone = false;
             let mut has_contact = false;
+            let mut needs_reposition = false;
 
             let world_transformation = perception_chain.world_transformation() * bucket_transform;
 
-            for (collider_transform, collider_geom) in [(&ground_transform, &ground_plane)] {
+            let colliders = [
+                (&ground_transform, &ground_plane),
+                (&obst0_transform, &obst0_box),
+            ];
+
+            for (collider_transform, collider_geom) in colliders {
                 let res = parry3d::query::contact(
                     collider_transform,
                     collider_geom,
@@ -510,14 +514,20 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                 if let Ok(contact) = res {
                     if let Some(contact) = contact {
-                        has_contact = true;
+                        contact_zone = true;
 
-                        log::warn!(
-                            "                        Effector is in obstacle prediction zone"
-                        );
+                        // log::warn!(
+                        //     "                        Effector is in obstacle prediction zone"
+                        // );
 
-                        if contact.dist < 0.30 {
+                        if contact.dist.abs() < 0.45 && !target.interpolation {
+                            log::warn!("                        Effector needs repositioning");
+                            needs_reposition = true;
+                        }
+
+                        if contact.dist.abs() < 0.25 {
                             log::warn!("                        Effector is too close to obstacle");
+                            has_contact = true;
                         }
 
                         log::debug!("Collider           Distance: {:.2}m", contact.dist);
@@ -533,25 +543,47 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 }
             }
 
-            // let point_projection =
-            //     ground_plane.project_point(&ground_transform, &effector_point, true);
-            // let distance = ground_plane.distance_to_point(&ground_transform, &effector_point, true);
-
-            // log::debug!(
-            //     "Ground             Contact: {} Distance: {:.2}m",
-            //     point_projection.is_inside,
-            //     distance
-            // );
-
             if !perception_chain.is_ready() || !kinematic_control {
                 continue;
             }
 
             let mut done = true;
 
+            if needs_reposition && !target.interpolation {
+                client.send_motion(Motion::StopAll).await?;
+
+                let current_point = perception_chain.world_transformation() * Point3::origin();
+
+                log::debug!(
+                    "Try target:        ({:.2}, {:.2}, {:.2})",
+                    current_point.x,
+                    current_point.y,
+                    current_point.z + 0.50
+                );
+
+                log::info!("Press enter to continue");
+                std::io::stdin().read_line(&mut String::new())?;
+
+                targets.push_front(target);
+
+                let mut interpol_target =
+                    Target::from_point(current_point.x, current_point.y, current_point.z + 0.50);
+                interpol_target.interpolation = true;
+
+                targets.push_front(interpol_target);
+
+                break;
+            }
+
+            if has_contact {
+                log::error!("                       Effector is in obstacle contact zone");
+                client.send_motion(Motion::StopAll).await?;
+                break;
+            }
+
             // TODO: Send all commands at once
             for mut joint_diff in perception_chain.error(&projection_chain) {
-                joint_diff.power_limit = if has_contact { Some(20_000) } else { None };
+                joint_diff.power_limit = if contact_zone { Some(20_000) } else { None };
 
                 log::debug!(" ⇒ {:?}", joint_diff);
 
