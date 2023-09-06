@@ -351,7 +351,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     ]);
 
     // let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
-    // let targets: Vec<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
+    // let mut targets: VecDeque<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
     //     .iter()
     //     .map(|v| {
     //         Target::new(
@@ -523,10 +523,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         //     needs_reposition = true;
                         // }
 
-                        // if contact.dist.abs() < 0.15 {
-                        //     log::warn!("                        Effector is too close to obstacle");
-                        //     has_contact = true;
-                        // }
+                        if contact.dist.abs() < 0.05 {
+                            log::warn!("                        Effector is too close to obstacle");
+                            has_contact = true;
+                        }
 
                         let collider = collider_geom.aabb(&collider_transform);
 
@@ -630,6 +630,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                     client.send_motion(motion).await?;
                 }
 
+                // TODO: This is not strictly correct, the tolerance is set on the motion profile. Test
+                // if all motion profiles are zero then we are done.
                 done = joint_diff.is_below_tolerance() && done;
             }
 
