@@ -368,8 +368,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
     let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
 
-    let obst0_box = Cuboid::new(Vector3::new(2.5, 0.25, 0.5));
-    let obst0_transform = Isometry3::translation(3.0, 2.0, 0.5);
+    let obst0_box = Cuboid::new(Vector3::new(2.5, 0.205, 0.725));
+    let obst0_transform = Isometry3::translation(3.0, 2.0, 0.725);
 
     let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
     let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
@@ -491,11 +491,11 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                     if let Some(contact) = contact {
                         contact_zone = true;
 
-                        // log::warn!(
-                        //     "                        Effector is in obstacle prediction zone"
-                        // );
+                        log::warn!(
+                            "                        Effector is in obstacle prediction zone"
+                        );
 
-                        if contact.dist.abs() < 0.40 && !target.interpolation {
+                        if contact.dist.abs() < 0.35 && !target.interpolation {
                             log::warn!("                        Effector needs repositioning");
                             needs_reposition = true;
                         }
@@ -527,20 +527,22 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                 let current_point = perception_chain.world_transformation() * Point3::origin();
 
+                let offset_y = 0.35;
+
                 log::debug!(
                     "Try target:        ({:.2}, {:.2}, {:.2})",
                     current_point.x,
                     current_point.y,
-                    current_point.z + 0.50
+                    current_point.z + offset_y
                 );
-
-                log::info!("Press enter to continue");
-                std::io::stdin().read_line(&mut String::new())?;
 
                 targets.push_front(target);
 
-                let mut interpol_target =
-                    Target::from_point(current_point.x, current_point.y, current_point.z + 0.50);
+                let mut interpol_target = Target::from_point(
+                    current_point.x,
+                    current_point.y,
+                    current_point.z + offset_y,
+                );
                 interpol_target.interpolation = true;
 
                 targets.push_front(interpol_target);
@@ -558,7 +560,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             // TODO: Send all commands at once
             for mut joint_diff in perception_chain.error(&projection_chain) {
-                joint_diff.power_limit = if contact_zone { Some(20_000) } else { None };
+                joint_diff.power_limit = if contact_zone { Some(15_000) } else { None };
 
                 log::debug!(" ⇒ {:?}", joint_diff);
 
