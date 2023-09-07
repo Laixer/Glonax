@@ -11,6 +11,7 @@ use nalgebra as na;
 use parry3d::shape::Cuboid;
 
 mod config;
+mod ik;
 mod robot;
 
 #[derive(Clone, Copy)]
@@ -71,98 +72,33 @@ impl std::fmt::Display for Target {
     }
 }
 
-// TODO: move to core::algorithm
-struct InverseKinematics {
-    l1: f32,
-    l2: f32,
-}
+fn set_chain_from_target(target: &Target, chain: &mut glonax::robot::Chain) -> anyhow::Result<()> {
+    let kinematic_epsilon = 0.0001;
 
-impl InverseKinematics {
-    fn new(l1: f32, l2: f32) -> Self {
-        Self { l1, l2 }
+    let solver = ik::ExcavatorIK::new(6.0, 2.97);
+
+    let kinrot = solver
+        .solve(target)
+        .map_err(|_| anyhow::anyhow!("IK error"))?;
+
+    let mut positions = vec![kinrot.frame, kinrot.boom, kinrot.arm];
+
+    if let Some(attachment) = kinrot.attachment {
+        positions.push(attachment);
     }
 
-    fn solve(&self, target: &Target) -> std::result::Result<(f32, f32, f32, Option<f32>), ()> {
-        use glonax::core::geometry::law_of_cosines;
+    chain.reset();
+    chain.set_joint_positions(positions);
 
-        let local_z = target.point.z - 0.595 - 1.295;
-        log::debug!(" IK Local Z:        {:.2}", local_z);
+    let vector = chain.world_transformation().translation.vector;
 
-        let theta_1 = target.point.y.atan2(target.point.x);
-
-        let offset = 0.16;
-        let offset_x = offset * theta_1.cos();
-        let offset_y = offset * theta_1.sin();
-
-        log::debug!(" IK Vector offset:  ({:.2}, {:.2})", offset_x, offset_y);
-
-        let local_x = target.point.x - offset_x;
-        let local_y = target.point.y - offset_y;
-        log::debug!(" IK Local X:        {:.2}", local_x);
-        log::debug!(" IK Local Y:        {:.2}", local_y);
-
-        // L4 is the leg between the origin and the target projected on the XY plane (ground).
-        let l4 = (local_x.powi(2) + local_y.powi(2)).sqrt();
-        log::debug!(" IK Vector length L4: {:.2}", l4);
-        // L5 is the leg between the origin and the target (vector).
-        let l5 = (l4.powi(2) + local_z.powi(2)).sqrt();
-        log::debug!(" IK Vector length L5: {:.2}", l5);
-
-        if l5 >= self.l1 + self.l2 {
-            return Err(());
-        }
-
-        let theta_2p1 = local_z.atan2(l4);
-        log::debug!(
-            " IK theta_2p1:      {:5.2}rad {:5.2}°",
-            theta_2p1,
-            theta_2p1.to_degrees()
-        );
-        let theta_2p2 =
-            ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
-        log::debug!(
-            " IK theta_2p2:      {:5.2}rad {:5.2}°",
-            theta_2p2,
-            theta_2p2.to_degrees()
-        );
-
-        let theta_2 = local_z.atan2(l4) + law_of_cosines(self.l1, l5, self.l2);
-        let theta_3 = std::f32::consts::PI - law_of_cosines(self.l1, self.l2, l5);
-
-        let theta_4 = if target.orientation.axis().is_some() {
-            let attach_target = target.orientation.angle();
-            log::debug!(
-                "Attachment target: {:5.2}rad {:5.2}°",
-                attach_target,
-                attach_target.to_degrees()
-            );
-
-            let abs_pitch_attachment = (-59.35_f32.to_radians() + theta_2) + theta_3;
-            log::debug!(
-                "Projected pitch:   {:5.2}rad {:5.2}°",
-                abs_pitch_attachment,
-                abs_pitch_attachment.to_degrees()
-            );
-
-            let rel_attachment_error = attach_target - abs_pitch_attachment;
-            log::debug!(
-                "RelAttach error:   {:5.2}rad {:5.2}°",
-                rel_attachment_error,
-                rel_attachment_error.to_degrees()
-            );
-
-            if rel_attachment_error < -55.0_f32.to_radians() {
-                log::warn!("Attachment pitch is below lower bound");
-            } else if rel_attachment_error > 125.0_f32.to_radians() {
-                log::warn!("Attachment pitch is above upper bound");
-            }
-
-            Some(rel_attachment_error)
-        } else {
-            None
-        };
-
-        Ok((theta_1, theta_2, theta_3, theta_4))
+    if (target.point.coords.norm() - vector.norm()).abs() > kinematic_epsilon {
+        log::error!("Target norm: {}", target.point.coords.norm());
+        log::error!("Chain norm: {}", vector.norm());
+        log::error!("Diff: {}", target.point.coords.norm() - vector.norm());
+        Err(anyhow::anyhow!("IK error"))
+    } else {
+        Ok(())
     }
 }
 
@@ -245,8 +181,9 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     use glonax::core::geometry::EulerAngles;
     use glonax::core::Motion;
     use std::collections::VecDeque;
+    use std::time::Duration;
+    use tokio::time;
 
-    let kinematic_epsilon = 0.0001;
     let kinematic_control = true;
     let kinematic_interval = std::time::Duration::from_millis(25);
 
@@ -380,8 +317,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
 
     loop {
-        projection_chain.reset();
-
         if targets.is_empty() {
             log::info!("All targets reached");
 
@@ -390,74 +325,29 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
         let target = targets.pop_front().unwrap();
 
-        {
-            log::debug!("Current target      {}", target);
-            log::debug!("Is interpolation:   {}", target.interpolation);
+        log::debug!("Current target      {}", target);
+        log::debug!("Is interpolation:   {}", target.interpolation);
 
-            let solver = InverseKinematics::new(6.0, 2.97);
+        set_chain_from_target(&target, &mut projection_chain)?;
 
-            let (p_frame_yaw, p_boom_pitch, p_arm_pitch, p_attachment_pitch) =
-                solver.solve(&target).expect("IK failed");
-            log::debug!(
-                "IK angles:         {:5.2}rad {:5.2}° {:5.2}rad {:5.2}°  {:5.2}rad {:5.2}°",
-                p_frame_yaw,
-                p_frame_yaw.to_degrees(),
-                p_boom_pitch,
-                p_boom_pitch.to_degrees(),
-                p_arm_pitch,
-                p_arm_pitch.to_degrees(),
-            );
+        log::debug!("Projection chain: {:?}", projection_chain);
 
-            if let Some(angle) = p_attachment_pitch {
-                log::debug!(
-                    "IK angles:         {:5.2}rad {:5.2}°",
-                    angle,
-                    angle.to_degrees()
-                );
-            }
-
-            projection_chain.set_joint_positions(vec![
-                UnitQuaternion::from_yaw(p_frame_yaw),
-                UnitQuaternion::from_pitch(-p_boom_pitch + 59.35_f32.to_radians()),
-                UnitQuaternion::from_pitch(p_arm_pitch),
-            ]);
-
-            if let Some(angle) = p_attachment_pitch {
-                projection_chain.set_joint_position(
-                    "attachment",
-                    UnitQuaternion::from_pitch(angle + 55_f32.to_radians()),
-                );
-            }
-
-            let projection_point = projection_chain.world_transformation() * na::Point3::origin();
-
-            log::debug!("Projection chain: {:?}", projection_chain);
-
-            if (target.point.coords.norm() - projection_point.coords.norm()).abs()
-                > kinematic_epsilon
-            {
-                log::error!("Target norm: {}", target.point.coords.norm());
-                log::error!("Projection norm: {}", projection_point.coords.norm());
-                log::error!(
-                    "Diff: {}",
-                    target.point.coords.norm() - projection_point.coords.norm()
-                );
-                return Err(anyhow::anyhow!("IK error"));
-            }
+        if kinematic_control {
+            log::info!("Press enter to continue");
+            std::io::stdin().read_line(&mut String::new())?;
         }
-
-        log::info!("Press enter to continue");
-        std::io::stdin().read_line(&mut String::new())?;
 
         client.send_motion(Motion::ResumeAll).await?;
 
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        if kinematic_control {
+            time::sleep(Duration::from_millis(1000)).await;
+        }
 
         loop {
-            tokio::time::sleep(kinematic_interval).await;
+            time::sleep(kinematic_interval).await;
 
             let perception_chain = perception_chain_shared_read.read().await;
-            if perception_chain.last_update().elapsed() > std::time::Duration::from_millis(200) {
+            if perception_chain.last_update().elapsed() > Duration::from_millis(200) {
                 log::warn!("No update received for 200ms, stopping");
                 client.send_motion(Motion::StopAll).await?;
                 return Err(anyhow::anyhow!("No update received for 200ms"));
@@ -513,15 +403,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 if let Ok(contact) = res {
                     if let Some(contact) = contact {
                         contact_zone = true;
-
-                        // log::warn!(
-                        //     "                        Effector is in obstacle prediction zone"
-                        // );
-
-                        // if contact.dist.abs() < 0.20 && !target.interpolation {
-                        //     log::warn!("                        Effector needs repositioning");
-                        //     needs_reposition = true;
-                        // }
 
                         if contact.dist.abs() < 0.05 {
                             log::warn!("                        Effector is too close to obstacle");
