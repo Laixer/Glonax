@@ -10,6 +10,7 @@ rand = "0.8"
 
 nalgebra = "0.32.3"
 parry3d = "0.13.5"
+rapier3d = "0.17.2"
 
 serde = "1.0"
 serde_derive = "1.0"

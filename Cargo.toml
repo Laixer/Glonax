@@ -5,6 +5,7 @@ panic = 'abort'     # Abort on panic
 strip = true        # Strip symbols from binary*
 
 [workspace]
+resolver = "2"
 members = [
   "glonax-j1939",
   "glonax-runtime",
