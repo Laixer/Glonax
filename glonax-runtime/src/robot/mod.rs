@@ -241,69 +241,6 @@ impl Device {
 pub struct JointDiff<'a> {
     pub joint: &'a Joint,
     pub rotation: UnitQuaternion<f32>,
-    pub power_limit: Option<i16>,
-}
-
-impl<'a> JointDiff<'a> {
-    pub fn error_angle(&self) -> Option<f32> {
-        self.rotation.axis().map(|axis| {
-            axis.x * self.rotation.angle()
-                + axis.y * self.rotation.angle()
-                + axis.z * self.rotation.angle()
-        })
-    }
-
-    pub fn error_angle_optimized(&self) -> Option<f32> {
-        self.error_angle().map(|angle| {
-            if self.joint.ty() == &JointType::Continuous {
-                crate::core::geometry::shortest_rotation(angle)
-            } else {
-                angle
-            }
-        })
-    }
-
-    pub fn is_below_tolerance(&self) -> bool {
-        self.error_angle_optimized()
-            .map_or(true, |angle| angle.abs() < self.joint.tolerance())
-    }
-
-    pub fn error_angle_power(&self) -> Option<i16> {
-        self.error_angle_optimized().map_or(None, |angle| {
-            if let Some(power_limit) = self.power_limit {
-                self.joint
-                    .profile()
-                    .map(|profile| profile.power(angle).max(-power_limit).min(power_limit))
-            } else {
-                self.joint.profile().map(|profile| profile.power(angle))
-            }
-        })
-    }
-
-    pub fn actuator_motion(&self) -> Option<crate::core::Motion> {
-        self.error_angle_power().map_or(None, |power| {
-            self.joint
-                .actuator()
-                .map(|actuator| crate::core::Motion::new(actuator, power))
-        })
-    }
-}
-
-impl std::fmt::Debug for JointDiff<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let angle = self.error_angle_optimized().unwrap_or(0.0);
-        let power = self.error_angle_power().unwrap_or(0);
-
-        write!(
-            f,
-            "{:<15} Error: {:5.2}rad {:7.2}°  Power: {:6} {:5.1}%",
-            self.joint.name(),
-            angle,
-            angle.to_degrees(),
-            power,
-            power as f32 / (crate::core::Motion::POWER_MAX as f32 / 100.0)
-        )
-    }
 }
 
 pub struct Chain {
@@ -435,7 +372,6 @@ impl Chain {
             error_vec.push(JointDiff {
                 joint: self.robot.joint_by_name(joint_name).unwrap(),
                 rotation: lhs_rotation.rotation_to(&rhs_rotation),
-                power_limit: None,
             });
         }
 

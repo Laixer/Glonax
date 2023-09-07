@@ -621,18 +621,51 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let mut done = true;
 
             // TODO: Send all commands at once
-            for mut joint_diff in perception_chain.error(&projection_chain) {
-                joint_diff.power_limit = if contact_zone { Some(15_000) } else { None };
+            for joint_diff in perception_chain.error(&projection_chain) {
+                let joint = joint_diff.joint;
 
-                log::debug!(" ⇒ {:?}", joint_diff);
-
-                if let Some(motion) = joint_diff.actuator_motion() {
-                    client.send_motion(motion).await?;
+                if joint.actuator().is_none()
+                    || joint.profile().is_none()
+                    || joint_diff.rotation.axis().is_none()
+                {
+                    continue;
                 }
 
-                // TODO: This is not strictly correct, the tolerance is set on the motion profile. Test
-                // if all motion profiles are zero then we are done.
-                done = joint_diff.is_below_tolerance() && done;
+                let axis = joint_diff.rotation.axis().unwrap();
+                let error_angle = axis.x * joint_diff.rotation.angle()
+                    + axis.y * joint_diff.rotation.angle()
+                    + axis.z * joint_diff.rotation.angle();
+
+                let actuator = joint.actuator().unwrap();
+                let profile = joint.profile().unwrap();
+
+                let error_angle = {
+                    if joint.ty() == &glonax::robot::JointType::Continuous {
+                        glonax::core::geometry::shortest_rotation(error_angle)
+                    } else {
+                        error_angle
+                    }
+                };
+
+                let power = profile.power(error_angle);
+                let power = if contact_zone {
+                    power.max(-15_000).min(15_000)
+                } else {
+                    power
+                };
+
+                log::debug!(
+                    " ⇒ {:<15} Error: {:5.2}rad {:7.2}°  Power: {:6} {:5.1}%",
+                    joint.name(),
+                    error_angle,
+                    error_angle.to_degrees(),
+                    power,
+                    power as f32 / (Motion::POWER_MAX as f32 / 100.0)
+                );
+
+                client.send_motion(Motion::new(actuator, power)).await?;
+
+                done = power == 0 && done;
             }
 
             if done {
