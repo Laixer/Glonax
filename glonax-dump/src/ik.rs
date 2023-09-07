@@ -75,7 +75,7 @@ impl ExcavatorIK {
                 attach_target.to_degrees()
             );
 
-            let abs_pitch_attachment = (-59.35_f32.to_radians() + theta_2) + theta_3;
+            let abs_pitch_attachment = -theta_2 + theta_3;
             log::debug!(
                 "Projected pitch:   {:5.2}rad {:5.2}°",
                 abs_pitch_attachment,
