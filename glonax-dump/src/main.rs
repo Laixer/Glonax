@@ -325,7 +325,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
         let target = targets.pop_front().unwrap();
 
-        log::debug!("Current target      {}", target);
+        log::info!("Current target: {}", target);
         log::debug!("Is interpolation:   {}", target.interpolation);
 
         set_chain_from_target(&target, &mut projection_chain)?;
@@ -356,11 +356,22 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             log::debug!("Perception: {:?}", perception_chain);
 
             if let Some(abs_pitch) = perception_chain.abs_pitch() {
-                log::debug!("Absolute pitch:    {:.2}°", abs_pitch.to_degrees());
+                log::debug!(
+                    "{:<35} {:.2}°",
+                    "Abs pitch (Effector)",
+                    abs_pitch.to_degrees()
+                );
+            }
+            if let Some(abs_pitch) = perception_chain.abs_pitch_with_attachment() {
+                log::debug!(
+                    "{:<35} {:.2}°",
+                    "Abs pitch (Attachment)",
+                    abs_pitch.to_degrees()
+                );
             }
 
             let distance = projection_chain.distance(&perception_chain);
-            log::debug!("Target distance:   {:.2}m", distance);
+            log::debug!("{:<35} {:5.2}m", "Target distance (Effector)", distance);
 
             let mut contact_zone = false;
             let mut has_contact = false;
@@ -379,13 +390,17 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             match groud_points {
                 parry3d::query::ClosestPoints::Intersecting => {
-                    log::debug!("Ground distance:   intersecting");
+                    log::debug!("{:<35} intersecting", "Ground distance (Attachment)");
                 }
                 parry3d::query::ClosestPoints::WithinMargin(p1, p2) => {
-                    log::debug!("Ground distance:   {:.2}m", p2.z - p1.z);
+                    log::debug!(
+                        "{:<35} {:5.2}m",
+                        "Ground distance (Attachment)",
+                        p2.z - p1.z
+                    );
                 }
                 parry3d::query::ClosestPoints::Disjoint => {
-                    log::debug!("Ground distance:   disjoint");
+                    log::debug!("{:<35} disjoint", "Ground distance (Attachment)");
                 }
             }
 
@@ -446,10 +461,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         log::debug!("Collider intersects      {}", is_intersecting);
                     }
                 }
-            }
-
-            if !perception_chain.is_ready() || !kinematic_control {
-                continue;
             }
 
             if clearance_height > 0.0 && !target.interpolation {
@@ -536,21 +547,30 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 };
 
                 log::debug!(
-                    " ⇒ {:<15} Error: {:5.2}rad {:7.2}°  Power: {:6} {:5.1}%",
+                    " ⇒ {:<15} Error: {:5.2}rad {:7.2}°  Power: {:6} {:7.1}%",
                     joint.name(),
                     error_angle,
                     error_angle.to_degrees(),
                     power,
-                    power as f32 / (Motion::POWER_MAX as f32 / 100.0)
+                    if power == 0 {
+                        0.0
+                    } else {
+                        ((power.abs() as f32 - profile.offset)
+                            / (Motion::POWER_MAX as f32 - profile.offset))
+                            * 100.0
+                    },
                 );
 
-                client.send_motion(Motion::new(actuator, power)).await?;
+                if perception_chain.is_ready() && kinematic_control {
+                    client.send_motion(Motion::new(actuator, power)).await?;
+                }
 
                 done = power == 0 && done;
             }
 
             if done {
                 client.send_motion(Motion::StopAll).await?;
+                log::info!("Target reached");
                 break;
             }
         }

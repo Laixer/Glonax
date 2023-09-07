@@ -9,13 +9,12 @@ pub trait MotionProfile {
     fn power(&self, value: f32) -> i16;
 }
 
-// TODO: Rename to LinearMotionProfile
 #[derive(Copy, Clone, Debug)]
 pub struct LinearMotionProfile {
-    scale: f32,
-    offset: f32,
-    lower_bound: f32,
-    inverse: bool,
+    pub scale: f32,
+    pub offset: f32,
+    pub lower_bound: f32,
+    pub inverse: bool,
 }
 
 impl LinearMotionProfile {
@@ -288,11 +287,25 @@ impl Chain {
                 .unwrap_or_default()
                 * self.joint_state[2].1.unwrap().angle();
 
-            // let theta_3 = self.joint_state[2].1.unwrap().axis().unwrap().y
-            //     * self.joint_state[2].1.unwrap().angle();
+            Some((-59.35_f32.to_radians() + theta_2) + theta_3)
+        } else {
+            None
+        }
+    }
 
-            let abs_pitch_arm = (-59.35_f32.to_radians() + theta_2) + theta_3;
-            Some(abs_pitch_arm)
+    // TODO: HACK: XXX: REMOVE: This is a temporary hack to get the absolute pitch of the arm
+    #[deprecated]
+    pub fn abs_pitch_with_attachment(&self) -> Option<f32> {
+        if self.abs_pitch().is_some() && self.joint_state[3].1.is_some() {
+            let theta_4 = self.joint_state[3]
+                .1
+                .unwrap()
+                .axis()
+                .map(|axis| axis.y)
+                .unwrap_or_default()
+                * self.joint_state[3].1.unwrap().angle();
+
+            Some(self.abs_pitch().unwrap() + theta_4)
         } else {
             None
         }
@@ -401,14 +414,14 @@ impl std::fmt::Debug for Chain {
                 (name.to_string(), lhs.unwrap(), rhs_rotation)
             })
         {
-            let chain_angle = lhs_rotation
-                .axis()
-                .map(|axis| {
-                    axis.x * lhs_rotation.angle()
-                        + axis.y * lhs_rotation.angle()
-                        + axis.z * lhs_rotation.angle()
-                })
-                .unwrap_or_default();
+            // let chain_angle = lhs_rotation
+            //     .axis()
+            //     .map(|axis| {
+            //         axis.x * lhs_rotation.angle()
+            //             + axis.y * lhs_rotation.angle()
+            //             + axis.z * lhs_rotation.angle()
+            //     })
+            //     .unwrap_or_default();
 
             let relative_rotation = lhs_rotation * rhs_rotation;
             let joint_angle = relative_rotation
@@ -420,11 +433,17 @@ impl std::fmt::Debug for Chain {
                 })
                 .unwrap_or_default();
 
+            // s.push_str(&format!(
+            //     "{}={:.2}rad/{:.2}° [{:.2}rad/{:.2}°] ",
+            //     joint_name,
+            //     chain_angle,
+            //     chain_angle.to_degrees(),
+            //     joint_angle,
+            //     joint_angle.to_degrees(),
+            // ));
             s.push_str(&format!(
-                "{}={:.2}rad/{:.2}° [{:.2}rad/{:.2}°] ",
+                "{}={:.2}rad/{:.2}° ",
                 joint_name,
-                chain_angle,
-                chain_angle.to_degrees(),
                 joint_angle,
                 joint_angle.to_degrees(),
             ));

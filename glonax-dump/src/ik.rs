@@ -24,7 +24,7 @@ impl ExcavatorIK {
         use glonax::core::geometry::law_of_cosines;
 
         let local_z = target.point.z - 0.595 - 1.295;
-        log::debug!(" IK Local Z:        {:.2}", local_z);
+        // log::debug!(" IK Local Z:        {:.2}", local_z);
 
         let theta_1 = target.point.y.atan2(target.point.x);
 
@@ -32,37 +32,37 @@ impl ExcavatorIK {
         let offset_x = offset * theta_1.cos();
         let offset_y = offset * theta_1.sin();
 
-        log::debug!(" IK Vector offset:  ({:.2}, {:.2})", offset_x, offset_y);
+        // log::debug!(" IK Vector offset:  ({:.2}, {:.2})", offset_x, offset_y);
 
         let local_x = target.point.x - offset_x;
         let local_y = target.point.y - offset_y;
-        log::debug!(" IK Local X:        {:.2}", local_x);
-        log::debug!(" IK Local Y:        {:.2}", local_y);
+        // log::debug!(" IK Local X:        {:.2}", local_x);
+        // log::debug!(" IK Local Y:        {:.2}", local_y);
 
         // L4 is the leg between the origin and the target projected on the XY plane (ground).
         let l4 = (local_x.powi(2) + local_y.powi(2)).sqrt();
-        log::debug!(" IK Vector length L4: {:.2}", l4);
+        // log::debug!(" IK Vector length L4: {:.2}", l4);
         // L5 is the leg between the origin and the target (vector).
         let l5 = (l4.powi(2) + local_z.powi(2)).sqrt();
-        log::debug!(" IK Vector length L5: {:.2}", l5);
+        // log::debug!(" IK Vector length L5: {:.2}", l5);
 
         if l5 >= self.l1 + self.l2 {
             return Err(());
         }
 
-        let theta_2p1 = local_z.atan2(l4);
-        log::debug!(
-            " IK theta_2p1:      {:5.2}rad {:5.2}°",
-            theta_2p1,
-            theta_2p1.to_degrees()
-        );
-        let theta_2p2 =
-            ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
-        log::debug!(
-            " IK theta_2p2:      {:5.2}rad {:5.2}°",
-            theta_2p2,
-            theta_2p2.to_degrees()
-        );
+        // let theta_2p1 = local_z.atan2(l4);
+        // log::debug!(
+        //     " IK theta_2p1:      {:5.2}rad {:5.2}°",
+        //     theta_2p1,
+        //     theta_2p1.to_degrees()
+        // );
+        // let theta_2p2 =
+        //     ((self.l1.powi(2) + l5.powi(2) - self.l2.powi(2)) / (2.0 * self.l1 * l5)).acos();
+        // log::debug!(
+        //     " IK theta_2p2:      {:5.2}rad {:5.2}°",
+        //     theta_2p2,
+        //     theta_2p2.to_degrees()
+        // );
 
         let theta_2 = local_z.atan2(l4) + law_of_cosines(self.l1, l5, self.l2);
         let theta_3 = std::f32::consts::PI - law_of_cosines(self.l1, self.l2, l5);
