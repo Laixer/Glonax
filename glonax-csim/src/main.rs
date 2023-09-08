@@ -287,6 +287,23 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             .await
             .unwrap();
 
+        let angle_a = encoder_a_position as f32 / 1000.0;
+        let angle_b = encoder_b_position as f32 / 1000.0;
+        let angle_c = encoder_c_position as f32 / 1000.0;
+        let angle_d = encoder_d_position as f32 / 1000.0;
+
+        log::debug!(
+            "A: {:5.2}rad {:5.2}° B: {:5.2}rad {:5.2}° C: {:5.2}rad {:5.2}° D: {:5.2}rad {:5.2}°",
+            angle_a,
+            angle_a.to_degrees(),
+            angle_b,
+            angle_b.to_degrees(),
+            angle_c,
+            angle_c.to_degrees(),
+            angle_d,
+            angle_d.to_degrees()
+        );
+
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
 }

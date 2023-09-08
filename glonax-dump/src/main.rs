@@ -279,11 +279,19 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let mut targets = VecDeque::from([
         Target::new(
             Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595),
-            UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 60_f32.to_radians(), 0.0),
+            UnitQuaternion::from_euler_angles(
+                0.0,
+                180_f32.to_radians() - 55.3_f32.to_radians(),
+                0.0,
+            ),
         ),
         Target::new(
             Point3::new(5.21 + 0.16, 5.0, 1.295 + 0.595),
-            UnitQuaternion::from_euler_angles(0.0, 90_f32.to_radians() + 60_f32.to_radians(), 0.0),
+            UnitQuaternion::from_euler_angles(
+                0.0,
+                180_f32.to_radians() - 55.3_f32.to_radians(),
+                0.0,
+            ),
         ),
     ]);
 
@@ -311,7 +319,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         obst0_box.half_extents.y + 0.15,
         obst0_box.half_extents.z + 0.15,
     ));
-    let obst0_transform = Isometry3::translation(3.0, 2.0, 0.725);
+    let obst0_transform = Isometry3::translation(3.0, 2.5, 0.725);
 
     let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
     let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
@@ -348,8 +356,8 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             let perception_chain = perception_chain_shared_read.read().await;
             if perception_chain.last_update().elapsed() > Duration::from_millis(200) {
-                log::warn!("No update received for 200ms, stopping");
                 client.send_motion(Motion::StopAll).await?;
+                log::warn!("No update received for 200ms, stopping");
                 return Err(anyhow::anyhow!("No update received for 200ms"));
             }
 
