@@ -580,6 +580,7 @@ dependencies = [
  "nalgebra",
  "serde",
  "serde_derive",
+ "socket2 0.5.3",
  "sysinfo",
  "tokio 1.32.0",
  "toml",

@@ -14,12 +14,16 @@ pub trait SignalSource {
 
 // TODO: Move into mod
 #[inline]
-pub async fn broadcast_bind() -> std::io::Result<tokio::net::UdpSocket> {
-    tokio::net::UdpSocket::bind(SocketAddrV4::new(
+pub fn broadcast_bind() -> std::io::Result<tokio::net::UdpSocket> {
+    let socket = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::DGRAM, None)?;
+    socket.set_reuse_address(true)?;
+    socket.set_reuse_port(true)?;
+    socket.bind(&socket2::SockAddr::from(SocketAddrV4::new(
         Ipv4Addr::UNSPECIFIED,
         constants::DEFAULT_NETWORK_PORT,
-    ))
-    .await
+    )))?;
+
+    tokio::net::UdpSocket::from_std(socket.into())
 }
 
 // TODO: Move into mod
@@ -31,7 +35,7 @@ pub async fn any_bind() -> std::io::Result<tokio::net::UdpSocket> {
 }
 
 pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {
-    let socket = broadcast_bind().await?;
+    let socket = broadcast_bind()?;
 
     let mut buffer = [0u8; 1024];
 
