@@ -225,9 +225,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         use glonax::core::{Metric, Signal};
         use glonax::transport::frame::{Frame, FrameMessage};
 
-        let socket = glonax::channel::broadcast_bind()
-            .await
-            .expect("Failed to bind to socket");
+        let socket = glonax::channel::broadcast_bind().expect("Failed to bind to socket");
 
         let mut buffer = [0u8; 1024];
 

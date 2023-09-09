@@ -289,7 +289,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                         log::warn!("Memory usage is above 90%: {:.2}%", memory_usage);
                     }
                 }
-                glonax::core::Metric::GnssLatLong(_) => {
+                glonax::core::Metric::GnssSatellites(_) => {
                     signal_gnss_timeout = Instant::now();
                 }
                 glonax::core::Metric::EncoderAbsAngle((node, _)) => match node {

@@ -57,6 +57,10 @@ impl NMEAMessage {
         if line.starts_with("$GNGGA") {
             let sentence: Vec<&str> = line.split(',').collect();
 
+            if sentence.is_empty() {
+                return this;
+            }
+
             // let hour = sentence[1]
             //     .chars()
             //     .take(2)
@@ -110,38 +114,60 @@ impl NMEAMessage {
         } else if line.starts_with("$GNGLL") {
             let sentence: Vec<&str> = line.split(',').collect();
 
-            if sentence[6].len() > 0 {
-                let validity = sentence[6].to_uppercase().chars().next().unwrap();
-                if validity == 'A' {
-                    let lat_line = sentence[1];
-                    let lat_quadrant = sentence[2].to_uppercase().chars().next().unwrap();
+            if sentence.is_empty() {
+                return this;
+            }
 
-                    let long_line = sentence[3];
-                    let long_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
+            // let last = sentence.last().unwrap();
+            // if !last.starts_with("N*") {
+            //     return this;
+            // }
 
-                    this.coordinates = Some((
-                        Self::dms_to_degree(lat_line, lat_quadrant) as f32,
-                        Self::dms_to_degree(long_line, long_quadrant),
-                    ));
-                }
+            if sentence[6].len() < 1 {
+                return this;
+            }
+
+            let validity = sentence[6].to_uppercase().chars().next().unwrap();
+            if validity == 'A' {
+                let lat_line = sentence[1];
+                let lat_quadrant = sentence[2].to_uppercase().chars().next().unwrap();
+
+                let long_line = sentence[3];
+                let long_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
+
+                this.coordinates = Some((
+                    Self::dms_to_degree(lat_line, lat_quadrant) as f32,
+                    Self::dms_to_degree(long_line, long_quadrant),
+                ));
             }
         } else if line.starts_with("$GNRMC") {
             let sentence: Vec<&str> = line.split(',').collect();
 
-            if sentence[2].len() > 0 {
-                let validity = sentence[2].to_uppercase().chars().next().unwrap();
-                if validity == 'A' {
-                    let lat_line = sentence[3];
-                    let lat_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
+            if sentence.is_empty() {
+                return this;
+            }
 
-                    let long_line = sentence[5];
-                    let long_quadrant = sentence[6].to_uppercase().chars().next().unwrap();
+            // let last = sentence.last().unwrap();
+            // if !last.starts_with("N*") {
+            //     return this;
+            // }
 
-                    this.coordinates = Some((
-                        Self::dms_to_degree(lat_line, lat_quadrant) as f32,
-                        Self::dms_to_degree(long_line, long_quadrant),
-                    ));
-                }
+            if sentence[2].len() < 1 {
+                return this;
+            }
+
+            let validity = sentence[2].to_uppercase().chars().next().unwrap();
+            if validity == 'A' {
+                let lat_line = sentence[3];
+                let lat_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
+
+                let long_line = sentence[5];
+                let long_quadrant = sentence[6].to_uppercase().chars().next().unwrap();
+
+                this.coordinates = Some((
+                    Self::dms_to_degree(lat_line, lat_quadrant) as f32,
+                    Self::dms_to_degree(long_line, long_quadrant),
+                ));
             }
 
             if sentence[7].len() > 0 {
