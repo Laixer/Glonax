@@ -474,41 +474,35 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 )
                 .unwrap();
 
-                if let parry3d::query::ClosestPoints::WithinMargin(p1, p2) = groud_points {
-                    let height = p2.z - p1.z;
-
-                    // log::debug!("Clearance height: {:.2}m", height);
-
-                    let necessary_clearance = clearance_height - height;
-
-                    if necessary_clearance > 0.0 {
-                        log::debug!("Necessary clearance: {:.2}m", necessary_clearance);
-
-                        let new_z = current_point.z + necessary_clearance;
-
-                        let clearance_target =
-                            Target::from_point(current_point.x, current_point.y, new_z + 0.08);
-                        log::debug!("New clearance target: {}", clearance_target);
-
-                        // log::debug!("BERFORE Projection chain: {:?}", projection_chain);
-
-                        set_chain_from_target(&clearance_target, &mut projection_chain)?;
-
-                        // log::debug!("AFTER Projection chain: {:?}", projection_chain);
-
-                        client.send_motion(Motion::StopAll).await?;
-                        tokio::time::sleep(Duration::from_millis(150)).await;
-                        client.send_motion(Motion::ResumeAll).await?;
-                    } else {
-                        log::debug!("No necessary clearance, continue with current height");
-
-                        let clearance_target =
-                            Target::from_point(target.point.x, target.point.y, current_point.z);
-                        log::debug!("New clearance target: {}", clearance_target);
-
-                        set_chain_from_target(&clearance_target, &mut projection_chain)?;
-                    }
+                let height = match groud_points {
+                    parry3d::query::ClosestPoints::WithinMargin(p1, p2) => p2.z - p1.z,
+                    _ => 0.0,
                 };
+
+                let necessary_clearance = clearance_height - height;
+                if necessary_clearance > 0.0 {
+                    log::debug!("Necessary clearance: {:.2}m", necessary_clearance);
+
+                    let new_z = current_point.z + necessary_clearance;
+
+                    let clearance_target =
+                        Target::from_point(current_point.x, current_point.y, new_z + 0.08);
+                    log::debug!("New clearance target: {}", clearance_target);
+
+                    set_chain_from_target(&clearance_target, &mut projection_chain)?;
+
+                    client.send_motion(Motion::StopAll).await?;
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                    client.send_motion(Motion::ResumeAll).await?;
+                } else {
+                    log::debug!("No necessary clearance, continue with current height");
+
+                    let clearance_target =
+                        Target::from_point(target.point.x, target.point.y, current_point.z);
+                    log::debug!("New clearance target: {}", clearance_target);
+
+                    set_chain_from_target(&clearance_target, &mut projection_chain)?;
+                }
             } else {
                 set_chain_from_target(&target, &mut projection_chain)?;
             }
