@@ -401,32 +401,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                     if let Some(contact) = contact {
                         contact_zone = true;
 
-                        if contact.dist.abs() < 0.05 {
-                            // TODO: Maybe not here?
-                            if perception_chain.is_ready() && kinematic_control {
-                                client.send_motion(Motion::StopAll).await?;
-                                log::error!("Effector is in obstacle contact zone");
-                                return Err(anyhow::anyhow!(
-                                    "Effector is in obstacle contact zone"
-                                ));
-                            } else {
-                                log::error!("Effector is in obstacle contact zone");
-                            }
-                        }
-
-                        let collider = collider_geom.aabb(&collider_transform);
-
-                        log::debug!("- Collider maxs            {:?}", collider.maxs);
-
-                        if contact.dist.abs() < 0.45 {
-                            clearance_height = clearance_height.max(collider.maxs.z + 0.20);
-                            log::debug!(
-                                "- Collider clearance       {:.2}m [{:.2}m +0.20m]",
-                                clearance_height,
-                                collider.maxs.z
-                            );
-                        }
-
                         log::debug!("- Collider dist            {:.2}m", contact.dist);
                         log::debug!("- Collider points          ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
                             contact.point1.x,
@@ -455,6 +429,32 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                         .unwrap();
 
                         log::debug!("- Collider intersects      {}", is_intersecting);
+
+                        if contact.dist.abs() < 0.05 {
+                            // TODO: Maybe not here?
+                            if perception_chain.is_ready() && kinematic_control {
+                                client.send_motion(Motion::StopAll).await?;
+                                log::error!("Effector is in obstacle contact zone");
+                                return Err(anyhow::anyhow!(
+                                    "Effector is in obstacle contact zone"
+                                ));
+                            } else {
+                                log::error!("Effector is in obstacle contact zone");
+                            }
+                        }
+
+                        let collider = collider_geom.aabb(&collider_transform);
+
+                        log::debug!("- Collider maxs            {:?}", collider.maxs);
+
+                        if contact.dist.abs() < 0.40 {
+                            clearance_height = clearance_height.max(collider.maxs.z + 0.20);
+                            log::debug!(
+                                "- Collider clearance       {:.2}m [{:.2}m +0.20m]",
+                                clearance_height,
+                                collider.maxs.z
+                            );
+                        }
                     }
                 }
             }
@@ -507,47 +507,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 set_chain_from_target(&target, &mut projection_chain)?;
             }
 
-            if clearance_height > 0.0 && !target.interpolation {
-                //     client.send_motion(Motion::StopAll).await?;
-
-                //     let current_point = perception_chain.world_transformation() * Point3::origin();
-
-                //     targets.push_front(target);
-
-                //     log::debug!(
-                //         "Clearance target Z:        ({:.2}, {:.2}, {:.2})",
-                //         target.point.x,
-                //         target.point.y,
-                //         current_point.z + clearance_height,
-                //     );
-
-                //     let mut interpol_target = Target::from_point(
-                //         target.point.x,
-                //         target.point.y,
-                //         current_point.z + clearance_height,
-                //     );
-                //     interpol_target.interpolation = true;
-                //     targets.push_front(interpol_target);
-
-                //     log::debug!(
-                //         "Clearance target:        ({:.2}, {:.2}, {:.2})",
-                //         current_point.x,
-                //         current_point.y,
-                //         current_point.z + clearance_height,
-                //     );
-
-                //     let mut interpol_target = Target::from_point(
-                //         current_point.x,
-                //         current_point.y,
-                //         current_point.z + clearance_height,
-                //     );
-                //     interpol_target.interpolation = true;
-
-                //     targets.push_front(interpol_target);
-
-                //     break;
-            }
-
             if let Some(abs_pitch) = perception_chain.abs_pitch() {
                 log::debug!(
                     "{:<35} {:.2}°",
@@ -592,25 +551,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                     log::debug!("{:<35} disjoint", "Ground clearance (Attachment)");
                 }
             }
-
-            // let current_point = perception_chain.world_transformation() * Point3::origin();
-
-            // log::debug!(
-            //     "{:<35} ({:.2}, {:.2}, {:.2})",
-            //     "Target error (Effector)",
-            //     (target.point.x - current_point.x).abs(),
-            //     (target.point.y - current_point.y).abs(),
-            //     (target.point.z - current_point.z).abs()
-            // );
-
-            // let is_close = distance <= 0.075
-            //     && (target.point.x - current_point.x).abs() <= 0.05
-            //     && (target.point.y - current_point.y).abs() <= 0.05
-            //     && (target.point.z - current_point.z).abs() <= 0.05;
-
-            // log::debug!("{:<35} {}", "Is close (Effector)", is_close);
-
-            // let mut done = is_close;
 
             // TODO: Send all commands at once
             for joint_diff in perception_chain.error(&projection_chain) {
@@ -664,15 +604,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 if perception_chain.is_ready() && kinematic_control {
                     client.send_motion(Motion::new(actuator, power)).await?;
                 }
-
-                // done = power == 0 && done;
             }
-
-            // if done {
-            //     client.send_motion(Motion::StopAll).await?;
-            //     log::info!("Target reached");
-            //     break;
-            // }
         }
     }
 
