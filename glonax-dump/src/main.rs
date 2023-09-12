@@ -325,7 +325,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     loop {
         if targets.is_empty() {
             log::info!("All targets reached");
-
             break;
         }
 
@@ -361,6 +360,200 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             log::debug!("Perception: {:?}", perception_chain);
 
+            let current_point = perception_chain.world_transformation() * Point3::origin();
+
+            log::debug!(
+                "{:<35} ({:.2}, {:.2}, {:.2})",
+                "Target error (Effector)",
+                (target.point.x - current_point.x).abs(),
+                (target.point.y - current_point.y).abs(),
+                (target.point.z - current_point.z).abs()
+            );
+
+            let is_close = (target.point.x - current_point.x).abs() <= 0.05
+                && (target.point.y - current_point.y).abs() <= 0.05
+                && (target.point.z - current_point.z).abs() <= 0.05;
+
+            if is_close {
+                client.send_motion(Motion::StopAll).await?;
+                log::info!("Target reached");
+                break;
+            }
+
+            let perception_transformation =
+                perception_chain.world_transformation() * bucket_transform;
+
+            let mut contact_zone = false;
+            let mut clearance_height = 0.0_f32;
+
+            let colliders = [(&obst0_transform, &obst0_box_buffer)];
+
+            for (collider_transform, collider_geom) in colliders {
+                let res = parry3d::query::contact(
+                    collider_transform,
+                    collider_geom,
+                    &perception_transformation,
+                    &bucket_geometry,
+                    1.0,
+                );
+
+                if let Ok(contact) = res {
+                    if let Some(contact) = contact {
+                        contact_zone = true;
+
+                        if contact.dist.abs() < 0.05 {
+                            // TODO: Maybe not here?
+                            if perception_chain.is_ready() && kinematic_control {
+                                client.send_motion(Motion::StopAll).await?;
+                                log::error!("Effector is in obstacle contact zone");
+                                return Err(anyhow::anyhow!(
+                                    "Effector is in obstacle contact zone"
+                                ));
+                            } else {
+                                log::error!("Effector is in obstacle contact zone");
+                            }
+                        }
+
+                        let collider = collider_geom.aabb(&collider_transform);
+
+                        log::debug!("- Collider maxs            {:?}", collider.maxs);
+
+                        if contact.dist.abs() < 0.45 {
+                            clearance_height = clearance_height.max(collider.maxs.z + 0.20);
+                            log::debug!(
+                                "- Collider clearance       {:.2}m [{:.2}m +0.20m]",
+                                clearance_height,
+                                collider.maxs.z
+                            );
+                        }
+
+                        log::debug!("- Collider dist            {:.2}m", contact.dist);
+                        log::debug!("- Collider points          ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
+                            contact.point1.x,
+                            contact.point1.y,
+                            contact.point1.z,
+                            contact.point2.x,
+                            contact.point2.y,
+                            contact.point2.z
+                        );
+                        log::debug!("- Collider normals         ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
+                            contact.normal1.x,
+                            contact.normal1.y,
+                            contact.normal1.z,
+                            contact.normal2.x,
+                            contact.normal2.y,
+                            contact.normal2.z
+                        );
+
+                        // TODO: This is just informational, remove later
+                        let is_intersecting = parry3d::query::intersection_test(
+                            collider_transform,
+                            collider_geom,
+                            &perception_transformation,
+                            &bucket_geometry,
+                        )
+                        .unwrap();
+
+                        log::debug!("- Collider intersects      {}", is_intersecting);
+                    }
+                }
+            }
+
+            if contact_zone {
+                let current_point = perception_chain.world_transformation() * Point3::origin();
+
+                let world_transformation =
+                    perception_chain.world_transformation() * bucket_transform;
+
+                let groud_points = parry3d::query::closest_points(
+                    &ground_transform,
+                    &ground_plane,
+                    &world_transformation,
+                    &bucket_geometry,
+                    25.0,
+                )
+                .unwrap();
+
+                if let parry3d::query::ClosestPoints::WithinMargin(p1, p2) = groud_points {
+                    let height = p2.z - p1.z;
+
+                    // log::debug!("Clearance height: {:.2}m", height);
+
+                    let necessary_clearance = clearance_height - height;
+
+                    if necessary_clearance > 0.0 {
+                        log::debug!("Necessary clearance: {:.2}m", necessary_clearance);
+
+                        let new_z = current_point.z + necessary_clearance;
+
+                        let clearance_target =
+                            Target::from_point(current_point.x, current_point.y, new_z + 0.08);
+                        log::debug!("New clearance target: {}", clearance_target);
+
+                        // log::debug!("BERFORE Projection chain: {:?}", projection_chain);
+
+                        set_chain_from_target(&clearance_target, &mut projection_chain)?;
+
+                        // log::debug!("AFTER Projection chain: {:?}", projection_chain);
+
+                        client.send_motion(Motion::StopAll).await?;
+                        tokio::time::sleep(Duration::from_millis(150)).await;
+                        client.send_motion(Motion::ResumeAll).await?;
+                    } else {
+                        log::debug!("No necessary clearance, continue with current height");
+
+                        let clearance_target =
+                            Target::from_point(target.point.x, target.point.y, current_point.z);
+                        log::debug!("New clearance target: {}", clearance_target);
+
+                        set_chain_from_target(&clearance_target, &mut projection_chain)?;
+                    }
+                };
+            } else {
+                set_chain_from_target(&target, &mut projection_chain)?;
+            }
+
+            if clearance_height > 0.0 && !target.interpolation {
+                //     client.send_motion(Motion::StopAll).await?;
+
+                //     let current_point = perception_chain.world_transformation() * Point3::origin();
+
+                //     targets.push_front(target);
+
+                //     log::debug!(
+                //         "Clearance target Z:        ({:.2}, {:.2}, {:.2})",
+                //         target.point.x,
+                //         target.point.y,
+                //         current_point.z + clearance_height,
+                //     );
+
+                //     let mut interpol_target = Target::from_point(
+                //         target.point.x,
+                //         target.point.y,
+                //         current_point.z + clearance_height,
+                //     );
+                //     interpol_target.interpolation = true;
+                //     targets.push_front(interpol_target);
+
+                //     log::debug!(
+                //         "Clearance target:        ({:.2}, {:.2}, {:.2})",
+                //         current_point.x,
+                //         current_point.y,
+                //         current_point.z + clearance_height,
+                //     );
+
+                //     let mut interpol_target = Target::from_point(
+                //         current_point.x,
+                //         current_point.y,
+                //         current_point.z + clearance_height,
+                //     );
+                //     interpol_target.interpolation = true;
+
+                //     targets.push_front(interpol_target);
+
+                //     break;
+            }
+
             if let Some(abs_pitch) = perception_chain.abs_pitch() {
                 log::debug!(
                     "{:<35} {:.2}°",
@@ -379,10 +572,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             let distance = projection_chain.distance(&perception_chain);
             log::debug!("{:<35} {:5.2}m", "Target distance (Effector)", distance);
 
-            let mut contact_zone = false;
-            let mut has_contact = false;
-            let mut clearance_height = 0.0_f32;
-
             let world_transformation = perception_chain.world_transformation() * bucket_transform;
 
             let groud_points = parry3d::query::closest_points(
@@ -396,127 +585,38 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             match groud_points {
                 parry3d::query::ClosestPoints::Intersecting => {
-                    log::debug!("{:<35} intersecting", "Ground distance (Attachment)");
+                    log::debug!("{:<35} intersecting", "Ground clearance (Attachment)");
                 }
                 parry3d::query::ClosestPoints::WithinMargin(p1, p2) => {
                     log::debug!(
                         "{:<35} {:5.2}m",
-                        "Ground distance (Attachment)",
+                        "Ground clearance (Attachment)",
                         p2.z - p1.z
                     );
                 }
                 parry3d::query::ClosestPoints::Disjoint => {
-                    log::debug!("{:<35} disjoint", "Ground distance (Attachment)");
+                    log::debug!("{:<35} disjoint", "Ground clearance (Attachment)");
                 }
             }
 
-            let colliders = [(&obst0_transform, &obst0_box_buffer)];
+            // let current_point = perception_chain.world_transformation() * Point3::origin();
 
-            for (collider_transform, collider_geom) in colliders {
-                let res = parry3d::query::contact(
-                    collider_transform,
-                    collider_geom,
-                    &world_transformation,
-                    &bucket_geometry,
-                    1.0,
-                );
+            // log::debug!(
+            //     "{:<35} ({:.2}, {:.2}, {:.2})",
+            //     "Target error (Effector)",
+            //     (target.point.x - current_point.x).abs(),
+            //     (target.point.y - current_point.y).abs(),
+            //     (target.point.z - current_point.z).abs()
+            // );
 
-                if let Ok(contact) = res {
-                    if let Some(contact) = contact {
-                        contact_zone = true;
+            // let is_close = distance <= 0.075
+            //     && (target.point.x - current_point.x).abs() <= 0.05
+            //     && (target.point.y - current_point.y).abs() <= 0.05
+            //     && (target.point.z - current_point.z).abs() <= 0.05;
 
-                        if contact.dist.abs() < 0.05 {
-                            log::warn!("                        Effector is too close to obstacle");
-                            has_contact = true;
-                        }
+            // log::debug!("{:<35} {}", "Is close (Effector)", is_close);
 
-                        let collider = collider_geom.aabb(&collider_transform);
-
-                        log::debug!("Collider max             {:?}", collider.maxs);
-
-                        if contact.dist < 0.50 {
-                            clearance_height = clearance_height.max(collider.maxs.z + 0.20);
-                            log::debug!("Collider clearance       {}", clearance_height);
-                        }
-
-                        let is_intersecting = parry3d::query::intersection_test(
-                            collider_transform,
-                            collider_geom,
-                            &world_transformation,
-                            &bucket_geometry,
-                        )
-                        .unwrap();
-
-                        log::debug!("Collider dist            {:.2}m", contact.dist);
-                        log::debug!("Collider points          ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
-                            contact.point1.x,
-                            contact.point1.y,
-                            contact.point1.z,
-                            contact.point2.x,
-                            contact.point2.y,
-                            contact.point2.z
-                        );
-                        log::debug!("Collider normals         ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
-                            contact.normal1.x,
-                            contact.normal1.y,
-                            contact.normal1.z,
-                            contact.normal2.x,
-                            contact.normal2.y,
-                            contact.normal2.z
-                        );
-                        log::debug!("Collider intersects      {}", is_intersecting);
-                    }
-                }
-            }
-
-            if clearance_height > 0.0 && !target.interpolation {
-                client.send_motion(Motion::StopAll).await?;
-
-                let current_point = perception_chain.world_transformation() * Point3::origin();
-
-                targets.push_front(target);
-
-                log::debug!(
-                    "Clearance target Z:        ({:.2}, {:.2}, {:.2})",
-                    target.point.x,
-                    target.point.y,
-                    current_point.z + clearance_height,
-                );
-
-                let mut interpol_target = Target::from_point(
-                    target.point.x,
-                    target.point.y,
-                    current_point.z + clearance_height,
-                );
-                interpol_target.interpolation = true;
-                targets.push_front(interpol_target);
-
-                log::debug!(
-                    "Clearance target:        ({:.2}, {:.2}, {:.2})",
-                    current_point.x,
-                    current_point.y,
-                    current_point.z + clearance_height,
-                );
-
-                let mut interpol_target = Target::from_point(
-                    current_point.x,
-                    current_point.y,
-                    current_point.z + clearance_height,
-                );
-                interpol_target.interpolation = true;
-
-                targets.push_front(interpol_target);
-
-                break;
-            }
-
-            if has_contact {
-                log::error!("                       Effector is in obstacle contact zone");
-                client.send_motion(Motion::StopAll).await?;
-                return Err(anyhow::anyhow!("Effector is in obstacle contact zone"));
-            }
-
-            let mut done = true;
+            // let mut done = is_close;
 
             // TODO: Send all commands at once
             for joint_diff in perception_chain.error(&projection_chain) {
@@ -571,14 +671,14 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                     client.send_motion(Motion::new(actuator, power)).await?;
                 }
 
-                done = power == 0 && done;
+                // done = power == 0 && done;
             }
 
-            if done {
-                client.send_motion(Motion::StopAll).await?;
-                log::info!("Target reached");
-                break;
-            }
+            // if done {
+            //     client.send_motion(Motion::StopAll).await?;
+            //     log::info!("Target reached");
+            //     break;
+            // }
         }
     }
 
