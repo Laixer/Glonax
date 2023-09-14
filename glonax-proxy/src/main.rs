@@ -259,6 +259,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     let mut session_signal_rx = signal_rx;
     tokio::spawn(async move {
+        use glonax::core::Metric;
         use glonax::transport::frame::{Frame, FrameMessage};
         use std::time::Instant;
 
@@ -280,19 +281,22 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         let mut signal_encoder_0x6d_timeout = Instant::now();
         let mut signal_engine_timeout = Instant::now();
 
+        let mut status = glonax::core::Status::Healthy;
+
         while let Some(signal) = session_signal_rx.recv().await {
             match signal.metric {
-                glonax::core::Metric::VmsMemoryUsage((memory_used, memory_total)) => {
+                Metric::VmsMemoryUsage((memory_used, memory_total)) => {
                     let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
 
                     if memory_usage > 90.0 {
                         log::warn!("Memory usage is above 90%: {:.2}%", memory_usage);
+                        status = glonax::core::Status::DegradedHighUsageMemory;
                     }
                 }
-                glonax::core::Metric::GnssSatellites(_) => {
+                Metric::GnssSatellites(_) => {
                     signal_gnss_timeout = Instant::now();
                 }
-                glonax::core::Metric::EncoderAbsAngle((node, _)) => match node {
+                Metric::EncoderAbsAngle((node, _)) => match node {
                     0x6A => {
                         signal_encoder_0x6a_timeout = Instant::now();
                     }
@@ -307,7 +311,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                     }
                     _ => {}
                 },
-                glonax::core::Metric::EngineRpm(_) => {
+                Metric::EngineRpm(_) => {
                     signal_engine_timeout = Instant::now();
                 }
                 _ => {}
@@ -315,26 +319,32 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             if signal_gnss_timeout.elapsed().as_secs() > 5 {
                 log::warn!("GNSS signal timeout: no update in last 5 seconds");
+                status = glonax::core::Status::DegradedTimeoutGNSS;
                 signal_gnss_timeout = Instant::now();
             }
             if signal_encoder_0x6a_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6A signal timeout: no update in last 1 second");
+                status = glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6a_timeout = Instant::now();
             }
             if signal_encoder_0x6b_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6B signal timeout: no update in last 1 second");
+                status = glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6b_timeout = Instant::now();
             }
             if signal_encoder_0x6c_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6C signal timeout: no update in last 1 second");
+                status = glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6c_timeout = Instant::now();
             }
             if signal_encoder_0x6d_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6D signal timeout: no update in last 1 second");
+                status = glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6d_timeout = Instant::now();
             }
             if signal_engine_timeout.elapsed().as_secs() > 5 {
                 log::warn!("Engine signal timeout: no update in last 5 seconds");
+                status = glonax::core::Status::DegradedTimeoutEngine;
                 signal_engine_timeout = Instant::now();
             }
 
@@ -349,19 +359,35 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
 
             if now.elapsed().as_millis() > 1_000 {
-                let instance = glonax::core::Instance::new(
-                    instance_id.clone(),
-                    instance_model.clone(),
-                    instance_name.clone(),
-                );
-                let payload = instance.to_bytes();
+                {
+                    let instance = glonax::core::Instance::new(
+                        instance_id.clone(),
+                        instance_model.clone(),
+                        instance_name.clone(),
+                    );
+                    let payload = instance.to_bytes();
 
-                let mut frame = Frame::new(FrameMessage::Instance, payload.len());
-                frame.put(&payload[..]);
+                    let mut frame = Frame::new(FrameMessage::Instance, payload.len());
+                    frame.put(&payload[..]);
 
-                if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-                    log::error!("Failed to send signal: {}", e);
-                } else {
+                    if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+                        log::error!("Failed to send signal: {}", e);
+                    }
+                }
+
+                {
+                    let payload = status.to_bytes();
+
+                    let mut frame = Frame::new(FrameMessage::Status, payload.len());
+                    frame.put(&payload[..]);
+
+                    if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+                        log::error!("Failed to send signal: {}", e);
+                    }
+                }
+
+                {
+                    status = glonax::core::Status::Healthy;
                     now = Instant::now();
                 }
             }

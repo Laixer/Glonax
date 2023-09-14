@@ -1,6 +1,7 @@
 use bytes::{BufMut, BytesMut};
 use serde_derive::Deserialize;
 
+// TODO: Include version
 #[derive(Clone, Debug, Deserialize)]
 pub struct Instance {
     /// Instance unique identifier.

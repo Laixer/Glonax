@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Debug, Clone, serde_derive::Serialize)]
 struct Telemetry {
     version: String,
-    status: String,
+    status: Option<String>,
     name: String,
     location: Option<(f32, f32)>,
     altitude: Option<f32>,
@@ -113,57 +113,61 @@ struct Telemetry {
 
 impl std::fmt::Display for Telemetry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut status = self.status.clone();
+        let mut s = String::new();
+
+        if let Some(status) = &self.status {
+            s.push_str(status);
+        }
 
         if let Some(uptime) = self.uptime {
-            status.push_str(&format!(" Uptime: {}s", uptime));
+            s.push_str(&format!(" Uptime: {}s", uptime));
         }
 
         if let Some(memory) = self.memory {
-            status.push_str(&format!(" Memory: {}%", memory));
+            s.push_str(&format!(" Memory: {}%", memory));
         }
 
         if let Some(swap) = self.swap {
-            status.push_str(&format!(" Swap: {}%", swap));
+            s.push_str(&format!(" Swap: {}%", swap));
         }
 
         if let Some(cpu_1) = self.cpu_1 {
-            status.push_str(&format!(" CPU 1: {}%", cpu_1));
+            s.push_str(&format!(" CPU 1: {}%", cpu_1));
         }
 
         if let Some(cpu_5) = self.cpu_5 {
-            status.push_str(&format!(" CPU 5: {}%", cpu_5));
+            s.push_str(&format!(" CPU 5: {}%", cpu_5));
         }
 
         if let Some(cpu_15) = self.cpu_15 {
-            status.push_str(&format!(" CPU 15: {}%", cpu_15));
+            s.push_str(&format!(" CPU 15: {}%", cpu_15));
         }
 
         if let Some((value_lat, value_long)) = self.location {
-            status.push_str(&format!(" Location: ({:.5}, {:.5})", value_lat, value_long));
+            s.push_str(&format!(" Location: ({:.5}, {:.5})", value_lat, value_long));
         }
 
         if let Some(altitude) = self.altitude {
-            status.push_str(&format!(" Altitude: {:.1}m", altitude));
+            s.push_str(&format!(" Altitude: {:.1}m", altitude));
         }
 
         if let Some(speed) = self.speed {
-            status.push_str(&format!(" Speed: {:.1}m/s", speed));
+            s.push_str(&format!(" Speed: {:.1}m/s", speed));
         }
 
         if let Some(heading) = self.heading {
-            status.push_str(&format!(" Heading: {:.1}°", heading));
+            s.push_str(&format!(" Heading: {:.1}°", heading));
         }
 
         if let Some(satellites) = self.satellites {
-            status.push_str(&format!(" Satellites: {}", satellites));
+            s.push_str(&format!(" Satellites: {}", satellites));
         }
 
         if let Some(rpm) = self.rpm {
-            status.push_str(&format!(" RPM: {}", rpm));
+            s.push_str(&format!(" RPM: {}", rpm));
         }
 
-        write!(f, "{}", status)
+        write!(f, "{}", s)
     }
 }
 
@@ -178,7 +182,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             glonax::constants::VERSION_MINOR,
             glonax::constants::VERSION_PATCH
         ),
-        status: "HEALTHY".to_string(),
+        status: None,
         name: config.instance.name.clone(),
         location: None,
         altitude: None,
@@ -197,7 +201,7 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     let telemetrics_clone = telemetrics.clone();
 
     tokio::spawn(async move {
-        use glonax::core::{Metric, Signal};
+        use glonax::core::{Metric, Signal, Status};
         use glonax::transport::frame::{Frame, FrameMessage};
 
         let socket = glonax::channel::broadcast_bind().expect("Failed to bind to socket");
@@ -210,7 +214,11 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
             let (size, _) = socket.recv_from(&mut buffer).await.unwrap();
 
             if let Ok(frame) = Frame::try_from(&buffer[..size]) {
-                if frame.message == FrameMessage::Signal {
+                if frame.message == FrameMessage::Status {
+                    let status = Status::try_from(&buffer[frame.payload_range()]).unwrap();
+
+                    telemetrics.write().await.status = Some(status.to_string().to_uppercase());
+                } else if frame.message == FrameMessage::Signal {
                     let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
 
                     match signal.metric {
@@ -273,8 +281,14 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         .unwrap();
 
     loop {
+        tokio::time::sleep(std::time::Duration::from_secs(config.interval)).await;
+
         if config.probe {
             let data = telemetrics_clone.read().await;
+
+            if data.status.is_none() {
+                continue;
+            }
 
             let response = client
                 .post(request_url.clone())
@@ -291,7 +305,5 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
         };
 
         log::trace!("{}", telemetrics_clone.read().await);
-
-        tokio::time::sleep(std::time::Duration::from_secs(config.interval)).await;
     }
 }
