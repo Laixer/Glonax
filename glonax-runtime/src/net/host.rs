@@ -13,11 +13,6 @@ impl HostService {
         Self { system: sys }
     }
 
-    /// Returns the CPU usage in percent
-    pub fn swap_used(&self) -> f64 {
-        (self.system.used_swap() as f64 / self.system.total_swap() as f64) * 100.0
-    }
-
     /// Refreshes the system information
     pub fn refresh(&mut self) {
         self.system.refresh_memory();

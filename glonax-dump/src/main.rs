@@ -6,6 +6,7 @@
 
 use clap::Parser;
 
+use glonax::core::geometry::{EulerAngles, Target};
 use na::{Isometry3, Point3, UnitQuaternion, Vector3};
 use nalgebra as na;
 use parry3d::shape::Cuboid;
@@ -13,64 +14,6 @@ use parry3d::shape::Cuboid;
 mod config;
 mod ik;
 mod robot;
-
-#[derive(Clone, Copy)]
-struct Target {
-    pub point: Point3<f32>,
-    pub orientation: UnitQuaternion<f32>,
-    pub interpolation: bool,
-}
-
-impl Target {
-    fn new(point: Point3<f32>, orientation: UnitQuaternion<f32>) -> Self {
-        Self {
-            point,
-            orientation,
-            interpolation: false,
-        }
-    }
-
-    fn from_point(x: f32, y: f32, z: f32) -> Self {
-        Self {
-            point: Point3::new(x, y, z),
-            orientation: UnitQuaternion::identity(),
-            interpolation: false,
-        }
-    }
-}
-
-impl std::fmt::Display for Target {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°, {:.2}rad {:.2}°, {:.2}rad {:.2}°]",
-            self.point.x,
-            self.point.y,
-            self.point.z,
-            self.orientation
-                .axis()
-                .map_or(0.0, |axis| axis.x * self.orientation.angle()),
-            self.orientation
-                .axis()
-                .map_or(0.0, |axis| axis.x * self.orientation.angle())
-                .to_degrees(),
-            self.orientation
-                .axis()
-                .map_or(0.0, |axis| axis.y * self.orientation.angle()),
-            self.orientation
-                .axis()
-                .map_or(0.0, |axis| axis.y * self.orientation.angle())
-                .to_degrees(),
-            self.orientation
-                .axis()
-                .map_or(0.0, |axis| axis.z * self.orientation.angle()),
-            self.orientation
-                .axis()
-                .map_or(0.0, |axis| axis.z * self.orientation.angle())
-                .to_degrees(),
-        )
-    }
-}
 
 fn set_chain_from_target(target: &Target, chain: &mut glonax::robot::Chain) -> anyhow::Result<()> {
     let kinematic_epsilon = 0.0001;
