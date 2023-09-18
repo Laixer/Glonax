@@ -6,7 +6,6 @@ pub use self::status::Status;
 pub use self::motion::Actuator; // TODO: maybe access via motion::Actuator
 pub use self::motion::Motion;
 
-pub mod geometry;
 mod instance;
 mod motion;
 mod signal;

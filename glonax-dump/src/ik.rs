@@ -1,4 +1,4 @@
-use glonax::core::geometry::EulerAngles;
+use glonax::geometry::EulerAngles;
 use nalgebra::UnitQuaternion;
 
 use crate::Target;
@@ -21,7 +21,7 @@ impl ExcavatorIK {
     }
 
     pub(super) fn solve(&self, target: &Target) -> std::result::Result<KinematicRotation, ()> {
-        use glonax::core::geometry::law_of_cosines;
+        use glonax::geometry::law_of_cosines;
 
         let local_z = target.point.z - 0.595 - 1.295;
         // log::debug!(" IK Local Z:        {:.2}", local_z);
@@ -102,7 +102,7 @@ impl ExcavatorIK {
 
         Ok(KinematicRotation {
             frame: UnitQuaternion::from_yaw(theta_1),
-            boom: UnitQuaternion::from_pitch(-theta_2 + 59.35_f32.to_radians()),
+            boom: UnitQuaternion::from_pitch(-theta_2),
             arm: UnitQuaternion::from_pitch(theta_3),
             attachment: theta_4
                 .map(|theta_4| UnitQuaternion::from_pitch(theta_4 + 55_f32.to_radians())),

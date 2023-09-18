@@ -6,7 +6,7 @@
 
 use clap::Parser;
 
-use glonax::core::geometry::{EulerAngles, Target};
+use glonax::geometry::{law_of_cosines, shortest_rotation, EulerAngles, Target};
 use na::{Isometry3, Point3, UnitQuaternion, Vector3};
 use nalgebra as na;
 use parry3d::shape::Cuboid;
