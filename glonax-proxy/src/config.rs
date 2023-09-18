@@ -6,6 +6,8 @@ pub struct ProxyConfig {
     pub address: String,
     /// CAN network interface.
     pub interface: String,
+    /// CAN network interface2.
+    pub interface2: Option<String>,
     /// Refresh host service interval in milliseconds.
     pub host_interval: u64,
     /// Instance configuration.

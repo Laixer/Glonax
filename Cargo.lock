@@ -1427,18 +1427,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "glonax-ecu"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "glonax",
- "log",
- "simplelog",
- "tokio 1.32.0",
-]
-
-[[package]]
 name = "glonax-gamepad"
 version = "1.0.0"
 dependencies = [
