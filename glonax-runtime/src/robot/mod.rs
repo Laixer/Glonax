@@ -268,48 +268,49 @@ impl Chain {
     }
 
     // TODO: HACK: XXX: REMOVE: This is a temporary hack to get the absolute pitch of the arm
-    #[deprecated]
-    pub fn abs_pitch(&self) -> Option<f32> {
-        if self.joint_state[1].1.is_some() && self.joint_state[2].1.is_some() {
-            let theta_2 = self.joint_state[1]
-                .1
-                .unwrap()
-                .axis()
-                .map(|axis| axis.y)
-                .unwrap_or_default()
-                * self.joint_state[1].1.unwrap().angle();
+    // #[deprecated]
+    // pub fn abs_pitch(&self) -> Option<f32> {
+    //     if self.joint_state[1].1.is_some() && self.joint_state[2].1.is_some() {
+    //         let theta_2 = self.joint_state[1]
+    //             .1
+    //             .unwrap()
+    //             .axis()
+    //             .map(|axis| axis.y)
+    //             .unwrap_or_default()
+    //             * self.joint_state[1].1.unwrap().angle();
 
-            let theta_3 = self.joint_state[2]
-                .1
-                .unwrap()
-                .axis()
-                .map(|axis| axis.y)
-                .unwrap_or_default()
-                * self.joint_state[2].1.unwrap().angle();
+    //         let theta_3 = self.joint_state[2]
+    //             .1
+    //             .unwrap()
+    //             .axis()
+    //             .map(|axis| axis.y)
+    //             .unwrap_or_default()
+    //             * self.joint_state[2].1.unwrap().angle();
 
-            Some((-59.35_f32.to_radians() + theta_2) + theta_3)
-        } else {
-            None
-        }
-    }
+    //         // Some((-59.35_f32.to_radians() + theta_2) + theta_3)
+    //         Some((theta_2) + theta_3)
+    //     } else {
+    //         None
+    //     }
+    // }
 
     // TODO: HACK: XXX: REMOVE: This is a temporary hack to get the absolute pitch of the arm
-    #[deprecated]
-    pub fn abs_pitch_with_attachment(&self) -> Option<f32> {
-        if self.abs_pitch().is_some() && self.joint_state[3].1.is_some() {
-            let theta_4 = self.joint_state[3]
-                .1
-                .unwrap()
-                .axis()
-                .map(|axis| axis.y)
-                .unwrap_or_default()
-                * self.joint_state[3].1.unwrap().angle();
+    // #[deprecated]
+    // pub fn abs_pitch_with_attachment(&self) -> Option<f32> {
+    //     if self.abs_pitch().is_some() && self.joint_state[3].1.is_some() {
+    //         let theta_4 = self.joint_state[3]
+    //             .1
+    //             .unwrap()
+    //             .axis()
+    //             .map(|axis| axis.y)
+    //             .unwrap_or_default()
+    //             * self.joint_state[3].1.unwrap().angle();
 
-            Some(self.abs_pitch().unwrap() + theta_4)
-        } else {
-            None
-        }
-    }
+    //         Some(self.abs_pitch().unwrap() + theta_4)
+    //     } else {
+    //         None
+    //     }
+    // }
 
     pub fn reset(&mut self) {
         for (_, joint) in &mut self.joint_state {
@@ -326,6 +327,7 @@ impl Chain {
         self
     }
 
+    // TODO: When we set the position of a joint, limit to the joint axis
     pub fn set_joint_position(&mut self, name: impl ToString, rotation: UnitQuaternion<f32>) {
         let joint_idx = self
             .joint_state
@@ -339,6 +341,9 @@ impl Chain {
         self.last_update = std::time::Instant::now();
     }
 
+    // TODO: Maybe remove this function
+    // TODO: When we set the position of a joint, limit to the joint axis
+    #[deprecated]
     pub fn set_joint_positions(&mut self, rotations: Vec<UnitQuaternion<f32>>) {
         for (joint_idx, rotation) in rotations.iter().enumerate() {
             self.previous_state[joint_idx].1 = self.joint_state[joint_idx].1;
@@ -348,8 +353,27 @@ impl Chain {
         self.last_update = std::time::Instant::now();
     }
 
-    // TODO: Return this as a matrix
-    pub fn world_transformation(&self) -> Isometry3<f32> {
+    pub fn transformation_until(&self, end_joint_name: impl ToString) -> Isometry3<f32> {
+        let mut pose = Isometry3::identity();
+
+        for (joint_name, rotation) in &self.joint_state {
+            let joint = self.robot.joint_by_name(joint_name).unwrap();
+
+            if rotation.is_some() {
+                pose = pose * joint.origin() * rotation.unwrap();
+            } else {
+                pose = pose * joint.origin();
+            }
+
+            if joint_name == &end_joint_name.to_string() {
+                break;
+            }
+        }
+
+        pose
+    }
+
+    pub fn transformation(&self) -> Isometry3<f32> {
         let mut pose = Isometry3::identity();
 
         for (joint_name, rotation) in &self.joint_state {
@@ -365,11 +389,8 @@ impl Chain {
         pose
     }
 
-    pub fn distance(&self, rhs: &Self) -> f32 {
-        let lhs_point = self.world_transformation() * Point3::origin();
-        let rhs_point = rhs.world_transformation() * Point3::origin();
-
-        nalgebra::distance(&lhs_point, &rhs_point)
+    pub fn effector_point(&self) -> Point3<f32> {
+        self.transformation().translation.vector.into()
     }
 
     pub fn error(&self, rhs: &Self) -> Vec<JointDiff> {
@@ -394,9 +415,19 @@ impl Chain {
 
 impl std::fmt::Display for Chain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let point = self.world_transformation() * Point3::origin();
+        let vector = self.transformation().translation.vector;
+        // TODO: This is an incomplete solution to the problem of getting the pitch of the arm
+        let (_, pitch, _) = self.transformation().rotation.euler_angles();
 
-        write!(f, "({:.2}, {:.2}, {:.2})", point.x, point.y, point.z)
+        write!(
+            f,
+            "({:.2}, {:.2}, {:.2}) [{:.2}rad {:.2}°]",
+            vector.x,
+            vector.y,
+            vector.z,
+            pitch,
+            pitch.to_degrees()
+        )
     }
 }
 

@@ -18,6 +18,8 @@ struct Args {
     address: String,
     /// CAN network interface.
     interface: String,
+    /// CAN network interface.
+    interface2: Option<String>,
     /// Refresh host service interval in milliseconds.
     #[arg(long, default_value_t = 500)]
     host_interval: u64,
@@ -41,6 +43,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::ProxyConfig {
         address: args.address,
         interface: args.interface,
+        interface2: args.interface2,
         host_interval: args.host_interval,
         instance: glonax::from_toml(args.config)?,
         global: glonax::GlobalConfig::default(),
@@ -137,7 +140,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         }
     });
 
-    // TODO: Move into separate service
     let ecu_sender = signal_tx.clone();
     let ecu_interface = config.interface.clone();
     tokio::spawn(async move {
@@ -175,6 +177,38 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
         }
     });
+
+    let ecu_sender = signal_tx.clone();
+    if let Some(ecu_interface) = config.interface2.clone() {
+        tokio::spawn(async move {
+            use glonax::channel::SignalSource;
+            use glonax::net::{EngineManagementSystem, J1939Network, Router};
+
+            log::debug!("Starting EMS service");
+
+            let network = J1939Network::new(&ecu_interface, 0x9E).unwrap();
+            let mut router = Router::new(network);
+
+            let mut engine_management_service = EngineManagementSystem::new(0x0);
+
+            loop {
+                if let Err(e) = router.listen().await {
+                    log::error!("Failed to receive from router: {}", e);
+                }
+
+                let mut signals = vec![];
+                if let Some(message) = router.try_accept(&mut engine_management_service) {
+                    message.collect_signals(&mut signals);
+                }
+
+                for signal in signals {
+                    if let Err(e) = ecu_sender.send(signal).await {
+                        log::error!("Failed to send signal: {}", e);
+                    }
+                }
+            }
+        });
+    }
 
     let fifo_sender = signal_tx.clone();
     tokio::spawn(async move {
