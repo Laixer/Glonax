@@ -1,4 +1,24 @@
-use glonax::core::{Actuator, Level, Motion};
+use glonax::core::{Actuator, Motion};
+
+/// Level trait.
+pub trait Level {
+    /// Return the value of self above the lower threshold.
+    /// Otherwise return a default value.
+    fn ramp(self, lower: Self) -> Self;
+}
+
+/// Implement level trait for i16.
+impl Level for i16 {
+    /// Return the value of self above the lower threshold.
+    /// Otherwise return a default value.
+    fn ramp(self, lower: Self) -> Self {
+        if self < lower && self > -lower {
+            0
+        } else {
+            self
+        }
+    }
+}
 
 /// Button state.
 #[derive(PartialEq, Eq)]
@@ -170,5 +190,18 @@ impl InputState {
                 Motion::StraightDrive(Motion::POWER_NEUTRAL).into()
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ramp() {
+        assert_eq!(120_i16.ramp(3072), 0);
+        assert_eq!(20_000_i16.ramp(3072), 20_000);
+        assert_eq!(-10_i16.ramp(3072), 0);
+        assert_eq!(-5960_i16.ramp(3072), -5960);
     }
 }

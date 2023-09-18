@@ -1,3 +1,4 @@
+/// Configuration trait.
 pub trait Configurable: Clone {
     /// Get the global configuration
     fn global(&self) -> &GlobalConfig;

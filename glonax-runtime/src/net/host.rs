@@ -7,6 +7,7 @@ pub struct HostService {
 }
 
 impl HostService {
+    /// Creates a new host service
     pub fn new() -> Self {
         let sys = System::new();
 
