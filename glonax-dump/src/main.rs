@@ -13,6 +13,7 @@ use parry3d::shape::Cuboid;
 
 mod config;
 mod ik;
+mod program;
 mod robot;
 
 fn set_chain_from_target(target: &Target, chain: &mut glonax::robot::Chain) -> anyhow::Result<()> {
