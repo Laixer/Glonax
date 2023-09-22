@@ -63,15 +63,19 @@ impl EulerAngles for UnitQuaternion<f32> {
 
 #[derive(Clone, Copy)]
 pub struct Target {
+    /// The point in space to move to
     pub point: Point3<f32>,
+    /// The orientation to move to
     pub orientation: UnitQuaternion<f32>,
 }
 
 impl Target {
+    /// Construct a new target
     pub fn new(point: Point3<f32>, orientation: UnitQuaternion<f32>) -> Self {
         Self { point, orientation }
     }
 
+    /// Construct a new target from a point
     pub fn from_point(x: f32, y: f32, z: f32) -> Self {
         Self {
             point: Point3::new(x, y, z),
@@ -145,6 +149,24 @@ impl From<[f32; 6]> for Target {
         Self {
             point: Point3::new(x, y, z),
             orientation: UnitQuaternion::from_euler_angles(roll, pitch, yaw),
+        }
+    }
+}
+
+impl From<&[f32; 6]> for Target {
+    fn from([x, y, z, roll, pitch, yaw]: &[f32; 6]) -> Self {
+        Self {
+            point: Point3::new(*x, *y, *z),
+            orientation: UnitQuaternion::from_euler_angles(*roll, *pitch, *yaw),
+        }
+    }
+}
+
+impl From<Point3<f32>> for Target {
+    fn from(point: Point3<f32>) -> Self {
+        Self {
+            point,
+            orientation: UnitQuaternion::identity(),
         }
     }
 }

@@ -267,51 +267,6 @@ impl Chain {
         self.last_update
     }
 
-    // TODO: HACK: XXX: REMOVE: This is a temporary hack to get the absolute pitch of the arm
-    // #[deprecated]
-    // pub fn abs_pitch(&self) -> Option<f32> {
-    //     if self.joint_state[1].1.is_some() && self.joint_state[2].1.is_some() {
-    //         let theta_2 = self.joint_state[1]
-    //             .1
-    //             .unwrap()
-    //             .axis()
-    //             .map(|axis| axis.y)
-    //             .unwrap_or_default()
-    //             * self.joint_state[1].1.unwrap().angle();
-
-    //         let theta_3 = self.joint_state[2]
-    //             .1
-    //             .unwrap()
-    //             .axis()
-    //             .map(|axis| axis.y)
-    //             .unwrap_or_default()
-    //             * self.joint_state[2].1.unwrap().angle();
-
-    //         // Some((-59.35_f32.to_radians() + theta_2) + theta_3)
-    //         Some((theta_2) + theta_3)
-    //     } else {
-    //         None
-    //     }
-    // }
-
-    // TODO: HACK: XXX: REMOVE: This is a temporary hack to get the absolute pitch of the arm
-    // #[deprecated]
-    // pub fn abs_pitch_with_attachment(&self) -> Option<f32> {
-    //     if self.abs_pitch().is_some() && self.joint_state[3].1.is_some() {
-    //         let theta_4 = self.joint_state[3]
-    //             .1
-    //             .unwrap()
-    //             .axis()
-    //             .map(|axis| axis.y)
-    //             .unwrap_or_default()
-    //             * self.joint_state[3].1.unwrap().angle();
-
-    //         Some(self.abs_pitch().unwrap() + theta_4)
-    //     } else {
-    //         None
-    //     }
-    // }
-
     pub fn reset(&mut self) {
         for (_, joint) in &mut self.joint_state {
             *joint = None;
@@ -321,7 +276,7 @@ impl Chain {
         }
     }
 
-    pub fn add_link(&mut self, link: impl ToString) -> &mut Self {
+    pub fn add_link(mut self, link: impl ToString) -> Self {
         self.joint_state.push((link.to_string(), None));
         self.previous_state.push((link.to_string(), None));
         self
@@ -445,15 +400,6 @@ impl std::fmt::Debug for Chain {
                 (name.to_string(), lhs.unwrap(), rhs_rotation)
             })
         {
-            // let chain_angle = lhs_rotation
-            //     .axis()
-            //     .map(|axis| {
-            //         axis.x * lhs_rotation.angle()
-            //             + axis.y * lhs_rotation.angle()
-            //             + axis.z * lhs_rotation.angle()
-            //     })
-            //     .unwrap_or_default();
-
             let relative_rotation = lhs_rotation * rhs_rotation;
             let joint_angle = relative_rotation
                 .axis()
@@ -464,14 +410,6 @@ impl std::fmt::Debug for Chain {
                 })
                 .unwrap_or_default();
 
-            // s.push_str(&format!(
-            //     "{}={:.2}rad/{:.2}° [{:.2}rad/{:.2}°] ",
-            //     joint_name,
-            //     chain_angle,
-            //     chain_angle.to_degrees(),
-            //     joint_angle,
-            //     joint_angle.to_degrees(),
-            // ));
             s.push_str(&format!(
                 "{}={:.2}rad/{:.2}° ",
                 joint_name,
