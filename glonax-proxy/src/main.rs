@@ -102,6 +102,8 @@ async fn main() -> anyhow::Result<()> {
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use tokio::net::TcpListener;
 
+    const NETWORK_DEVICE_ADDRESS: u8 = 0x9E;
+
     log::info!("Starting proxy services");
 
     log::info!("Instance ID: {}", config.instance.id);
@@ -140,76 +142,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         }
     });
 
-    let ecu_sender = signal_tx.clone();
-    let ecu_interface = config.interface.clone();
-    tokio::spawn(async move {
-        use glonax::channel::SignalSource;
-        use glonax::net::{EncoderService, J1939Network, Router};
-
-        log::debug!("Starting ECU services");
-
-        let network = J1939Network::new(&ecu_interface, 0x9E).unwrap();
-        let mut router = Router::new(network);
-
-        let mut encoder_list = vec![
-            EncoderService::new(0x6A),
-            EncoderService::new(0x6B),
-            EncoderService::new(0x6C),
-            EncoderService::new(0x6D),
-        ];
-
-        loop {
-            if let Err(e) = router.listen().await {
-                log::error!("Failed to receive from router: {}", e);
-            }
-
-            let mut signals = vec![];
-            for encoder in &mut encoder_list {
-                if let Some(message) = router.try_accept(encoder) {
-                    message.collect_signals(&mut signals);
-                }
-            }
-
-            for signal in signals {
-                if let Err(e) = ecu_sender.send(signal).await {
-                    log::error!("Failed to send signal: {}", e);
-                }
-            }
-        }
-    });
-
-    let ecu_sender = signal_tx.clone();
-    if let Some(ecu_interface) = config.interface2.clone() {
-        tokio::spawn(async move {
-            use glonax::channel::SignalSource;
-            use glonax::net::{EngineManagementSystem, J1939Network, Router};
-
-            log::debug!("Starting EMS service");
-
-            let network = J1939Network::new(&ecu_interface, 0x9E).unwrap();
-            let mut router = Router::new(network);
-
-            let mut engine_management_service = EngineManagementSystem::new(0x0);
-
-            loop {
-                if let Err(e) = router.listen().await {
-                    log::error!("Failed to receive from router: {}", e);
-                }
-
-                let mut signals = vec![];
-                if let Some(message) = router.try_accept(&mut engine_management_service) {
-                    message.collect_signals(&mut signals);
-                }
-
-                for signal in signals {
-                    if let Err(e) = ecu_sender.send(signal).await {
-                        log::error!("Failed to send signal: {}", e);
-                    }
-                }
-            }
-        });
-    }
-
     let fifo_sender = signal_tx.clone();
     tokio::spawn(async move {
         loop {
@@ -235,6 +167,84 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         }
     });
 
+    let ecu_sender = signal_tx.clone();
+    let ecu_interface = config.interface.clone();
+    tokio::spawn(async move {
+        use glonax::channel::SignalSource;
+        use glonax::net::{EncoderService, J1939Network, Router};
+
+        log::debug!("Starting ECU services");
+
+        match J1939Network::new(&ecu_interface, NETWORK_DEVICE_ADDRESS) {
+            Ok(network) => {
+                let mut router = Router::new(network);
+
+                let mut encoder_list = vec![
+                    EncoderService::new(0x6A),
+                    EncoderService::new(0x6B),
+                    EncoderService::new(0x6C),
+                    EncoderService::new(0x6D),
+                ];
+
+                loop {
+                    if let Err(e) = router.listen().await {
+                        log::error!("Failed to receive from router: {}", e);
+                    }
+
+                    let mut signals = vec![];
+                    for encoder in &mut encoder_list {
+                        if let Some(message) = router.try_accept(encoder) {
+                            message.collect_signals(&mut signals);
+                        }
+                    }
+
+                    for signal in signals {
+                        if let Err(e) = ecu_sender.send(signal).await {
+                            log::error!("Failed to send signal: {}", e);
+                        }
+                    }
+                }
+            }
+            Err(e) => log::error!("Failed to create network: {}", e),
+        }
+    });
+
+    let ecu_sender = signal_tx.clone();
+    if let Some(ecu_interface) = config.interface2.clone() {
+        tokio::spawn(async move {
+            use glonax::channel::SignalSource;
+            use glonax::net::{EngineManagementSystem, J1939Network, Router};
+
+            log::debug!("Starting EMS service");
+
+            match J1939Network::new(&ecu_interface, NETWORK_DEVICE_ADDRESS) {
+                Ok(network) => {
+                    let mut router = Router::new(network);
+
+                    let mut engine_management_service = EngineManagementSystem::new(0x0);
+
+                    loop {
+                        if let Err(e) = router.listen().await {
+                            log::error!("Failed to receive from router: {}", e);
+                        }
+
+                        let mut signals = vec![];
+                        if let Some(message) = router.try_accept(&mut engine_management_service) {
+                            message.collect_signals(&mut signals);
+                        }
+
+                        for signal in signals {
+                            if let Err(e) = ecu_sender.send(signal).await {
+                                log::error!("Failed to send signal: {}", e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => log::error!("Failed to create network: {}", e),
+            }
+        });
+    }
+
     let ecu_interface = config.interface.clone();
     tokio::spawn(async move {
         use glonax::core::Motion;
@@ -242,53 +252,56 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting motion listener");
 
-        let network = J1939Network::new(&ecu_interface, 0x9E).unwrap();
+        match J1939Network::new(&ecu_interface, NETWORK_DEVICE_ADDRESS) {
+            Ok(network) => {
+                let service = ActuatorService::new(0x4A);
 
-        let service = ActuatorService::new(0x4A);
+                while let Some(motion) = motion_rx.recv().await {
+                    match motion {
+                        Motion::StopAll => {
+                            if let Err(e) = network.send_vectored(&service.lock()).await {
+                                log::error!("Failed to send motion: {}", e);
+                            }
+                        }
+                        Motion::ResumeAll => {
+                            if let Err(e) = network.send_vectored(&service.unlock()).await {
+                                log::error!("Failed to send motion: {}", e);
+                            }
+                        }
+                        Motion::ResetAll => {
+                            if let Err(e) = network.send_vectored(&service.lock()).await {
+                                log::error!("Failed to send motion: {}", e);
+                            }
+                            if let Err(e) = network.send_vectored(&service.unlock()).await {
+                                log::error!("Failed to send motion: {}", e);
+                            }
+                        }
+                        Motion::StraightDrive(value) => {
+                            let frames = &service.drive_straight(value);
 
-        while let Some(motion) = motion_rx.recv().await {
-            match motion {
-                Motion::StopAll => {
-                    if let Err(e) = network.send_vectored(&service.lock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
-                }
-                Motion::ResumeAll => {
-                    if let Err(e) = network.send_vectored(&service.unlock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
-                }
-                Motion::ResetAll => {
-                    if let Err(e) = network.send_vectored(&service.lock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
-                    if let Err(e) = network.send_vectored(&service.unlock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
-                }
-                Motion::StraightDrive(value) => {
-                    let frames = &service.drive_straight(value);
+                            if let Err(e) = network.send_vectored(frames).await {
+                                log::error!("Failed to send motion: {}", e);
+                            }
+                        }
+                        Motion::Change(changes) => {
+                            let frames = &service.actuator_command(
+                                changes
+                                    .iter()
+                                    .map(|changeset| (changeset.actuator as u8, changeset.value))
+                                    .collect(),
+                            );
 
-                    if let Err(e) = network.send_vectored(frames).await {
-                        log::error!("Failed to send motion: {}", e);
+                            if let Err(e) = network.send_vectored(frames).await {
+                                log::error!("Failed to send motion: {}", e);
+                            }
+                        }
                     }
                 }
-                Motion::Change(changes) => {
-                    let frames = &service.actuator_command(
-                        changes
-                            .iter()
-                            .map(|changeset| (changeset.actuator as u8, changeset.value))
-                            .collect(),
-                    );
 
-                    if let Err(e) = network.send_vectored(frames).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
-                }
+                log::debug!("Motion listener shutdown");
             }
+            Err(e) => log::error!("Failed to create network: {}", e),
         }
-
-        log::debug!("Motion listener shutdown");
     });
 
     let instance_id = config.instance.id.clone();
