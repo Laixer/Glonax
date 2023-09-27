@@ -45,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
         interface: args.interface,
         interface2: args.interface2,
         host_interval: args.host_interval,
-        instance: glonax::from_toml(args.config)?,
+        instance: glonax::from_file(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
 
