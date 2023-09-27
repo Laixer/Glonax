@@ -215,19 +215,23 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         loop {
             log::debug!("Waiting for FIFO connection: signal");
 
-            let mut client = glonax::transport::Client::open_read("signal")
-                .await
-                .unwrap();
+            match glonax::transport::Client::open_read("signal").await {
+                Ok(mut client) => {
+                    log::debug!("Connected to FIFO: signal");
 
-            log::debug!("Connected to FIFO: signal");
+                    while let Ok(signal) = client.recv_signal().await {
+                        if let Err(e) = fifo_sender.send(signal).await {
+                            log::error!("Failed to send signal: {}", e);
+                        }
+                    }
 
-            while let Ok(signal) = client.recv_signal().await {
-                if let Err(e) = fifo_sender.send(signal).await {
-                    log::error!("Failed to send signal: {}", e);
+                    log::debug!("FIFO listener shutdown: signal");
+                }
+                Err(e) => {
+                    log::error!("Failed to connect to FIFO: signal: {}", e);
+                    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                 }
             }
-
-            log::debug!("FIFO listener shutdown: signal");
         }
     });
 
