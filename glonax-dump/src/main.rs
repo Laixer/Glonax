@@ -6,45 +6,14 @@
 
 use clap::Parser;
 
-use glonax::geometry::{law_of_cosines, shortest_rotation, EulerAngles, Target};
-use na::{Isometry3, Point3, UnitQuaternion, Vector3};
+use glonax::geometry::{shortest_rotation, EulerAngles, Target};
+use na::{Isometry3, UnitQuaternion, Vector3};
 use nalgebra as na;
 use parry3d::shape::Cuboid;
 
 mod config;
-mod ik;
 mod program;
 mod robot;
-
-fn set_chain_from_target(target: &Target, chain: &mut glonax::robot::Chain) -> anyhow::Result<()> {
-    let kinematic_epsilon = 0.0001;
-
-    let solver = ik::ExcavatorIK::new(6.0, 2.97);
-
-    let kinrot = solver
-        .solve(target)
-        .map_err(|_| anyhow::anyhow!("IK error"))?;
-
-    let mut positions = vec![kinrot.frame, kinrot.boom, kinrot.arm];
-
-    if let Some(attachment) = kinrot.attachment {
-        positions.push(attachment);
-    }
-
-    chain.reset();
-    chain.set_joint_positions(positions);
-
-    let vector = chain.world_transformation().translation.vector;
-
-    if (target.point.coords.norm() - vector.norm()).abs() > kinematic_epsilon {
-        log::error!("Target norm: {}", target.point.coords.norm());
-        log::error!("Chain norm: {}", vector.norm());
-        log::error!("Diff: {}", target.point.coords.norm() - vector.norm());
-        Err(anyhow::anyhow!("IK error"))
-    } else {
-        Ok(())
-    }
-}
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
@@ -122,32 +91,20 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
-    use glonax::core::geometry::EulerAngles;
     use glonax::core::Motion;
-    use std::collections::VecDeque;
     use std::time::Duration;
     use tokio::time;
 
+    let kinematic_detect_obstacles = false;
     let kinematic_control = true;
     let kinematic_interval = std::time::Duration::from_millis(25);
 
     let robot = robot::excavator(&config);
 
-    log::debug!("Configured: {}", robot);
+    // log::debug!("Configured: {}", robot);
 
-    let frame_encoder = robot.device_by_name("frame_encoder").unwrap().clone();
-    let boom_encoder = robot.device_by_name("boom_encoder").unwrap().clone();
-    let arm_encoder = robot.device_by_name("arm_encoder").unwrap().clone();
-    let attachment_encoder = robot.device_by_name("attachment_encoder").unwrap().clone();
-
-    let mut perception_chain = glonax::robot::Chain::new(robot);
-    perception_chain
-        .add_link("frame")
-        .add_link("boom")
-        .add_link("arm")
-        .add_link("attachment");
-
-    let mut projection_chain = perception_chain.clone();
+    let perception_chain = robot.kinematic_chain();
+    let mut objective_chain = robot.kinematic_chain();
 
     let perception_chain_shared = std::sync::Arc::new(tokio::sync::RwLock::new(perception_chain));
     let perception_chain_shared_read = perception_chain_shared.clone();
@@ -165,6 +122,11 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
     client.send_motion(Motion::StopAll).await?;
 
+    let frame_encoder = robot.frame_device_id();
+    let boom_encoder = robot.boom_device_id();
+    let arm_encoder = robot.arm_device_id();
+    let attachment_encoder = robot.attachment_device_id();
+
     tokio::spawn(async move {
         use glonax::core::{Metric, Signal};
         use glonax::transport::frame::{Frame, FrameMessage};
@@ -181,31 +143,32 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             if let Ok(frame) = Frame::try_from(&buffer[..size]) {
                 if frame.message == FrameMessage::Signal {
                     let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
-
                     if let Metric::EncoderAbsAngle((node, value)) = signal.metric {
                         match node {
-                            node if frame_encoder.id() == node => {
+                            node if frame_encoder == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("frame", UnitQuaternion::from_yaw(value));
                             }
-                            node if boom_encoder.id() == node => {
+                            node if boom_encoder == node => {
+                                let pitch = value - 59.35_f32.to_radians();
                                 perception_chain_shared
                                     .write()
                                     .await
-                                    .set_joint_position("boom", UnitQuaternion::from_pitch(value));
+                                    .set_joint_position("boom", UnitQuaternion::from_pitch(pitch));
                             }
-                            node if arm_encoder.id() == node => {
+                            node if arm_encoder == node => {
                                 perception_chain_shared
                                     .write()
                                     .await
                                     .set_joint_position("arm", UnitQuaternion::from_pitch(value));
                             }
-                            node if attachment_encoder.id() == node => {
+                            node if attachment_encoder == node => {
+                                let pitch = value - 55_f32.to_radians();
                                 perception_chain_shared.write().await.set_joint_position(
                                     "attachment",
-                                    UnitQuaternion::from_pitch(value),
+                                    UnitQuaternion::from_pitch(pitch),
                                 );
                             }
                             _ => {}
@@ -218,38 +181,10 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
         }
     });
 
-    let mut targets = VecDeque::from([
-        Target::new(
-            Point3::new(5.21 + 0.16, 0.0, 1.295 + 0.595),
-            UnitQuaternion::from_euler_angles(
-                0.0,
-                180_f32.to_radians() - 55.3_f32.to_radians(),
-                0.0,
-            ),
-        ),
-        Target::new(
-            Point3::new(5.21 + 0.16, 5.0, 1.295 + 0.595),
-            UnitQuaternion::from_euler_angles(
-                0.0,
-                180_f32.to_radians() - 55.3_f32.to_radians(),
-                0.0,
-            ),
-        ),
-    ]);
+    let mut program = program::from_file("contrib/share/programs/basic_training.json")?; // axis_align_test
 
-    // let str = std::fs::read_to_string("contrib/share/programs/basic_training.json")?;
-    // let mut targets: VecDeque<Target> = serde_json::from_str::<Vec<[f32; 6]>>(&str)?
-    //     .iter()
-    //     .map(|v| {
-    //         Target::new(
-    //             Point3::new(v[0], v[1], v[2]),
-    //             UnitQuaternion::from_euler_angles(v[3], v[4], v[5]),
-    //         )
-    //     })
-    //     .collect();
-
-    for (idx, target) in targets.iter().enumerate() {
-        log::debug!(" * Target {:2}    {}", idx, target);
+    for (idx, target) in program.iter().enumerate() {
+        log::debug!("> Target {:2}    {}", idx, target);
     }
 
     let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
@@ -267,19 +202,18 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
 
     loop {
-        if targets.is_empty() {
+        if program.is_empty() {
             log::info!("All targets reached");
             break;
         }
 
-        let target = targets.pop_front().unwrap();
+        let target = program.pop_front().unwrap();
+        log::info!("Objective target: {}", target);
 
-        log::info!("Current target: {}", target);
-        log::debug!("Is interpolation:   {}", target.interpolation);
+        // set_chain_from_target(&target, &mut objective_chain)?;
+        objective_chain.set_target(&target);
 
-        set_chain_from_target(&target, &mut projection_chain)?;
-
-        log::debug!("Projection chain: {:?}", projection_chain);
+        log::debug!("Objective chain: {:?}", objective_chain);
 
         if kinematic_control {
             log::info!("Press enter to continue");
@@ -304,172 +238,177 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             log::debug!("Perception: {:?}", perception_chain);
 
-            let current_point = perception_chain.world_transformation() * Point3::origin();
+            let error_vector = perception_chain.translation_error(&objective_chain);
 
             log::debug!(
                 "{:<35} ({:.2}, {:.2}, {:.2})",
-                "Target error (Effector)",
-                (target.point.x - current_point.x).abs(),
-                (target.point.y - current_point.y).abs(),
-                (target.point.z - current_point.z).abs()
+                "Error vector (Attachment)",
+                error_vector.x.abs(),
+                error_vector.y.abs(),
+                error_vector.z.abs()
             );
 
-            let is_close = (target.point.x - current_point.x).abs() <= 0.05
-                && (target.point.y - current_point.y).abs() <= 0.05
-                && (target.point.z - current_point.z).abs() <= 0.05;
-
-            if is_close {
+            if error_vector.x.abs() <= 0.06
+                && error_vector.y.abs() <= 0.06
+                && error_vector.z.abs() <= 0.06
+            {
                 client.send_motion(Motion::StopAll).await?;
                 log::info!("Target reached");
                 break;
             }
 
-            let perception_transformation =
-                perception_chain.world_transformation() * bucket_transform;
+            // let mut contact_zone = false;
+            // let mut clearance_height = 0.0_f32;
 
-            let mut contact_zone = false;
-            let mut clearance_height = 0.0_f32;
+            // let colliders = [(&obst0_transform, &obst0_box_buffer)];
 
-            let colliders = [(&obst0_transform, &obst0_box_buffer)];
+            // let perception_transformation = perception_chain.transformation() * bucket_transform;
 
-            for (collider_transform, collider_geom) in colliders {
-                let res = parry3d::query::contact(
-                    collider_transform,
-                    collider_geom,
-                    &perception_transformation,
-                    &bucket_geometry,
-                    1.0,
-                );
+            // for (collider_transform, collider_geom) in colliders {
+            //     if !kinematic_detect_obstacles {
+            //         break;
+            //     }
 
-                if let Ok(contact) = res {
-                    if let Some(contact) = contact {
-                        contact_zone = true;
+            //     let res = parry3d::query::contact(
+            //         collider_transform,
+            //         collider_geom,
+            //         &perception_transformation,
+            //         &bucket_geometry,
+            //         1.0,
+            //     );
 
-                        log::debug!("- Collider dist            {:.2}m", contact.dist);
-                        log::debug!("- Collider points          ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
-                            contact.point1.x,
-                            contact.point1.y,
-                            contact.point1.z,
-                            contact.point2.x,
-                            contact.point2.y,
-                            contact.point2.z
-                        );
-                        log::debug!("- Collider normals         ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
-                            contact.normal1.x,
-                            contact.normal1.y,
-                            contact.normal1.z,
-                            contact.normal2.x,
-                            contact.normal2.y,
-                            contact.normal2.z
-                        );
+            //     if let Ok(contact) = res {
+            //         if let Some(contact) = contact {
+            //             contact_zone = true;
 
-                        // TODO: This is just informational, remove later
-                        let is_intersecting = parry3d::query::intersection_test(
-                            collider_transform,
-                            collider_geom,
-                            &perception_transformation,
-                            &bucket_geometry,
-                        )
-                        .unwrap();
+            //             log::debug!("- Collider dist            {:.2}m", contact.dist);
+            //             log::debug!("- Collider points          ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
+            //                 contact.point1.x,
+            //                 contact.point1.y,
+            //                 contact.point1.z,
+            //                 contact.point2.x,
+            //                 contact.point2.y,
+            //                 contact.point2.z
+            //             );
+            //             log::debug!("- Collider normals         ({:+.2}, {:+.2}, {:+.2}) - ({:+.2}, {:+.2}, {:+.2})",
+            //                 contact.normal1.x,
+            //                 contact.normal1.y,
+            //                 contact.normal1.z,
+            //                 contact.normal2.x,
+            //                 contact.normal2.y,
+            //                 contact.normal2.z
+            //             );
 
-                        log::debug!("- Collider intersects      {}", is_intersecting);
+            //             // TODO: This is just informational, remove later
+            //             let is_intersecting = parry3d::query::intersection_test(
+            //                 collider_transform,
+            //                 collider_geom,
+            //                 &perception_transformation,
+            //                 &bucket_geometry,
+            //             )
+            //             .unwrap();
 
-                        if contact.dist.abs() < 0.05 {
-                            // TODO: Maybe not here?
-                            if perception_chain.is_ready() && kinematic_control {
-                                client.send_motion(Motion::StopAll).await?;
-                                log::error!("Effector is in obstacle contact zone");
-                                return Err(anyhow::anyhow!(
-                                    "Effector is in obstacle contact zone"
-                                ));
-                            } else {
-                                log::error!("Effector is in obstacle contact zone");
-                            }
-                        }
+            //             log::debug!("- Collider intersects      {}", is_intersecting);
 
-                        let collider = collider_geom.aabb(&collider_transform);
+            //             if contact.dist.abs() < 0.05 {
+            //                 // TODO: Maybe not here?
+            //                 if perception_chain.is_ready() && kinematic_control {
+            //                     client.send_motion(Motion::StopAll).await?;
+            //                     log::error!("Effector is in obstacle contact zone");
+            //                     return Err(anyhow::anyhow!(
+            //                         "Effector is in obstacle contact zone"
+            //                     ));
+            //                 } else {
+            //                     log::error!("Effector is in obstacle contact zone");
+            //                 }
+            //             }
 
-                        log::debug!("- Collider maxs            {:?}", collider.maxs);
+            //             let collider = collider_geom.aabb(&collider_transform);
 
-                        if contact.dist.abs() < 0.40 {
-                            clearance_height = clearance_height.max(collider.maxs.z + 0.20);
-                            log::debug!(
-                                "- Collider clearance       {:.2}m [{:.2}m +0.20m]",
-                                clearance_height,
-                                collider.maxs.z
-                            );
-                        }
-                    }
-                }
-            }
+            //             log::debug!("- Collider maxs            {:?}", collider.maxs);
 
-            if contact_zone {
-                let current_point = perception_chain.world_transformation() * Point3::origin();
+            //             if contact.dist.abs() < 0.40 {
+            //                 clearance_height = clearance_height.max(collider.maxs.z + 0.20);
+            //                 log::debug!(
+            //                     "- Collider clearance       {:.2}m [{:.2}m +0.20m]",
+            //                     clearance_height,
+            //                     collider.maxs.z
+            //                 );
+            //             }
+            //         }
+            //     }
+            // }
 
-                let world_transformation =
-                    perception_chain.world_transformation() * bucket_transform;
+            // if contact_zone {
+            //     // let current_point = perception_chain.world_transformation() * Point3::origin();
+            //     let perception_transformation = perception_chain.transformation();
 
-                let groud_points = parry3d::query::closest_points(
-                    &ground_transform,
-                    &ground_plane,
-                    &world_transformation,
-                    &bucket_geometry,
-                    25.0,
-                )
-                .unwrap();
+            //     let world_transformation = perception_chain.transformation() * bucket_transform;
 
-                let height = match groud_points {
-                    parry3d::query::ClosestPoints::WithinMargin(p1, p2) => p2.z - p1.z,
-                    _ => 0.0,
-                };
+            //     let groud_points = parry3d::query::closest_points(
+            //         &ground_transform,
+            //         &ground_plane,
+            //         &world_transformation,
+            //         &bucket_geometry,
+            //         25.0,
+            //     )
+            //     .unwrap();
 
-                let necessary_clearance = clearance_height - height;
-                if necessary_clearance > 0.0 {
-                    log::debug!("Necessary clearance: {:.2}m", necessary_clearance);
+            //     let height = match groud_points {
+            //         parry3d::query::ClosestPoints::WithinMargin(p1, p2) => p2.z - p1.z,
+            //         _ => 0.0,
+            //     };
 
-                    let new_z = current_point.z + necessary_clearance;
+            //     let necessary_clearance = clearance_height - height;
+            //     if necessary_clearance > 0.0 {
+            //         log::debug!("Necessary clearance: {:.2}m", necessary_clearance);
 
-                    let clearance_target =
-                        Target::from_point(current_point.x, current_point.y, new_z + 0.08);
-                    log::debug!("New clearance target: {}", clearance_target);
+            //         let new_z =
+            //             perception_transformation.translation.vector.z + necessary_clearance;
 
-                    set_chain_from_target(&clearance_target, &mut projection_chain)?;
+            //         let clearance_target = Target::from_point(
+            //             perception_transformation.translation.vector.x,
+            //             perception_transformation.translation.vector.y,
+            //             new_z + 0.08,
+            //         );
+            //         log::debug!("New clearance target: {}", clearance_target);
 
-                    client.send_motion(Motion::StopAll).await?;
-                    tokio::time::sleep(Duration::from_millis(150)).await;
-                    client.send_motion(Motion::ResumeAll).await?;
-                } else {
-                    log::debug!("No necessary clearance, continue with current height");
+            //         // set_chain_from_target(&clearance_target, &mut objective_chain)?;
+            //         objective_chain.set_target(&clearance_target);
 
-                    let clearance_target =
-                        Target::from_point(target.point.x, target.point.y, current_point.z);
-                    log::debug!("New clearance target: {}", clearance_target);
+            //         client.send_motion(Motion::StopAll).await?;
+            //         tokio::time::sleep(Duration::from_millis(150)).await;
+            //         client.send_motion(Motion::ResumeAll).await?;
+            //     } else {
+            //         log::debug!("No necessary clearance, continue with current height");
 
-                    set_chain_from_target(&clearance_target, &mut projection_chain)?;
-                }
-            } else {
-                set_chain_from_target(&target, &mut projection_chain)?;
-            }
+            //         let clearance_target = Target::from_point(
+            //             target.point.x,
+            //             target.point.y,
+            //             perception_transformation.translation.vector.z,
+            //         );
+            //         log::debug!("New clearance target: {}", clearance_target);
 
-            if let Some(abs_pitch) = perception_chain.abs_pitch() {
-                log::debug!(
-                    "{:<35} {:.2}°",
-                    "Abs pitch (Effector)",
-                    abs_pitch.to_degrees()
-                );
-            }
-            if let Some(abs_pitch) = perception_chain.abs_pitch_with_attachment() {
-                log::debug!(
-                    "{:<35} {:.2}°",
-                    "Abs pitch (Attachment)",
-                    abs_pitch.to_degrees()
-                );
-            }
+            //         // set_chain_from_target(&clearance_target, &mut objective_chain)?;
+            //         objective_chain.set_target(&clearance_target);
+            //     }
+            // } else {
+            //     // set_chain_from_target(&target, &mut objective_chain)?;
+            //     objective_chain.set_target(&target);
+            // }
 
-            let distance = projection_chain.distance(&perception_chain);
-            log::debug!("{:<35} {:5.2}m", "Target distance (Effector)", distance);
+            let pitch = perception_chain.effector_pitch_angle();
+            log::debug!(
+                "{:<35} {:.2}°",
+                "Abs pitch (Attachment)",
+                pitch.to_degrees()
+            );
 
-            let world_transformation = perception_chain.world_transformation() * bucket_transform;
+            let dist2 = perception_chain.translation_norm(&objective_chain);
+
+            log::debug!("{:<35} {:5.2}m", "Target distance (Attachment)", dist2);
+
+            let world_transformation = perception_chain.transformation() * bucket_transform;
 
             let groud_points = parry3d::query::closest_points(
                 &ground_transform,
@@ -497,7 +436,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             }
 
             // TODO: Send all commands at once
-            for joint_diff in perception_chain.error(&projection_chain) {
+            for joint_diff in perception_chain.rotation_error(&objective_chain) {
                 let joint = joint_diff.joint;
 
                 if joint.actuator().is_none()
@@ -517,18 +456,18 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
                 let error_angle = {
                     if joint.ty() == &glonax::robot::JointType::Continuous {
-                        glonax::core::geometry::shortest_rotation(error_angle)
+                        shortest_rotation(error_angle)
                     } else {
                         error_angle
                     }
                 };
 
                 let power = profile.power(error_angle);
-                let power = if contact_zone {
-                    power.max(-15_000).min(15_000)
-                } else {
-                    power
-                };
+                // let power = if contact_zone {
+                //     power.max(-15_000).min(15_000)
+                // } else {
+                //     power
+                // };
 
                 log::debug!(
                     " ⇒ {:<15} Error: {:5.2}rad {:7.2}°  Power: {:6} {:7.1}%",
