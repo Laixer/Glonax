@@ -57,7 +57,6 @@ cp -r ./contrib/share/* $PACKAGE_DIR/usr/local/share/glonax
 
 # Copy binaries
 cp ./target/release/glonax-csim $PACKAGE_DIR/usr/local/bin
-cp ./target/release/glonax-ecud $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-gnssd $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-input $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-netctl $PACKAGE_DIR/usr/local/bin

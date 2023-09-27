@@ -114,8 +114,12 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::warn!("Instance ID is not set or invalid");
     }
 
-    let (signal_tx, signal_rx) = tokio::sync::mpsc::channel(16);
-    let (motion_tx, mut motion_rx) = tokio::sync::mpsc::channel(16);
+    let (signal_tx, signal_rx) = tokio::sync::mpsc::channel(32);
+    let (motion_tx, mut motion_rx) = tokio::sync::mpsc::channel(32);
+
+    let telemetrics = std::sync::Arc::new(tokio::sync::RwLock::new(
+        glonax::telemetry::Telemetry::default(),
+    ));
 
     let host_sender = signal_tx.clone();
     let host_interval = config.host_interval;
@@ -336,35 +340,74 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         while let Some(signal) = session_signal_rx.recv().await {
             match signal.metric {
+                Metric::VmsUptime(uptime) => {
+                    telemetrics.write().await.uptime = Some(uptime);
+                }
                 Metric::VmsMemoryUsage((memory_used, memory_total)) => {
                     let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
+
+                    telemetrics.write().await.memory = Some(memory_usage as u64);
 
                     if memory_usage > 90.0 {
                         log::warn!("Memory usage is above 90%: {:.2}%", memory_usage);
                         status = glonax::core::Status::DegradedHighUsageMemory;
                     }
                 }
-                Metric::GnssSatellites(_) => {
+                Metric::VmsSwapUsage((swap_used, swap_total)) => {
+                    let swap_usage = (swap_used as f64 / swap_total as f64) * 100.0;
+
+                    telemetrics.write().await.swap = Some(swap_usage as u64);
+                }
+                Metric::VmsCpuLoad((cpu_load_1, cpu_load_5, cpu_load_15)) => {
+                    telemetrics.write().await.cpu_1 = Some(cpu_load_1);
+                    telemetrics.write().await.cpu_5 = Some(cpu_load_5);
+                    telemetrics.write().await.cpu_15 = Some(cpu_load_15);
+                }
+                Metric::GnssLatLong(lat_long) => {
+                    telemetrics.write().await.location = Some(lat_long);
+                }
+                Metric::GnssAltitude(altitude) => {
+                    telemetrics.write().await.altitude = Some(altitude);
+                }
+                Metric::GnssSpeed(speed) => {
+                    telemetrics.write().await.speed = Some(speed);
+                }
+                Metric::GnssHeading(heading) => {
+                    telemetrics.write().await.heading = Some(heading);
+                }
+                Metric::GnssSatellites(satellites) => {
+                    telemetrics.write().await.satellites = Some(satellites);
+
                     signal_gnss_timeout = Instant::now();
                 }
-                Metric::EncoderAbsAngle((node, _)) => match node {
+                Metric::EngineRpm(rpm) => {
+                    telemetrics.write().await.rpm = Some(rpm);
+
+                    signal_engine_timeout = Instant::now();
+                }
+                Metric::EncoderAbsAngle((node, value)) => match node {
                     0x6A => {
+                        telemetrics.write().await.encoders[0] = value;
+
                         signal_encoder_0x6a_timeout = Instant::now();
                     }
                     0x6B => {
+                        telemetrics.write().await.encoders[1] = value;
+
                         signal_encoder_0x6b_timeout = Instant::now();
                     }
                     0x6C => {
+                        telemetrics.write().await.encoders[2] = value;
+
                         signal_encoder_0x6c_timeout = Instant::now();
                     }
                     0x6D => {
+                        telemetrics.write().await.encoders[3] = value;
+
                         signal_encoder_0x6d_timeout = Instant::now();
                     }
                     _ => {}
                 },
-                Metric::EngineRpm(_) => {
-                    signal_engine_timeout = Instant::now();
-                }
                 _ => {}
             }
 
@@ -488,6 +531,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             while let Ok(frame) = client.read_frame().await {
                 match frame.message {
+                    glonax::transport::frame::FrameMessage::Request => {
+                        // TODO: Handle request
+                    }
                     glonax::transport::frame::FrameMessage::Shutdown => {
                         log::debug!("Client requested shutdown");
                         session_shutdown = true;

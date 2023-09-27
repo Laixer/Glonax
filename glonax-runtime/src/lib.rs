@@ -20,6 +20,7 @@ pub use runtime::operand::Operand;
 pub use self::config::*;
 
 pub mod geometry;
+pub mod telemetry;
 
 pub mod runtime;
 pub use self::runtime::builder::Builder as RuntimeBuilder;
