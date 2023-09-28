@@ -102,8 +102,6 @@ async fn main() -> anyhow::Result<()> {
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use tokio::net::TcpListener;
 
-    const NETWORK_DEVICE_ADDRESS: u8 = 0x9E;
-
     log::info!("Starting proxy services");
 
     log::info!("Instance ID: {}", config.instance.id);
@@ -120,6 +118,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     let telemetrics = std::sync::Arc::new(tokio::sync::RwLock::new(
         glonax::telemetry::Telemetry::default(),
     ));
+
+    let machine_state = std::sync::Arc::new(tokio::sync::RwLock::new(glonax::MachineState {
+        status: glonax::core::Status::Healthy,
+    }));
 
     let host_sender = signal_tx.clone();
     let host_interval = config.host_interval;
@@ -179,7 +181,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting ECU services");
 
-        match J1939Network::new(&ecu_interface, NETWORK_DEVICE_ADDRESS) {
+        match J1939Network::new(&ecu_interface, glonax::constants::DEFAULT_J1939_ADDRESS) {
             Ok(network) => {
                 let mut router = Router::new(network);
 
@@ -221,7 +223,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             log::debug!("Starting EMS service");
 
-            match J1939Network::new(&ecu_interface, NETWORK_DEVICE_ADDRESS) {
+            match J1939Network::new(&ecu_interface, glonax::constants::DEFAULT_J1939_ADDRESS) {
                 Ok(network) => {
                     let mut router = Router::new(network);
 
@@ -256,7 +258,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting motion listener");
 
-        match J1939Network::new(&ecu_interface, NETWORK_DEVICE_ADDRESS) {
+        match J1939Network::new(&ecu_interface, glonax::constants::DEFAULT_J1939_ADDRESS) {
             Ok(network) => {
                 let service = ActuatorService::new(0x4A);
 
@@ -312,6 +314,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     let instance_model = config.instance.model.clone();
     let instance_name = config.instance.name.clone();
 
+    let machine_state_writer = machine_state.clone();
     let mut session_signal_rx = signal_rx;
     tokio::spawn(async move {
         use glonax::core::Metric;
@@ -336,8 +339,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         let mut signal_encoder_0x6d_timeout = Instant::now();
         let mut signal_engine_timeout = Instant::now();
 
-        let mut status = glonax::core::Status::Healthy;
-
         while let Some(signal) = session_signal_rx.recv().await {
             match signal.metric {
                 Metric::VmsUptime(uptime) => {
@@ -350,7 +351,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
                     if memory_usage > 90.0 {
                         log::warn!("Memory usage is above 90%: {:.2}%", memory_usage);
-                        status = glonax::core::Status::DegradedHighUsageMemory;
+                        machine_state_writer.write().await.status =
+                            glonax::core::Status::DegradedHighUsageMemory;
                     }
                 }
                 Metric::VmsSwapUsage((swap_used, swap_total)) => {
@@ -413,32 +415,38 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             if signal_gnss_timeout.elapsed().as_secs() > 5 {
                 log::warn!("GNSS signal timeout: no update in last 5 seconds");
-                status = glonax::core::Status::DegradedTimeoutGNSS;
+                machine_state_writer.write().await.status =
+                    glonax::core::Status::DegradedTimeoutGNSS;
                 signal_gnss_timeout = Instant::now();
             }
             if signal_encoder_0x6a_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6A signal timeout: no update in last 1 second");
-                status = glonax::core::Status::DegradedTimeoutEncoder;
+                machine_state_writer.write().await.status =
+                    glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6a_timeout = Instant::now();
             }
             if signal_encoder_0x6b_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6B signal timeout: no update in last 1 second");
-                status = glonax::core::Status::DegradedTimeoutEncoder;
+                machine_state_writer.write().await.status =
+                    glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6b_timeout = Instant::now();
             }
             if signal_encoder_0x6c_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6C signal timeout: no update in last 1 second");
-                status = glonax::core::Status::DegradedTimeoutEncoder;
+                machine_state_writer.write().await.status =
+                    glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6c_timeout = Instant::now();
             }
             if signal_encoder_0x6d_timeout.elapsed().as_secs() > 1 {
                 log::warn!("Encoder 0x6D signal timeout: no update in last 1 second");
-                status = glonax::core::Status::DegradedTimeoutEncoder;
+                machine_state_writer.write().await.status =
+                    glonax::core::Status::DegradedTimeoutEncoder;
                 signal_encoder_0x6d_timeout = Instant::now();
             }
             if signal_engine_timeout.elapsed().as_secs() > 5 {
                 log::warn!("Engine signal timeout: no update in last 5 seconds");
-                status = glonax::core::Status::DegradedTimeoutEngine;
+                machine_state_writer.write().await.status =
+                    glonax::core::Status::DegradedTimeoutEngine;
                 signal_engine_timeout = Instant::now();
             }
 
@@ -470,7 +478,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
 
                 {
-                    let payload = status.to_bytes();
+                    let payload = machine_state_writer.read().await.status.to_bytes();
 
                     let mut frame = Frame::new(FrameMessage::Status, payload.len());
                     frame.put(&payload[..]);
@@ -481,7 +489,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
 
                 {
-                    status = glonax::core::Status::Healthy;
+                    machine_state_writer.write().await.status = glonax::core::Status::Healthy;
                     now = Instant::now();
                 }
             }
@@ -509,6 +517,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
         };
 
+        let machine_state_reader = machine_state.clone();
         let session_motion_tx = motion_tx.clone();
         tokio::spawn(async move {
             log::debug!("Accepted connection from: {}", addr);
@@ -532,7 +541,14 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             while let Ok(frame) = client.read_frame().await {
                 match frame.message {
                     glonax::transport::frame::FrameMessage::Request => {
-                        // TODO: Handle request
+                        let request = client.request(frame.payload_length).await.unwrap();
+                        match request.message() {
+                            glonax::transport::frame::FrameMessage::Status => {
+                                let status = &machine_state_reader.read().await.status;
+                                client.send_status(status).await.unwrap();
+                            }
+                            _ => todo!(),
+                        }
                     }
                     glonax::transport::frame::FrameMessage::Shutdown => {
                         log::debug!("Client requested shutdown");

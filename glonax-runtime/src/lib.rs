@@ -27,6 +27,10 @@ pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::Error;
 pub use self::runtime::RuntimeContext;
 
+pub struct MachineState {
+    pub status: core::Status,
+}
+
 // TODO: Rename to consts
 pub mod constants {
     /// Glonax runtime version.
