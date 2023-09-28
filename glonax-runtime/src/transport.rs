@@ -1,6 +1,6 @@
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::core::{Instance, Motion, Signal};
+use crate::core::{Instance, Motion, Signal, Status};
 
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x02;
@@ -191,6 +191,30 @@ pub mod frame {
             buf.to_vec()
         }
     }
+
+    pub struct Request {
+        message: FrameMessage,
+    }
+
+    impl Request {
+        pub fn new(message: FrameMessage) -> Self {
+            Self { message }
+        }
+
+        #[inline]
+        pub fn message(&self) -> &FrameMessage {
+            &self.message
+        }
+
+        // TODO: Write name length to buffer
+        pub fn to_bytes(&self) -> Vec<u8> {
+            let mut buf = BytesMut::with_capacity(1);
+
+            buf.put_u8(self.message.to_u8());
+
+            buf.to_vec()
+        }
+    }
 }
 
 pub struct ConnectionOptions {
@@ -311,10 +335,20 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         self.inner.write_all(frame.as_ref()).await
     }
 
+    // TODO: Pass ref
     pub async fn send_instance(&mut self, instance: Instance) -> std::io::Result<()> {
         let payload = instance.to_bytes();
 
         let mut frame = frame::Frame::new(frame::FrameMessage::Instance, payload.len());
+        frame.put(&payload[..]);
+
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    pub async fn send_status(&mut self, status: &Status) -> std::io::Result<()> {
+        let payload = status.to_bytes();
+
+        let mut frame = frame::Frame::new(frame::FrameMessage::Status, payload.len());
         frame.put(&payload[..]);
 
         self.inner.write_all(frame.as_ref()).await
@@ -326,6 +360,16 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         self.inner.write_all(frame.as_ref()).await
     }
 
+    pub async fn send_request_status(&mut self) -> std::io::Result<()> {
+        let payload = frame::Request::new(frame::FrameMessage::Status).to_bytes();
+
+        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
+        frame.put(&payload[..]);
+
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    // TODO: Pass ref
     pub async fn send_motion(&mut self, motion: Motion) -> std::io::Result<()> {
         let payload = motion.to_bytes();
 
@@ -335,6 +379,7 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         self.inner.write_all(frame.as_ref()).await
     }
 
+    // TODO: Pass ref
     pub async fn send_signal(&mut self, signal: Signal) -> std::io::Result<()> {
         let payload = signal.to_bytes();
 
@@ -352,6 +397,27 @@ impl<T: AsyncRead + Unpin> Client<T> {
         self.inner.read_exact(&mut header_buffer).await?;
 
         Ok(frame::Frame::try_from(&header_buffer[..]).unwrap())
+    }
+
+    pub async fn request(&mut self, size: usize) -> std::io::Result<frame::Request> {
+        let payload_buffer = &mut vec![0u8; size];
+
+        self.inner.read_exact(payload_buffer).await?;
+
+        let message = frame::FrameMessage::from_u8(payload_buffer[0]);
+        if message.is_none() {
+            log::warn!("Invalid message type {}", payload_buffer[0]);
+        }
+
+        return Ok(frame::Request::new(message.unwrap()));
+    }
+
+    pub async fn status(&mut self, size: usize) -> std::io::Result<Status> {
+        let payload_buffer = &mut vec![0u8; size];
+
+        self.inner.read_exact(payload_buffer).await?;
+
+        Ok(Status::try_from(&payload_buffer[..]).unwrap())
     }
 
     pub async fn signal(&mut self, size: usize) -> std::io::Result<Signal> {
@@ -388,6 +454,16 @@ impl<T: AsyncRead + Unpin> Client<T> {
                 }
 
                 return Ok(frame::Start::new(flags, session_name));
+            }
+        }
+    }
+
+    pub async fn recv_status(&mut self) -> std::io::Result<Status> {
+        loop {
+            let frame = self.read_frame().await?;
+
+            if frame.message == frame::FrameMessage::Status {
+                return self.status(frame.payload_length).await;
             }
         }
     }
