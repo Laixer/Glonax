@@ -335,8 +335,7 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         self.inner.write_all(frame.as_ref()).await
     }
 
-    // TODO: Pass ref
-    pub async fn send_instance(&mut self, instance: Instance) -> std::io::Result<()> {
+    pub async fn send_instance(&mut self, instance: &Instance) -> std::io::Result<()> {
         let payload = instance.to_bytes();
 
         let mut frame = frame::Frame::new(frame::FrameMessage::Instance, payload.len());
@@ -356,6 +355,15 @@ impl<T: AsyncWrite + Unpin> Client<T> {
 
     pub async fn shutdown(&mut self) -> std::io::Result<()> {
         let frame = frame::Frame::new(frame::FrameMessage::Shutdown, 0);
+
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    pub async fn send_request_instance(&mut self) -> std::io::Result<()> {
+        let payload = frame::Request::new(frame::FrameMessage::Instance).to_bytes();
+
+        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
+        frame.put(&payload[..]);
 
         self.inner.write_all(frame.as_ref()).await
     }
@@ -418,6 +426,14 @@ impl<T: AsyncRead + Unpin> Client<T> {
         self.inner.read_exact(payload_buffer).await?;
 
         Ok(Status::try_from(&payload_buffer[..]).unwrap())
+    }
+
+    pub async fn instance(&mut self, size: usize) -> std::io::Result<Instance> {
+        let payload_buffer = &mut vec![0u8; size];
+
+        self.inner.read_exact(payload_buffer).await?;
+
+        Ok(Instance::try_from(&payload_buffer[..]).unwrap())
     }
 
     pub async fn signal(&mut self, size: usize) -> std::io::Result<Signal> {

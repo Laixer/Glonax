@@ -461,6 +461,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
 
             if now.elapsed().as_millis() > 1_000 {
+                // TODO: Remove
                 {
                     let instance = glonax::core::Instance::new(
                         instance_id.clone(),
@@ -477,16 +478,17 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                     }
                 }
 
-                {
-                    let payload = machine_state_writer.read().await.status.to_bytes();
+                // TODO: Remove
+                // {
+                //     let payload = machine_state_writer.read().await.status.to_bytes();
 
-                    let mut frame = Frame::new(FrameMessage::Status, payload.len());
-                    frame.put(&payload[..]);
+                //     let mut frame = Frame::new(FrameMessage::Status, payload.len());
+                //     frame.put(&payload[..]);
 
-                    if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-                        log::error!("Failed to send signal: {}", e);
-                    }
-                }
+                //     if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+                //         log::error!("Failed to send signal: {}", e);
+                //     }
+                // }
 
                 {
                     machine_state_writer.write().await.status = glonax::core::Status::Healthy;
@@ -517,6 +519,10 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
         };
 
+        let instance_id = config.instance.id.clone();
+        let instance_model = config.instance.model.clone();
+        let instance_name = config.instance.name.clone();
+
         let machine_state_reader = machine_state.clone();
         let session_motion_tx = motion_tx.clone();
         tokio::spawn(async move {
@@ -546,6 +552,14 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                             glonax::transport::frame::FrameMessage::Status => {
                                 let status = &machine_state_reader.read().await.status;
                                 client.send_status(status).await.unwrap();
+                            }
+                            glonax::transport::frame::FrameMessage::Instance => {
+                                let instance = glonax::core::Instance::new(
+                                    instance_id.clone(),
+                                    instance_model.clone(),
+                                    instance_name.clone(),
+                                );
+                                client.send_instance(&instance).await.unwrap();
                             }
                             _ => todo!(),
                         }
