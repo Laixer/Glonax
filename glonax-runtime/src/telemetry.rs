@@ -7,12 +7,10 @@ pub struct Telemetry {
     pub satellites: Option<u8>,
     pub memory: Option<u64>,
     pub swap: Option<u64>,
-    pub cpu_1: Option<f64>,
-    pub cpu_5: Option<f64>,
-    pub cpu_15: Option<f64>,
+    pub cpu_load: Option<(f64, f64, f64)>,
     pub uptime: Option<u64>,
     pub rpm: Option<u16>,
-    pub encoders: [f32; 4],
+    pub encoders: std::collections::HashMap<u8, i16>,
 }
 
 impl Telemetry {
@@ -25,12 +23,10 @@ impl Telemetry {
             satellites: None,
             memory: None,
             swap: None,
-            cpu_1: None,
-            cpu_5: None,
-            cpu_15: None,
+            cpu_load: None,
             uptime: None,
             rpm: None,
-            encoders: [0.0; 4],
+            encoders: std::collections::HashMap::new(),
         }
     }
 }
@@ -57,15 +53,9 @@ impl std::fmt::Display for Telemetry {
             s.push_str(&format!(" Swap: {}%", swap));
         }
 
-        if let Some(cpu_1) = self.cpu_1 {
+        if let Some((cpu_1, cpu_5, cpu_15)) = self.cpu_load {
             s.push_str(&format!(" CPU 1: {}%", cpu_1));
-        }
-
-        if let Some(cpu_5) = self.cpu_5 {
             s.push_str(&format!(" CPU 5: {}%", cpu_5));
-        }
-
-        if let Some(cpu_15) = self.cpu_15 {
             s.push_str(&format!(" CPU 15: {}%", cpu_15));
         }
 

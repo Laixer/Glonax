@@ -361,9 +361,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                     telemetrics.write().await.swap = Some(swap_usage as u64);
                 }
                 Metric::VmsCpuLoad((cpu_load_1, cpu_load_5, cpu_load_15)) => {
-                    telemetrics.write().await.cpu_1 = Some(cpu_load_1);
-                    telemetrics.write().await.cpu_5 = Some(cpu_load_5);
-                    telemetrics.write().await.cpu_15 = Some(cpu_load_15);
+                    telemetrics.write().await.cpu_load =
+                        Some((cpu_load_1, cpu_load_5, cpu_load_15));
                 }
                 Metric::GnssLatLong(lat_long) => {
                     telemetrics.write().await.location = Some(lat_long);
@@ -389,22 +388,38 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
                 Metric::EncoderAbsAngle((node, value)) => match node {
                     0x6A => {
-                        telemetrics.write().await.encoders[0] = value;
+                        telemetrics
+                            .write()
+                            .await
+                            .encoders
+                            .insert(0x6A, value as i16);
 
                         signal_encoder_0x6a_timeout = Instant::now();
                     }
                     0x6B => {
-                        telemetrics.write().await.encoders[1] = value;
+                        telemetrics
+                            .write()
+                            .await
+                            .encoders
+                            .insert(0x6B, value as i16);
 
                         signal_encoder_0x6b_timeout = Instant::now();
                     }
                     0x6C => {
-                        telemetrics.write().await.encoders[2] = value;
+                        telemetrics
+                            .write()
+                            .await
+                            .encoders
+                            .insert(0x6C, value as i16);
 
                         signal_encoder_0x6c_timeout = Instant::now();
                     }
                     0x6D => {
-                        telemetrics.write().await.encoders[3] = value;
+                        telemetrics
+                            .write()
+                            .await
+                            .encoders
+                            .insert(0x6D, value as i16);
 
                         signal_encoder_0x6d_timeout = Instant::now();
                     }
@@ -477,18 +492,6 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                         log::error!("Failed to send signal: {}", e);
                     }
                 }
-
-                // TODO: Remove
-                // {
-                //     let payload = machine_state_writer.read().await.status.to_bytes();
-
-                //     let mut frame = Frame::new(FrameMessage::Status, payload.len());
-                //     frame.put(&payload[..]);
-
-                //     if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-                //         log::error!("Failed to send signal: {}", e);
-                //     }
-                // }
 
                 {
                     machine_state_writer.write().await.status = glonax::core::Status::Healthy;
