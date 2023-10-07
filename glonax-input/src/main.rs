@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
         Some(mut address) => {
             if !address.contains(':') {
                 address.push_str(":");
-                address.push_str(&glonax::constants::DEFAULT_NETWORK_PORT.to_string());
+                address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
             }
 
             Ok(std::net::ToSocketAddrs::to_socket_addrs(&address)?

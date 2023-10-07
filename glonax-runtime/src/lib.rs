@@ -32,7 +32,7 @@ pub struct MachineState {
 }
 
 // TODO: Rename to consts
-pub mod constants {
+pub mod consts {
     /// Glonax runtime version.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");
     /// Glonax runtime major version.

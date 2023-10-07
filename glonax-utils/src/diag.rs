@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Scan => {
             let broadcast_addr = std::net::SocketAddrV4::new(
                 std::net::Ipv4Addr::UNSPECIFIED,
-                glonax::constants::DEFAULT_NETWORK_PORT,
+                glonax::consts::DEFAULT_NETWORK_PORT,
             );
 
             let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
@@ -82,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Dump => {
             let broadcast_addr = std::net::SocketAddrV4::new(
                 std::net::Ipv4Addr::UNSPECIFIED,
-                glonax::constants::DEFAULT_NETWORK_PORT,
+                glonax::consts::DEFAULT_NETWORK_PORT,
             );
 
             let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;

@@ -181,7 +181,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting ECU services");
 
-        match J1939Network::new(&ecu_interface, glonax::constants::DEFAULT_J1939_ADDRESS) {
+        match J1939Network::new(&ecu_interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
             Ok(network) => {
                 let mut router = Router::new(network);
 
@@ -223,7 +223,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
             log::debug!("Starting EMS service");
 
-            match J1939Network::new(&ecu_interface, glonax::constants::DEFAULT_J1939_ADDRESS) {
+            match J1939Network::new(&ecu_interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
                 Ok(network) => {
                     let mut router = Router::new(network);
 
@@ -258,7 +258,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         log::debug!("Starting motion listener");
 
-        match J1939Network::new(&ecu_interface, glonax::constants::DEFAULT_J1939_ADDRESS) {
+        match J1939Network::new(&ecu_interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
             Ok(network) => {
                 let service = ActuatorService::new(0x4A);
 
@@ -329,7 +329,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
         let broadcast_addr = std::net::SocketAddrV4::new(
             std::net::Ipv4Addr::BROADCAST,
-            glonax::constants::DEFAULT_NETWORK_PORT,
+            glonax::consts::DEFAULT_NETWORK_PORT,
         );
 
         let mut signal_gnss_timeout = Instant::now();

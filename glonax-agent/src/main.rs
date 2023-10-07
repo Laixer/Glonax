@@ -178,9 +178,9 @@ async fn daemonize(config: &config::AgentConfig) -> anyhow::Result<()> {
     let telemetrics = Arc::new(RwLock::new(Telemetry {
         version: format!(
             "{}{}{}",
-            glonax::constants::VERSION_MAJOR,
-            glonax::constants::VERSION_MINOR,
-            glonax::constants::VERSION_PATCH
+            glonax::consts::VERSION_MAJOR,
+            glonax::consts::VERSION_MINOR,
+            glonax::consts::VERSION_PATCH
         ),
         status: None,
         name: config.instance.name.clone(),

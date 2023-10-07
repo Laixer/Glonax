@@ -1,7 +1,7 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 
 use crate::{
-    constants,
+    consts,
     core::Instance,
     transport::frame::{Frame, FrameMessage},
     transport::Client,
@@ -20,7 +20,7 @@ pub fn broadcast_bind() -> std::io::Result<tokio::net::UdpSocket> {
     socket.set_reuse_port(true)?;
     socket.bind(&socket2::SockAddr::from(SocketAddrV4::new(
         Ipv4Addr::UNSPECIFIED,
-        constants::DEFAULT_NETWORK_PORT,
+        consts::DEFAULT_NETWORK_PORT,
     )))?;
 
     tokio::net::UdpSocket::from_std(socket.into())
@@ -51,7 +51,7 @@ pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {
 
                 return Ok((
                     instance,
-                    SocketAddr::new(socket_addr.ip(), constants::DEFAULT_NETWORK_PORT),
+                    SocketAddr::new(socket_addr.ip(), consts::DEFAULT_NETWORK_PORT),
                 ));
             }
         }
@@ -59,7 +59,7 @@ pub async fn recv_instance() -> std::io::Result<(Instance, SocketAddr)> {
 }
 
 pub async fn signal_open_write() -> std::io::Result<Client<tokio::fs::File>> {
-    use constants::FIFO_SIGNAL_FILE;
+    use consts::FIFO_SIGNAL_FILE;
 
     log::debug!("Waiting for FIFO connection: {}", FIFO_SIGNAL_FILE);
 
