@@ -31,7 +31,6 @@ pub struct MachineState {
     pub status: core::Status,
 }
 
-// TODO: Rename to consts
 pub mod consts {
     /// Glonax runtime version.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -49,4 +48,8 @@ pub mod consts {
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
     /// Signal FIFO file located in the working directory.
     pub const FIFO_SIGNAL_FILE: &str = "signal";
+    /// Glonax default queue size for signals.
+    pub const QUEUE_SIZE_SIGNAL: usize = 32;
+    /// Glonax default queue size for motion commands.
+    pub const QUEUE_SIZE_MOTION: usize = 32;
 }

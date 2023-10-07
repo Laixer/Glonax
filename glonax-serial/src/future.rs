@@ -24,10 +24,8 @@ impl Uart {
     /// * `InvalidInput` if `port` is not a valid device name.
     /// * `Io` for any other error while opening or initializing the device.
     pub fn open(path: &std::path::Path, baud_rate: BaudRate) -> super::Result<Self> {
-        crate::builder::Builder::new(path)
-            .unwrap()
-            .set_baud_rate(baud_rate)
-            .unwrap()
+        crate::builder::Builder::new(path)?
+            .set_baud_rate(baud_rate)?
             .set_parity(Parity::ParityNone)
             .set_stop_bits(StopBits::Stop1)
             .set_flow_control(FlowControl::FlowNone)

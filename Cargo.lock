@@ -686,6 +686,7 @@ dependencies = [
  "bytes 1.5.0",
  "clap",
  "glonax",
+ "glonax-serial",
  "log",
  "simplelog",
  "tokio 1.32.0",
