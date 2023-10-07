@@ -99,6 +99,11 @@ async fn main() -> anyhow::Result<()> {
     daemonize(&config).await
 }
 
+pub type SignalSender = tokio::sync::mpsc::Sender<glonax::core::Signal>;
+pub type SignalReceiver = tokio::sync::mpsc::Receiver<glonax::core::Signal>;
+pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
+pub type MotionReceiver = tokio::sync::mpsc::Receiver<glonax::core::Motion>;
+
 async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use tokio::net::TcpListener;
 
@@ -315,7 +320,8 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     let instance_name = config.instance.name.clone();
 
     let machine_state_writer = machine_state.clone();
-    let mut session_signal_rx = signal_rx;
+    let mut local_receiver = signal_rx;
+    let local_config = config.clone();
     tokio::spawn(async move {
         use glonax::core::Metric;
         use glonax::transport::frame::{Frame, FrameMessage};
@@ -339,7 +345,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         let mut signal_encoder_0x6d_timeout = Instant::now();
         let mut signal_engine_timeout = Instant::now();
 
-        while let Some(signal) = session_signal_rx.recv().await {
+        while let Some(signal) = local_receiver.recv().await {
             match signal.metric {
                 Metric::VmsUptime(uptime) => {
                     telemetrics.write().await.uptime = Some(uptime);
@@ -479,9 +485,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 // TODO: Remove
                 {
                     let instance = glonax::core::Instance::new(
-                        instance_id.clone(),
-                        instance_model.clone(),
-                        instance_name.clone(),
+                        local_config.instance.id.clone(),
+                        local_config.instance.model.clone(),
+                        local_config.instance.name.clone(),
                     );
                     let payload = instance.to_bytes();
 
@@ -505,13 +511,16 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
 
     motion_tx.send(glonax::core::Motion::ResetAll).await?;
 
-    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
+    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
+        glonax::consts::NETWORK_MAX_CLIENTS,
+    ));
 
     log::debug!("Waiting for connection to {}", config.address);
-
     let listener = TcpListener::bind(config.address.clone()).await?;
 
     loop {
+        use glonax::transport::frame::FrameMessage;
+
         let (stream, addr) = listener.accept().await?;
 
         let permit = match semaphore.clone().try_acquire_owned() {
@@ -522,12 +531,9 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
             }
         };
 
-        let instance_id = config.instance.id.clone();
-        let instance_model = config.instance.model.clone();
-        let instance_name = config.instance.name.clone();
-
         let machine_state_reader = machine_state.clone();
         let session_motion_tx = motion_tx.clone();
+        let local_config = config.clone();
         tokio::spawn(async move {
             log::debug!("Accepted connection from: {}", addr);
 
@@ -540,40 +546,37 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 .await
                 .expect("Failed to receive start message");
 
-            let session_name = start.name().to_string();
-            let session_write = start.is_write();
-            let session_failsafe = start.is_failsafe();
             let mut session_shutdown = false;
 
-            log::info!("Session started for: {}", session_name);
+            log::info!("Session started for: {}", start.name());
 
             while let Ok(frame) = client.read_frame().await {
                 match frame.message {
-                    glonax::transport::frame::FrameMessage::Request => {
+                    FrameMessage::Request => {
                         let request = client.request(frame.payload_length).await.unwrap();
                         match request.message() {
-                            glonax::transport::frame::FrameMessage::Status => {
+                            FrameMessage::Status => {
                                 let status = &machine_state_reader.read().await.status;
                                 client.send_status(status).await.unwrap();
                             }
-                            glonax::transport::frame::FrameMessage::Instance => {
+                            FrameMessage::Instance => {
                                 let instance = glonax::core::Instance::new(
-                                    instance_id.clone(),
-                                    instance_model.clone(),
-                                    instance_name.clone(),
+                                    local_config.instance.id.clone(),
+                                    local_config.instance.model.clone(),
+                                    local_config.instance.name.clone(),
                                 );
                                 client.send_instance(&instance).await.unwrap();
                             }
                             _ => todo!(),
                         }
                     }
-                    glonax::transport::frame::FrameMessage::Shutdown => {
+                    FrameMessage::Shutdown => {
                         log::debug!("Client requested shutdown");
                         session_shutdown = true;
                         break;
                     }
-                    glonax::transport::frame::FrameMessage::Motion => {
-                        if session_write {
+                    FrameMessage::Motion => {
+                        if start.is_write() {
                             let motion = client.motion(frame.payload_length).await.unwrap();
 
                             if let Err(e) = session_motion_tx.send(motion).await {
@@ -586,15 +589,15 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
                 }
             }
 
-            if !session_shutdown && session_write && session_failsafe {
-                log::warn!("Enacting failsafe for: {}", session_name);
+            if !session_shutdown && start.is_write() && start.is_failsafe() {
+                log::warn!("Enacting failsafe for: {}", start.name());
 
                 if let Err(e) = session_motion_tx.send(glonax::core::Motion::StopAll).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
 
-            log::info!("Session shutdown for: {}", session_name);
+            log::info!("Session shutdown for: {}", start.name());
 
             drop(permit);
         });

@@ -28,7 +28,10 @@ pub use self::runtime::Error;
 pub use self::runtime::RuntimeContext;
 
 pub struct MachineState {
+    /// Current machine state.
     pub status: core::Status,
+    /// Connected clients.
+    pub client_list: Vec<i32>,
 }
 
 pub mod consts {
@@ -52,4 +55,6 @@ pub mod consts {
     pub const QUEUE_SIZE_SIGNAL: usize = 32;
     /// Glonax default queue size for motion commands.
     pub const QUEUE_SIZE_MOTION: usize = 32;
+    /// Glonax network maximum number of clients.
+    pub const NETWORK_MAX_CLIENTS: usize = 16;
 }

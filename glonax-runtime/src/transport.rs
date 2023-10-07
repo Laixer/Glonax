@@ -145,6 +145,7 @@ pub mod frame {
         }
     }
 
+    // TODO: maybe this should be a session?
     pub struct Start {
         flags: u8,
         name: String,
