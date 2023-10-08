@@ -17,7 +17,7 @@ mod input;
 struct Args {
     /// Remote network address.
     #[arg(short = 'c', long = "connect")]
-    address: Option<String>,
+    address: String,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String,
@@ -39,21 +39,16 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let address = match args.address {
-        Some(mut address) => {
-            if !address.contains(':') {
-                address.push_str(":");
-                address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
-            }
+    let mut address = args.address.clone();
 
-            Ok(std::net::ToSocketAddrs::to_socket_addrs(&address)?
-                .next()
-                .unwrap())
-        }
-        None => glonax::channel::recv_instance()
-            .await
-            .map(|(_, address)| address),
-    }?;
+    if !address.contains(':') {
+        address.push_str(":");
+        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
+    }
+
+    let address = std::net::ToSocketAddrs::to_socket_addrs(&address)?
+        .next()
+        .unwrap();
 
     let mut config = config::InputConfig {
         address,
