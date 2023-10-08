@@ -141,7 +141,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         .await?;
 
     runtime.spawn_signal_service(component::service_host);
-    runtime.spawn_signal_service(component::service_fifo);
+    // runtime.spawn_signal_service(component::service_fifo);
     runtime.spawn_signal_service(component::service_gnss);
     runtime.spawn_signal_service(component::service_net_encoder);
     runtime.spawn_signal_service(component::service_net_ems);

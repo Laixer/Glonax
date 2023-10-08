@@ -74,19 +74,22 @@ pub mod frame {
 
     impl Frame {
         pub fn new(message: FrameMessage, payload_length: usize) -> Self {
+            let mut buffer = BytesMut::with_capacity(MIN_BUFFER_SIZE + payload_length);
+
+            buffer.put(&PROTO_HEADER[..]);
+            buffer.put_u8(PROTO_VERSION);
+            buffer.put_u8(message.to_u8());
+            buffer.put_u16(payload_length as u16);
+            buffer.put(&[0u8; 3][..]);
+
             Self {
-                buffer: BytesMut::with_capacity(MIN_BUFFER_SIZE + payload_length),
+                buffer,
                 message,
                 payload_length,
             }
         }
 
         pub fn put(&mut self, payload: &[u8]) {
-            self.buffer.put(&PROTO_HEADER[..]);
-            self.buffer.put_u8(PROTO_VERSION);
-            self.buffer.put_u8(self.message.to_u8());
-            self.buffer.put_u16(self.payload_length as u16);
-            self.buffer.put(&[0u8; 3][..]);
             self.buffer.put(&payload[..]);
         }
 
@@ -354,8 +357,26 @@ impl<T: AsyncWrite + Unpin> Client<T> {
         self.inner.write_all(frame.as_ref()).await
     }
 
+    pub async fn send_null(&mut self) -> std::io::Result<()> {
+        let frame = frame::Frame::new(frame::FrameMessage::Null, 0);
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    // TODO: Should this be send_shutdown?
     pub async fn shutdown(&mut self) -> std::io::Result<()> {
         let frame = frame::Frame::new(frame::FrameMessage::Shutdown, 0);
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    //
+    // Sending rquests
+    //
+
+    pub async fn send_request_null(&mut self) -> std::io::Result<()> {
+        let payload = frame::Request::new(frame::FrameMessage::Null).to_bytes();
+
+        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
+        frame.put(&payload[..]);
 
         self.inner.write_all(frame.as_ref()).await
     }
@@ -371,6 +392,24 @@ impl<T: AsyncWrite + Unpin> Client<T> {
 
     pub async fn send_request_status(&mut self) -> std::io::Result<()> {
         let payload = frame::Request::new(frame::FrameMessage::Status).to_bytes();
+
+        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
+        frame.put(&payload[..]);
+
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    pub async fn send_request_motion(&mut self) -> std::io::Result<()> {
+        let payload = frame::Request::new(frame::FrameMessage::Motion).to_bytes();
+
+        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
+        frame.put(&payload[..]);
+
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    pub async fn send_request_signal(&mut self) -> std::io::Result<()> {
+        let payload = frame::Request::new(frame::FrameMessage::Signal).to_bytes();
 
         let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
         frame.put(&payload[..]);

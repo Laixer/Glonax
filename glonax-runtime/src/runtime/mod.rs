@@ -58,16 +58,15 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
         });
     }
 
+    /// Spawn a signal service in the background.
     pub fn spawn_signal_service<Fut>(&self, service: impl FnOnce(Cnf, SignalSender) -> Fut)
     where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        let local_config = self.config.clone();
-        let local_sender = self.signal_tx.clone();
-
-        tokio::spawn(service(local_config, local_sender));
+        tokio::spawn(service(self.config.clone(), self.signal_tx.clone()));
     }
 
+    /// Run a motion service.
     pub async fn run_motion_service<Fut>(
         &self,
         machine_state: &SharedMachineState,
@@ -80,25 +79,24 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        let local_config = self.config.clone();
-        let local_machine_state = machine_state.clone();
-        let local_sender = self.motion_tx.clone();
-
-        let shutdown = self.shutdown_signal();
-
-        service(local_config, local_machine_state, local_sender, shutdown).await;
+        service(
+            self.config.clone(),
+            machine_state.clone(),
+            self.motion_tx.clone(),
+            self.shutdown_signal(),
+        )
+        .await;
     }
 
+    /// Spawn a motion sink in the background.
     pub fn spawn_motion_sink<Fut>(&mut self, service: impl FnOnce(Cnf, MotionReceiver) -> Fut)
     where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        let local_config = self.config.clone();
-        let local_receiver = self.motion_rx.take().unwrap();
-
-        tokio::spawn(service(local_config, local_receiver));
+        tokio::spawn(service(self.config.clone(), self.motion_rx.take().unwrap()));
     }
 
+    /// Spawn a middleware service in the background.
     pub fn spawn_middleware_service<Fut>(
         &self,
         machine_state: &SharedMachineState,
@@ -106,12 +104,10 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        let local_config = self.config.clone();
-        let local_machine_state = machine_state.clone();
-
-        tokio::spawn(service(local_config, local_machine_state));
+        tokio::spawn(service(self.config.clone(), machine_state.clone()));
     }
 
+    /// Spawn a middleware signal sink in the background.
     pub fn spawn_middleware_signal_sink<Conf, Fut>(
         &mut self,
         config: &Conf,
@@ -121,11 +117,11 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
         Fut: std::future::Future<Output = ()> + Send + 'static,
         Conf: crate::Configurable,
     {
-        let local_config = config.clone();
-        let local_machine_state = machine_state.clone();
-        let local_receiver = self.signal_rx.take().unwrap();
-
-        tokio::spawn(service(local_config, local_machine_state, local_receiver));
+        tokio::spawn(service(
+            config.clone(),
+            machine_state.clone(),
+            self.signal_rx.take().unwrap(),
+        ));
     }
 
     /// Wait for the runtime to shutdown.

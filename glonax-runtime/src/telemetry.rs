@@ -10,7 +10,7 @@ pub struct Telemetry {
     pub cpu_load: Option<(f64, f64, f64)>,
     pub uptime: Option<u64>,
     pub rpm: Option<u16>,
-    pub encoders: std::collections::HashMap<u8, i16>,
+    pub encoders: std::collections::HashMap<u8, f32>,
 }
 
 impl Telemetry {

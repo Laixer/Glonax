@@ -30,6 +30,7 @@ pub(super) async fn service_host(local_config: ProxyConfig, local_sender: Signal
     }
 }
 
+// TODO: Remove
 pub(super) async fn service_fifo(_local_config: ProxyConfig, local_sender: SignalSender) {
     log::debug!("Starting FIFO service");
 
@@ -204,10 +205,7 @@ pub(super) async fn sink_proxy(
     );
 
     let mut signal_gnss_timeout = Instant::now();
-    let mut signal_encoder_0x6a_timeout = Instant::now();
-    let mut signal_encoder_0x6b_timeout = Instant::now();
-    let mut signal_encoder_0x6c_timeout = Instant::now();
-    let mut signal_encoder_0x6d_timeout = Instant::now();
+    let mut signal_encoder_timeout = Instant::now();
     let mut signal_engine_timeout = Instant::now();
 
     while let Some(signal) = signal_rx.recv().await {
@@ -257,49 +255,16 @@ pub(super) async fn sink_proxy(
 
                 signal_engine_timeout = Instant::now();
             }
-            Metric::EncoderAbsAngle((node, value)) => match node {
-                0x6A => {
-                    local_machine_state
-                        .write()
-                        .await
-                        .data
-                        .encoders
-                        .insert(0x6A, value as i16);
+            Metric::EncoderAbsAngle((node, value)) => {
+                local_machine_state
+                    .write()
+                    .await
+                    .data
+                    .encoders
+                    .insert(node, value);
 
-                    signal_encoder_0x6a_timeout = Instant::now();
-                }
-                0x6B => {
-                    local_machine_state
-                        .write()
-                        .await
-                        .data
-                        .encoders
-                        .insert(0x6B, value as i16);
-
-                    signal_encoder_0x6b_timeout = Instant::now();
-                }
-                0x6C => {
-                    local_machine_state
-                        .write()
-                        .await
-                        .data
-                        .encoders
-                        .insert(0x6C, value as i16);
-
-                    signal_encoder_0x6c_timeout = Instant::now();
-                }
-                0x6D => {
-                    local_machine_state
-                        .write()
-                        .await
-                        .data
-                        .encoders
-                        .insert(0x6D, value as i16);
-
-                    signal_encoder_0x6d_timeout = Instant::now();
-                }
-                _ => {}
-            },
+                signal_encoder_timeout = Instant::now();
+            }
             _ => {}
         }
 
@@ -308,25 +273,10 @@ pub(super) async fn sink_proxy(
             local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutGNSS;
             signal_gnss_timeout = Instant::now();
         }
-        if signal_encoder_0x6a_timeout.elapsed().as_secs() > 1 {
+        if signal_encoder_timeout.elapsed().as_secs() > 1 {
             log::warn!("Encoder 0x6A signal timeout: no update in last 1 second");
             local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-            signal_encoder_0x6a_timeout = Instant::now();
-        }
-        if signal_encoder_0x6b_timeout.elapsed().as_secs() > 1 {
-            log::warn!("Encoder 0x6B signal timeout: no update in last 1 second");
-            local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-            signal_encoder_0x6b_timeout = Instant::now();
-        }
-        if signal_encoder_0x6c_timeout.elapsed().as_secs() > 1 {
-            log::warn!("Encoder 0x6C signal timeout: no update in last 1 second");
-            local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-            signal_encoder_0x6c_timeout = Instant::now();
-        }
-        if signal_encoder_0x6d_timeout.elapsed().as_secs() > 1 {
-            log::warn!("Encoder 0x6D signal timeout: no update in last 1 second");
-            local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-            signal_encoder_0x6d_timeout = Instant::now();
+            signal_encoder_timeout = Instant::now();
         }
         if signal_engine_timeout.elapsed().as_secs() > 5 {
             log::warn!("Engine signal timeout: no update in last 5 seconds");
@@ -372,13 +322,15 @@ pub(super) async fn sink_proxy(
     log::debug!("Signal broadcast shutdown");
 }
 
+const _REMOTE_PROBE_HOST: &str = "https://cymbion-oybqn.ondigitalocean.app";
+
 pub(super) async fn service_remote_probe(
-    _local_config: ProxyConfig,
+    local_config: ProxyConfig,
     local_machine_state: SharedMachineState,
 ) {
     log::debug!("Starting host service");
 
-    // let url = reqwest::Url::parse(HOST).unwrap();
+    // let url = reqwest::Url::parse(REMOTE_PROBE_HOST).unwrap();
 
     // let client = reqwest::Client::builder()
     //     .user_agent("glonax-agent/0.1.0")
@@ -392,7 +344,7 @@ pub(super) async fn service_remote_probe(
     //     .unwrap();
 
     loop {
-        tokio::time::sleep(std::time::Duration::from_secs(14)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(local_config.probe_interval)).await;
 
         // if config.probe {
         //     let data = telemetrics.read().await;
@@ -535,6 +487,9 @@ pub(super) async fn service_remote_server(
                     FrameMessage::Request => {
                         let request = client.request(frame.payload_length).await.unwrap();
                         match request.message() {
+                            FrameMessage::Null => {
+                                client.send_null().await.unwrap();
+                            }
                             FrameMessage::Status => {
                                 let status = &local_machine_state.read().await.status;
                                 client.send_status(status).await.unwrap();
