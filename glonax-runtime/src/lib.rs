@@ -30,8 +30,27 @@ pub use self::runtime::RuntimeContext;
 pub struct MachineState {
     /// Current machine state.
     pub status: core::Status,
+    /// Glonax instance.
+    pub instance: core::Instance,
+    /// Telemetry data.
+    pub data: telemetry::Telemetry,
     /// Connected clients.
     pub client_list: Vec<i32>,
+}
+
+impl MachineState {
+    pub fn new() -> Self {
+        Self {
+            status: core::Status::Healthy,
+            instance: core::Instance {
+                id: "".to_string(), // TODO: Generate UUID
+                model: "".to_string(),
+                name: "".to_string(),
+            },
+            data: telemetry::Telemetry::default(),
+            client_list: vec![],
+        }
+    }
 }
 
 pub mod consts {
