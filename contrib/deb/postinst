@@ -97,6 +97,5 @@ if [ -d /run/systemd/system ]; then
 
   enable_glonax_service glonax-proxy.service
   enable_glonax_service glonax-agent.service
-  enable_glonax_service glonax-gnss.service
   enable_glonax_service glonax-ecu.service
 fi

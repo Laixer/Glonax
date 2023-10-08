@@ -32,6 +32,12 @@ struct Args {
     /// Serial baud rate.
     #[arg(long, default_value_t = 9600)]
     gnss_baud_rate: usize,
+    /// Probe interval in seconds.
+    #[arg(long, default_value_t = 60)]
+    probe_interval: u64,
+    /// Enable/Disable probing.
+    #[arg(long)]
+    no_probe: bool,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -53,6 +59,8 @@ async fn main() -> anyhow::Result<()> {
         host_interval: args.host_interval,
         gnss_device: args.gnss_device,
         gnss_baud_rate: args.gnss_baud_rate,
+        probe_interval: args.probe_interval,
+        probe: !args.no_probe,
         instance: glonax::from_file(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
