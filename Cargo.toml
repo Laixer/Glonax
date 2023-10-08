@@ -11,7 +11,6 @@ members = [
   "glonax-runtime",
   "glonax-serial",
   "glonax-proxy",
-  "glonax-gnss",
   "glonax-input",
   "glonax-agent",
   "glonax-dump",

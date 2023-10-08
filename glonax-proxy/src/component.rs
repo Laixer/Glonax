@@ -139,16 +139,20 @@ pub(super) async fn service_net_ems(local_config: ProxyConfig, local_sender: Sig
     }
 }
 
-pub(super) async fn service_gnss(_local_config: ProxyConfig, local_sender: SignalSender) {
+pub(super) async fn service_gnss(local_config: ProxyConfig, local_sender: SignalSender) {
     use glonax::channel::SignalSource;
     use tokio::io::{AsyncBufReadExt, BufReader};
+
+    if local_config.gnss_device.is_none() {
+        return;
+    }
 
     log::debug!("Starting GNSS service");
 
     loop {
         match glonax_serial::Uart::open(
-            &std::path::Path::new("/dev/ttyUSB0"),
-            glonax_serial::BaudRate::from_speed(9600),
+            &std::path::Path::new(local_config.gnss_device.as_ref().unwrap()),
+            glonax_serial::BaudRate::from_speed(local_config.gnss_baud_rate),
         ) {
             Ok(serial) => {
                 let reader = BufReader::new(serial);

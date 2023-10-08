@@ -12,6 +12,10 @@ pub struct ProxyConfig {
     pub host_interval: u64,
     /// Instance configuration.
     pub instance: Instance,
+    /// Serial device.
+    pub gnss_device: Option<std::path::PathBuf>,
+    /// Serial baud rate.
+    pub gnss_baud_rate: usize,
     /// Global configuration.
     pub global: GlobalConfig,
 }

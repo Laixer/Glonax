@@ -641,19 +641,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "glonax-gnss"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "glonax",
- "glonax-serial",
- "log",
- "simplelog",
- "tokio 1.32.0",
-]
-
-[[package]]
 name = "glonax-input"
 version = "1.0.0"
 dependencies = [

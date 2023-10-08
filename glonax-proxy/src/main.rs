@@ -27,6 +27,11 @@ struct Args {
     /// Configuration file.
     #[arg(long = "config", default_value = "/etc/glonax.conf")]
     config: std::path::PathBuf,
+    /// Serial device.
+    gnss_device: Option<std::path::PathBuf>,
+    /// Serial baud rate.
+    #[arg(long, default_value_t = 9600)]
+    gnss_baud_rate: usize,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -46,6 +51,8 @@ async fn main() -> anyhow::Result<()> {
         interface: args.interface,
         interface2: args.interface2,
         host_interval: args.host_interval,
+        gnss_device: args.gnss_device,
+        gnss_baud_rate: args.gnss_baud_rate,
         instance: glonax::from_file(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
