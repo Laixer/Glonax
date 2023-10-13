@@ -1,6 +1,3 @@
-use glonax::core::Motion;
-use tokio::sync::mpsc;
-
 use crate::config::ProxyConfig;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
@@ -56,69 +53,6 @@ pub(super) async fn service_core(
     // log::debug!("Signal broadcast shutdown");
 }
 
-pub(super) async fn sink_net_actuator(
-    local_config: ProxyConfig,
-    mut motion_rx: mpsc::Receiver<Motion>,
-) {
-    use glonax::net::{ActuatorService, J1939Network};
-
-    log::debug!("Starting motion listener");
-
-    match J1939Network::new(
-        &local_config.interface,
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
-        Ok(network) => {
-            let service = ActuatorService::new(0x4A);
-
-            while let Some(motion) = motion_rx.recv().await {
-                match motion {
-                    Motion::StopAll => {
-                        if let Err(e) = network.send_vectored(&service.lock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::ResumeAll => {
-                        if let Err(e) = network.send_vectored(&service.unlock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::ResetAll => {
-                        if let Err(e) = network.send_vectored(&service.lock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                        if let Err(e) = network.send_vectored(&service.unlock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::StraightDrive(value) => {
-                        let frames = &service.drive_straight(value);
-
-                        if let Err(e) = network.send_vectored(frames).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::Change(changes) => {
-                        let frames = &service.actuator_command(
-                            changes
-                                .iter()
-                                .map(|changeset| (changeset.actuator as u8, changeset.value))
-                                .collect(),
-                        );
-
-                        if let Err(e) = network.send_vectored(frames).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                }
-            }
-
-            log::debug!("Motion listener shutdown");
-        }
-        Err(e) => log::error!("Failed to create network: {}", e),
-    }
-}
-
 pub(super) async fn service_remote_server(
     local_config: ProxyConfig,
     local_machine_state: SharedMachineState,
@@ -132,7 +66,7 @@ pub(super) async fn service_remote_server(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    log::debug!("Waiting for connection to {}", local_config.address);
+    log::debug!("Listening on: {}", local_config.address);
     let listener = TcpListener::bind(local_config.address.clone())
         .await
         .unwrap();
@@ -148,11 +82,20 @@ pub(super) async fn service_remote_server(
             }
         };
 
+        let active_client_count =
+            glonax::consts::NETWORK_MAX_CLIENTS - semaphore.available_permits();
+
+        log::trace!(
+            "Connections: {}/{}",
+            active_client_count,
+            glonax::consts::NETWORK_MAX_CLIENTS
+        );
+
         let local_config = local_config.clone();
         let local_machine_state = local_machine_state.clone();
         let local_motion_tx = local_sender.clone();
         tokio::spawn(async move {
-            log::debug!("Accepted connection from: {}", addr);
+            log::debug!("Accepted client from: {}", addr);
 
             let mut client = glonax::transport::Client::new(stream);
 

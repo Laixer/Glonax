@@ -27,8 +27,11 @@ struct Args {
     /// Input commands will translate to the full motion range.
     #[arg(long)]
     full_motion: bool,
-    /// Daemonize the service.
+    /// Quiet output (no logging).
     #[arg(long)]
+    quiet: bool,
+    /// Daemonize the service.
+    #[arg(short = 'D', long)]
     daemon: bool,
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -37,6 +40,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    use log::LevelFilter;
+
     let args = Args::parse();
 
     let mut address = args.address.clone();
@@ -65,9 +70,6 @@ async fn main() -> anyhow::Result<()> {
     if args.daemon {
         log_config.set_time_level(log::LevelFilter::Off);
         log_config.set_thread_level(log::LevelFilter::Off);
-    } else {
-        log_config.set_time_offset_to_local().ok();
-        log_config.set_time_format_rfc2822();
     }
 
     log_config.set_target_level(log::LevelFilter::Off);
@@ -76,13 +78,14 @@ async fn main() -> anyhow::Result<()> {
     log_config.add_filter_ignore_str("mio");
 
     let log_level = if args.daemon {
-        log::LevelFilter::Info
+        LevelFilter::Info
+    } else if args.quiet {
+        LevelFilter::Off
     } else {
         match args.verbose {
-            0 => log::LevelFilter::Error,
-            1 => log::LevelFilter::Info,
-            2 => log::LevelFilter::Debug,
-            _ => log::LevelFilter::Trace,
+            0 => LevelFilter::Info,
+            1 => LevelFilter::Debug,
+            _ => LevelFilter::Trace,
         }
     };
 

@@ -1,12 +1,16 @@
 use std::time::Duration;
 
+use glonax::core::Motion;
 use tokio::time::sleep;
 
 use crate::config::ProxyConfig;
 
+pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
+pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::MachineState>>;
+
 pub(super) async fn service_host(
     local_config: ProxyConfig,
-    local_machine_state: crate::component::SharedMachineState,
+    local_machine_state: SharedMachineState,
 ) {
     log::debug!("Starting host service");
 
@@ -22,11 +26,11 @@ pub(super) async fn service_host(
 
 pub(super) async fn service_net_encoder(
     local_config: ProxyConfig,
-    local_machine_state: crate::component::SharedMachineState,
+    local_machine_state: SharedMachineState,
 ) {
     use glonax::net::{EncoderService, J1939Network, Router};
 
-    log::debug!("Starting encoder services");
+    log::debug!("Starting encoder service");
 
     match J1939Network::new(
         &local_config.interface,
@@ -60,7 +64,7 @@ pub(super) async fn service_net_encoder(
 
 pub(super) async fn service_net_ems(
     local_config: ProxyConfig,
-    local_machine_state: crate::component::SharedMachineState,
+    local_machine_state: SharedMachineState,
 ) {
     if local_config.interface2.is_none() {
         return;
@@ -95,7 +99,7 @@ pub(super) async fn service_net_ems(
 
 pub(super) async fn service_gnss(
     local_config: ProxyConfig,
-    local_machine_state: crate::component::SharedMachineState,
+    local_machine_state: SharedMachineState,
 ) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -125,5 +129,65 @@ pub(super) async fn service_gnss(
             log::error!("Failed to open serial: {}", e);
             tokio::time::sleep(std::time::Duration::from_secs(5)).await;
         }
+    }
+}
+
+pub(super) async fn sink_net_actuator(local_config: ProxyConfig, mut motion_rx: MotionReceiver) {
+    use glonax::net::{ActuatorService, J1939Network};
+
+    log::debug!("Starting motion listener");
+
+    match J1939Network::new(
+        &local_config.interface,
+        glonax::consts::DEFAULT_J1939_ADDRESS,
+    ) {
+        Ok(network) => {
+            let service = ActuatorService::new(0x4A);
+
+            while let Some(motion) = motion_rx.recv().await {
+                match motion {
+                    Motion::StopAll => {
+                        if let Err(e) = network.send_vectored(&service.lock()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    Motion::ResumeAll => {
+                        if let Err(e) = network.send_vectored(&service.unlock()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    Motion::ResetAll => {
+                        if let Err(e) = network.send_vectored(&service.lock()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                        if let Err(e) = network.send_vectored(&service.unlock()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    Motion::StraightDrive(value) => {
+                        let frames = &service.drive_straight(value);
+
+                        if let Err(e) = network.send_vectored(frames).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    Motion::Change(changes) => {
+                        let frames = &service.actuator_command(
+                            changes
+                                .iter()
+                                .map(|changeset| (changeset.actuator as u8, changeset.value))
+                                .collect(),
+                        );
+
+                        if let Err(e) = network.send_vectored(frames).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                }
+            }
+
+            log::debug!("Motion listener shutdown");
+        }
+        Err(e) => log::error!("Failed to create network: {}", e),
     }
 }

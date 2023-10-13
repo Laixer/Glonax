@@ -24,24 +24,33 @@ struct Args {
     /// CAN network interface.
     interface2: Option<String>,
     /// Refresh host service interval in milliseconds.
-    #[arg(long, default_value_t = 500)]
+    #[arg(long, default_value_t = 500, value_name = "INTERVAL")]
     host_interval: u64,
     /// Configuration file.
-    #[arg(long = "config", default_value = "/etc/glonax.conf")]
+    #[arg(
+        short,
+        long = "config",
+        default_value = "/etc/glonax.conf",
+        value_name = "FILE"
+    )]
     config: std::path::PathBuf,
-    /// Serial device.
+    #[arg(long, value_name = "DEVICE")]
+    /// Path to GNSS device.
     gnss_device: Option<std::path::PathBuf>,
     /// Serial baud rate.
-    #[arg(long, default_value_t = 9600)]
+    #[arg(long, default_value_t = 9600, value_name = "RATE")]
     gnss_baud_rate: usize,
     /// Probe interval in seconds.
-    #[arg(long, default_value_t = 60)]
+    #[arg(long, default_value_t = 60, value_name = "INTERVAL")]
     probe_interval: u64,
     /// Enable/Disable probing.
     #[arg(long)]
     no_probe: bool,
-    /// Daemonize the service.
+    /// Quiet output (no logging).
     #[arg(long)]
+    quiet: bool,
+    /// Daemonize the service.
+    #[arg(short = 'D', long)]
     daemon: bool,
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -50,6 +59,8 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    use log::LevelFilter;
+
     let args = Args::parse();
 
     let bin_name = env!("CARGO_BIN_NAME");
@@ -72,26 +83,24 @@ async fn main() -> anyhow::Result<()> {
 
     let mut log_config = simplelog::ConfigBuilder::new();
     if args.daemon {
-        log_config.set_time_level(log::LevelFilter::Off);
-        log_config.set_thread_level(log::LevelFilter::Off);
-    } else {
-        log_config.set_time_offset_to_local().ok();
-        log_config.set_time_format_rfc2822();
+        log_config.set_time_level(LevelFilter::Off);
+        log_config.set_thread_level(LevelFilter::Off);
     }
 
-    log_config.set_target_level(log::LevelFilter::Off);
-    log_config.set_location_level(log::LevelFilter::Off);
+    log_config.set_target_level(LevelFilter::Off);
+    log_config.set_location_level(LevelFilter::Off);
     log_config.add_filter_ignore_str("sled");
     log_config.add_filter_ignore_str("mio");
 
     let log_level = if args.daemon {
-        log::LevelFilter::Info
+        LevelFilter::Info
+    } else if args.quiet {
+        LevelFilter::Off
     } else {
         match args.verbose {
-            0 => log::LevelFilter::Error,
-            1 => log::LevelFilter::Info,
-            2 => log::LevelFilter::Debug,
-            _ => log::LevelFilter::Trace,
+            0 => LevelFilter::Info,
+            1 => LevelFilter::Debug,
+            _ => LevelFilter::Trace,
         }
     };
 
@@ -114,14 +123,10 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    daemonize(&config).await
-}
-
-async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
-    log::info!("Starting proxy services");
+    log::debug!("Starting proxy services");
 
     log::info!("Instance ID: {}", config.instance.id);
     log::info!("Instance Model: {}", config.instance.model);
@@ -131,7 +136,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         log::warn!("Instance ID is not set or invalid");
     }
 
-    let mut runtime = glonax::RuntimeBuilder::from_config(config)?
+    let mut runtime = glonax::RuntimeBuilder::from_config(&config)?
         // .with_shutdown()
         .build();
 
@@ -150,7 +155,7 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
     runtime.spawn_middleware_service(&machine_state, component::service_core);
     runtime.spawn_middleware_service(&machine_state, probe::service);
 
-    runtime.spawn_motion_sink(component::sink_net_actuator);
+    runtime.spawn_motion_sink(device::sink_net_actuator);
 
     runtime
         .run_motion_service(&machine_state, component::service_remote_server)
