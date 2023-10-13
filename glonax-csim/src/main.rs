@@ -19,8 +19,8 @@ struct Args {
     #[arg(long, default_value_t = true)]
     randomize_start: bool,
     /// Input commands will translate to the full motion range.
-    #[arg(long, default_value_t = true)]
-    jitter: bool,
+    #[arg(long, default_value_t = false)]
+    no_jitter: bool,
     /// Daemonize the service.
     #[arg(long)]
     daemon: bool,
@@ -38,7 +38,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::SimConfig {
         interface: args.interface,
         randomize_start: args.randomize_start,
-        jitter: args.jitter,
+        jitter: !args.no_jitter,
         global: glonax::GlobalConfig::default(),
     };
 
@@ -190,7 +190,7 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
     let encoder_b = EncoderService::new(0x6B);
     let encoder_c = EncoderService::new(0x6C);
     let encoder_d = EncoderService::new(0x6D);
-    let engine_management_system = EngineManagementSystem::new(0x0);
+    let engine_management_system = EngineManagementSystem::new();
 
     let mut encoder_a_position = rng.gen_range(0..=6280);
     let mut encoder_b_position = rng.gen_range(0..=1832 - 1);
@@ -277,7 +277,7 @@ async fn ecu_simulator(config: config::SimConfig, state: std::sync::Arc<EcuState
             tokio::time::sleep(std::time::Duration::from_millis(rng.gen_range(3..=8))).await;
         }
 
-        let mut engine_message = EngineMessage::new(0x0);
+        let mut engine_message = EngineMessage::new();
 
         engine_message.driver_demand = Some(rng.gen_range(18..=20));
         engine_message.actual_engine = Some(rng.gen_range(19..=21));

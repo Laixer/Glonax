@@ -8,6 +8,8 @@ use clap::Parser;
 
 mod component;
 mod config;
+mod device;
+mod probe;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
@@ -140,14 +142,13 @@ async fn daemonize(config: &config::ProxyConfig) -> anyhow::Result<()> {
         .send(glonax::core::Motion::ResetAll)
         .await?;
 
-    runtime.spawn_signal_service(component::service_host);
-    // runtime.spawn_signal_service(component::service_fifo);
-    runtime.spawn_signal_service(component::service_gnss);
-    runtime.spawn_signal_service(component::service_net_encoder);
-    runtime.spawn_signal_service(component::service_net_ems);
+    runtime.spawn_signal_service(&machine_state, device::service_host);
+    runtime.spawn_signal_service(&machine_state, device::service_gnss);
+    runtime.spawn_signal_service(&machine_state, device::service_net_encoder);
+    runtime.spawn_signal_service(&machine_state, device::service_net_ems);
 
-    runtime.spawn_middleware_service(&machine_state, component::service_remote_probe);
-    runtime.spawn_middleware_signal_sink(config, &machine_state, component::sink_proxy);
+    runtime.spawn_middleware_service(&machine_state, component::service_core);
+    runtime.spawn_middleware_service(&machine_state, probe::service);
 
     runtime.spawn_motion_sink(component::sink_net_actuator);
 

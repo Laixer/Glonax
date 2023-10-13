@@ -17,7 +17,6 @@ impl<Cnf: Configurable> Builder<Cnf> {
     pub fn from_config(config: &Cnf) -> super::Result<Self> {
         use tokio::sync::broadcast;
 
-        let (signal_tx, signal_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_SIGNAL);
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(RuntimeContext::<Cnf> {
@@ -27,8 +26,6 @@ impl<Cnf: Configurable> Builder<Cnf> {
                 model: String::new(),
                 name: String::new(),
             },
-            signal_tx,
-            signal_rx: Some(signal_rx),
             motion_tx,
             motion_rx: Some(motion_rx),
             shutdown: broadcast::channel(1),

@@ -6,7 +6,7 @@
 
 use clap::Parser;
 
-use glonax::geometry::{shortest_rotation, EulerAngles, Target};
+use glonax::geometry::{shortest_rotation, EulerAngles};
 use na::{Isometry3, UnitQuaternion, Vector3};
 use nalgebra as na;
 use parry3d::shape::Cuboid;
@@ -32,11 +32,15 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let (instance, address) = glonax::channel::recv_instance().await?;
+    // let (instance, address) = glonax::channel::recv_instance().await?;
 
     let mut config = config::DumpConfig {
-        address,
-        instance,
+        // address,
+        instance: glonax::core::Instance {
+            id: String::new(),
+            model: String::new(),
+            name: String::new(),
+        },
         global: glonax::GlobalConfig::default(),
     };
 
@@ -95,7 +99,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     use std::time::Duration;
     use tokio::time;
 
-    let kinematic_detect_obstacles = false;
+    // let kinematic_detect_obstacles = false;
     let kinematic_control = true;
     let kinematic_interval = std::time::Duration::from_millis(25);
 
@@ -112,74 +116,71 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
         .write(true)
-        .connect(
-            config.address.to_owned(),
-            config.global.bin_name.to_string(),
-        )
+        .connect("localhost:30051", config.global.bin_name.to_string())
         .await?;
 
-    log::info!("Connected to {}", config.address);
+    log::info!("Connected to {}", "localhost:30051");
 
-    client.send_motion(Motion::StopAll).await?;
+    client.send_packet(&Motion::StopAll).await?;
 
     let frame_encoder = robot.frame_device_id();
     let boom_encoder = robot.boom_device_id();
     let arm_encoder = robot.arm_device_id();
     let attachment_encoder = robot.attachment_device_id();
 
-    tokio::spawn(async move {
-        use glonax::core::{Metric, Signal};
-        use glonax::transport::frame::{Frame, FrameMessage};
+    // tokio::spawn(async move {
+    // use glonax::core::{Metric, Signal};
+    // use glonax::transport::frame::{Frame, FrameMessage};
 
-        let socket = glonax::channel::broadcast_bind().expect("Failed to bind to socket");
+    // let socket = glonax::channel::broadcast_bind().expect("Failed to bind to socket");
 
-        let mut buffer = [0u8; 1024];
+    // let mut buffer = [0u8; 1024];
 
-        log::debug!("Listening for signals");
+    // log::debug!("Listening for signals");
 
-        loop {
-            let (size, _) = socket.recv_from(&mut buffer).await.unwrap();
+    // loop {
+    //     let (size, _) = socket.recv_from(&mut buffer).await.unwrap();
 
-            if let Ok(frame) = Frame::try_from(&buffer[..size]) {
-                if frame.message == FrameMessage::Signal {
-                    let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
-                    if let Metric::EncoderAbsAngle((node, value)) = signal.metric {
-                        match node {
-                            node if frame_encoder == node => {
-                                perception_chain_shared
-                                    .write()
-                                    .await
-                                    .set_joint_position("frame", UnitQuaternion::from_yaw(value));
-                            }
-                            node if boom_encoder == node => {
-                                let pitch = value - 59.35_f32.to_radians();
-                                perception_chain_shared
-                                    .write()
-                                    .await
-                                    .set_joint_position("boom", UnitQuaternion::from_pitch(pitch));
-                            }
-                            node if arm_encoder == node => {
-                                perception_chain_shared
-                                    .write()
-                                    .await
-                                    .set_joint_position("arm", UnitQuaternion::from_pitch(value));
-                            }
-                            node if attachment_encoder == node => {
-                                let pitch = value - 55_f32.to_radians();
-                                perception_chain_shared.write().await.set_joint_position(
-                                    "attachment",
-                                    UnitQuaternion::from_pitch(pitch),
-                                );
-                            }
-                            _ => {}
-                        }
+    // if let Ok(frame) = Frame::try_from(&buffer[..size]) {
+    //     if frame.message == FrameMessage::Signal {
+    //         let signal = Signal::try_from(&buffer[frame.payload_range()]).unwrap();
+    //         if let Metric::EncoderAbsAngle((node, value)) = signal.metric {
+    //             match node {
+    //                 node if frame_encoder == node => {
+    //                     perception_chain_shared
+    //                         .write()
+    //                         .await
+    //                         .set_joint_position("frame", UnitQuaternion::from_yaw(value));
+    //                 }
+    //                 node if boom_encoder == node => {
+    //                     let pitch = value - 59.35_f32.to_radians();
+    //                     perception_chain_shared
+    //                         .write()
+    //                         .await
+    //                         .set_joint_position("boom", UnitQuaternion::from_pitch(pitch));
+    //                 }
+    //                 node if arm_encoder == node => {
+    //                     perception_chain_shared
+    //                         .write()
+    //                         .await
+    //                         .set_joint_position("arm", UnitQuaternion::from_pitch(value));
+    //                 }
+    //                 node if attachment_encoder == node => {
+    //                     let pitch = value - 55_f32.to_radians();
+    //                     perception_chain_shared.write().await.set_joint_position(
+    //                         "attachment",
+    //                         UnitQuaternion::from_pitch(pitch),
+    //                     );
+    //                 }
+    //                 _ => {}
+    //             }
 
-                        log::trace!("Perception: {:?}", perception_chain_shared.read().await);
-                    }
-                }
-            }
-        }
-    });
+    //             log::trace!("Perception: {:?}", perception_chain_shared.read().await);
+    //         }
+    //     }
+    // }
+    //     }
+    // });
 
     let mut program = program::from_file("contrib/share/programs/basic_training.json")?; // axis_align_test
 
@@ -190,13 +191,13 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
     let ground_plane = Cuboid::new(Vector3::new(10.0, 10.0, 1.0));
     let ground_transform = Isometry3::translation(0.0, 0.0, -1.0);
 
-    let obst0_box = Cuboid::new(Vector3::new(2.5, 0.205, 0.725));
-    let obst0_box_buffer = Cuboid::new(Vector3::new(
-        obst0_box.half_extents.x + 0.15,
-        obst0_box.half_extents.y + 0.15,
-        obst0_box.half_extents.z + 0.15,
-    ));
-    let obst0_transform = Isometry3::translation(3.0, 2.5, 0.725);
+    // let obst0_box = Cuboid::new(Vector3::new(2.5, 0.205, 0.725));
+    // let obst0_box_buffer = Cuboid::new(Vector3::new(
+    //     obst0_box.half_extents.x + 0.15,
+    //     obst0_box.half_extents.y + 0.15,
+    //     obst0_box.half_extents.z + 0.15,
+    // ));
+    // let obst0_transform = Isometry3::translation(3.0, 2.5, 0.725);
 
     let bucket_geometry = Cuboid::new(Vector3::new(0.75, 1.04, 0.25));
     let bucket_transform = Isometry3::translation(0.75, 0.0, 0.375);
@@ -220,7 +221,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
             std::io::stdin().read_line(&mut String::new())?;
         }
 
-        client.send_motion(Motion::ResumeAll).await?;
+        client.send_packet(&Motion::ResumeAll).await?;
 
         if kinematic_control {
             time::sleep(Duration::from_millis(1000)).await;
@@ -231,7 +232,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
 
             let perception_chain = perception_chain_shared_read.read().await;
             if perception_chain.last_update().elapsed() > Duration::from_millis(200) {
-                client.send_motion(Motion::StopAll).await?;
+                client.send_packet(&Motion::StopAll).await?;
                 log::warn!("No update received for 200ms, stopping");
                 return Err(anyhow::anyhow!("No update received for 200ms"));
             }
@@ -252,7 +253,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 && error_vector.y.abs() <= 0.06
                 && error_vector.z.abs() <= 0.06
             {
-                client.send_motion(Motion::StopAll).await?;
+                client.send_packet(&Motion::StopAll).await?;
                 log::info!("Target reached");
                 break;
             }
@@ -454,13 +455,13 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 let actuator = joint.actuator().unwrap();
                 let profile = joint.profile().unwrap();
 
-                let error_angle = {
-                    if joint.ty() == &glonax::robot::JointType::Continuous {
-                        shortest_rotation(error_angle)
-                    } else {
-                        error_angle
-                    }
-                };
+                // let error_angle = {
+                //     if joint.ty() == &glonax::robot::JointType::Continuous {
+                //         shortest_rotation(error_angle)
+                //     } else {
+                //         error_angle
+                //     }
+                // };
 
                 let power = profile.power(error_angle);
                 // let power = if contact_zone {
@@ -485,7 +486,7 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 );
 
                 if perception_chain.is_ready() && kinematic_control {
-                    client.send_motion(Motion::new(actuator, power)).await?;
+                    client.send_packet(&Motion::new(actuator, power)).await?;
                 }
             }
         }

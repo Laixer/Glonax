@@ -1,8 +1,10 @@
 use glonax_j1939::*;
 
+use crate::core::Rotator;
+
 use super::Parsable;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EncoderState {
     /// No error.
     NoError,
@@ -36,9 +38,10 @@ pub struct EncoderService {
     node: u8,
 }
 
+#[derive(Debug, Clone)]
 pub struct EncoderMessage {
     /// Node ID.
-    node: u8,
+    pub node: u8,
     /// Position.
     pub position: u32,
     /// Speed.
@@ -110,6 +113,30 @@ impl EncoderMessage {
 
         vec![frame_builder.set_len(8).build()]
     }
+
+    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
+        let mut machine_state = local_machine_state.write().await;
+
+        match self.node {
+            0x6A => {
+                machine_state.state.pose.frame_rotator =
+                    Rotator::from_yaw(self.position as f32 / 1000.0);
+            }
+            0x6B => {
+                machine_state.state.pose.boom_rotator =
+                    Rotator::from_pitch(self.position as f32 / 1000.0);
+            }
+            0x6C => {
+                machine_state.state.pose.arm_rotator =
+                    Rotator::from_pitch(self.position as f32 / 1000.0);
+            }
+            0x6D => {
+                machine_state.state.pose.attachment_rotator =
+                    Rotator::from_pitch(self.position as f32 / 1000.0);
+            }
+            _ => {}
+        }
+    }
 }
 
 impl std::fmt::Display for EncoderMessage {
@@ -125,17 +152,6 @@ impl std::fmt::Display for EncoderMessage {
                 .as_ref()
                 .map_or_else(|| "-".to_owned(), |f| f.to_string()),
         )
-    }
-}
-
-impl crate::channel::SignalSource for EncoderMessage {
-    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
-        signals.push(crate::core::Signal::new(
-            crate::core::Metric::EncoderAbsAngle((self.node, self.position as f32 / 1000.0)),
-        ));
-        signals.push(crate::core::Signal::new(crate::core::Metric::EncoderRpm((
-            self.node, self.speed,
-        ))));
     }
 }
 

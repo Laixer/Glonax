@@ -142,7 +142,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         if let Some(motion) = input_state.try_from(input) {
             log::trace!("{}", motion);
 
-            if let Err(e) = client.send_motion(motion).await {
+            if let Err(e) = client.send_packet(&motion).await {
                 log::error!("Failed to write to socket: {}", e);
                 break;
             }

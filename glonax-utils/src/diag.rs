@@ -25,8 +25,8 @@ struct Args {
 enum Command {
     /// Scan the network for nodes.
     Scan,
-    /// Show raw frames on screen.
-    Dump,
+    // / Show raw frames on screen.
+    // Dump,
 }
 
 #[tokio::main]
@@ -79,27 +79,27 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Dump => {
-            let broadcast_addr = std::net::SocketAddrV4::new(
-                std::net::Ipv4Addr::UNSPECIFIED,
-                glonax::consts::DEFAULT_NETWORK_PORT,
-            );
+        // Command::Dump => {
+            // let broadcast_addr = std::net::SocketAddrV4::new(
+            //     std::net::Ipv4Addr::UNSPECIFIED,
+            //     glonax::consts::DEFAULT_NETWORK_PORT,
+            // );
 
-            let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
+            // let socket = tokio::net::UdpSocket::bind(broadcast_addr).await?;
 
-            let mut buffer = [0u8; 1024];
+            // let mut buffer = [0u8; 1024];
 
-            loop {
-                let (size, _) = socket.recv_from(&mut buffer).await?;
-                if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
-                    if frame.message == glonax::transport::frame::FrameMessage::Signal {
-                        let signal =
-                            glonax::core::Signal::try_from(&buffer[frame.payload_range()]).unwrap();
+            // loop {
+            //     let (size, _) = socket.recv_from(&mut buffer).await?;
+            //     if let Ok(frame) = glonax::transport::frame::Frame::try_from(&buffer[..size]) {
+            //         if frame.message == glonax::transport::frame::FrameMessage::Signal {
+            //             let signal =
+            //                 glonax::core::Signal::try_from(&buffer[frame.payload_range()]).unwrap();
 
-                        info!("{}", signal.metric);
-                    }
-                }
-            }
-        }
+            //             info!("{}", signal.metric);
+            //         }
+            //     }
+            // }
+        // }
     }
 }

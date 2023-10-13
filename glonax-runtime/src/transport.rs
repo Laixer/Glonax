@@ -1,7 +1,5 @@
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
-use crate::core::{Instance, Motion, Signal, Status};
-
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x02;
 
@@ -12,12 +10,12 @@ const PROTO_VERSION: u8 = 0x02;
 //     + 3;
 const MIN_BUFFER_SIZE: usize = 10;
 
-pub enum Message {
-    Null,
-    Start(frame::Start),
-    Shutdown,
-    Motion(Motion),
-    Signal(Signal),
+// TODO: Add Display
+pub trait Packetize: TryFrom<Vec<u8>> {
+    const MESSAGE: frame::FrameMessage;
+
+    /// Convert packet to bytes.
+    fn to_bytes(&self) -> Vec<u8>;
 }
 
 pub mod frame {
@@ -35,9 +33,14 @@ pub mod frame {
         Status = 0x16,
         Motion = 0x20,
         Signal = 0x31,
+        Pose = 0x40,
+        VMS = 0x41,
+        GNSS = 0x42,
+        Engine = 0x43,
     }
 
     impl FrameMessage {
+        // TODO: TryFrom
         pub fn from_u8(value: u8) -> Option<Self> {
             match value {
                 0x1 => Some(Self::Null),
@@ -48,6 +51,10 @@ pub mod frame {
                 0x16 => Some(Self::Status),
                 0x20 => Some(Self::Motion),
                 0x31 => Some(Self::Signal),
+                0x40 => Some(Self::Pose),
+                0x41 => Some(Self::VMS),
+                0x42 => Some(Self::GNSS),
+                0x43 => Some(Self::Engine),
                 _ => None,
             }
         }
@@ -62,6 +69,10 @@ pub mod frame {
                 Self::Status => 0x16,
                 Self::Motion => 0x20,
                 Self::Signal => 0x31,
+                Self::Pose => 0x40,
+                Self::VMS => 0x41,
+                Self::GNSS => 0x42,
+                Self::Engine => 0x43,
             }
         }
     }
@@ -182,9 +193,29 @@ pub mod frame {
         pub fn name(&self) -> &str {
             &self.name
         }
+    }
 
-        // TODO: Write name length to buffer
-        pub fn to_bytes(&self) -> Vec<u8> {
+    impl TryFrom<Vec<u8>> for Start {
+        type Error = ();
+
+        fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+            let flags = buffer[0];
+
+            let mut session_name = String::new();
+
+            for c in &buffer[1..] {
+                session_name.push(*c as char);
+            }
+
+            Ok(Self::new(flags, session_name))
+        }
+    }
+
+    impl super::Packetize for Start {
+        const MESSAGE: FrameMessage = FrameMessage::Start;
+
+        // TODO: Whenever we have a string, we should send its length first
+        fn to_bytes(&self) -> Vec<u8> {
             let name_bytes = self.name.as_bytes();
 
             let mut buf = BytesMut::with_capacity(1 + name_bytes.len());
@@ -209,14 +240,80 @@ pub mod frame {
         pub fn message(&self) -> &FrameMessage {
             &self.message
         }
+    }
 
-        // TODO: Write name length to buffer
+    impl TryFrom<Vec<u8>> for Request {
+        type Error = ();
+
+        fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+            if buffer.len() != 1 {
+                log::warn!("Invalid buffer size");
+                return Err(());
+            }
+
+            let message = FrameMessage::from_u8(buffer[0]);
+            if message.is_none() {
+                log::warn!("Invalid message type {}", buffer[0]);
+                return Err(());
+            }
+
+            Ok(Self::new(message.unwrap()))
+        }
+    }
+
+    impl super::Packetize for Request {
+        const MESSAGE: FrameMessage = FrameMessage::Request;
+
+        fn to_bytes(&self) -> Vec<u8> {
+            vec![self.message.to_u8()]
+        }
+    }
+
+    pub struct Shutdown;
+
+    impl Shutdown {
         pub fn to_bytes(&self) -> Vec<u8> {
-            let mut buf = BytesMut::with_capacity(1);
+            vec![]
+        }
+    }
 
-            buf.put_u8(self.message.to_u8());
+    impl TryFrom<Vec<u8>> for Shutdown {
+        type Error = ();
 
-            buf.to_vec()
+        fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
+            Ok(Self)
+        }
+    }
+
+    impl super::Packetize for Shutdown {
+        const MESSAGE: FrameMessage = FrameMessage::Shutdown;
+
+        fn to_bytes(&self) -> Vec<u8> {
+            vec![]
+        }
+    }
+
+    pub struct Null;
+
+    impl Null {
+        pub fn to_bytes(&self) -> Vec<u8> {
+            vec![]
+        }
+    }
+
+    impl TryFrom<Vec<u8>> for Null {
+        type Error = ();
+
+        fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
+            Ok(Self)
+        }
+    }
+
+    impl super::Packetize for Null {
+        const MESSAGE: FrameMessage = FrameMessage::Null;
+
+        fn to_bytes(&self) -> Vec<u8> {
+            vec![]
         }
     }
 }
@@ -272,7 +369,7 @@ impl ConnectionOptions {
         let mut client = Client::new(stream);
 
         client
-            .handshake(self.flags, session_name.to_string())
+            .send_packet(&frame::Start::new(self.flags, session_name.to_string()))
             .await?;
 
         Ok(client)
@@ -317,124 +414,21 @@ impl<T> Client<T> {
 }
 
 impl<T: AsyncWrite + Unpin> Client<T> {
-    pub async fn handshake(
+    pub async fn send_packet<P: Packetize>(&mut self, packet: &P) -> std::io::Result<()> {
+        let payload = packet.to_bytes();
+
+        let mut frame = frame::Frame::new(P::MESSAGE, payload.len());
+        frame.put(&payload[..]);
+
+        self.inner.write_all(frame.as_ref()).await
+    }
+
+    #[inline]
+    pub async fn send_request(
         &mut self,
-        mode: u8,
-        session_name: impl ToString,
+        frame_message: frame::FrameMessage,
     ) -> std::io::Result<()> {
-        self.send_start(mode, session_name).await
-    }
-
-    pub async fn send_start(
-        &mut self,
-        mode: u8,
-        session_name: impl ToString,
-    ) -> std::io::Result<()> {
-        let start = frame::Start::new(mode, session_name.to_string());
-        let payload = start.to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Start, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_instance(&mut self, instance: &Instance) -> std::io::Result<()> {
-        let payload = instance.to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Instance, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_status(&mut self, status: &Status) -> std::io::Result<()> {
-        let payload = status.to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Status, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_null(&mut self) -> std::io::Result<()> {
-        let frame = frame::Frame::new(frame::FrameMessage::Null, 0);
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    // TODO: Should this be send_shutdown?
-    pub async fn shutdown(&mut self) -> std::io::Result<()> {
-        let frame = frame::Frame::new(frame::FrameMessage::Shutdown, 0);
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    //
-    // Sending rquests
-    //
-
-    pub async fn send_request_null(&mut self) -> std::io::Result<()> {
-        let payload = frame::Request::new(frame::FrameMessage::Null).to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_request_instance(&mut self) -> std::io::Result<()> {
-        let payload = frame::Request::new(frame::FrameMessage::Instance).to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_request_status(&mut self) -> std::io::Result<()> {
-        let payload = frame::Request::new(frame::FrameMessage::Status).to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_request_motion(&mut self) -> std::io::Result<()> {
-        let payload = frame::Request::new(frame::FrameMessage::Motion).to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    pub async fn send_request_signal(&mut self) -> std::io::Result<()> {
-        let payload = frame::Request::new(frame::FrameMessage::Signal).to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Request, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    // TODO: Pass ref
-    pub async fn send_motion(&mut self, motion: Motion) -> std::io::Result<()> {
-        let payload = motion.to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Motion, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
-    }
-
-    // TODO: Pass ref
-    pub async fn send_signal(&mut self, signal: Signal) -> std::io::Result<()> {
-        let payload = signal.to_bytes();
-
-        let mut frame = frame::Frame::new(frame::FrameMessage::Signal, payload.len());
-        frame.put(&payload[..]);
-
-        self.inner.write_all(frame.as_ref()).await
+        self.send_packet(&frame::Request::new(frame_message)).await
     }
 }
 
@@ -447,100 +441,17 @@ impl<T: AsyncRead + Unpin> Client<T> {
         Ok(frame::Frame::try_from(&header_buffer[..]).unwrap())
     }
 
-    pub async fn request(&mut self, size: usize) -> std::io::Result<frame::Request> {
-        let payload_buffer = &mut vec![0u8; size];
+    pub async fn packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
+        let buffer = {
+            let payload_buffer = &mut vec![0u8; size];
 
-        self.inner.read_exact(payload_buffer).await?;
+            self.inner.read_exact(payload_buffer).await?;
 
-        let message = frame::FrameMessage::from_u8(payload_buffer[0]);
-        if message.is_none() {
-            log::warn!("Invalid message type {}", payload_buffer[0]);
-        }
+            payload_buffer.clone()
+        };
 
-        return Ok(frame::Request::new(message.unwrap()));
-    }
-
-    pub async fn status(&mut self, size: usize) -> std::io::Result<Status> {
-        let payload_buffer = &mut vec![0u8; size];
-
-        self.inner.read_exact(payload_buffer).await?;
-
-        Ok(Status::try_from(&payload_buffer[..]).unwrap())
-    }
-
-    pub async fn instance(&mut self, size: usize) -> std::io::Result<Instance> {
-        let payload_buffer = &mut vec![0u8; size];
-
-        self.inner.read_exact(payload_buffer).await?;
-
-        Ok(Instance::try_from(&payload_buffer[..]).unwrap())
-    }
-
-    pub async fn signal(&mut self, size: usize) -> std::io::Result<Signal> {
-        let payload_buffer = &mut vec![0u8; size];
-
-        self.inner.read_exact(payload_buffer).await?;
-
-        Ok(Signal::try_from(&payload_buffer[..]).unwrap())
-    }
-
-    pub async fn motion(&mut self, size: usize) -> std::io::Result<Motion> {
-        let payload_buffer = &mut vec![0u8; size];
-
-        self.inner.read_exact(payload_buffer).await?;
-
-        Ok(Motion::try_from(&payload_buffer[..]).unwrap())
-    }
-
-    pub async fn recv_start(&mut self) -> std::io::Result<frame::Start> {
-        loop {
-            let frame = self.read_frame().await?;
-
-            if frame.message == frame::FrameMessage::Start {
-                let payload_buffer = &mut vec![0u8; frame.payload_length];
-
-                self.inner.read_exact(payload_buffer).await?;
-
-                let flags = payload_buffer[0];
-
-                let mut session_name = String::new();
-
-                for c in &payload_buffer[1..] {
-                    session_name.push(*c as char);
-                }
-
-                return Ok(frame::Start::new(flags, session_name));
-            }
-        }
-    }
-
-    pub async fn recv_status(&mut self) -> std::io::Result<Status> {
-        loop {
-            let frame = self.read_frame().await?;
-
-            if frame.message == frame::FrameMessage::Status {
-                return self.status(frame.payload_length).await;
-            }
-        }
-    }
-
-    pub async fn recv_signal(&mut self) -> std::io::Result<Signal> {
-        loop {
-            let frame = self.read_frame().await?;
-
-            if frame.message == frame::FrameMessage::Signal {
-                return self.signal(frame.payload_length).await;
-            }
-        }
-    }
-
-    pub async fn recv_motion(&mut self) -> std::io::Result<Motion> {
-        loop {
-            let frame = self.read_frame().await?;
-
-            if frame.message == frame::FrameMessage::Motion {
-                return self.motion(frame.payload_length).await;
-            }
-        }
+        P::try_from(buffer).map_err(|_| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to parse packet")
+        })
     }
 }

@@ -1,6 +1,3 @@
-use crate::core::{Metric, Signal};
-
-// TODO: Timestamp
 pub struct NMEAMessage {
     /// WGS 84 coordinates.
     pub coordinates: Option<(f32, f32)>,
@@ -181,6 +178,28 @@ impl NMEAMessage {
 
         this
     }
+
+    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
+        let mut machine_state = local_machine_state.write().await;
+
+        if let Some((lat, long)) = self.coordinates {
+            machine_state.state.gnss.location = (lat, long)
+        }
+        if let Some(altitude) = self.altitude {
+            machine_state.state.gnss.altitude = altitude;
+        }
+        if let Some(speed) = self.speed {
+            const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
+
+            machine_state.state.gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
+        }
+        if let Some(heading) = self.heading {
+            machine_state.state.gnss.heading = heading;
+        }
+        if let Some(satellites) = self.satellites {
+            machine_state.state.gnss.satellites = satellites;
+        }
+    }
 }
 
 impl std::fmt::Display for NMEAMessage {
@@ -205,30 +224,6 @@ impl std::fmt::Display for NMEAMessage {
                 .as_ref()
                 .map_or_else(|| "-".to_owned(), |f| format!("{:.1}°", f)),
         )
-    }
-}
-
-impl crate::channel::SignalSource for NMEAMessage {
-    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
-        if let Some((lat, long)) = self.coordinates {
-            signals.push(Signal::new(Metric::GnssLatLong((lat, long))));
-        }
-        if let Some(altitude) = self.altitude {
-            signals.push(Signal::new(Metric::GnssAltitude(altitude)));
-        }
-        if let Some(speed) = self.speed {
-            const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
-
-            signals.push(Signal::new(Metric::GnssSpeed(
-                speed * KNOT_TO_METER_PER_SECOND,
-            )));
-        }
-        if let Some(heading) = self.heading {
-            signals.push(Signal::new(Metric::GnssHeading(heading)));
-        }
-        if let Some(satellites) = self.satellites {
-            signals.push(Signal::new(Metric::GnssSatellites(satellites)));
-        }
     }
 }
 

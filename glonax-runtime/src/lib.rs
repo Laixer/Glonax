@@ -8,7 +8,6 @@ pub mod channel;
 pub mod core;
 pub mod device;
 pub mod net;
-pub mod robot;
 pub mod transport;
 
 #[macro_use]
@@ -19,23 +18,43 @@ pub use runtime::operand::Operand;
 
 pub use self::config::*;
 
-pub mod geometry;
-pub mod telemetry;
-
 pub mod runtime;
 pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::Error;
 pub use self::runtime::RuntimeContext;
 
+use crate::core::{Engine, Gnss, Host, Pose};
+
+pub struct RobotState {
+    /// VMS telemetry data.
+    pub vms: Host,
+    /// GNSS telemetry data.
+    pub gnss: Gnss,
+    /// Engine telemetry data.
+    pub engine: Engine,
+    /// Pose telemetry data.
+    pub pose: Pose,
+}
+
+impl Default for RobotState {
+    fn default() -> Self {
+        Self {
+            vms: Host::default(),
+            gnss: Gnss::default(),
+            engine: Engine::default(),
+            pose: Pose::default(),
+        }
+    }
+}
+
+// TODO: Rename to runtime session
 pub struct MachineState {
     /// Current machine state.
     pub status: core::Status,
     /// Glonax instance.
     pub instance: core::Instance,
-    /// Telemetry data.
-    pub data: telemetry::Telemetry,
-    /// Connected clients.
-    pub client_list: Vec<i32>,
+    /// Robot state.
+    pub state: RobotState,
 }
 
 impl MachineState {
@@ -47,8 +66,7 @@ impl MachineState {
                 model: "".to_string(),
                 name: "".to_string(),
             },
-            data: telemetry::Telemetry::default(),
-            client_list: vec![],
+            state: RobotState::default(),
         }
     }
 }

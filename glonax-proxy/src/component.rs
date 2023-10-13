@@ -1,374 +1,59 @@
-use glonax::core::{Motion, Signal};
+use glonax::core::Motion;
 use tokio::sync::mpsc;
 
 use crate::config::ProxyConfig;
 
-pub type SignalSender = tokio::sync::mpsc::Sender<glonax::core::Signal>;
 pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
 pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::MachineState>>;
 
-pub(super) async fn service_host(local_config: ProxyConfig, local_sender: SignalSender) {
-    use glonax::channel::SignalSource;
-
-    log::debug!("Starting host service");
-
-    let mut service = glonax::net::HostService::new();
-
-    loop {
-        service.refresh();
-
-        let mut signals = vec![];
-        service.collect_signals(&mut signals);
-
-        for signal in signals {
-            if let Err(e) = local_sender.send(signal).await {
-                log::error!("Failed to send signal: {}", e);
-            }
-        }
-
-        tokio::time::sleep(std::time::Duration::from_millis(local_config.host_interval)).await;
-    }
-}
-
-// TODO: Remove
-pub(super) async fn service_fifo(_local_config: ProxyConfig, local_sender: SignalSender) {
-    log::debug!("Starting FIFO service");
-
-    loop {
-        log::debug!("Waiting for FIFO connection: signal");
-
-        match glonax::transport::Client::open_read("signal").await {
-            Ok(mut client) => {
-                log::debug!("Connected to FIFO: signal");
-
-                while let Ok(signal) = client.recv_signal().await {
-                    if let Err(e) = local_sender.send(signal).await {
-                        log::error!("Failed to send signal: {}", e);
-                    }
-                }
-
-                log::debug!("FIFO listener shutdown: signal");
-            }
-            Err(e) => {
-                log::error!("Failed to connect to FIFO: signal: {}", e);
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-            }
-        }
-    }
-}
-
-pub(super) async fn service_net_encoder(local_config: ProxyConfig, local_sender: SignalSender) {
-    use glonax::channel::SignalSource;
-    use glonax::net::{EncoderService, J1939Network, Router};
-
-    log::debug!("Starting encoder services");
-
-    match J1939Network::new(
-        &local_config.interface,
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
-        Ok(network) => {
-            let mut router = Router::new(network);
-
-            let mut encoder_list = vec![
-                EncoderService::new(0x6A),
-                EncoderService::new(0x6B),
-                EncoderService::new(0x6C),
-                EncoderService::new(0x6D),
-            ];
-
-            loop {
-                if let Err(e) = router.listen().await {
-                    log::error!("Failed to receive from router: {}", e);
-                }
-
-                let mut signals = vec![];
-                for encoder in &mut encoder_list {
-                    if let Some(message) = router.try_accept(encoder) {
-                        message.collect_signals(&mut signals);
-                    }
-                }
-
-                for signal in signals {
-                    if let Err(e) = local_sender.send(signal).await {
-                        log::error!("Failed to send signal: {}", e);
-                    }
-                }
-            }
-        }
-        Err(e) => log::error!("Failed to create network: {}", e),
-    }
-}
-
-pub(super) async fn service_net_ems(local_config: ProxyConfig, local_sender: SignalSender) {
-    if local_config.interface2.is_none() {
-        return;
-    }
-
-    use glonax::channel::SignalSource;
-    use glonax::net::{EngineManagementSystem, J1939Network, Router};
-
-    log::debug!("Starting EMS service");
-
-    match J1939Network::new(
-        &local_config.interface2.unwrap(),
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
-        Ok(network) => {
-            let mut router = Router::new(network);
-
-            let mut engine_management_service = EngineManagementSystem::new(0x0);
-
-            loop {
-                if let Err(e) = router.listen().await {
-                    log::error!("Failed to receive from router: {}", e);
-                }
-
-                let mut signals = vec![];
-                if let Some(message) = router.try_accept(&mut engine_management_service) {
-                    message.collect_signals(&mut signals);
-                }
-
-                for signal in signals {
-                    if let Err(e) = local_sender.send(signal).await {
-                        log::error!("Failed to send signal: {}", e);
-                    }
-                }
-            }
-        }
-        Err(e) => log::error!("Failed to create network: {}", e),
-    }
-}
-
-pub(super) async fn service_gnss(local_config: ProxyConfig, local_sender: SignalSender) {
-    use glonax::channel::SignalSource;
-    use tokio::io::{AsyncBufReadExt, BufReader};
-
-    if local_config.gnss_device.is_none() {
-        return;
-    }
-
-    log::debug!("Starting GNSS service");
-
-    loop {
-        match glonax_serial::Uart::open(
-            &std::path::Path::new(local_config.gnss_device.as_ref().unwrap()),
-            glonax_serial::BaudRate::from_speed(local_config.gnss_baud_rate),
-        ) {
-            Ok(serial) => {
-                let reader = BufReader::new(serial);
-                let mut lines = reader.lines();
-
-                let service = glonax::net::NMEAService::new();
-
-                while let Ok(Some(line)) = lines.next_line().await {
-                    if let Some(message) = service.decode(line) {
-                        log::trace!("Received message: {}", message);
-
-                        let mut signals = vec![];
-                        message.collect_signals(&mut signals);
-
-                        for signal in signals {
-                            if let Err(e) = local_sender.send(signal).await {
-                                log::error!("Failed to send signal: {}", e);
-                            }
-                        }
-                    }
-                }
-            }
-            Err(e) => {
-                log::error!("Failed to open serial: {}", e);
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-            }
-        }
-    }
-}
-
-pub(super) async fn sink_proxy(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-    mut signal_rx: mpsc::Receiver<Signal>,
+pub(super) async fn service_core(
+    _local_config: ProxyConfig,
+    _local_machine_state: SharedMachineState,
 ) {
-    use glonax::core::Metric;
-    use glonax::transport::frame::{Frame, FrameMessage};
-    use std::time::Instant;
+    // use glonax::core::Metric;
+    // use glonax::transport::frame::{Frame, FrameMessage};
+    // use std::time::Instant;
 
-    log::debug!("Starting signal broadcast");
+    // log::debug!("Starting core service");
 
-    let socket = glonax::channel::any_bind().await.unwrap();
+    // loop {
+    //     tokio::time::sleep(std::time::Duration::from_millis(15)).await;
+    // }
 
-    let mut now = Instant::now();
+    // // let mut now = Instant::now();
 
-    let broadcast_addr = std::net::SocketAddrV4::new(
-        std::net::Ipv4Addr::BROADCAST,
-        glonax::consts::DEFAULT_NETWORK_PORT,
-    );
+    // let mut signal_gnss_timeout = Instant::now();
+    // let mut signal_encoder_timeout = Instant::now();
+    // let mut signal_engine_timeout = Instant::now();
 
-    let mut signal_gnss_timeout = Instant::now();
-    let mut signal_encoder_timeout = Instant::now();
-    let mut signal_engine_timeout = Instant::now();
+    //     if signal_gnss_timeout.elapsed().as_secs() > 5 {
+    //         log::warn!("GNSS timeout: no update in last 5 seconds");
+    //         local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutGNSS;
+    //         signal_gnss_timeout = Instant::now();
+    //     } else if signal_encoder_timeout.elapsed().as_secs() > 1 {
+    //         log::warn!("Encoder timeout: no update in last 1 second");
+    //         local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
+    //         signal_encoder_timeout = Instant::now();
+    //     } else if signal_engine_timeout.elapsed().as_secs() > 5 {
+    //         log::warn!("Engine timeout: no update in last 5 seconds");
+    //         local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEngine;
+    //         signal_engine_timeout = Instant::now();
+    //     } else {
+    //         local_machine_state.write().await.status = glonax::core::Status::Healthy;
+    //     }
 
-    while let Some(signal) = signal_rx.recv().await {
-        match signal.metric {
-            Metric::VmsUptime(uptime) => {
-                local_machine_state.write().await.data.uptime = Some(uptime);
-            }
-            Metric::VmsMemoryUsage((memory_used, memory_total)) => {
-                let memory_usage = (memory_used as f64 / memory_total as f64) * 100.0;
+    //     let payload = signal.to_bytes();
 
-                local_machine_state.write().await.data.memory = Some(memory_usage as u64);
+    //     let mut frame = Frame::new(FrameMessage::Signal, payload.len());
+    //     frame.put(&payload[..]);
 
-                if memory_usage > 90.0 {
-                    log::warn!("Memory usage is above 90%: {:.2}%", memory_usage);
-                    local_machine_state.write().await.status =
-                        glonax::core::Status::DegradedHighUsageMemory;
-                }
-            }
-            Metric::VmsSwapUsage((swap_used, swap_total)) => {
-                let swap_usage = (swap_used as f64 / swap_total as f64) * 100.0;
+    //     if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+    //         log::error!("Failed to send signal: {}", e);
+    //         break;
+    //     }
+    // }
 
-                local_machine_state.write().await.data.swap = Some(swap_usage as u64);
-            }
-            Metric::VmsCpuLoad((cpu_load_1, cpu_load_5, cpu_load_15)) => {
-                local_machine_state.write().await.data.cpu_load =
-                    Some((cpu_load_1, cpu_load_5, cpu_load_15));
-            }
-            Metric::GnssLatLong(lat_long) => {
-                local_machine_state.write().await.data.location = Some(lat_long);
-            }
-            Metric::GnssAltitude(altitude) => {
-                local_machine_state.write().await.data.altitude = Some(altitude);
-            }
-            Metric::GnssSpeed(speed) => {
-                local_machine_state.write().await.data.speed = Some(speed);
-            }
-            Metric::GnssHeading(heading) => {
-                local_machine_state.write().await.data.heading = Some(heading);
-            }
-            Metric::GnssSatellites(satellites) => {
-                local_machine_state.write().await.data.satellites = Some(satellites);
-
-                signal_gnss_timeout = Instant::now();
-            }
-            Metric::EngineRpm(rpm) => {
-                local_machine_state.write().await.data.rpm = Some(rpm);
-
-                signal_engine_timeout = Instant::now();
-            }
-            Metric::EncoderAbsAngle((node, value)) => {
-                local_machine_state
-                    .write()
-                    .await
-                    .data
-                    .encoders
-                    .insert(node, value);
-
-                signal_encoder_timeout = Instant::now();
-            }
-            _ => {}
-        }
-
-        if signal_gnss_timeout.elapsed().as_secs() > 5 {
-            log::warn!("GNSS signal timeout: no update in last 5 seconds");
-            local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutGNSS;
-            signal_gnss_timeout = Instant::now();
-        }
-        if signal_encoder_timeout.elapsed().as_secs() > 1 {
-            log::warn!("Encoder 0x6A signal timeout: no update in last 1 second");
-            local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-            signal_encoder_timeout = Instant::now();
-        }
-        if signal_engine_timeout.elapsed().as_secs() > 5 {
-            log::warn!("Engine signal timeout: no update in last 5 seconds");
-            local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEngine;
-            signal_engine_timeout = Instant::now();
-        }
-
-        let payload = signal.to_bytes();
-
-        let mut frame = Frame::new(FrameMessage::Signal, payload.len());
-        frame.put(&payload[..]);
-
-        if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-            log::error!("Failed to send signal: {}", e);
-            break;
-        }
-
-        if now.elapsed().as_millis() > 1_000 {
-            // TODO: Remove
-            {
-                let instance = glonax::core::Instance::new(
-                    local_config.instance.id.clone(),
-                    local_config.instance.model.clone(),
-                    local_config.instance.name.clone(),
-                );
-                let payload = instance.to_bytes();
-
-                let mut frame = Frame::new(FrameMessage::Instance, payload.len());
-                frame.put(&payload[..]);
-
-                if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-                    log::error!("Failed to send signal: {}", e);
-                }
-            }
-
-            {
-                local_machine_state.write().await.status = glonax::core::Status::Healthy;
-                now = Instant::now();
-            }
-        }
-    }
-
-    log::debug!("Signal broadcast shutdown");
-}
-
-const _REMOTE_PROBE_HOST: &str = "https://cymbion-oybqn.ondigitalocean.app";
-
-pub(super) async fn service_remote_probe(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-) {
-    log::debug!("Starting host service");
-
-    // let url = reqwest::Url::parse(REMOTE_PROBE_HOST).unwrap();
-
-    // let client = reqwest::Client::builder()
-    //     .user_agent("glonax-agent/0.1.0")
-    //     .timeout(std::time::Duration::from_secs(5))
-    //     .https_only(true)
-    //     .build()
-    //     .unwrap();
-
-    // let request_url = url
-    //     .join(&format!("api/v1/{}/probe", config.instance.id))
-    //     .unwrap();
-
-    loop {
-        tokio::time::sleep(std::time::Duration::from_secs(local_config.probe_interval)).await;
-
-        // if config.probe {
-        //     let data = telemetrics.read().await;
-
-        //     if data.status.is_none() {
-        //         continue;
-        //     }
-
-        //     let response = client
-        //         .post(request_url.clone())
-        //         .json(&*data)
-        //         .send()
-        //         .await
-        //         .unwrap();
-
-        //     if response.status() == 200 {
-        //         log::info!("Probe sent successfully");
-        //     } else {
-        //         log::error!("Probe failed, status: {}", response.status());
-        //     }
-        // };
-
-        log::trace!("{}", local_machine_state.read().await.data);
-    }
+    // log::debug!("Signal broadcast shutdown");
 }
 
 pub(super) async fn sink_net_actuator(
@@ -471,12 +156,22 @@ pub(super) async fn service_remote_server(
 
             let mut client = glonax::transport::Client::new(stream);
 
-            // TODO: Handle errors
             // TODO: Set timeout
-            let start = client
-                .recv_start()
-                .await
-                .expect("Failed to receive start message");
+            // TODO: Handle errors
+            let frame = client.read_frame().await.unwrap();
+
+            // TODO: Handle errors
+            let start = if frame.message == FrameMessage::Start {
+                client
+                    .packet::<glonax::transport::frame::Start>(frame.payload_length)
+                    .await
+            } else {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Invalid start message",
+                ))
+            }
+            .expect("Failed to receive start message");
 
             let mut session_shutdown = false;
 
@@ -485,24 +180,60 @@ pub(super) async fn service_remote_server(
             while let Ok(frame) = client.read_frame().await {
                 match frame.message {
                     FrameMessage::Request => {
-                        let request = client.request(frame.payload_length).await.unwrap();
+                        let request = client
+                            .packet::<glonax::transport::frame::Request>(frame.payload_length)
+                            .await
+                            .unwrap();
                         match request.message() {
                             FrameMessage::Null => {
-                                client.send_null().await.unwrap();
+                                client
+                                    .send_packet(&glonax::transport::frame::Null)
+                                    .await
+                                    .unwrap();
                             }
                             FrameMessage::Status => {
                                 let status = &local_machine_state.read().await.status;
-                                client.send_status(status).await.unwrap();
+                                client.send_packet(status).await.unwrap();
                             }
                             FrameMessage::Instance => {
+                                // TODO: Get this from the runtime session.
                                 let instance = glonax::core::Instance::new(
                                     local_config.instance.id.clone(),
                                     local_config.instance.model.clone(),
                                     local_config.instance.name.clone(),
                                 );
-                                client.send_instance(&instance).await.unwrap();
+                                client.send_packet(&instance).await.unwrap();
                             }
-                            _ => todo!(),
+                            FrameMessage::Pose => {
+                                client
+                                    .send_packet(&local_machine_state.read().await.state.pose)
+                                    .await
+                                    .unwrap();
+                            }
+                            FrameMessage::Engine => {
+                                client
+                                    .send_packet(&local_machine_state.read().await.state.engine)
+                                    .await
+                                    .unwrap();
+                            }
+                            FrameMessage::VMS => {
+                                client
+                                    .send_packet(&local_machine_state.read().await.state.vms)
+                                    .await
+                                    .unwrap();
+                            }
+                            FrameMessage::GNSS => {
+                                client
+                                    .send_packet(&local_machine_state.read().await.state.gnss)
+                                    .await
+                                    .unwrap();
+                            }
+                            _ => {
+                                client
+                                    .send_packet(&glonax::transport::frame::Null)
+                                    .await
+                                    .unwrap();
+                            }
                         }
                     }
                     FrameMessage::Shutdown => {
@@ -512,7 +243,10 @@ pub(super) async fn service_remote_server(
                     }
                     FrameMessage::Motion => {
                         if start.is_write() {
-                            let motion = client.motion(frame.payload_length).await.unwrap();
+                            let motion = client
+                                .packet::<glonax::core::Motion>(frame.payload_length)
+                                .await
+                                .unwrap();
 
                             if let Err(e) = local_motion_tx.send(motion).await {
                                 log::error!("Failed to send motion: {}", e);

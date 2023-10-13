@@ -4,8 +4,6 @@ use glonax_j1939::{
 };
 
 pub struct EngineMessage {
-    /// Node ID.
-    node: u8,
     /// Engine Torque Mode.
     pub engine_torque_mode: Option<EngineTorqueMode>,
     /// Driver's Demand Engine - Percent Torque.
@@ -21,9 +19,8 @@ pub struct EngineMessage {
 }
 
 impl EngineMessage {
-    pub fn new(node: u8) -> Self {
+    pub fn new() -> Self {
         Self {
-            node,
             engine_torque_mode: None,
             driver_demand: None,
             actual_engine: None,
@@ -33,9 +30,8 @@ impl EngineMessage {
         }
     }
 
-    pub fn from_frame(node: u8, frame: &Frame) -> Self {
+    pub fn from_frame(frame: &Frame) -> Self {
         Self {
-            node,
             engine_torque_mode: decode::spn899(frame.pdu()[0]),
             driver_demand: decode::spn512(frame.pdu()[1]),
             actual_engine: decode::spn513(frame.pdu()[2]),
@@ -70,6 +66,14 @@ impl EngineMessage {
 
         vec![frame_builder.set_len(8).build()]
     }
+
+    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
+        let mut machine_state = local_machine_state.write().await;
+
+        machine_state.state.engine.driver_demand = self.driver_demand.unwrap_or(0);
+        machine_state.state.engine.actual_engine = self.actual_engine.unwrap_or(0);
+        machine_state.state.engine.rpm = self.rpm.unwrap_or(0);
+    }
 }
 
 impl std::fmt::Display for EngineMessage {
@@ -100,37 +104,14 @@ impl std::fmt::Display for EngineMessage {
     }
 }
 
-impl crate::channel::SignalSource for EngineMessage {
-    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
-        if let Some(driver_demand) = self.driver_demand {
-            signals.push(crate::core::Signal::new(
-                crate::core::Metric::EngineDriverDemand(driver_demand),
-            ));
-        }
-        if let Some(actual_engine) = self.actual_engine {
-            signals.push(crate::core::Signal::new(
-                crate::core::Metric::EngineActualEngine(actual_engine),
-            ));
-        }
-        if let Some(rpm) = self.rpm {
-            signals.push(crate::core::Signal::new(crate::core::Metric::EngineRpm(
-                rpm,
-            )));
-        }
-    }
-}
-
-pub struct EngineManagementSystem {
-    node: u8,
-}
+pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
-    pub fn new(node: u8) -> Self {
-        Self { node }
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn serialize(&self, engine_message: &mut EngineMessage) -> Vec<Frame> {
-        engine_message.node = self.node;
         engine_message.to_frame()
     }
 }
@@ -144,7 +125,7 @@ impl super::Parsable<EngineMessage> for EngineManagementSystem {
             return None;
         }
 
-        Some(EngineMessage::from_frame(self.node, frame))
+        Some(EngineMessage::from_frame(frame))
     }
 }
 
@@ -159,7 +140,7 @@ mod tests {
                 .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
                 .build();
 
-        let engine_message = EngineMessage::from_frame(0, &frame);
+        let engine_message = EngineMessage::from_frame(&frame);
         assert_eq!(
             engine_message.engine_torque_mode.unwrap(),
             EngineTorqueMode::NoRequest
@@ -181,7 +162,7 @@ mod tests {
                 .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
                 .build();
 
-        let engine_message = EngineMessage::from_frame(0, &frame);
+        let engine_message = EngineMessage::from_frame(&frame);
         assert_eq!(
             engine_message.engine_torque_mode.unwrap(),
             EngineTorqueMode::PTOGovernor

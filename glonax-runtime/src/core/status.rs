@@ -88,3 +88,20 @@ impl TryFrom<&[u8]> for Status {
         }
     }
 }
+
+impl TryFrom<Vec<u8>> for Status {
+    type Error = ();
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Status::try_from(&value[..])
+    }
+}
+
+impl crate::transport::Packetize for Status {
+    const MESSAGE: crate::transport::frame::FrameMessage =
+        crate::transport::frame::FrameMessage::Status;
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
+}

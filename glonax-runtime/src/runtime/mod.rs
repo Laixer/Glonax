@@ -8,8 +8,6 @@ pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-pub type SignalSender = tokio::sync::mpsc::Sender<crate::core::Signal>;
-pub type SignalReceiver = tokio::sync::mpsc::Receiver<crate::core::Signal>;
 pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Motion>;
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
 pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<crate::MachineState>>;
@@ -20,8 +18,6 @@ pub struct RuntimeContext<Conf> {
     pub config: Conf,
     /// Glonax instance.
     pub instance: crate::core::Instance,
-    pub signal_tx: SignalSender,
-    pub signal_rx: Option<SignalReceiver>,
     pub motion_tx: MotionSender,
     pub motion_rx: Option<MotionReceiver>,
     /// Runtime event bus.
@@ -59,11 +55,14 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     }
 
     /// Spawn a signal service in the background.
-    pub fn spawn_signal_service<Fut>(&self, service: impl FnOnce(Cnf, SignalSender) -> Fut)
-    where
+    pub fn spawn_signal_service<Fut>(
+        &self,
+        machine_state: &SharedMachineState,
+        service: impl FnOnce(Cnf, SharedMachineState) -> Fut,
+    ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        tokio::spawn(service(self.config.clone(), self.signal_tx.clone()));
+        tokio::spawn(service(self.config.clone(), machine_state.clone()));
     }
 
     /// Run a motion service.
@@ -105,23 +104,6 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
         tokio::spawn(service(self.config.clone(), machine_state.clone()));
-    }
-
-    /// Spawn a middleware signal sink in the background.
-    pub fn spawn_middleware_signal_sink<Conf, Fut>(
-        &mut self,
-        config: &Conf,
-        machine_state: &SharedMachineState,
-        service: impl FnOnce(Conf, SharedMachineState, SignalReceiver) -> Fut,
-    ) where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
-        Conf: crate::Configurable,
-    {
-        tokio::spawn(service(
-            config.clone(),
-            machine_state.clone(),
-            self.signal_rx.take().unwrap(),
-        ));
     }
 
     /// Wait for the runtime to shutdown.

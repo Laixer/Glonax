@@ -164,3 +164,20 @@ impl TryFrom<&[u8]> for Motion {
         }
     }
 }
+
+impl TryFrom<Vec<u8>> for Motion {
+    type Error = ();
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Motion::try_from(&value[..])
+    }
+}
+
+impl crate::transport::Packetize for Motion {
+    const MESSAGE: crate::transport::frame::FrameMessage =
+        crate::transport::frame::FrameMessage::Motion;
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
+}

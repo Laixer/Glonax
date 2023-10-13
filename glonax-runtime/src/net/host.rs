@@ -1,7 +1,5 @@
 use sysinfo::{System, SystemExt};
 
-use crate::core::{Metric, Signal};
-
 pub struct HostService {
     system: System,
 }
@@ -19,29 +17,45 @@ impl HostService {
         self.system.refresh_memory();
         self.system.refresh_cpu();
     }
+
+    pub fn used_memory(&self) -> u64 {
+        self.system.used_memory()
+    }
+
+    pub fn total_memory(&self) -> u64 {
+        self.system.total_memory()
+    }
+
+    pub fn used_swap(&self) -> u64 {
+        self.system.used_swap()
+    }
+
+    pub fn total_swap(&self) -> u64 {
+        self.system.total_swap()
+    }
+
+    pub fn uptime(&self) -> u64 {
+        self.system.uptime()
+    }
+
+    pub fn timestamp(&self) -> chrono::DateTime<chrono::Utc> {
+        chrono::Utc::now()
+    }
+
+    pub fn cpu_load(&self) -> (f64, f64, f64) {
+        let load_avg = self.system.load_average();
+        (load_avg.one, load_avg.five, load_avg.fifteen)
+    }
 }
 
-impl crate::channel::SignalSource for HostService {
-    fn collect_signals(&self, signals: &mut Vec<crate::core::Signal>) {
-        signals.push(Signal::new(Metric::VmsMemoryUsage((
-            self.system.used_memory(),
-            self.system.total_memory(),
-        ))));
-        signals.push(Signal::new(Metric::VmsSwapUsage((
-            self.system.used_swap(),
-            self.system.total_swap(),
-        ))));
-        if self.system.uptime() % 10 == 0 {
-            signals.push(Signal::new(Metric::VmsUptime(self.system.uptime())));
-        }
-        if self.system.uptime() % 60 == 0 {
-            signals.push(Signal::new(Metric::VmsTimestamp(chrono::Utc::now())));
-        }
-        let load_avg = self.system.load_average();
-        signals.push(Signal::new(Metric::VmsCpuLoad((
-            load_avg.one,
-            load_avg.five,
-            load_avg.fifteen,
-        ))));
+impl HostService {
+    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
+        let mut machine_state = local_machine_state.write().await;
+
+        machine_state.state.vms.memory = (self.used_memory(), self.total_memory());
+        machine_state.state.vms.swap = (self.used_swap(), self.total_swap());
+        machine_state.state.vms.cpu_load = self.cpu_load();
+        machine_state.state.vms.uptime = self.uptime();
+        machine_state.state.vms.timestamp = self.timestamp();
     }
 }

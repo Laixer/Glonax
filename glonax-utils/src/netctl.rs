@@ -40,7 +40,7 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
-    let mut engine_management_service = EngineManagementSystem::new(0x0);
+    let mut engine_management_service = EngineManagementSystem::new();
     let mut frame_encoder = EncoderService::new(0x6A);
     let mut boom_encoder = EncoderService::new(0x6B);
     let mut arm_encoder = EncoderService::new(0x6C);
