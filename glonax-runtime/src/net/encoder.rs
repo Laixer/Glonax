@@ -119,20 +119,21 @@ impl EncoderMessage {
 
         match self.node {
             0x6A => {
-                machine_state.state.pose.frame_rotator =
-                    Rotator::from_yaw(self.position as f32 / 1000.0);
+                let position = self.position as f32 / 1000.0;
+                machine_state.state.pose.frame_rotator = Rotator::from_yaw(position);
             }
             0x6B => {
-                machine_state.state.pose.boom_rotator =
-                    Rotator::from_pitch(self.position as f32 / 1000.0);
+                let offset = 60_f32.to_radians();
+                let position = self.position as f32 / 1000.0;
+                machine_state.state.pose.boom_rotator = Rotator::from_pitch(position - offset);
             }
             0x6C => {
-                machine_state.state.pose.arm_rotator =
-                    Rotator::from_pitch(self.position as f32 / 1000.0);
+                let position = self.position as f32 / 1000.0;
+                machine_state.state.pose.arm_rotator = Rotator::from_pitch(position);
             }
             0x6D => {
-                machine_state.state.pose.attachment_rotator =
-                    Rotator::from_pitch(self.position as f32 / 1000.0);
+                let position = self.position as f32 / 1000.0;
+                machine_state.state.pose.attachment_rotator = Rotator::from_pitch(position);
             }
             _ => {}
         }

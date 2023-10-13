@@ -49,7 +49,6 @@ impl Pose {
     }
 }
 
-// TODO: Move to transport
 impl TryFrom<&[u8]> for Pose {
     type Error = ();
 

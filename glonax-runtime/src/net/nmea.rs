@@ -227,7 +227,7 @@ impl std::fmt::Display for NMEAMessage {
     }
 }
 
-pub struct NMEAService {}
+pub struct NMEAService;
 
 impl NMEAService {
     pub fn new() -> Self {

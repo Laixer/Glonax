@@ -54,6 +54,8 @@ impl TryFrom<Vec<u8>> for Host {
     type Error = ();
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        use chrono::{TimeZone, Utc};
+
         let mut buf = Bytes::copy_from_slice(&value);
 
         Ok(Self {
@@ -61,10 +63,7 @@ impl TryFrom<Vec<u8>> for Host {
             swap: (buf.get_u64(), buf.get_u64()),
             cpu_load: (buf.get_f64(), buf.get_f64(), buf.get_f64()),
             uptime: buf.get_u64(),
-            timestamp: chrono::DateTime::<chrono::Utc>::from_utc(
-                chrono::NaiveDateTime::from_timestamp(buf.get_i64(), 0),
-                chrono::Utc,
-            ),
+            timestamp: Utc.timestamp_opt(buf.get_i64(), 0).unwrap(),
         })
     }
 }
