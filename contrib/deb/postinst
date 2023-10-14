@@ -96,6 +96,4 @@ if [ -d /run/systemd/system ]; then
   echo "..done"
 
   enable_glonax_service glonax-proxy.service
-  enable_glonax_service glonax-agent.service
-  enable_glonax_service glonax-ecu.service
 fi
