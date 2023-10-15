@@ -100,8 +100,13 @@ pub(super) async fn service_remote_server(
             let mut client = glonax::transport::Client::new(stream);
 
             // TODO: Set timeout
-            // TODO: Handle errors
-            let frame = client.read_frame().await.unwrap();
+            let frame = match client.read_frame().await {
+                Ok(frame) => frame,
+                Err(e) => {
+                    log::warn!("Failed to read frame: {}", e);
+                    return;
+                }
+            };
 
             // TODO: Handle errors
             let start = if frame.message == FrameMessage::Start {
