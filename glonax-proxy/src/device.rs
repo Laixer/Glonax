@@ -66,11 +66,11 @@ pub(super) async fn service_net_ems(
     local_config: ProxyConfig,
     local_machine_state: SharedMachineState,
 ) {
+    use glonax::net::{EngineManagementSystem, J1939Network, Router};
+
     if local_config.interface2.is_none() {
         return;
     }
-
-    use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
     log::debug!("Starting EMS service");
 
@@ -132,7 +132,11 @@ pub(super) async fn service_gnss(
     }
 }
 
-pub(super) async fn sink_net_actuator(local_config: ProxyConfig, mut motion_rx: MotionReceiver) {
+pub(super) async fn sink_net_actuator(
+    local_config: ProxyConfig,
+    local_machine_state: SharedMachineState,
+    mut motion_rx: MotionReceiver,
+) {
     use glonax::net::{ActuatorService, J1939Network};
 
     log::debug!("Starting motion listener");

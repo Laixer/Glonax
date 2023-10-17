@@ -580,6 +580,7 @@ dependencies = [
  "glonax",
  "glonax-serial",
  "log",
+ "rand",
  "reqwest",
  "simplelog",
  "tokio 1.33.0",

@@ -161,6 +161,7 @@ impl EncoderService {
         Self { node }
     }
 
+    // TODO: Maybe not
     pub fn encode(&self, position: u32, speed: u16) -> Vec<Frame> {
         EncoderMessage {
             node: self.node,

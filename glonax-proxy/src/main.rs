@@ -28,7 +28,7 @@ struct Args {
     host_interval: u64,
     /// Configuration file.
     #[arg(
-        short,
+        short = 'c',
         long = "config",
         default_value = "/etc/glonax.conf",
         value_name = "FILE"
@@ -43,7 +43,7 @@ struct Args {
     /// Probe interval in seconds.
     #[arg(long, default_value_t = 60, value_name = "INTERVAL")]
     probe_interval: u64,
-    /// Enable/Disable probing.
+    /// Disable probing.
     #[arg(long)]
     no_probe: bool,
     /// Quiet output (no logging).

@@ -88,11 +88,18 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     }
 
     /// Spawn a motion sink in the background.
-    pub fn spawn_motion_sink<Fut>(&mut self, service: impl FnOnce(Cnf, MotionReceiver) -> Fut)
-    where
+    pub fn spawn_motion_sink<Fut>(
+        &mut self,
+        machine_state: &SharedMachineState,
+        service: impl FnOnce(Cnf, SharedMachineState, MotionReceiver) -> Fut,
+    ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        tokio::spawn(service(self.config.clone(), self.motion_rx.take().unwrap()));
+        tokio::spawn(service(
+            self.config.clone(),
+            machine_state.clone(),
+            self.motion_rx.take().unwrap(),
+        ));
     }
 
     /// Spawn a middleware service in the background.
