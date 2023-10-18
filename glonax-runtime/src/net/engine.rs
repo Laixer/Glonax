@@ -19,6 +19,7 @@ pub struct EngineMessage {
 }
 
 impl EngineMessage {
+    /// Construct a new engine message.
     pub fn new() -> Self {
         Self {
             engine_torque_mode: None,

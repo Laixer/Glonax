@@ -51,6 +51,26 @@ pub struct EncoderMessage {
 }
 
 impl EncoderMessage {
+    /// Construct a new encoder message.
+    pub fn new(node: u8) -> Self {
+        Self {
+            node,
+            position: 0,
+            speed: 0,
+            state: None,
+        }
+    }
+
+    /// Construct a new encoder message with position.
+    pub fn new_with_position(node: u8, position: u32) -> Self {
+        Self {
+            node,
+            position,
+            speed: 0,
+            state: None,
+        }
+    }
+
     pub fn from_frame(node: u8, frame: &Frame) -> Self {
         let mut this = Self {
             node,

@@ -38,7 +38,7 @@ struct Args {
     /// Path to GNSS device.
     gnss_device: Option<std::path::PathBuf>,
     /// Serial baud rate.
-    #[arg(long, default_value_t = 9600, value_name = "RATE")]
+    #[arg(long, default_value_t = 9_600, value_name = "RATE")]
     gnss_baud_rate: usize,
     /// Probe interval in seconds.
     #[arg(long, default_value_t = 60, value_name = "INTERVAL")]
@@ -46,6 +46,9 @@ struct Args {
     /// Disable probing.
     #[arg(long)]
     no_probe: bool,
+    /// Enable simulation mode.
+    #[arg(long, default_value_t = false)]
+    simulation: bool,
     /// Quiet output (no logging).
     #[arg(long)]
     quiet: bool,
@@ -74,6 +77,8 @@ async fn main() -> anyhow::Result<()> {
         gnss_baud_rate: args.gnss_baud_rate,
         probe_interval: args.probe_interval,
         probe: !args.no_probe,
+        simulation: args.simulation,
+        simulation_jitter: false,
         instance: glonax::from_file(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
@@ -128,6 +133,10 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Starting proxy services");
 
+    if config.simulation {
+        log::warn!("Simulation mode is enabled");
+    }
+
     log::info!("Instance ID: {}", config.instance.id);
     log::info!("Instance Model: {}", config.instance.model);
     log::info!("Instance Name: {}", config.instance.name);
@@ -155,7 +164,7 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_middleware_service(&machine_state, component::service_core);
     runtime.spawn_middleware_service(&machine_state, probe::service);
 
-    runtime.spawn_motion_sink(device::sink_net_actuator);
+    runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator);
 
     runtime
         .run_motion_service(&machine_state, component::service_remote_server)

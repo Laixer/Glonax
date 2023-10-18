@@ -20,6 +20,10 @@ pub struct ProxyConfig {
     pub probe: bool,
     /// Probe interval in seconds.
     pub probe_interval: u64,
+    /// Enable simulation mode.
+    pub simulation: bool,
+    /// Enable simulation jitter.
+    pub simulation_jitter: bool,
     /// Global configuration.
     pub global: GlobalConfig,
 }

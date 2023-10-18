@@ -15,6 +15,7 @@ pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<crate::MachineS
 pub mod builder;
 
 pub struct RuntimeContext<Conf> {
+    /// Runtime configuration.
     pub config: Conf,
     /// Glonax instance.
     pub instance: crate::core::Instance,
@@ -117,8 +118,6 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     ///
     /// This method will block until the runtime is shutdown.
     pub async fn wait_for_shutdown(&self) {
-        let mut shutdown = self.shutdown_signal();
-
-        shutdown.recv().await.unwrap();
+        self.shutdown_signal().recv().await.ok();
     }
 }
