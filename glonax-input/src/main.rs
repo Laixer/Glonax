@@ -135,7 +135,11 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         .failsafe(config.fail_safe)
         .connect(
             config.address.to_owned(),
-            config.global.bin_name.to_string(),
+            format!(
+                "{}/{}",
+                config.global.bin_name.to_string(),
+                glonax::consts::VERSION
+            ),
         )
         .await?;
 
