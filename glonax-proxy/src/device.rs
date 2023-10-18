@@ -3,7 +3,7 @@ use std::time::Duration;
 use glonax::core::Motion;
 use tokio::time::sleep;
 
-use crate::{config::ProxyConfig, device};
+use crate::config::ProxyConfig;
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::MachineState>>;

@@ -13,6 +13,5 @@ members = [
   "glonax-proxy",
   "glonax-input",
   "glonax-agent",
-  "glonax-csim",
   "glonax-utils"
 ]

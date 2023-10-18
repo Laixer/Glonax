@@ -1,6 +1,6 @@
 [package]
 name = "glonax"
-version = "3.1.0"
+version = "3.2.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
@@ -14,14 +14,11 @@ keywords = ["hardware", "machine", "controller"]
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 
 chrono = "0.4"
-bytes = "1.4.0"
-toml = "0.7"
+bytes = "1.5"
+toml = "0.8"
 serde = "1.0"
 serde_derive = "1.0"
-
-futures = "0.3"
 log = "0.4"
-tokio = { version = "1.29", features = ["full"] }
-async-trait = "0.1"
-sysinfo = "0.29.0"
+tokio = { version = "1.33", features = ["full"] }
+sysinfo = "0.29"
 socket2 = "0.5"
