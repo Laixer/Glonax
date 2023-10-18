@@ -60,7 +60,7 @@ cp ./target/release/glonax-input $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-netctl $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-diag $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-agent $PACKAGE_DIR/usr/local/bin
-cp ./target/release/glonax-proxyd $PACKAGE_DIR/usr/local/bin
+cp ./target/release/glonaxd $PACKAGE_DIR/usr/local/bin
 
 # Set package architecture
 sed -i "s/{ARCH}/$ARCH_NAME/" $PACKAGE_DIR/DEBIAN/control

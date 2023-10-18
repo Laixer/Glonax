@@ -35,7 +35,7 @@ jobs:
 
     - name: Test install
       run: |
-        glonax-proxyd -V
+        glonaxd -V
 
     - name: Publish artifacts
       uses: actions/upload-artifact@v2

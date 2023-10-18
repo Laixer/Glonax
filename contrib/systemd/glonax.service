@@ -1,5 +1,5 @@
 [Unit]
-Description=Glonax Proxy
+Description=Glonax Server
 StartLimitIntervalSec=5
 StartLimitBurst=5
 Wants=sys-subsystem-net-devices-can0.device
@@ -13,7 +13,7 @@ Nice=-15
 User=glonax
 Group=glonax
 ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i eth0 -i can0 -o carrier
-ExecStart=/usr/local/bin/glonax-proxyd --bind 0:30051 --daemon can0
+ExecStart=/usr/local/bin/glonaxd --bind 0:30051 --daemon can0
 PrivateTmp=true
 
 [Install]

@@ -95,5 +95,5 @@ if [ -d /run/systemd/system ]; then
   systemctl daemon-reload
   echo "..done"
 
-  enable_glonax_service glonax-proxy.service
+  enable_glonax_service glonax.service
 fi

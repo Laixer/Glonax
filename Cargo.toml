@@ -8,10 +8,11 @@ strip = true        # Strip symbols from binary*
 resolver = "2"
 members = [
   "glonax-j1939",
+  "glonax-agent",
+  "glonax-gamepad",
+  "glonax-input",
   "glonax-runtime",
   "glonax-serial",
-  "glonax-proxy",
-  "glonax-input",
-  "glonax-agent",
+  "glonax-server",
   "glonax-utils"
 ]

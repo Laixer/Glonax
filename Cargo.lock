@@ -492,7 +492,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "glonax-proxy"
+name = "glonax-serial"
+version = "1.0.0"
+dependencies = [
+ "libc",
+ "log",
+ "termios",
+ "tokio 1.33.0",
+]
+
+[[package]]
+name = "glonax-server"
 version = "1.0.0"
 dependencies = [
  "anyhow",
@@ -503,16 +513,6 @@ dependencies = [
  "rand",
  "reqwest",
  "simplelog",
- "tokio 1.33.0",
-]
-
-[[package]]
-name = "glonax-serial"
-version = "1.0.0"
-dependencies = [
- "libc",
- "log",
- "termios",
  "tokio 1.33.0",
 ]
 
