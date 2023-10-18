@@ -158,13 +158,20 @@ async fn main() -> anyhow::Result<()> {
 
     runtime.spawn_signal_service(&machine_state, device::service_host);
     runtime.spawn_signal_service(&machine_state, device::service_gnss);
-    runtime.spawn_signal_service(&machine_state, device::service_net_encoder);
-    runtime.spawn_signal_service(&machine_state, device::service_net_ems);
 
-    runtime.spawn_middleware_service(&machine_state, component::service_core);
+    if config.simulation {
+        runtime.spawn_signal_service(&machine_state, device::service_net_encoder_sim);
+        runtime.spawn_signal_service(&machine_state, device::service_net_ems_sim);
+
+        runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator_sim);
+    } else {
+        runtime.spawn_signal_service(&machine_state, device::service_net_encoder);
+        runtime.spawn_signal_service(&machine_state, device::service_net_ems);
+
+        runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator);
+    }
+
     runtime.spawn_middleware_service(&machine_state, probe::service);
-
-    runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator);
 
     runtime
         .run_motion_service(&machine_state, component::service_remote_server)

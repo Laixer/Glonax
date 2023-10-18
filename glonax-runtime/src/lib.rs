@@ -25,6 +25,46 @@ pub use self::runtime::RuntimeContext;
 
 use crate::core::{Engine, Gnss, Host, Pose};
 
+pub struct EcuState {
+    pub power: [std::sync::atomic::AtomicI16; 8],
+    motion_lock: std::sync::atomic::AtomicBool,
+}
+
+impl EcuState {
+    pub fn lock(&self) {
+        self.power[0].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[1].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[2].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[3].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[4].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[5].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[6].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.power[7].store(0, std::sync::atomic::Ordering::Relaxed);
+
+        self.motion_lock
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn unlock(&self) {
+        self.motion_lock
+            .store(false, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    pub fn is_locked(&self) -> bool {
+        self.motion_lock.load(std::sync::atomic::Ordering::Relaxed)
+    }
+}
+
+impl Default for EcuState {
+    fn default() -> Self {
+        Self {
+            power: [0; 8].map(|_| std::sync::atomic::AtomicI16::new(0)),
+            motion_lock: std::sync::atomic::AtomicBool::new(false),
+        }
+    }
+}
+
+// TODO: Rename to device state
 pub struct RobotState {
     /// VMS telemetry data.
     pub vms: Host,
@@ -55,6 +95,8 @@ pub struct MachineState {
     pub instance: core::Instance,
     /// Robot state.
     pub state: RobotState,
+    /// ECU state.
+    pub ecu_state: EcuState,
 }
 
 impl MachineState {
@@ -67,6 +109,7 @@ impl MachineState {
                 name: "".to_string(),
             },
             state: RobotState::default(),
+            ecu_state: EcuState::default(),
         }
     }
 }

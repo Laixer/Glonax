@@ -3,7 +3,7 @@ use crate::config::ProxyConfig;
 pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
 pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::MachineState>>;
 
-pub(super) async fn service_core(
+pub(super) async fn _service_core(
     _local_config: ProxyConfig,
     _local_machine_state: SharedMachineState,
 ) {
