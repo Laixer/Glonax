@@ -17,260 +17,110 @@ async fn main() -> anyhow::Result<()> {
 
     use glonax::transport::frame::FrameMessage;
 
+    let bin_name = env!("CARGO_BIN_NAME");
+
+    let address = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "localhost:30051".to_string());
+
     log::debug!("Starting host service");
 
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(true)
-        .connect("localhost:30051", "glonax-agent/0.1.0")
-        .await
-        .unwrap();
+        .connect(
+            address.clone(),
+            format!("{}/{}", bin_name, glonax::consts::VERSION),
+        )
+        .await?;
 
-    log::info!("Connected to {}", "localhost:30051");
+    log::info!("Connected to {}", address);
 
-    client.send_request(FrameMessage::Instance).await.unwrap();
+    client.send_request(FrameMessage::Instance).await?;
+    read_message(&mut client).await?;
 
-    let frame = client.read_frame().await.unwrap();
-    match frame.message {
-        FrameMessage::Null => {
-            log::info!("Received null");
-        }
-        FrameMessage::Status => {
-            let status = client
-                .packet::<glonax::core::Status>(frame.payload_length)
-                .await
-                .unwrap();
-            log::info!("Received status: {}", status);
-        }
-        FrameMessage::Instance => {
-            let instance = client
-                .packet::<glonax::core::Instance>(frame.payload_length)
-                .await
-                .unwrap();
-            log::info!("Received instance: {}", instance);
-        }
-        _ => {}
-    }
-
-    client.send_request(FrameMessage::Status).await.unwrap();
-
-    let frame = client.read_frame().await.unwrap();
-    match frame.message {
-        FrameMessage::Null => {
-            log::info!("Received null");
-        }
-        FrameMessage::Status => {
-            let status = client
-                .packet::<glonax::core::Status>(frame.payload_length)
-                .await
-                .unwrap();
-            log::info!("Received status: {}", status);
-        }
-        FrameMessage::Instance => {
-            let instance = client
-                .packet::<glonax::core::Instance>(frame.payload_length)
-                .await
-                .unwrap();
-            log::info!("Received instance: {}", instance);
-        }
-        _ => {}
-    }
+    client.send_request(FrameMessage::Status).await?;
+    read_message(&mut client).await?;
 
     // tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
-    loop {
-        client.send_request(FrameMessage::Pose).await.unwrap();
+    // loop {
+    for _ in 0..100 {
+        client.send_request(FrameMessage::Pose).await?;
+        read_message(&mut client).await?;
 
-        let frame = client.read_frame().await.unwrap();
-        match frame.message {
-            FrameMessage::Null => {
-                log::info!("Received null");
-            }
-            FrameMessage::Status => {
-                let status = client
-                    .packet::<glonax::core::Status>(frame.payload_length)
-                    .await
-                    .unwrap();
-                log::info!("Received status: {}", status);
-            }
-            FrameMessage::Instance => {
-                let instance = client
-                    .packet::<glonax::core::Instance>(frame.payload_length)
-                    .await
-                    .unwrap();
-                log::info!("Received instance: {}", instance);
-            }
-            FrameMessage::Pose => {
-                let pose = client
-                    .packet::<glonax::core::Pose>(frame.payload_length)
-                    .await
-                    .unwrap();
-                log::info!("Received pose: {}", pose);
-            }
-            FrameMessage::Engine => {
-                let engine = client
-                    .packet::<glonax::core::Engine>(frame.payload_length)
-                    .await
-                    .unwrap();
-                log::info!("Received engine: {}", engine);
-            }
-            _ => {}
-        }
+        // client.send_request(FrameMessage::Engine).await?;
+        // read_message(&mut client).await?;
+
+        client.send_request(FrameMessage::Instance).await?;
+        read_message(&mut client).await?;
+
+        client.send_request(FrameMessage::Status).await?;
+        read_message(&mut client).await?;
+
+        client.send_request(FrameMessage::VMS).await?;
+        read_message(&mut client).await?;
+
+        client.send_request(FrameMessage::GNSS).await?;
+        read_message(&mut client).await?;
+
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
     }
 
-    //     client.send_request(FrameMessage::Engine).await.unwrap();
+    client.send_request(FrameMessage::Shutdown).await?;
 
-    //     let frame = client.read_frame().await.unwrap();
-    //     match frame.message {
-    //         FrameMessage::Null => {
-    //             log::info!("Received null");
-    //         }
-    //         FrameMessage::Status => {
-    //             let status = client
-    //                 .packet::<glonax::core::Status>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received status: {}", status);
-    //         }
-    //         FrameMessage::Instance => {
-    //             let instance = client
-    //                 .packet::<glonax::core::Instance>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received instance: {}", instance);
-    //         }
-    //         FrameMessage::Pose => {
-    //             let pose = client
-    //                 .packet::<glonax::core::Pose>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received pose: {}", pose);
-    //         }
-    //         FrameMessage::Engine => {
-    //             let engine = client
-    //                 .packet::<glonax::core::Engine>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received engine: {}", engine);
-    //         }
-    //         _ => {}
-    //     }
+    Ok(())
+}
 
-    //     client.send_request(FrameMessage::Status).await.unwrap();
+async fn read_message(
+    client: &mut glonax::transport::Client<tokio::net::TcpStream>,
+) -> std::io::Result<()> {
+    use glonax::transport::frame::FrameMessage;
 
-    //     let frame = client.read_frame().await.unwrap();
-    //     match frame.message {
-    //         FrameMessage::Null => {
-    //             log::info!("Received null");
-    //         }
-    //         FrameMessage::Status => {
-    //             let status = client
-    //                 .packet::<glonax::core::Status>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received status: {}", status);
-    //         }
-    //         FrameMessage::Instance => {
-    //             let instance = client
-    //                 .packet::<glonax::core::Instance>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received instance: {}", instance);
-    //         }
-    //         FrameMessage::Pose => {
-    //             let pose = client
-    //                 .packet::<glonax::core::Pose>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received pose: {}", pose);
-    //         }
-    //         _ => {}
-    //     }
+    let frame = client.read_frame().await?;
 
-    //     client.send_request(FrameMessage::VMS).await.unwrap();
+    match frame.message {
+        FrameMessage::Null => {
+            log::info!("Received null");
+        }
+        FrameMessage::Shutdown => {
+            log::info!("Received shutdown");
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Received shutdown",
+            ))?;
+        }
+        FrameMessage::Status => {
+            let status = client
+                .packet::<glonax::core::Status>(frame.payload_length)
+                .await?;
+            log::info!("Received status: {}", status);
+        }
+        FrameMessage::Instance => {
+            let instance = client
+                .packet::<glonax::core::Instance>(frame.payload_length)
+                .await?;
+            log::info!("Received instance: {}", instance);
+        }
+        FrameMessage::Pose => {
+            let pose = client
+                .packet::<glonax::core::Pose>(frame.payload_length)
+                .await?;
+            log::info!("Received pose: {}", pose);
+        }
+        FrameMessage::VMS => {
+            let vms = client
+                .packet::<glonax::core::Host>(frame.payload_length)
+                .await?;
+            log::info!("Received vms: {}", vms);
+        }
+        FrameMessage::GNSS => {
+            let gnss = client
+                .packet::<glonax::core::Gnss>(frame.payload_length)
+                .await?;
+            log::info!("Received gnss: {}", gnss);
+        }
+        _ => {}
+    }
 
-    //     let frame = client.read_frame().await.unwrap();
-    //     match frame.message {
-    //         FrameMessage::Null => {
-    //             log::info!("Received null");
-    //         }
-    //         FrameMessage::Status => {
-    //             let status = client
-    //                 .packet::<glonax::core::Status>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received status: {}", status);
-    //         }
-    //         FrameMessage::Instance => {
-    //             let instance = client
-    //                 .packet::<glonax::core::Instance>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received instance: {}", instance);
-    //         }
-    //         FrameMessage::Pose => {
-    //             let pose = client
-    //                 .packet::<glonax::core::Pose>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received pose: {}", pose);
-    //         }
-    //         FrameMessage::VMS => {
-    //             let vms = client
-    //                 .packet::<glonax::core::Host>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received vms: {}", vms);
-    //         }
-    //         _ => {}
-    //     }
-
-    //     client.send_request(FrameMessage::GNSS).await.unwrap();
-
-    //     let frame = client.read_frame().await.unwrap();
-    //     match frame.message {
-    //         FrameMessage::Null => {
-    //             log::info!("Received null");
-    //         }
-    //         FrameMessage::Status => {
-    //             let status = client
-    //                 .packet::<glonax::core::Status>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received status: {}", status);
-    //         }
-    //         FrameMessage::Instance => {
-    //             let instance = client
-    //                 .packet::<glonax::core::Instance>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received instance: {}", instance);
-    //         }
-    //         FrameMessage::Pose => {
-    //             let pose = client
-    //                 .packet::<glonax::core::Pose>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received pose: {}", pose);
-    //         }
-    //         FrameMessage::VMS => {
-    //             let vms = client
-    //                 .packet::<glonax::core::Host>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received vms: {}", vms);
-    //         }
-    //         FrameMessage::GNSS => {
-    //             let gnss = client
-    //                 .packet::<glonax::core::Gnss>(frame.payload_length)
-    //                 .await
-    //                 .unwrap();
-    //             log::info!("Received gnss: {}", gnss);
-    //         }
-    //         _ => {}
-    //     }
-
-    // tokio::time::sleep(std::time::Duration::from_millis(25)).await;
-    // }
-
-    // Ok(())
+    Ok(())
 }
