@@ -1,7 +1,5 @@
 use glonax_j1939::*;
 
-use crate::core::Rotator;
-
 use super::Parsable;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -135,25 +133,39 @@ impl EncoderMessage {
     }
 
     pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
+        use nalgebra::Rotation3;
+
         let mut machine_state = local_machine_state.write().await;
 
+        // TODO: Move this up
         match self.node {
             0x6A => {
+                let offset = 0.0;
                 let position = self.position as f32 / 1000.0;
-                machine_state.state.pose.frame_rotator = Rotator::from_yaw(position);
+                let position = (position - offset) * -1.0;
+                machine_state.state.pose.frame_rotator =
+                    Rotation3::from_euler_angles(0.0, 0.0, position);
             }
             0x6B => {
                 let offset = 60_f32.to_radians();
                 let position = self.position as f32 / 1000.0;
-                machine_state.state.pose.boom_rotator = Rotator::from_pitch(position - offset);
+                let position = (position - offset) * -1.0;
+                machine_state.state.pose.boom_rotator =
+                    Rotation3::from_euler_angles(0.0, position, 0.0);
             }
             0x6C => {
+                let offset = 0.0;
                 let position = self.position as f32 / 1000.0;
-                machine_state.state.pose.arm_rotator = Rotator::from_pitch(position);
+                let position = (position - offset) * -1.0;
+                machine_state.state.pose.arm_rotator =
+                    Rotation3::from_euler_angles(0.0, position, 0.0);
             }
             0x6D => {
+                let offset = 0.0;
                 let position = self.position as f32 / 1000.0;
-                machine_state.state.pose.attachment_rotator = Rotator::from_pitch(position);
+                let position = (position - offset) * -1.0;
+                machine_state.state.pose.attachment_rotator =
+                    Rotation3::from_euler_angles(0.0, position, 0.0);
             }
             _ => {}
         }

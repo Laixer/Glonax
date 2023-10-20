@@ -1,23 +1,21 @@
-use crate::core::Rotator;
-
 pub struct Pose {
     /// Frame rotator.
-    pub frame_rotator: Rotator,
+    pub frame_rotator: nalgebra::Rotation3<f32>,
     /// Boom rotator.
-    pub boom_rotator: Rotator,
+    pub boom_rotator: nalgebra::Rotation3<f32>,
     /// Arm rotator.
-    pub arm_rotator: Rotator,
+    pub arm_rotator: nalgebra::Rotation3<f32>,
     /// Attachment rotator.
-    pub attachment_rotator: Rotator,
+    pub attachment_rotator: nalgebra::Rotation3<f32>,
 }
 
 impl Default for Pose {
     fn default() -> Self {
         Self {
-            frame_rotator: Rotator::identity(),
-            boom_rotator: Rotator::identity(),
-            arm_rotator: Rotator::identity(),
-            attachment_rotator: Rotator::identity(),
+            frame_rotator: nalgebra::Rotation3::identity(),
+            boom_rotator: nalgebra::Rotation3::identity(),
+            arm_rotator: nalgebra::Rotation3::identity(),
+            attachment_rotator: nalgebra::Rotation3::identity(),
         }
     }
 }
@@ -29,21 +27,25 @@ impl Pose {
 
         let mut buf = bytes::BytesMut::with_capacity(32);
 
-        buf.put_f32(self.frame_rotator.x);
-        buf.put_f32(self.frame_rotator.y);
-        buf.put_f32(self.frame_rotator.z);
+        let (roll, pitch, yaw) = self.frame_rotator.euler_angles();
+        buf.put_f32(roll);
+        buf.put_f32(pitch);
+        buf.put_f32(yaw);
 
-        buf.put_f32(self.boom_rotator.x);
-        buf.put_f32(self.boom_rotator.y);
-        buf.put_f32(self.boom_rotator.z);
+        let (roll, pitch, yaw) = self.boom_rotator.euler_angles();
+        buf.put_f32(roll);
+        buf.put_f32(pitch);
+        buf.put_f32(yaw);
 
-        buf.put_f32(self.arm_rotator.x);
-        buf.put_f32(self.arm_rotator.y);
-        buf.put_f32(self.arm_rotator.z);
+        let (roll, pitch, yaw) = self.arm_rotator.euler_angles();
+        buf.put_f32(roll);
+        buf.put_f32(pitch);
+        buf.put_f32(yaw);
 
-        buf.put_f32(self.attachment_rotator.x);
-        buf.put_f32(self.attachment_rotator.y);
-        buf.put_f32(self.attachment_rotator.z);
+        let (roll, pitch, yaw) = self.attachment_rotator.euler_angles();
+        buf.put_f32(roll);
+        buf.put_f32(pitch);
+        buf.put_f32(yaw);
 
         buf.to_vec()
     }
@@ -57,27 +59,14 @@ impl TryFrom<&[u8]> for Pose {
 
         let mut buf = bytes::Bytes::copy_from_slice(value);
 
-        let frame_rotator = Rotator {
-            x: buf.get_f32(),
-            y: buf.get_f32(),
-            z: buf.get_f32(),
-        };
-
-        let boom_rotator = Rotator {
-            x: buf.get_f32(),
-            y: buf.get_f32(),
-            z: buf.get_f32(),
-        };
-        let arm_rotator = Rotator {
-            x: buf.get_f32(),
-            y: buf.get_f32(),
-            z: buf.get_f32(),
-        };
-        let attachment_rotator = Rotator {
-            x: buf.get_f32(),
-            y: buf.get_f32(),
-            z: buf.get_f32(),
-        };
+        let frame_rotator =
+            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+        let boom_rotator =
+            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+        let arm_rotator =
+            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+        let attachment_rotator =
+            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
 
         Ok(Self {
             frame_rotator,
@@ -92,25 +81,25 @@ impl std::fmt::Display for Pose {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        s.push_str(&format!(
-            "Frame: {:.2}rad {:.2}°; ",
-            self.frame_rotator.z,
-            self.frame_rotator.z.to_degrees(),
-        ));
+        let (_roll, _pitch, yaw) = self.frame_rotator.euler_angles();
+        s.push_str(&format!("Frame: {:.2}rad {:.2}°; ", yaw, yaw.to_degrees(),));
+        let (_roll, pitch, _yaw) = self.boom_rotator.euler_angles();
         s.push_str(&format!(
             "Boom: {:.2}rad {:.2}°; ",
-            self.boom_rotator.y,
-            self.boom_rotator.y.to_degrees(),
+            pitch,
+            pitch.to_degrees()
         ));
+        let (_roll, pitch, _yaw) = self.arm_rotator.euler_angles();
         s.push_str(&format!(
             "Arm: {:.2}rad {:.2}°; ",
-            self.arm_rotator.y,
-            self.arm_rotator.y.to_degrees(),
+            pitch,
+            pitch.to_degrees()
         ));
+        let (_roll, pitch, _yaw) = self.attachment_rotator.euler_angles();
         s.push_str(&format!(
             "Attachment: {:.2}rad {:.2}°",
-            self.attachment_rotator.y,
-            self.attachment_rotator.y.to_degrees(),
+            pitch,
+            pitch.to_degrees()
         ));
 
         write!(f, "{}", s)
