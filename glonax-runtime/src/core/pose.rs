@@ -1,26 +1,97 @@
+use nalgebra::{Rotation3, UnitVector3, Vector};
+
+struct EncoderAdapter {
+    /// Encoder factor.
+    factor: f32,
+    /// Encoder offset.
+    offset: f32,
+    /// Invert encoder.
+    invert: bool,
+    /// Encoder axis.
+    axis: UnitVector3<f32>,
+}
+
+impl EncoderAdapter {
+    fn as_radians(&self, position: u32) -> f32 {
+        let position = (position as f32 / self.factor) - self.offset;
+        if self.invert {
+            position * -1.0
+        } else {
+            position
+        }
+    }
+
+    #[inline]
+    fn as_rotation(&self, position: u32) -> Rotation3<f32> {
+        Rotation3::from_axis_angle(&self.axis, self.as_radians(position))
+    }
+}
+
 pub struct Pose {
     /// Frame rotator.
-    pub frame_rotator: nalgebra::Rotation3<f32>,
+    frame_rotator: Rotation3<f32>,
     /// Boom rotator.
-    pub boom_rotator: nalgebra::Rotation3<f32>,
+    boom_rotator: Rotation3<f32>,
     /// Arm rotator.
-    pub arm_rotator: nalgebra::Rotation3<f32>,
+    arm_rotator: Rotation3<f32>,
     /// Attachment rotator.
-    pub attachment_rotator: nalgebra::Rotation3<f32>,
+    attachment_rotator: Rotation3<f32>,
 }
 
 impl Default for Pose {
     fn default() -> Self {
         Self {
-            frame_rotator: nalgebra::Rotation3::identity(),
-            boom_rotator: nalgebra::Rotation3::identity(),
-            arm_rotator: nalgebra::Rotation3::identity(),
-            attachment_rotator: nalgebra::Rotation3::identity(),
+            frame_rotator: Rotation3::identity(),
+            boom_rotator: Rotation3::identity(),
+            arm_rotator: Rotation3::identity(),
+            attachment_rotator: Rotation3::identity(),
         }
     }
 }
 
 impl Pose {
+    pub fn set_node_position(&mut self, node: u8, position: u32) {
+        match node {
+            0x6A => {
+                let frame_encoder = EncoderAdapter {
+                    factor: 1000.0,
+                    offset: 0.0,
+                    invert: true,
+                    axis: Vector::z_axis(),
+                };
+
+                self.frame_rotator = frame_encoder.as_rotation(position);
+            }
+            0x6B => {
+                let offset = 60_f32.to_radians();
+                let position = position as f32 / 1000.0;
+                let position = (position - offset) * -1.0;
+                self.boom_rotator = Rotation3::from_euler_angles(0.0, position, 0.0);
+            }
+            0x6C => {
+                let arm_encoder = EncoderAdapter {
+                    factor: 1000.0,
+                    offset: 0.0,
+                    invert: true,
+                    axis: Vector::y_axis(),
+                };
+
+                self.arm_rotator = arm_encoder.as_rotation(position);
+            }
+            0x6D => {
+                let attachment_encoder = EncoderAdapter {
+                    factor: 1000.0,
+                    offset: 0.0,
+                    invert: true,
+                    axis: Vector::y_axis(),
+                };
+
+                self.attachment_rotator = attachment_encoder.as_rotation(position);
+            }
+            _ => {}
+        }
+    }
+
     // TODO: Copy into bytes directly
     pub fn to_bytes(&self) -> Vec<u8> {
         use bytes::BufMut;
@@ -60,13 +131,12 @@ impl TryFrom<&[u8]> for Pose {
         let mut buf = bytes::Bytes::copy_from_slice(value);
 
         let frame_rotator =
-            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+            Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
         let boom_rotator =
-            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
-        let arm_rotator =
-            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+            Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+        let arm_rotator = Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
         let attachment_rotator =
-            nalgebra::Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+            Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
 
         Ok(Self {
             frame_rotator,
