@@ -103,23 +103,60 @@ pub(super) async fn service_remote_server(
             let frame = match client.read_frame().await {
                 Ok(frame) => frame,
                 Err(e) => {
+                    use tokio::io::AsyncWriteExt;
+
                     log::warn!("Failed to read frame: {}", e);
+
+                    client
+                        .send_packet(&glonax::transport::frame::Shutdown)
+                        .await
+                        .ok();
+                    client.inner_mut().shutdown().await.ok();
+
+                    log::debug!("Client shutdown");
+
                     return;
                 }
             };
 
             // TODO: Handle errors
             let start = if frame.message == FrameMessage::Start {
-                client
+                match client
                     .packet::<glonax::transport::frame::Start>(frame.payload_length)
                     .await
+                {
+                    Ok(start) => start,
+                    Err(e) => {
+                        use tokio::io::AsyncWriteExt;
+
+                        log::warn!("Failed to read frame: {}", e);
+
+                        client
+                            .send_packet(&glonax::transport::frame::Shutdown)
+                            .await
+                            .ok();
+                        client.inner_mut().shutdown().await.ok();
+
+                        log::debug!("Client shutdown");
+
+                        return;
+                    }
+                }
             } else {
-                Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Invalid start message",
-                ))
-            }
-            .expect("Failed to receive start message");
+                use tokio::io::AsyncWriteExt;
+
+                log::warn!("Client did not start session");
+
+                client
+                    .send_packet(&glonax::transport::frame::Shutdown)
+                    .await
+                    .ok();
+                client.inner_mut().shutdown().await.ok();
+
+                log::debug!("Client shutdown");
+
+                return;
+            };
 
             let mut session_shutdown = false;
 
@@ -138,6 +175,16 @@ pub(super) async fn service_remote_server(
                                     .send_packet(&glonax::transport::frame::Null)
                                     .await
                                     .unwrap();
+                            }
+                            FrameMessage::Shutdown => {
+                                log::debug!("Client requested shutdown");
+
+                                use tokio::io::AsyncWriteExt;
+
+                                client.inner_mut().shutdown().await.ok();
+
+                                session_shutdown = true;
+                                break;
                             }
                             FrameMessage::Status => {
                                 let status = &local_machine_state.read().await.status;
@@ -176,16 +223,16 @@ pub(super) async fn service_remote_server(
                                     .await
                                     .unwrap();
                             }
-                            _ => {
-                                client
-                                    .send_packet(&glonax::transport::frame::Null)
-                                    .await
-                                    .unwrap();
-                            }
+                            _ => {}
                         }
                     }
                     FrameMessage::Shutdown => {
                         log::debug!("Client requested shutdown");
+
+                        use tokio::io::AsyncWriteExt;
+
+                        client.inner_mut().shutdown().await.ok();
+
                         session_shutdown = true;
                         break;
                     }

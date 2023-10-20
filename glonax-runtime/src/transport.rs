@@ -3,6 +3,10 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x02;
 
+// FUTURE: Next protocol version should be 0x03
+// - Payload should end with 0x00
+// - Packets should have an explicit length so that we can read them in one go and check against the length
+
 // const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
 //     + std::mem::size_of::<u8>()
 //     + std::mem::size_of::<u8>()
@@ -219,18 +223,17 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Start {
-        type Error = (); // TODO: return frame::FrameError
+        type Error = FrameError;
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
             let flags = buffer[0];
 
-            let mut session_name = String::new();
+            // TODO: Announce session name length
 
-            for c in &buffer[1..] {
-                session_name.push(*c as char);
-            }
-
-            Ok(Self::new(flags, session_name))
+            Ok(Self::new(
+                flags,
+                String::from_utf8_lossy(&buffer[1..]).into_owned(),
+            ))
         }
     }
 
@@ -266,21 +269,19 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Request {
-        type Error = (); // TODO: return frame::FrameError
+        type Error = FrameError;
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+            // TODO: THis is not the right error, but size checks will move up to Frame
             if buffer.len() != 1 {
-                log::warn!("Invalid buffer size");
-                return Err(());
+                Err(FrameError::FrameTooSmall)?
             }
 
-            let message = FrameMessage::from_u8(buffer[0]);
-            if message.is_none() {
-                log::warn!("Invalid message type {}", buffer[0]);
-                return Err(());
-            }
+            // TODO: Return at once
+            let message = FrameMessage::from_u8(buffer[0])
+                .ok_or_else(|| FrameError::InvalidMessage(buffer[0]))?;
 
-            Ok(Self::new(message.unwrap())) // TODO: return error
+            Ok(Self::new(message))
         }
     }
 
@@ -301,7 +302,7 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Shutdown {
-        type Error = (); // TODO: return frame::FrameError
+        type Error = FrameError;
 
         fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
             Ok(Self)
@@ -325,7 +326,7 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Null {
-        type Error = (); // TODO: return frame::FrameError
+        type Error = FrameError;
 
         fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
             Ok(Self)
@@ -433,6 +434,14 @@ impl Client<tokio::fs::File> {
 impl<T> Client<T> {
     pub fn new(inner: T) -> Self {
         Self { inner }
+    }
+
+    pub fn inner(&self) -> &T {
+        &self.inner
+    }
+
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.inner
     }
 }
 
