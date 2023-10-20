@@ -23,6 +23,36 @@ pub mod frame {
 
     use super::{MIN_BUFFER_SIZE, PROTO_HEADER, PROTO_VERSION};
 
+    pub enum FrameError {
+        FrameTooSmall,
+        InvalidHeader,
+        VersionMismatch(u8),
+        InvalidMessage(u8),
+        ExcessivePayloadLength(usize),
+        InvalidPadding,
+    }
+
+    impl std::error::Error for FrameError {}
+
+    impl std::fmt::Debug for FrameError {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "FrameError: {:?}", self)
+        }
+    }
+
+    impl std::fmt::Display for FrameError {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                Self::FrameTooSmall => write!(f, "frame too small"),
+                Self::InvalidHeader => write!(f, "invalid header"),
+                Self::VersionMismatch(got) => write!(f, "version mismatch: {}", got),
+                Self::InvalidMessage(message) => write!(f, "invalid message type: {}", message),
+                Self::ExcessivePayloadLength(len) => write!(f, "excessive payload length: {}", len),
+                Self::InvalidPadding => write!(f, "invalid padding"),
+            }
+        }
+    }
+
     #[derive(Debug, PartialEq, Eq)]
     pub enum FrameMessage {
         Null = 0x1,
@@ -110,46 +140,39 @@ pub mod frame {
     }
 
     impl TryFrom<&[u8]> for Frame {
-        type Error = ();
+        type Error = FrameError;
 
         fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
             if buffer.len() < MIN_BUFFER_SIZE {
-                log::warn!("Invalid buffer size");
-                return Err(());
+                Err(FrameError::FrameTooSmall)?
             }
 
             // Check header
             if &buffer[0..3] != &PROTO_HEADER[..] {
-                log::warn!("Invalid header");
-                return Err(());
+                Err(FrameError::InvalidHeader)?
             }
 
             // Check protocol version
             let version = buffer[3];
             if version != PROTO_VERSION {
-                log::warn!("Invalid version {}", version);
-                return Err(());
+                Err(FrameError::VersionMismatch(version))?
             }
 
-            let message = FrameMessage::from_u8(buffer[4]);
-            if message.is_none() {
-                log::warn!("Invalid message type {}", buffer[4]);
-                return Err(());
-            }
+            // Check message type
+            let message = FrameMessage::from_u8(buffer[4])
+                .ok_or_else(|| FrameError::InvalidMessage(buffer[4]))?;
 
             let payload_length = u16::from_be_bytes([buffer[5], buffer[6]]) as usize;
             if payload_length > 4096 {
-                log::warn!("Invalid proto length {}", payload_length);
-                return Err(());
+                Err(FrameError::ExcessivePayloadLength(payload_length))?
             }
 
             // Check padding
             if &buffer[7..10] != &[0u8; 3] {
-                log::warn!("Invalid padding");
-                return Err(());
+                Err(FrameError::InvalidPadding)?
             }
 
-            Ok(Self::new(message.unwrap(), payload_length))
+            Ok(Self::new(message, payload_length))
         }
     }
 
@@ -196,7 +219,7 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Start {
-        type Error = ();
+        type Error = (); // TODO: return frame::FrameError
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
             let flags = buffer[0];
@@ -243,7 +266,7 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Request {
-        type Error = ();
+        type Error = (); // TODO: return frame::FrameError
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
             if buffer.len() != 1 {
@@ -257,7 +280,7 @@ pub mod frame {
                 return Err(());
             }
 
-            Ok(Self::new(message.unwrap()))
+            Ok(Self::new(message.unwrap())) // TODO: return error
         }
     }
 
@@ -278,7 +301,7 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Shutdown {
-        type Error = ();
+        type Error = (); // TODO: return frame::FrameError
 
         fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
             Ok(Self)
@@ -302,7 +325,7 @@ pub mod frame {
     }
 
     impl TryFrom<Vec<u8>> for Null {
-        type Error = ();
+        type Error = (); // TODO: return frame::FrameError
 
         fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
             Ok(Self)
@@ -438,7 +461,12 @@ impl<T: AsyncRead + Unpin> Client<T> {
 
         self.inner.read_exact(&mut header_buffer).await?;
 
-        Ok(frame::Frame::try_from(&header_buffer[..]).unwrap())
+        frame::Frame::try_from(&header_buffer[..]).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Failed to parse frame: {}", e),
+            )
+        })
     }
 
     pub async fn packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
