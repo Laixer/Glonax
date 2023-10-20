@@ -39,6 +39,7 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     ///
     /// The task will be terminated when the runtime is shutdown or when the
     /// shutdown signal is received.
+    #[deprecated]
     pub fn spawn_background_task<T>(&self, task: T)
     where
         T: std::future::Future<Output = ()> + Send + 'static,

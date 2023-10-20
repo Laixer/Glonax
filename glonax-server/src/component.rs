@@ -190,16 +190,18 @@ pub(super) async fn service_remote_server(
                         break;
                     }
                     FrameMessage::Motion => {
-                        if start.is_write() {
-                            let motion = client
-                                .packet::<glonax::core::Motion>(frame.payload_length)
-                                .await
-                                .unwrap();
+                        let motion = client
+                            .packet::<glonax::core::Motion>(frame.payload_length)
+                            .await
+                            .unwrap();
 
+                        if start.is_write() {
                             if let Err(e) = local_motion_tx.send(motion).await {
                                 log::error!("Failed to send motion: {}", e);
                                 break;
                             }
+                        } else {
+                            log::warn!("Client is not authorized to send motion");
                         }
                     }
                     _ => {}
