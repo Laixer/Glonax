@@ -16,7 +16,11 @@ const MIN_BUFFER_SIZE: usize = 10;
 
 // TODO: Add Display
 pub trait Packetize: TryFrom<Vec<u8>> {
+    /// The message type of the packet.
     const MESSAGE: frame::FrameMessage;
+
+    /// If the packet has a fixed size, this should be set to that size.
+    const MESSAGE_SIZE: Option<usize> = None;
 
     /// Convert packet to bytes.
     fn to_bytes(&self) -> Vec<u8>;
@@ -272,21 +276,15 @@ pub mod frame {
         type Error = FrameError;
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-            // TODO: THis is not the right error, but size checks will move up to Frame
-            if buffer.len() != 1 {
-                Err(FrameError::FrameTooSmall)?
-            }
-
-            // TODO: Return at once
-            let message = FrameMessage::from_u8(buffer[0])
-                .ok_or_else(|| FrameError::InvalidMessage(buffer[0]))?;
-
-            Ok(Self::new(message))
+            FrameMessage::from_u8(buffer[0])
+                .ok_or_else(|| FrameError::InvalidMessage(buffer[0]))
+                .map(Self::new)
         }
     }
 
     impl super::Packetize for Request {
         const MESSAGE: FrameMessage = FrameMessage::Request;
+        const MESSAGE_SIZE: Option<usize> = Some(1);
 
         fn to_bytes(&self) -> Vec<u8> {
             vec![self.message.to_u8()]
@@ -311,6 +309,7 @@ pub mod frame {
 
     impl super::Packetize for Shutdown {
         const MESSAGE: FrameMessage = FrameMessage::Shutdown;
+        const MESSAGE_SIZE: Option<usize> = Some(0);
 
         fn to_bytes(&self) -> Vec<u8> {
             vec![]
@@ -335,6 +334,7 @@ pub mod frame {
 
     impl super::Packetize for Null {
         const MESSAGE: FrameMessage = FrameMessage::Null;
+        const MESSAGE_SIZE: Option<usize> = Some(0);
 
         fn to_bytes(&self) -> Vec<u8> {
             vec![]
@@ -479,6 +479,17 @@ impl<T: AsyncRead + Unpin> Client<T> {
     }
 
     pub async fn packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
+        if P::MESSAGE_SIZE.is_some() && size != P::MESSAGE_SIZE.unwrap() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "Invalid packet size: expected {}, got {}",
+                    P::MESSAGE_SIZE.unwrap(),
+                    size
+                ),
+            ));
+        }
+
         let buffer = {
             let payload_buffer = &mut vec![0u8; size];
 

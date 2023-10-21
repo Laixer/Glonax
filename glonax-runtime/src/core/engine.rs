@@ -50,9 +50,10 @@ impl TryFrom<Vec<u8>> for Engine {
 impl crate::transport::Packetize for Engine {
     const MESSAGE: crate::transport::frame::FrameMessage =
         crate::transport::frame::FrameMessage::Engine;
+    const MESSAGE_SIZE: Option<usize> = Some(4);
 
     fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = BytesMut::with_capacity(8);
+        let mut buf = BytesMut::with_capacity(Self::MESSAGE_SIZE.unwrap());
 
         buf.put_u8(self.driver_demand);
         buf.put_u8(self.actual_engine);

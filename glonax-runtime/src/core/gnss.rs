@@ -61,9 +61,10 @@ impl TryFrom<Vec<u8>> for Gnss {
 impl crate::transport::Packetize for Gnss {
     const MESSAGE: crate::transport::frame::FrameMessage =
         crate::transport::frame::FrameMessage::GNSS;
+    const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 5) + 1);
 
     fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = BytesMut::with_capacity(8);
+        let mut buf = BytesMut::with_capacity(Self::MESSAGE_SIZE.unwrap());
 
         buf.put_f32(self.location.0);
         buf.put_f32(self.location.1);
