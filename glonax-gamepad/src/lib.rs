@@ -26,18 +26,18 @@ pub enum Button {
 impl From<u8> for Button {
     fn from(value: u8) -> Self {
         match value {
-            v if v == 0 => Button::South,
-            v if v == 1 => Button::East,
-            v if v == 2 => Button::West,
-            v if v == 3 => Button::North,
-            v if v == 4 => Button::LeftBumper,
-            v if v == 5 => Button::RightBumper,
-            v if v == 6 => Button::Select,
-            v if v == 7 => Button::Start,
-            v if v == 8 => Button::Guide,
-            v if v == 9 => Button::LeftStick,
-            v if v == 10 => Button::RightStick,
-            v => Button::Other(v),
+            0 => Button::South,
+            1 => Button::East,
+            2 => Button::West,
+            3 => Button::North,
+            4 => Button::LeftBumper,
+            5 => Button::RightBumper,
+            6 => Button::Select,
+            7 => Button::Start,
+            8 => Button::Guide,
+            9 => Button::LeftStick,
+            10 => Button::RightStick,
+            _ => Button::Other(value),
         }
     }
 }
@@ -58,15 +58,15 @@ pub enum Axis {
 impl From<u8> for Axis {
     fn from(value: u8) -> Self {
         match value {
-            v if v == 0 => Axis::LeftStickX,
-            v if v == 1 => Axis::LeftStickY,
-            v if v == 2 => Axis::LeftTrigger,
-            v if v == 3 => Axis::RightStickX,
-            v if v == 4 => Axis::RightStickY,
-            v if v == 5 => Axis::RightTrigger,
-            v if v == 6 => Axis::DirectionalPadX,
-            v if v == 7 => Axis::DirectionalPadY,
-            v => Axis::Other(v),
+            0 => Axis::LeftStickX,
+            1 => Axis::LeftStickY,
+            2 => Axis::LeftTrigger,
+            3 => Axis::RightStickX,
+            4 => Axis::RightStickY,
+            5 => Axis::RightTrigger,
+            6 => Axis::DirectionalPadX,
+            7 => Axis::DirectionalPadY,
+            _ => Axis::Other(value),
         }
     }
 }

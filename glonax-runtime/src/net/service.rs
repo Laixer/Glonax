@@ -2,7 +2,8 @@ use glonax_j1939::*;
 
 use super::Parsable;
 
-pub struct J1939ApplicationInspector {}
+#[derive(Default)]
+pub struct J1939ApplicationInspector;
 
 pub struct J1939Message {
     /// Software identification.
@@ -72,11 +73,5 @@ impl J1939Message {
 impl Parsable<J1939Message> for J1939ApplicationInspector {
     fn parse(&mut self, frame: &Frame) -> Option<J1939Message> {
         Some(J1939Message::from_frame(0x0, frame))
-    }
-}
-
-impl J1939ApplicationInspector {
-    pub fn new() -> Self {
-        Self {}
     }
 }

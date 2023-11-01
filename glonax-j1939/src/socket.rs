@@ -125,7 +125,7 @@ impl J1939Socket {
             let buf_uninit = unsafe {
                 std::slice::from_raw_parts_mut(
                     buf.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
-                    buf.len() * std::mem::size_of::<u8>(),
+                    std::mem::size_of_val(buf),
                 )
             };
 
@@ -145,7 +145,7 @@ impl J1939Socket {
             let buf_uninit = unsafe {
                 std::slice::from_raw_parts_mut(
                     buf.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
-                    buf.len() * std::mem::size_of::<u8>(),
+                    std::mem::size_of_val(buf),
                 )
             };
 
@@ -156,21 +156,28 @@ impl J1939Socket {
         }
     }
 
-    pub async fn recv_msg(&self, buf: &mut [u8]) -> io::Result<(usize, socket2::RecvFlags, SockAddrJ1939)> {
+    pub async fn recv_msg(
+        &self,
+        buf: &mut [u8],
+    ) -> io::Result<(usize, socket2::RecvFlags, SockAddrJ1939)> {
         loop {
             let mut guard = self.0.readable().await?;
 
             let buf_uninit = unsafe {
                 std::slice::from_raw_parts_mut(
                     buf.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
-                    buf.len() * std::mem::size_of::<u8>(),
+                    std::mem::size_of_val(buf),
                 )
             };
 
             let t = &mut [socket2::MaybeUninitSlice::new(buf_uninit)];
 
-            match guard.try_io(|inner| inner.get_ref().recv_from_vectored(t) ) {
-                Ok(result) => return Ok(result.map(|(size, recv_flags, sockaddr)| (size, recv_flags, sockaddr.into())).unwrap()),
+            match guard.try_io(|inner| inner.get_ref().recv_from_vectored(t)) {
+                Ok(result) => {
+                    return Ok(result
+                        .map(|(size, recv_flags, sockaddr)| (size, recv_flags, sockaddr.into()))
+                        .unwrap())
+                }
                 Err(_would_block) => continue,
             }
         }

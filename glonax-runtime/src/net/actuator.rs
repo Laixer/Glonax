@@ -463,7 +463,7 @@ mod tests {
         let config_b = MotionConfigMessage::from_frame(0x5E, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(config_b.locked, true);
+        assert!(config_b.locked);
     }
 
     #[test]
@@ -474,7 +474,7 @@ mod tests {
         let config_b = MotionConfigMessage::from_frame(0xA9, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(config_b.locked, false);
+        assert!(!config_b.locked);
     }
 
     #[test]

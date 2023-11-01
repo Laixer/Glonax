@@ -65,6 +65,7 @@ impl Default for EcuState {
 }
 
 // TODO: Rename to device state
+#[derive(Default)]
 pub struct RobotState {
     /// VMS telemetry data.
     pub vms: Host,
@@ -74,17 +75,6 @@ pub struct RobotState {
     pub engine: Engine,
     /// Pose telemetry data.
     pub pose: Pose,
-}
-
-impl Default for RobotState {
-    fn default() -> Self {
-        Self {
-            vms: Host::default(),
-            gnss: Gnss::default(),
-            engine: Engine::default(),
-            pose: Pose::default(),
-        }
-    }
 }
 
 // TODO: Rename to runtime session
@@ -99,8 +89,8 @@ pub struct MachineState {
     pub ecu_state: EcuState,
 }
 
-impl MachineState {
-    pub fn new() -> Self {
+impl Default for MachineState {
+    fn default() -> Self {
         Self {
             status: core::Status::Healthy,
             instance: core::Instance {

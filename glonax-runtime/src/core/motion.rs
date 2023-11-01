@@ -117,22 +117,21 @@ impl std::fmt::Display for Motion {
             Motion::ResetAll => write!(f, "Reset all"),
             Motion::StraightDrive(value) => write!(f, "Straight drive: {}", value),
             Motion::Change(changes) => {
-                write!(
-                    f,
-                    "Change: {}",
-                    changes
-                        .iter()
-                        .map(|changeset| format!(
-                            "Actuator: {:?}; Value: {}, ",
-                            changeset.actuator,
-                            match changeset.value {
-                                Self::POWER_MIN => "Power minimum".to_string(),
-                                Self::POWER_MAX => "Power maximum".to_string(),
-                                _ => changeset.value.to_string(),
-                            }
-                        ))
-                        .collect::<String>()
-                )
+                let mut s = String::new();
+
+                for changeset in changes {
+                    s.push_str(&format!(
+                        "Actuator: {:?}; Value: {}, ",
+                        changeset.actuator,
+                        match changeset.value {
+                            Self::POWER_MIN => "Power minimum".to_string(),
+                            Self::POWER_MAX => "Power maximum".to_string(),
+                            _ => changeset.value.to_string(),
+                        }
+                    ));
+                }
+
+                write!(f, "Change: {}", s)
             }
         }
     }

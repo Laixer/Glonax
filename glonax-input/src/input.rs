@@ -199,9 +199,9 @@ mod tests {
 
     #[test]
     fn ramp() {
-        assert_eq!(120_i16.ramp(3072), 0);
-        assert_eq!(20_000_i16.ramp(3072), 20_000);
-        assert_eq!(-10_i16.ramp(3072), 0);
-        assert_eq!(-5960_i16.ramp(3072), -5960);
+        assert_eq!(120_i16.ramp(3_072), 0);
+        assert_eq!(20_000_i16.ramp(3_072), 20_000);
+        assert_eq!(-(10_i16.ramp(3_072)), 0);
+        assert_eq!(-(5960_i16.ramp(3_072)), -5960);
     }
 }

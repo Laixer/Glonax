@@ -14,7 +14,7 @@ pub(super) async fn service_host(
 ) {
     log::debug!("Starting host service");
 
-    let mut service = glonax::net::HostService::new();
+    let mut service = glonax::net::HostService::default();
 
     loop {
         service.refresh();
@@ -36,7 +36,7 @@ struct Encoder {
 impl Encoder {
     fn new(factor: i16, bounds: (i16, i16), multiturn: bool, invert: bool) -> Self {
         Self {
-            rng: rand::rngs::OsRng::default(),
+            rng: rand::rngs::OsRng,
             position: bounds.0 as u32,
             factor,
             bounds,
@@ -59,14 +59,14 @@ impl Encoder {
         if self.multiturn {
             let mut position = (self.position as i16 + velocity_norm) % self.bounds.1;
             if position < 0 {
-                position = self.bounds.1 + position;
+                position += self.bounds.1;
             }
             self.position = position as u32;
         } else {
             let mut position =
                 (self.position as i16 + velocity_norm).clamp(self.bounds.0, self.bounds.1);
             if position < 0 {
-                position = self.bounds.1 + position;
+                position += self.bounds.1;
             }
             self.position = position as u32;
         }
@@ -165,16 +165,19 @@ pub(super) async fn service_net_ems_sim(
     log::debug!("Starting EMS service");
 
     use rand::Rng;
-    let mut rng = rand::rngs::OsRng::default();
+    let mut rng = rand::rngs::OsRng;
 
     loop {
         sleep(Duration::from_millis(10)).await;
 
-        let mut message = EngineMessage::new();
-        message.driver_demand = Some(rng.gen_range(18..=20));
-        message.actual_engine = Some(rng.gen_range(19..=21));
-        message.rpm = Some(rng.gen_range(1180..=1200));
-        message.fill(local_machine_state.clone()).await;
+        EngineMessage {
+            driver_demand: Some(rng.gen_range(18..=20)),
+            actual_engine: Some(rng.gen_range(19..=21)),
+            rpm: Some(rng.gen_range(1180..=1200)),
+            ..Default::default()
+        }
+        .fill(local_machine_state.clone())
+        .await;
     }
 }
 
@@ -197,7 +200,7 @@ pub(super) async fn service_net_ems(
         Ok(network) => {
             let mut router = Router::new(network);
 
-            let mut engine_management_service = EngineManagementSystem::new();
+            let mut engine_management_service = EngineManagementSystem;
 
             loop {
                 if let Err(e) = router.listen().await {
@@ -226,14 +229,14 @@ pub(super) async fn service_gnss(
     log::debug!("Starting GNSS service");
 
     match glonax_serial::Uart::open(
-        &std::path::Path::new(local_config.gnss_device.as_ref().unwrap()),
+        std::path::Path::new(local_config.gnss_device.as_ref().unwrap()),
         glonax_serial::BaudRate::from_speed(local_config.gnss_baud_rate),
     ) {
         Ok(serial) => {
             let reader = BufReader::new(serial);
             let mut lines = reader.lines();
 
-            let service = glonax::net::NMEAService::new();
+            let service = glonax::net::NMEAService;
 
             while let Ok(Some(line)) = lines.next_line().await {
                 if let Some(message) = service.decode(line) {

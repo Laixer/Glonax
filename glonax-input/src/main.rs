@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
     let mut address = args.address.clone();
 
     if !address.contains(':') {
-        address.push_str(":");
+        address.push(':');
         address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
     }
 
@@ -135,11 +135,7 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
         .failsafe(config.fail_safe)
         .connect(
             config.address.to_owned(),
-            format!(
-                "{}/{}",
-                config.global.bin_name.to_string(),
-                glonax::consts::VERSION
-            ),
+            format!("{}/{}", config.global.bin_name, glonax::consts::VERSION),
         )
         .await?;
 

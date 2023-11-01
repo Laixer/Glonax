@@ -68,7 +68,8 @@ impl TryFrom<&[u8]> for Status {
     type Error = ();
 
     fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
-        if buffer.len() < 1 {
+        // TODO: This can now be checked by the transport layer.
+        if buffer.len() != 1 {
             log::warn!("Invalid buffer size");
             return Err(());
         }

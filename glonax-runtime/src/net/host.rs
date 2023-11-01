@@ -5,13 +5,6 @@ pub struct HostService {
 }
 
 impl HostService {
-    /// Creates a new host service
-    pub fn new() -> Self {
-        let sys = System::new();
-
-        Self { system: sys }
-    }
-
     /// Refreshes the system information
     pub fn refresh(&mut self) {
         self.system.refresh_memory();
@@ -59,6 +52,14 @@ impl HostService {
     pub fn cpu_load(&self) -> (f64, f64, f64) {
         let load_avg = self.system.load_average();
         (load_avg.one, load_avg.five, load_avg.fifteen)
+    }
+}
+
+impl Default for HostService {
+    fn default() -> Self {
+        let sys = System::new();
+
+        Self { system: sys }
     }
 }
 

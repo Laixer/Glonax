@@ -74,7 +74,7 @@ pub fn from_file<T: serde::de::DeserializeOwned>(
 }
 
 /// Glonax global configuration.
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct GlobalConfig {
     /// Name of the binary.
     pub bin_name: String,
@@ -85,14 +85,5 @@ pub struct GlobalConfig {
 impl Configurable for GlobalConfig {
     fn global(&self) -> &GlobalConfig {
         self
-    }
-}
-
-impl Default for GlobalConfig {
-    fn default() -> Self {
-        Self {
-            bin_name: String::new(),
-            daemon: false,
-        }
     }
 }

@@ -24,7 +24,7 @@ impl NMEAMessage {
             .parse::<f32>()
             .unwrap();
         let min = str
-            .replace(".", "")
+            .replace('.', "")
             .chars()
             .skip(offset)
             .collect::<String>()
@@ -80,7 +80,7 @@ impl NMEAMessage {
             //     .unwrap();
             // println!("Timestamp: {}:{}:{}", hour, minute, second);
 
-            if sentence[6].len() > 0 {
+            if !sentence[6].is_empty() {
                 let fix_quality = sentence[6].parse::<u8>().unwrap();
                 if fix_quality == 1 || fix_quality == 2 {
                     let lat_line = sentence[2];
@@ -90,17 +90,17 @@ impl NMEAMessage {
                     let long_quadrant = sentence[5].to_uppercase().chars().next().unwrap();
 
                     this.coordinates = Some((
-                        Self::dms_to_degree(lat_line, lat_quadrant) as f32,
+                        Self::dms_to_degree(lat_line, lat_quadrant),
                         Self::dms_to_degree(long_line, long_quadrant),
                     ));
                 }
             }
 
-            if sentence[7].len() > 0 {
+            if !sentence[7].is_empty() {
                 this.satellites = Some(sentence[7].parse::<u8>().unwrap());
             }
 
-            if sentence[9].len() > 0 && sentence[10].len() > 0 {
+            if !sentence[9].is_empty() && !sentence[10].is_empty() {
                 let altitude = sentence[9].parse::<f32>().unwrap();
                 let altitude_unit = sentence[10].to_uppercase().chars().next().unwrap();
 
@@ -120,7 +120,7 @@ impl NMEAMessage {
             //     return this;
             // }
 
-            if sentence[6].len() < 1 {
+            if sentence[6].is_empty() {
                 return this;
             }
 
@@ -133,7 +133,7 @@ impl NMEAMessage {
                 let long_quadrant = sentence[4].to_uppercase().chars().next().unwrap();
 
                 this.coordinates = Some((
-                    Self::dms_to_degree(lat_line, lat_quadrant) as f32,
+                    Self::dms_to_degree(lat_line, lat_quadrant),
                     Self::dms_to_degree(long_line, long_quadrant),
                 ));
             }
@@ -149,7 +149,7 @@ impl NMEAMessage {
             //     return this;
             // }
 
-            if sentence[2].len() < 1 {
+            if sentence[2].is_empty() {
                 return this;
             }
 
@@ -162,16 +162,16 @@ impl NMEAMessage {
                 let long_quadrant = sentence[6].to_uppercase().chars().next().unwrap();
 
                 this.coordinates = Some((
-                    Self::dms_to_degree(lat_line, lat_quadrant) as f32,
+                    Self::dms_to_degree(lat_line, lat_quadrant),
                     Self::dms_to_degree(long_line, long_quadrant),
                 ));
             }
 
-            if sentence[7].len() > 0 {
+            if !sentence[7].is_empty() {
                 this.speed = Some(sentence[7].parse::<f32>().unwrap());
             }
 
-            if sentence[8].len() > 0 {
+            if !sentence[8].is_empty() {
                 this.heading = Some(sentence[8].parse::<f32>().unwrap());
             }
         }
@@ -227,19 +227,12 @@ impl std::fmt::Display for NMEAMessage {
     }
 }
 
+#[derive(Default)]
 pub struct NMEAService;
 
 impl NMEAService {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     pub fn decode(&self, line: String) -> Option<NMEAMessage> {
-        if line.starts_with("$GNGGA") {
-            Some(NMEAMessage::decode(line))
-        } else if line.starts_with("$GNGLL") {
-            Some(NMEAMessage::decode(line))
-        } else if line.starts_with("$GNRMC") {
+        if line.starts_with("$GNGGA") || line.starts_with("$GNGLL") || line.starts_with("$GNRMC") {
             Some(NMEAMessage::decode(line))
         } else {
             None

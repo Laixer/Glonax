@@ -3,6 +3,7 @@ use glonax_j1939::{
     *,
 };
 
+#[derive(Default)]
 pub struct EngineMessage {
     /// Engine Torque Mode.
     pub engine_torque_mode: Option<EngineTorqueMode>,
@@ -19,18 +20,6 @@ pub struct EngineMessage {
 }
 
 impl EngineMessage {
-    /// Construct a new engine message.
-    pub fn new() -> Self {
-        Self {
-            engine_torque_mode: None,
-            driver_demand: None,
-            actual_engine: None,
-            rpm: None,
-            source_addr: None,
-            starter_mode: None,
-        }
-    }
-
     pub fn from_frame(frame: &Frame) -> Self {
         Self {
             engine_torque_mode: decode::spn899(frame.pdu()[0]),
@@ -105,13 +94,10 @@ impl std::fmt::Display for EngineMessage {
     }
 }
 
+#[derive(Default)]
 pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
-    pub fn new() -> Self {
-        Self {}
-    }
-
     pub fn serialize(&self, engine_message: &mut EngineMessage) -> Vec<Frame> {
         engine_message.to_frame()
     }

@@ -44,7 +44,14 @@ pub mod frame {
 
     impl std::fmt::Debug for FrameError {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(f, "FrameError: {:?}", self)
+            match self {
+                Self::FrameTooSmall => write!(f, "FrameTooSmall"),
+                Self::InvalidHeader => write!(f, "InvalidHeader"),
+                Self::VersionMismatch(got) => write!(f, "VersionMismatch({})", got),
+                Self::InvalidMessage(message) => write!(f, "InvalidMessage({})", message),
+                Self::ExcessivePayloadLength(len) => write!(f, "ExcessivePayloadLength({})", len),
+                Self::InvalidPadding => write!(f, "InvalidPadding"),
+            }
         }
     }
 
@@ -139,7 +146,7 @@ pub mod frame {
         }
 
         pub fn put(&mut self, payload: &[u8]) {
-            self.buffer.put(&payload[..]);
+            self.buffer.put(payload);
         }
 
         pub fn payload_range(&self) -> std::ops::Range<usize> {
@@ -156,7 +163,7 @@ pub mod frame {
             }
 
             // Check header
-            if &buffer[0..3] != &PROTO_HEADER[..] {
+            if buffer[0..3] != PROTO_HEADER[..] {
                 Err(FrameError::InvalidHeader)?
             }
 
@@ -176,7 +183,7 @@ pub mod frame {
             }
 
             // Check padding
-            if &buffer[7..10] != &[0u8; 3] {
+            if buffer[7..10] != [0u8; 3] {
                 Err(FrameError::InvalidPadding)?
             }
 
@@ -347,6 +354,7 @@ pub struct ConnectionOptions {
 }
 
 impl ConnectionOptions {
+    // TOOD: Remove this
     pub fn new() -> Self {
         Self {
             flags: frame::Start::MODE_READ,
@@ -397,6 +405,12 @@ impl ConnectionOptions {
             .await?;
 
         Ok(client)
+    }
+}
+
+impl Default for ConnectionOptions {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

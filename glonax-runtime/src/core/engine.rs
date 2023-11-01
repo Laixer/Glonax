@@ -1,5 +1,6 @@
 use bytes::{BufMut, BytesMut};
 
+#[derive(Default)]
 pub struct Engine {
     /// Engine Driver Demand in percent.
     pub driver_demand: u8,
@@ -7,16 +8,6 @@ pub struct Engine {
     pub actual_engine: u8,
     /// Engine RPM.
     pub rpm: u16,
-}
-
-impl Default for Engine {
-    fn default() -> Self {
-        Self {
-            driver_demand: 0,
-            actual_engine: 0,
-            rpm: 0,
-        }
-    }
 }
 
 impl std::fmt::Display for Engine {
