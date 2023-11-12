@@ -1,26 +1,22 @@
 use std::time::Duration;
 
-use glonax::core::Motion;
+use glonax::{core::Motion, SharedRuntimeState};
 use tokio::time::sleep;
 
 use crate::config::ProxyConfig;
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
-pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::RuntimeState>>;
 
-pub(super) async fn service_host(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-) {
+pub(super) async fn service_host(config: ProxyConfig, runtime_state: SharedRuntimeState) {
     log::debug!("Starting host service");
 
     let mut service = glonax::net::HostService::default();
 
     loop {
         service.refresh();
-        service.fill(local_machine_state.clone()).await;
+        service.fill(runtime_state.clone()).await;
 
-        sleep(Duration::from_millis(local_config.host_interval)).await;
+        sleep(Duration::from_millis(config.host_interval)).await;
     }
 }
 
@@ -81,8 +77,8 @@ impl Encoder {
 }
 
 pub(super) async fn service_net_encoder_sim(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
+    config: ProxyConfig,
+    runtime_state: SharedRuntimeState,
 ) {
     use glonax::net::EncoderMessage;
 
@@ -106,31 +102,25 @@ pub(super) async fn service_net_encoder_sim(
         for device in control_devices.iter_mut() {
             sleep(Duration::from_millis(5)).await;
 
-            let pos = local_machine_state.read().await.ecu_state.power[device.1 as usize]
+            let pos = runtime_state.read().await.ecu_state.power[device.1 as usize]
                 .load(Ordering::SeqCst);
 
             EncoderMessage::new_with_position(
                 device.0,
-                device.2.position(pos, local_config.simulation_jitter),
+                device.2.position(pos, config.simulation_jitter),
             )
-            .fill(local_machine_state.clone())
+            .fill(runtime_state.clone())
             .await;
         }
     }
 }
 
-pub(super) async fn service_net_encoder(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-) {
+pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedRuntimeState) {
     use glonax::net::{EncoderService, J1939Network, Router};
 
     log::debug!("Starting encoder service");
 
-    match J1939Network::new(
-        &local_config.interface,
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
+    match J1939Network::new(&config.interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let mut router = Router::new(network);
 
@@ -148,7 +138,7 @@ pub(super) async fn service_net_encoder(
 
                 for encoder in &mut encoder_list {
                     if let Some(message) = router.try_accept(encoder) {
-                        message.fill(local_machine_state.clone()).await;
+                        message.fill(runtime_state.clone()).await;
                     }
                 }
             }
@@ -157,10 +147,7 @@ pub(super) async fn service_net_encoder(
     }
 }
 
-pub(super) async fn service_net_ems_sim(
-    _local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-) {
+pub(super) async fn service_net_ems_sim(_config: ProxyConfig, runtime_state: SharedRuntimeState) {
     use glonax::net::EngineMessage;
 
     log::debug!("Starting EMS service");
@@ -177,25 +164,22 @@ pub(super) async fn service_net_ems_sim(
             rpm: Some(rng.gen_range(1180..=1200)),
             ..Default::default()
         }
-        .fill(local_machine_state.clone())
+        .fill(runtime_state.clone())
         .await;
     }
 }
 
-pub(super) async fn service_net_ems(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-) {
+pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedRuntimeState) {
     use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
-    if local_config.interface2.is_none() {
+    if config.interface2.is_none() {
         return;
     }
 
     log::debug!("Starting EMS service");
 
     match J1939Network::new(
-        &local_config.interface2.unwrap(),
+        &config.interface2.unwrap(),
         glonax::consts::DEFAULT_J1939_ADDRESS,
     ) {
         Ok(network) => {
@@ -209,7 +193,7 @@ pub(super) async fn service_net_ems(
                 }
 
                 if let Some(message) = router.try_accept(&mut engine_management_service) {
-                    message.fill(local_machine_state.clone()).await;
+                    message.fill(runtime_state.clone()).await;
                 }
             }
         }
@@ -217,21 +201,18 @@ pub(super) async fn service_net_ems(
     }
 }
 
-pub(super) async fn service_gnss(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-) {
+pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedRuntimeState) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
-    if local_config.gnss_device.is_none() {
+    if config.gnss_device.is_none() {
         return;
     }
 
     log::debug!("Starting GNSS service");
 
     match glonax_serial::Uart::open(
-        std::path::Path::new(local_config.gnss_device.as_ref().unwrap()),
-        glonax_serial::BaudRate::from_speed(local_config.gnss_baud_rate),
+        std::path::Path::new(config.gnss_device.as_ref().unwrap()),
+        glonax_serial::BaudRate::from_speed(config.gnss_baud_rate),
     ) {
         Ok(serial) => {
             let reader = BufReader::new(serial);
@@ -241,7 +222,7 @@ pub(super) async fn service_gnss(
 
             while let Ok(Some(line)) = lines.next_line().await {
                 if let Some(message) = service.decode(line) {
-                    message.fill(local_machine_state.clone()).await;
+                    message.fill(runtime_state.clone()).await;
                 }
             }
         }
@@ -253,8 +234,8 @@ pub(super) async fn service_gnss(
 }
 
 pub(super) async fn sink_net_actuator_sim(
-    _local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
+    _config: ProxyConfig,
+    runtime_state: SharedRuntimeState,
     mut motion_rx: MotionReceiver,
 ) {
     log::debug!("Starting motion listener");
@@ -262,25 +243,25 @@ pub(super) async fn sink_net_actuator_sim(
     while let Some(motion) = motion_rx.recv().await {
         match motion {
             Motion::StopAll => {
-                local_machine_state.write().await.ecu_state.lock();
+                runtime_state.write().await.ecu_state.lock();
             }
             Motion::ResumeAll => {
-                local_machine_state.write().await.ecu_state.unlock();
+                runtime_state.write().await.ecu_state.unlock();
             }
             Motion::ResetAll => {
-                local_machine_state.write().await.ecu_state.lock();
-                local_machine_state.write().await.ecu_state.unlock();
+                runtime_state.write().await.ecu_state.lock();
+                runtime_state.write().await.ecu_state.unlock();
             }
             Motion::StraightDrive(_value) => {
                 // TODO: Implement
             }
             Motion::Change(changes) => {
-                if local_machine_state.read().await.ecu_state.is_locked() {
+                if runtime_state.read().await.ecu_state.is_locked() {
                     continue;
                 }
 
                 for changeset in &changes {
-                    local_machine_state.write().await.ecu_state.power[changeset.actuator as usize]
+                    runtime_state.write().await.ecu_state.power[changeset.actuator as usize]
                         .store(changeset.value, std::sync::atomic::Ordering::Relaxed);
                 }
             }
@@ -289,18 +270,15 @@ pub(super) async fn sink_net_actuator_sim(
 }
 
 pub(super) async fn sink_net_actuator(
-    local_config: ProxyConfig,
-    _local_machine_state: SharedMachineState,
+    config: ProxyConfig,
+    _runtime_state: SharedRuntimeState,
     mut motion_rx: MotionReceiver,
 ) {
     use glonax::net::{ActuatorService, J1939Network};
 
     log::debug!("Starting motion listener");
 
-    match J1939Network::new(
-        &local_config.interface,
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
+    match J1939Network::new(&config.interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let service = ActuatorService::new(0x4A);
 

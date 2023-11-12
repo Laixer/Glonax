@@ -145,6 +145,7 @@ async fn main() -> anyhow::Result<()> {
         log::warn!("Instance ID is not set or invalid");
     }
 
+    // TODO: Enable service termination
     let mut runtime = glonax::RuntimeBuilder::from_config(&config)?
         // .with_shutdown()
         .build();

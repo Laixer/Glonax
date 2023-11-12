@@ -1,11 +1,10 @@
+use glonax::SharedRuntimeState;
+
 use crate::config::ProxyConfig;
 
 const _REMOTE_PROBE_HOST: &str = "https://cymbion-oybqn.ondigitalocean.app";
 
-pub(super) async fn service(
-    _local_config: ProxyConfig,
-    _local_machine_state: crate::server::SharedMachineState,
-) {
+pub(super) async fn service(_config: ProxyConfig, _runtime_state: SharedRuntimeState) {
     // log::debug!("Starting host service");
 
     // let url = reqwest::Url::parse(REMOTE_PROBE_HOST).unwrap();

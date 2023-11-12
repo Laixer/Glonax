@@ -25,6 +25,34 @@ pub use self::runtime::RuntimeContext;
 
 use crate::core::{Engine, Gnss, Host, Pose};
 
+pub type SharedRuntimeState = std::sync::Arc<tokio::sync::RwLock<RuntimeState>>;
+
+pub mod consts {
+    /// Glonax runtime version.
+    pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+    /// Glonax runtime major version.
+    pub const VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
+    /// Glonax runtime minor version.
+    pub const VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
+    /// Glonax runtime patch version.
+    pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
+    /// Glonax default J1939 address.
+    pub const DEFAULT_J1939_ADDRESS: u8 = 0x9E;
+    /// Glonax default network port for both TCP and UDP.
+    pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
+    /// Glonax default configuration path.
+    pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
+    /// Signal FIFO file located in the working directory.
+    pub const FIFO_SIGNAL_FILE: &str = "signal";
+    /// Glonax default queue size for signals.
+    pub const QUEUE_SIZE_SIGNAL: usize = 32;
+    /// Glonax default queue size for motion commands.
+    pub const QUEUE_SIZE_MOTION: usize = 32;
+    /// Glonax network maximum number of clients.
+    pub const NETWORK_MAX_CLIENTS: usize = 16;
+}
+
+// TODO: Move somewhere else
 pub struct EcuState {
     pub power: [std::sync::atomic::AtomicI16; 8],
     motion_lock: std::sync::atomic::AtomicBool,
@@ -101,29 +129,4 @@ impl Default for RuntimeState {
             ecu_state: EcuState::default(),
         }
     }
-}
-
-pub mod consts {
-    /// Glonax runtime version.
-    pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-    /// Glonax runtime major version.
-    pub const VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
-    /// Glonax runtime minor version.
-    pub const VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
-    /// Glonax runtime patch version.
-    pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
-    /// Glonax default J1939 address.
-    pub const DEFAULT_J1939_ADDRESS: u8 = 0x9E;
-    /// Glonax default network port for both TCP and UDP.
-    pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
-    /// Glonax default configuration path.
-    pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
-    /// Signal FIFO file located in the working directory.
-    pub const FIFO_SIGNAL_FILE: &str = "signal";
-    /// Glonax default queue size for signals.
-    pub const QUEUE_SIZE_SIGNAL: usize = 32;
-    /// Glonax default queue size for motion commands.
-    pub const QUEUE_SIZE_MOTION: usize = 32;
-    /// Glonax network maximum number of clients.
-    pub const NETWORK_MAX_CLIENTS: usize = 16;
 }

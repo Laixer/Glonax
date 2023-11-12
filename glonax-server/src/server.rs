@@ -1,61 +1,13 @@
+use glonax::SharedRuntimeState;
+
 use crate::config::ProxyConfig;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
-pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::RuntimeState>>;
-
-// pub(super) async fn _service_core(
-//     _local_config: ProxyConfig,
-//     _local_machine_state: SharedMachineState,
-// ) {
-    // use glonax::core::Metric;
-    // use glonax::transport::frame::{Frame, FrameMessage};
-    // use std::time::Instant;
-
-    // log::debug!("Starting core service");
-
-    // loop {
-    //     tokio::time::sleep(std::time::Duration::from_millis(15)).await;
-    // }
-
-    // // let mut now = Instant::now();
-
-    // let mut signal_gnss_timeout = Instant::now();
-    // let mut signal_encoder_timeout = Instant::now();
-    // let mut signal_engine_timeout = Instant::now();
-
-    // if signal_gnss_timeout.elapsed().as_secs() > 5 {
-    //     log::warn!("GNSS timeout: no update in last 5 seconds");
-    //     local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutGNSS;
-    //     signal_gnss_timeout = Instant::now();
-    // } else if signal_encoder_timeout.elapsed().as_secs() > 1 {
-    //     log::warn!("Encoder timeout: no update in last 1 second");
-    //     local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-    //     signal_encoder_timeout = Instant::now();
-    // } else if signal_engine_timeout.elapsed().as_secs() > 5 {
-    //     log::warn!("Engine timeout: no update in last 5 seconds");
-    //     local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEngine;
-    //     signal_engine_timeout = Instant::now();
-    // } else {
-    //     local_machine_state.write().await.status = glonax::core::Status::Healthy;
-    // }
-
-    // let payload = signal.to_bytes();
-
-    // let mut frame = Frame::new(FrameMessage::Signal, payload.len());
-    // frame.put(&payload[..]);
-
-    // if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-    //     log::error!("Failed to send signal: {}", e);
-    //     break;
-    // }
-
-//     log::debug!("Signal broadcast shutdown");
-// }
 
 pub(super) async fn service(
-    local_config: ProxyConfig,
-    local_machine_state: SharedMachineState,
-    local_sender: MotionSender,
+    config: ProxyConfig,
+    runtime_state: SharedRuntimeState,
+    sender: MotionSender,
     _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) {
     use glonax::transport::frame::FrameMessage;
@@ -65,10 +17,8 @@ pub(super) async fn service(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    log::debug!("Listening on: {}", local_config.address);
-    let listener = TcpListener::bind(local_config.address.clone())
-        .await
-        .unwrap();
+    log::debug!("Listening on: {}", config.address);
+    let listener = TcpListener::bind(config.address.clone()).await.unwrap();
 
     loop {
         let (stream, addr) = listener.accept().await.unwrap();
@@ -90,8 +40,8 @@ pub(super) async fn service(
             glonax::consts::NETWORK_MAX_CLIENTS
         );
 
-        let local_machine_state = local_machine_state.clone();
-        let local_motion_tx = local_sender.clone();
+        let local_runtime_state = runtime_state.clone();
+        let local_motion_tx = sender.clone();
         tokio::spawn(async move {
             log::debug!("Accepted client from: {}", addr);
 
@@ -186,37 +136,37 @@ pub(super) async fn service(
                             }
                             FrameMessage::Status => {
                                 client
-                                    .send_packet(&local_machine_state.read().await.status)
+                                    .send_packet(&local_runtime_state.read().await.status)
                                     .await
                                     .unwrap();
                             }
                             FrameMessage::Instance => {
                                 client
-                                    .send_packet(&local_machine_state.read().await.instance)
+                                    .send_packet(&local_runtime_state.read().await.instance)
                                     .await
                                     .unwrap();
                             }
                             FrameMessage::Pose => {
                                 client
-                                    .send_packet(&local_machine_state.read().await.state.pose)
+                                    .send_packet(&local_runtime_state.read().await.state.pose)
                                     .await
                                     .unwrap();
                             }
                             FrameMessage::Engine => {
                                 client
-                                    .send_packet(&local_machine_state.read().await.state.engine)
+                                    .send_packet(&local_runtime_state.read().await.state.engine)
                                     .await
                                     .unwrap();
                             }
                             FrameMessage::VMS => {
                                 client
-                                    .send_packet(&local_machine_state.read().await.state.vms)
+                                    .send_packet(&local_runtime_state.read().await.state.vms)
                                     .await
                                     .unwrap();
                             }
                             FrameMessage::GNSS => {
                                 client
-                                    .send_packet(&local_machine_state.read().await.state.gnss)
+                                    .send_packet(&local_runtime_state.read().await.state.gnss)
                                     .await
                                     .unwrap();
                             }
