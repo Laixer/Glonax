@@ -3,6 +3,8 @@ use glonax_j1939::{
     *,
 };
 
+use crate::SharedRuntimeState;
+
 #[derive(Default)]
 pub struct EngineMessage {
     /// Engine Torque Mode.
@@ -57,12 +59,12 @@ impl EngineMessage {
         vec![frame_builder.set_len(8).build()]
     }
 
-    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
-        let mut machine_state = local_machine_state.write().await;
+    pub async fn fill(&self, local_runtime_state: SharedRuntimeState) {
+        let mut runtime_state = local_runtime_state.write().await;
 
-        machine_state.state.engine.driver_demand = self.driver_demand.unwrap_or(0);
-        machine_state.state.engine.actual_engine = self.actual_engine.unwrap_or(0);
-        machine_state.state.engine.rpm = self.rpm.unwrap_or(0);
+        runtime_state.state.engine.driver_demand = self.driver_demand.unwrap_or(0);
+        runtime_state.state.engine.actual_engine = self.actual_engine.unwrap_or(0);
+        runtime_state.state.engine.rpm = self.rpm.unwrap_or(0);
     }
 }
 

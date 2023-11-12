@@ -1,5 +1,7 @@
 use sysinfo::{System, SystemExt};
 
+use crate::SharedRuntimeState;
+
 pub struct HostService {
     system: System,
 }
@@ -64,13 +66,13 @@ impl Default for HostService {
 }
 
 impl HostService {
-    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
-        let mut machine_state = local_machine_state.write().await;
+    pub async fn fill(&self, local_runtime_state: SharedRuntimeState) {
+        let mut runtime_state = local_runtime_state.write().await;
 
-        machine_state.state.vms.memory = (self.used_memory(), self.total_memory());
-        machine_state.state.vms.swap = (self.used_swap(), self.total_swap());
-        machine_state.state.vms.cpu_load = self.cpu_load();
-        machine_state.state.vms.uptime = self.uptime();
-        machine_state.state.vms.timestamp = self.timestamp();
+        runtime_state.state.vms.memory = (self.used_memory(), self.total_memory());
+        runtime_state.state.vms.swap = (self.used_swap(), self.total_swap());
+        runtime_state.state.vms.cpu_load = self.cpu_load();
+        runtime_state.state.vms.uptime = self.uptime();
+        runtime_state.state.vms.timestamp = self.timestamp();
     }
 }

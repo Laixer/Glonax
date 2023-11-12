@@ -1,5 +1,7 @@
 use glonax_j1939::*;
 
+use crate::SharedRuntimeState;
+
 use super::Parsable;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -132,8 +134,8 @@ impl EncoderMessage {
         vec![frame_builder.set_len(8).build()]
     }
 
-    pub async fn fill(&self, local_machine_state: crate::runtime::SharedMachineState) {
-        local_machine_state
+    pub async fn fill(&self, local_runtime_state: SharedRuntimeState) {
+        local_runtime_state
             .write()
             .await
             .state
