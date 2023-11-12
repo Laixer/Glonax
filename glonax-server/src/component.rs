@@ -1,7 +1,7 @@
 use crate::config::ProxyConfig;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
-pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::MachineState>>;
+pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::RuntimeState>>;
 
 pub(super) async fn _service_core(
     _local_config: ProxyConfig,
@@ -91,7 +91,6 @@ pub(super) async fn service_remote_server(
             glonax::consts::NETWORK_MAX_CLIENTS
         );
 
-        let local_config = local_config.clone();
         let local_machine_state = local_machine_state.clone();
         let local_motion_tx = local_sender.clone();
         tokio::spawn(async move {
@@ -187,17 +186,16 @@ pub(super) async fn service_remote_server(
                                 break;
                             }
                             FrameMessage::Status => {
-                                let status = &local_machine_state.read().await.status;
-                                client.send_packet(status).await.unwrap();
+                                client
+                                    .send_packet(&local_machine_state.read().await.status)
+                                    .await
+                                    .unwrap();
                             }
                             FrameMessage::Instance => {
-                                // TODO: Get this from the runtime session.
-                                let instance = glonax::core::Instance::new(
-                                    local_config.instance.id.clone(),
-                                    local_config.instance.model.clone(),
-                                    local_config.instance.name.clone(),
-                                );
-                                client.send_packet(&instance).await.unwrap();
+                                client
+                                    .send_packet(&local_machine_state.read().await.instance)
+                                    .await
+                                    .unwrap();
                             }
                             FrameMessage::Pose => {
                                 client

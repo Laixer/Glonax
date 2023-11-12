@@ -10,7 +10,7 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Motion>;
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
-pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<crate::MachineState>>;
+pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<crate::RuntimeState>>;
 
 pub mod builder;
 

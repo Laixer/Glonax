@@ -149,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
         // .with_shutdown()
         .build();
 
-    let machine_state = Arc::new(RwLock::new(glonax::MachineState::default()));
+    let machine_state = Arc::new(RwLock::new(glonax::RuntimeState::default()));
 
     runtime
         .motion_tx

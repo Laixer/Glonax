@@ -77,8 +77,7 @@ pub struct RobotState {
     pub pose: Pose,
 }
 
-// TODO: Rename to runtime session
-pub struct MachineState {
+pub struct RuntimeState {
     /// Current machine state.
     pub status: core::Status,
     /// Glonax instance.
@@ -89,7 +88,7 @@ pub struct MachineState {
     pub ecu_state: EcuState,
 }
 
-impl Default for MachineState {
+impl Default for RuntimeState {
     fn default() -> Self {
         Self {
             status: core::Status::Healthy,
@@ -116,7 +115,7 @@ pub mod consts {
     /// Glonax default J1939 address.
     pub const DEFAULT_J1939_ADDRESS: u8 = 0x9E;
     /// Glonax default network port for both TCP and UDP.
-    pub const DEFAULT_NETWORK_PORT: u16 = 30051;
+    pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
     /// Glonax default configuration path.
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
     /// Signal FIFO file located in the working directory.

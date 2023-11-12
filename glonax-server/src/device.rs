@@ -6,7 +6,7 @@ use tokio::time::sleep;
 use crate::config::ProxyConfig;
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
-pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::MachineState>>;
+pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::RuntimeState>>;
 
 pub(super) async fn service_host(
     local_config: ProxyConfig,
