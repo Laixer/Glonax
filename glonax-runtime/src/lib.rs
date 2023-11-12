@@ -23,8 +23,6 @@ pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::Error;
 pub use self::runtime::RuntimeContext;
 
-use crate::core::{Engine, Gnss, Host, Pose};
-
 pub type SharedRuntimeState = std::sync::Arc<tokio::sync::RwLock<RuntimeState>>;
 
 pub mod consts {
@@ -95,16 +93,17 @@ impl Default for EcuState {
 // TODO: Rename to device state
 #[derive(Default)]
 pub struct RobotState {
-    /// VMS telemetry data.
-    pub vms: Host,
-    /// GNSS telemetry data.
-    pub gnss: Gnss,
-    /// Engine telemetry data.
-    pub engine: Engine,
-    /// Pose telemetry data.
-    pub pose: Pose,
+    /// VMS data.
+    pub vms: core::Host,
+    /// GNSS data.
+    pub gnss: core::Gnss,
+    /// Engine data.
+    pub engine: core::Engine,
+    /// Pose data.
+    pub pose: core::Pose,
 }
 
+// TODO: Rename to runtime
 pub struct RuntimeState {
     /// Current machine state.
     pub status: core::Status,

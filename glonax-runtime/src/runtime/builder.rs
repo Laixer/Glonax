@@ -21,11 +21,7 @@ impl<Cnf: Configurable> Builder<Cnf> {
 
         Ok(Self(RuntimeContext::<Cnf> {
             config: config.clone(),
-            instance: crate::core::Instance {
-                id: String::new(), // TODO: Generate UUID
-                model: String::new(),
-                name: String::new(),
-            },
+            instance: crate::core::Instance::default(),
             motion_tx,
             motion_rx: Some(motion_rx),
             shutdown: broadcast::channel(1),

@@ -2,7 +2,7 @@ use bytes::{BufMut, BytesMut};
 use serde_derive::Deserialize;
 
 // TODO: Include version
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 pub struct Instance {
     /// Instance unique identifier.
     pub id: String,
