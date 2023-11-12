@@ -1,7 +1,0 @@
-{
-    "name": "noop",
-    "version": "1.0",
-    "steps": [
-        {"run": "noop", "parameters": []}
-    ]
-}
