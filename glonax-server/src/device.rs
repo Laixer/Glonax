@@ -24,6 +24,7 @@ pub(super) async fn service_host(
     }
 }
 
+// TODO: Move to glonax-runtime
 struct Encoder {
     rng: rand::rngs::OsRng,
     position: u32,
