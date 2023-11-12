@@ -6,10 +6,10 @@
 
 use clap::Parser;
 
-mod component;
 mod config;
 mod device;
 mod probe;
+mod server;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
@@ -174,7 +174,7 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_middleware_service(&machine_state, probe::service);
 
     runtime
-        .run_motion_service(&machine_state, component::service_remote_server)
+        .run_motion_service(&machine_state, server::service)
         .await;
 
     // runtime.wait_for_shutdown().await;

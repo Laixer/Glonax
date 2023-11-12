@@ -3,10 +3,10 @@ use crate::config::ProxyConfig;
 pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
 pub type SharedMachineState = std::sync::Arc<tokio::sync::RwLock<glonax::RuntimeState>>;
 
-pub(super) async fn _service_core(
-    _local_config: ProxyConfig,
-    _local_machine_state: SharedMachineState,
-) {
+// pub(super) async fn _service_core(
+//     _local_config: ProxyConfig,
+//     _local_machine_state: SharedMachineState,
+// ) {
     // use glonax::core::Metric;
     // use glonax::transport::frame::{Frame, FrameMessage};
     // use std::time::Instant;
@@ -23,37 +23,36 @@ pub(super) async fn _service_core(
     // let mut signal_encoder_timeout = Instant::now();
     // let mut signal_engine_timeout = Instant::now();
 
-    //     if signal_gnss_timeout.elapsed().as_secs() > 5 {
-    //         log::warn!("GNSS timeout: no update in last 5 seconds");
-    //         local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutGNSS;
-    //         signal_gnss_timeout = Instant::now();
-    //     } else if signal_encoder_timeout.elapsed().as_secs() > 1 {
-    //         log::warn!("Encoder timeout: no update in last 1 second");
-    //         local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
-    //         signal_encoder_timeout = Instant::now();
-    //     } else if signal_engine_timeout.elapsed().as_secs() > 5 {
-    //         log::warn!("Engine timeout: no update in last 5 seconds");
-    //         local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEngine;
-    //         signal_engine_timeout = Instant::now();
-    //     } else {
-    //         local_machine_state.write().await.status = glonax::core::Status::Healthy;
-    //     }
-
-    //     let payload = signal.to_bytes();
-
-    //     let mut frame = Frame::new(FrameMessage::Signal, payload.len());
-    //     frame.put(&payload[..]);
-
-    //     if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
-    //         log::error!("Failed to send signal: {}", e);
-    //         break;
-    //     }
+    // if signal_gnss_timeout.elapsed().as_secs() > 5 {
+    //     log::warn!("GNSS timeout: no update in last 5 seconds");
+    //     local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutGNSS;
+    //     signal_gnss_timeout = Instant::now();
+    // } else if signal_encoder_timeout.elapsed().as_secs() > 1 {
+    //     log::warn!("Encoder timeout: no update in last 1 second");
+    //     local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEncoder;
+    //     signal_encoder_timeout = Instant::now();
+    // } else if signal_engine_timeout.elapsed().as_secs() > 5 {
+    //     log::warn!("Engine timeout: no update in last 5 seconds");
+    //     local_machine_state.write().await.status = glonax::core::Status::DegradedTimeoutEngine;
+    //     signal_engine_timeout = Instant::now();
+    // } else {
+    //     local_machine_state.write().await.status = glonax::core::Status::Healthy;
     // }
 
-    // log::debug!("Signal broadcast shutdown");
-}
+    // let payload = signal.to_bytes();
 
-pub(super) async fn service_remote_server(
+    // let mut frame = Frame::new(FrameMessage::Signal, payload.len());
+    // frame.put(&payload[..]);
+
+    // if let Err(e) = socket.send_to(frame.as_ref(), broadcast_addr).await {
+    //     log::error!("Failed to send signal: {}", e);
+    //     break;
+    // }
+
+//     log::debug!("Signal broadcast shutdown");
+// }
+
+pub(super) async fn service(
     local_config: ProxyConfig,
     local_machine_state: SharedMachineState,
     local_sender: MotionSender,

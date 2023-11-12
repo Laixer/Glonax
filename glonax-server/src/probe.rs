@@ -4,7 +4,7 @@ const _REMOTE_PROBE_HOST: &str = "https://cymbion-oybqn.ondigitalocean.app";
 
 pub(super) async fn service(
     _local_config: ProxyConfig,
-    _local_machine_state: crate::component::SharedMachineState,
+    _local_machine_state: crate::server::SharedMachineState,
 ) {
     // log::debug!("Starting host service");
 
