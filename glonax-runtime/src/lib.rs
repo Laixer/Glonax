@@ -40,8 +40,6 @@ pub mod consts {
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
     /// Glonax default configuration path.
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
-    /// Signal FIFO file located in the working directory.
-    pub const FIFO_SIGNAL_FILE: &str = "signal";
     /// Glonax default queue size for signals.
     pub const QUEUE_SIZE_SIGNAL: usize = 32;
     /// Glonax default queue size for motion commands.
@@ -120,9 +118,9 @@ impl Default for RuntimeState {
         Self {
             status: core::Status::Healthy,
             instance: core::Instance {
-                id: "".to_string(), // TODO: Generate UUID
-                model: "".to_string(),
-                name: "".to_string(),
+                id: String::new(),
+                model: String::new(),
+                name: String::new(),
             },
             state: RobotState::default(),
             ecu_state: EcuState::default(),
