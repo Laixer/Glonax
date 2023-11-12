@@ -1,13 +1,13 @@
 use std::time::Duration;
 
-use glonax::{core::Motion, SharedRuntimeState};
+use glonax::{core::Motion, runtime::SharedOperandState};
 use tokio::time::sleep;
 
 use crate::config::ProxyConfig;
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
-pub(super) async fn service_host(config: ProxyConfig, runtime_state: SharedRuntimeState) {
+pub(super) async fn service_host(config: ProxyConfig, runtime_state: SharedOperandState) {
     log::debug!("Starting host service");
 
     let mut service = glonax::net::HostService::default();
@@ -78,7 +78,7 @@ impl Encoder {
 
 pub(super) async fn service_net_encoder_sim(
     config: ProxyConfig,
-    runtime_state: SharedRuntimeState,
+    runtime_state: SharedOperandState,
 ) {
     use glonax::net::EncoderMessage;
 
@@ -115,7 +115,7 @@ pub(super) async fn service_net_encoder_sim(
     }
 }
 
-pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedRuntimeState) {
+pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedOperandState) {
     use glonax::net::{EncoderService, J1939Network, Router};
 
     log::debug!("Starting encoder service");
@@ -147,7 +147,7 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
     }
 }
 
-pub(super) async fn service_net_ems_sim(_config: ProxyConfig, runtime_state: SharedRuntimeState) {
+pub(super) async fn service_net_ems_sim(_config: ProxyConfig, runtime_state: SharedOperandState) {
     use glonax::net::EngineMessage;
 
     log::debug!("Starting EMS service");
@@ -169,7 +169,7 @@ pub(super) async fn service_net_ems_sim(_config: ProxyConfig, runtime_state: Sha
     }
 }
 
-pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedRuntimeState) {
+pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedOperandState) {
     use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
     if config.interface2.is_none() {
@@ -201,7 +201,7 @@ pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedRu
     }
 }
 
-pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedRuntimeState) {
+pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedOperandState) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
     if config.gnss_device.is_none() {
@@ -235,7 +235,7 @@ pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedRunti
 
 pub(super) async fn sink_net_actuator_sim(
     _config: ProxyConfig,
-    runtime_state: SharedRuntimeState,
+    runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
     log::debug!("Starting motion listener");
@@ -271,7 +271,7 @@ pub(super) async fn sink_net_actuator_sim(
 
 pub(super) async fn sink_net_actuator(
     config: ProxyConfig,
-    _runtime_state: SharedRuntimeState,
+    _runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
     use glonax::net::{ActuatorService, J1939Network};

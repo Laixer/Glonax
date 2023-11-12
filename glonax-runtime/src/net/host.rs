@@ -1,6 +1,6 @@
 use sysinfo::{System, SystemExt};
 
-use crate::SharedRuntimeState;
+use crate::runtime::SharedOperandState;
 
 pub struct HostService {
     system: System,
@@ -66,7 +66,7 @@ impl Default for HostService {
 }
 
 impl HostService {
-    pub async fn fill(&self, local_runtime_state: SharedRuntimeState) {
+    pub async fn fill(&self, local_runtime_state: SharedOperandState) {
         let mut runtime_state = local_runtime_state.write().await;
 
         runtime_state.state.vms.memory = (self.used_memory(), self.total_memory());

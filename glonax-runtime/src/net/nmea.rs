@@ -1,4 +1,4 @@
-use crate::SharedRuntimeState;
+use crate::runtime::SharedOperandState;
 
 pub struct NMEAMessage {
     /// WGS 84 coordinates.
@@ -181,7 +181,7 @@ impl NMEAMessage {
         this
     }
 
-    pub async fn fill(&self, local_runtime_state: SharedRuntimeState) {
+    pub async fn fill(&self, local_runtime_state: SharedOperandState) {
         let mut runtime_state = local_runtime_state.write().await;
 
         if let Some((lat, long)) = self.coordinates {

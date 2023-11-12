@@ -128,9 +128,6 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
-
     log::debug!("Starting proxy services");
 
     if config.simulation {
@@ -148,31 +145,27 @@ async fn main() -> anyhow::Result<()> {
     // TODO: Enable service termination
     let mut runtime = glonax::RuntimeBuilder::from_config(&config)?
         // .with_shutdown()
-        .enqueue_motion(glonax::core::Motion::ResetAll)
+        .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    let machine_state = Arc::new(RwLock::new(glonax::RuntimeState::default()));
-
-    runtime.spawn_service(&machine_state, device::service_host);
-    runtime.spawn_service(&machine_state, device::service_gnss);
+    runtime.spawn_service(device::service_host);
+    runtime.spawn_service(device::service_gnss);
 
     if config.simulation {
-        runtime.spawn_service(&machine_state, device::service_net_encoder_sim);
-        runtime.spawn_service(&machine_state, device::service_net_ems_sim);
+        runtime.spawn_service(device::service_net_encoder_sim);
+        runtime.spawn_service(device::service_net_ems_sim);
 
-        runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator_sim);
+        runtime.spawn_motion_sink(device::sink_net_actuator_sim);
     } else {
-        runtime.spawn_service(&machine_state, device::service_net_encoder);
-        runtime.spawn_service(&machine_state, device::service_net_ems);
+        runtime.spawn_service(device::service_net_encoder);
+        runtime.spawn_service(device::service_net_ems);
 
-        runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator);
+        runtime.spawn_motion_sink(device::sink_net_actuator);
     }
 
-    runtime.spawn_middleware_service(&machine_state, probe::service);
+    runtime.spawn_middleware_service(probe::service);
 
-    runtime
-        .run_motion_service(&machine_state, server::service)
-        .await;
+    runtime.run_motion_service(server::service).await;
 
     // runtime.wait_for_shutdown().await;
 

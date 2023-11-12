@@ -14,16 +14,13 @@ pub mod transport;
 extern crate log;
 
 mod config;
-pub use runtime::operand::Operand;
 
 pub use self::config::*;
 
 pub mod runtime;
 pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::Error;
-pub use self::runtime::RuntimeContext;
-
-pub type SharedRuntimeState = std::sync::Arc<tokio::sync::RwLock<RuntimeState>>;
+pub use self::runtime::Runtime;
 
 pub mod consts {
     /// Glonax runtime version.
@@ -101,7 +98,7 @@ pub struct RobotState {
     pub pose: core::Pose,
 }
 
-// TODO: Rename to runtime
+// TODO: Rename to OperatorState
 pub struct RuntimeState {
     /// Current machine state.
     pub status: core::Status,
