@@ -148,14 +148,10 @@ async fn main() -> anyhow::Result<()> {
     // TODO: Enable service termination
     let mut runtime = glonax::RuntimeBuilder::from_config(&config)?
         // .with_shutdown()
+        .enqueue_motion(glonax::core::Motion::ResetAll)
         .build();
 
     let machine_state = Arc::new(RwLock::new(glonax::RuntimeState::default()));
-
-    runtime
-        .motion_tx
-        .send(glonax::core::Motion::ResetAll)
-        .await?;
 
     runtime.spawn_service(&machine_state, device::service_host);
     runtime.spawn_service(&machine_state, device::service_gnss);

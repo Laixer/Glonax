@@ -48,6 +48,14 @@ impl<Cnf: Configurable> Builder<Cnf> {
         self
     }
 
+    /// Enqueue motion command.
+    /// 
+    /// This method will enqueue a motion command to be processed by the runtime.
+    pub fn enqueue_motion(self, motion: crate::core::Motion) -> Self {
+        self.0.motion_tx.blocking_send(motion).unwrap();
+        self
+    }
+
     /// Build the runtime.
     #[inline]
     pub fn build(self) -> RuntimeContext<Cnf> {
