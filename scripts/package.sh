@@ -59,7 +59,6 @@ cp -r ./contrib/share/* $PACKAGE_DIR/usr/local/share/glonax
 cp ./target/release/glonax-input $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-netctl $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonax-diag $PACKAGE_DIR/usr/local/bin
-cp ./target/release/glonax-agent $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonaxd $PACKAGE_DIR/usr/local/bin
 
 # Set package architecture
