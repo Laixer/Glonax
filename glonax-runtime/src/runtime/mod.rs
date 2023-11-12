@@ -36,42 +36,24 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
         self.shutdown.0.subscribe()
     }
 
-    /// Spawn an asynchronous task in the background.
+    /// Spawn a service in the background.
     ///
-    /// The task will be terminated when the runtime is shutdown or when the
-    /// shutdown signal is received.
-    #[deprecated]
-    pub fn spawn_background_task<T>(&self, task: T)
-    where
-        T: std::future::Future<Output = ()> + Send + 'static,
-    {
-        let mut shutdown = self.shutdown_signal();
-
-        tokio::spawn(async move {
-            tokio::select! {
-                _ = shutdown.recv() => {
-                    log::debug!("Shutting down background task");
-                }
-                _ = task => {}
-            }
-        });
-    }
-
-    /// Spawn a signal service in the background.
-    pub fn spawn_signal_service<Fut>(
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    pub fn spawn_service<Fut>(
         &self,
-        machine_state: &SharedRuntimeState,
+        runtime_state: &SharedRuntimeState,
         service: impl FnOnce(Cnf, SharedRuntimeState) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        tokio::spawn(service(self.config.clone(), machine_state.clone()));
+        tokio::spawn(service(self.config.clone(), runtime_state.clone()));
     }
 
     /// Run a motion service.
     pub async fn run_motion_service<Fut>(
         &self,
-        machine_state: &SharedRuntimeState,
+        runtime_state: &SharedRuntimeState,
         service: impl FnOnce(
             Cnf,
             SharedRuntimeState,
@@ -83,7 +65,7 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     {
         service(
             self.config.clone(),
-            machine_state.clone(),
+            runtime_state.clone(),
             self.motion_tx.clone(),
             self.shutdown_signal(),
         )
@@ -93,14 +75,14 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     /// Spawn a motion sink in the background.
     pub fn spawn_motion_sink<Fut>(
         &mut self,
-        machine_state: &SharedRuntimeState,
+        runtime_state: &SharedRuntimeState,
         service: impl FnOnce(Cnf, SharedRuntimeState, MotionReceiver) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
         tokio::spawn(service(
             self.config.clone(),
-            machine_state.clone(),
+            runtime_state.clone(),
             self.motion_rx.take().unwrap(),
         ));
     }
@@ -108,12 +90,12 @@ impl<Cnf: Configurable> RuntimeContext<Cnf> {
     /// Spawn a middleware service in the background.
     pub fn spawn_middleware_service<Fut>(
         &self,
-        machine_state: &SharedRuntimeState,
+        runtime_state: &SharedRuntimeState,
         service: impl FnOnce(Cnf, SharedRuntimeState) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        tokio::spawn(service(self.config.clone(), machine_state.clone()));
+        tokio::spawn(service(self.config.clone(), runtime_state.clone()));
     }
 
     /// Wait for the runtime to shutdown.

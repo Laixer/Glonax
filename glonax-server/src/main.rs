@@ -34,8 +34,8 @@ struct Args {
         value_name = "FILE"
     )]
     config: std::path::PathBuf,
-    #[arg(long, value_name = "DEVICE")]
     /// Path to GNSS device.
+    #[arg(long, value_name = "DEVICE")]
     gnss_device: Option<std::path::PathBuf>,
     /// Serial baud rate.
     #[arg(long, default_value_t = 9_600, value_name = "RATE")]
@@ -157,17 +157,17 @@ async fn main() -> anyhow::Result<()> {
         .send(glonax::core::Motion::ResetAll)
         .await?;
 
-    runtime.spawn_signal_service(&machine_state, device::service_host);
-    runtime.spawn_signal_service(&machine_state, device::service_gnss);
+    runtime.spawn_service(&machine_state, device::service_host);
+    runtime.spawn_service(&machine_state, device::service_gnss);
 
     if config.simulation {
-        runtime.spawn_signal_service(&machine_state, device::service_net_encoder_sim);
-        runtime.spawn_signal_service(&machine_state, device::service_net_ems_sim);
+        runtime.spawn_service(&machine_state, device::service_net_encoder_sim);
+        runtime.spawn_service(&machine_state, device::service_net_ems_sim);
 
         runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator_sim);
     } else {
-        runtime.spawn_signal_service(&machine_state, device::service_net_encoder);
-        runtime.spawn_signal_service(&machine_state, device::service_net_ems);
+        runtime.spawn_service(&machine_state, device::service_net_encoder);
+        runtime.spawn_service(&machine_state, device::service_net_ems);
 
         runtime.spawn_motion_sink(&machine_state, device::sink_net_actuator);
     }
