@@ -62,7 +62,7 @@ impl EncoderMessage {
     }
 
     /// Construct a new encoder message with position.
-    pub fn new_with_position(node: u8, position: u32) -> Self {
+    pub fn from_position(node: u8, position: u32) -> Self {
         Self {
             node,
             position,
@@ -71,6 +71,7 @@ impl EncoderMessage {
         }
     }
 
+    /// Construct a new encoder message from a frame.
     pub fn from_frame(node: u8, frame: &Frame) -> Self {
         let mut this = Self {
             node,
@@ -106,6 +107,7 @@ impl EncoderMessage {
         this
     }
 
+    #[allow(dead_code)]
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_450))
@@ -161,19 +163,9 @@ impl std::fmt::Display for EncoderMessage {
 }
 
 impl EncoderService {
+    /// Construct a new encoder service.
     pub fn new(node: u8) -> Self {
         Self { node }
-    }
-
-    // TODO: Maybe not
-    pub fn encode(&self, position: u32, speed: u16) -> Vec<Frame> {
-        EncoderMessage {
-            node: self.node,
-            position,
-            speed,
-            state: None,
-        }
-        .to_frame()
     }
 }
 

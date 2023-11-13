@@ -8,8 +8,7 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Motion>;
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
-
-pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::RuntimeState>>;
+pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
 
 pub mod builder;
 
@@ -19,7 +18,7 @@ pub struct Runtime<Conf> {
     /// Glonax instance.
     pub instance: crate::core::Instance,
     /// Glonax operand.
-    pub operand: SharedOperandState,
+    pub operand: SharedOperandState, // TODO: Generic
     /// Motion command sender.
     pub motion_tx: MotionSender,
     /// Motion command receiver.

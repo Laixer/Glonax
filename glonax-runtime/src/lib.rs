@@ -37,50 +37,52 @@ pub mod consts {
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
     /// Glonax default configuration path.
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
-    /// Glonax default queue size for signals.
-    pub const QUEUE_SIZE_SIGNAL: usize = 32;
     /// Glonax default queue size for motion commands.
     pub const QUEUE_SIZE_MOTION: usize = 32;
     /// Glonax network maximum number of clients.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
-// TODO: Move somewhere else
+use std::sync::atomic::{AtomicBool, AtomicI16, AtomicU32, Ordering};
+
+// TODO: Move somewhere else, maybe to glonax-server
 pub struct EcuState {
-    pub power: [std::sync::atomic::AtomicI16; 8],
-    motion_lock: std::sync::atomic::AtomicBool,
+    /// Frist derivative of the encoder position.
+    pub speed: [AtomicI16; 8],
+    /// Position of encoder.
+    pub position: [AtomicU32; 8],
+    motion_lock: AtomicBool,
 }
 
 impl EcuState {
     pub fn lock(&self) {
-        self.power[0].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[1].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[2].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[3].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[4].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[5].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[6].store(0, std::sync::atomic::Ordering::Relaxed);
-        self.power[7].store(0, std::sync::atomic::Ordering::Relaxed);
+        self.speed[0].store(0, Ordering::Relaxed);
+        self.speed[1].store(0, Ordering::Relaxed);
+        self.speed[2].store(0, Ordering::Relaxed);
+        self.speed[3].store(0, Ordering::Relaxed);
+        self.speed[4].store(0, Ordering::Relaxed);
+        self.speed[5].store(0, Ordering::Relaxed);
+        self.speed[6].store(0, Ordering::Relaxed);
+        self.speed[7].store(0, Ordering::Relaxed);
 
-        self.motion_lock
-            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.motion_lock.store(true, Ordering::Relaxed);
     }
 
     pub fn unlock(&self) {
-        self.motion_lock
-            .store(false, std::sync::atomic::Ordering::Relaxed);
+        self.motion_lock.store(false, Ordering::Relaxed);
     }
 
     pub fn is_locked(&self) -> bool {
-        self.motion_lock.load(std::sync::atomic::Ordering::Relaxed)
+        self.motion_lock.load(Ordering::Relaxed)
     }
 }
 
 impl Default for EcuState {
     fn default() -> Self {
         Self {
-            power: [0; 8].map(|_| std::sync::atomic::AtomicI16::new(0)),
-            motion_lock: std::sync::atomic::AtomicBool::new(false),
+            speed: [0; 8].map(|_| AtomicI16::new(0)),
+            position: [0; 8].map(|_| AtomicU32::new(0)),
+            motion_lock: AtomicBool::new(false),
         }
     }
 }
@@ -98,19 +100,19 @@ pub struct RobotState {
     pub pose: core::Pose,
 }
 
-// TODO: Rename to OperatorState
-pub struct RuntimeState {
+/// The operand is the current state of the machine.
+pub struct Operand {
     /// Current machine state.
     pub status: core::Status,
     /// Glonax instance.
     pub instance: core::Instance,
     /// Robot state.
-    pub state: RobotState,
+    pub state: RobotState, // TODO: Replace by generic, impl the generic in glonax-server
     /// ECU state.
-    pub ecu_state: EcuState,
+    pub ecu_state: EcuState, // TODO: Move into robot state
 }
 
-impl Default for RuntimeState {
+impl Default for Operand {
     fn default() -> Self {
         Self {
             status: core::Status::Healthy,

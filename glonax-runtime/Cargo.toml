@@ -13,6 +13,7 @@ keywords = ["hardware", "machine", "controller"]
 [dependencies]
 glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 
+rand = "0.8"
 chrono = "0.4"
 bytes = "1.5"
 toml = "0.8"
