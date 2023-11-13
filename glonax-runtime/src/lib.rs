@@ -43,86 +43,32 @@ pub mod consts {
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
-use std::sync::atomic::{AtomicBool, AtomicI16, AtomicU32, Ordering};
-
-// TODO: Move somewhere else, maybe to glonax-server
-pub struct EcuState {
-    /// Frist derivative of the encoder position.
-    pub speed: [AtomicI16; 8],
-    /// Position of encoder.
-    pub position: [AtomicU32; 8],
-    motion_lock: AtomicBool,
-}
-
-impl EcuState {
-    pub fn lock(&self) {
-        self.speed[0].store(0, Ordering::Relaxed);
-        self.speed[1].store(0, Ordering::Relaxed);
-        self.speed[2].store(0, Ordering::Relaxed);
-        self.speed[3].store(0, Ordering::Relaxed);
-        self.speed[4].store(0, Ordering::Relaxed);
-        self.speed[5].store(0, Ordering::Relaxed);
-        self.speed[6].store(0, Ordering::Relaxed);
-        self.speed[7].store(0, Ordering::Relaxed);
-
-        self.motion_lock.store(true, Ordering::Relaxed);
-    }
-
-    #[inline]
-    pub fn unlock(&self) {
-        self.motion_lock.store(false, Ordering::Relaxed);
-    }
-
-    #[inline]
-    pub fn is_locked(&self) -> bool {
-        self.motion_lock.load(Ordering::Relaxed)
-    }
-}
-
-impl Default for EcuState {
-    fn default() -> Self {
-        Self {
-            speed: [0; 8].map(|_| AtomicI16::new(0)),
-            position: [0; 8].map(|_| AtomicU32::new(0)),
-            motion_lock: AtomicBool::new(false),
-        }
-    }
-}
-
-// TODO: Rename to device state
-#[derive(Default)]
-pub struct RobotState {
-    /// VMS data.
-    pub vms: core::Host,
-    /// GNSS data.
-    pub gnss: core::Gnss,
-    /// Engine data.
-    pub engine: core::Engine,
-    /// Pose data.
-    pub pose: core::Pose,
+pub trait RobotState: Default {
+    fn vms_mut(&mut self) -> &mut core::Host;
+    fn gnss_mut(&mut self) -> &mut core::Gnss;
+    fn engine_mut(&mut self) -> &mut core::Engine;
+    fn pose_mut(&mut self) -> &mut core::Pose;
 }
 
 /// The operand is the current state of the machine.
 ///
 /// This is the state that is used by the runtime to control
 /// the machine and the state that is used by the middleware.
-pub struct Operand {
+pub struct Operand<R> {
     /// Current machine state.
     pub status: core::Status,
     /// Glonax instance.
     pub instance: core::Instance,
     /// Robot state.
-    pub state: RobotState, // TODO: Replace by generic, impl the generic in glonax-server
-    /// ECU state.
-    pub ecu_state: EcuState, // TODO: Move into robot state
+    pub state: R, // TODO: Replace by generic, impl the generic in glonax-server
 }
 
-impl Default for Operand {
+impl<R: RobotState> Default for Operand<R> {
     fn default() -> Self {
         Self {
             status: core::Status::Healthy,
             instance: core::Instance::default(),
-            state: RobotState::default(),
+            state: R::default(),
         }
     }
 }

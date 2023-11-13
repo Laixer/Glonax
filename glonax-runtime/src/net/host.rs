@@ -1,6 +1,6 @@
 use sysinfo::{System, SystemExt};
 
-use crate::runtime::SharedOperandState;
+use crate::{runtime::SharedOperandState, RobotState};
 
 pub struct HostService {
     system: System,
@@ -66,13 +66,13 @@ impl Default for HostService {
 }
 
 impl HostService {
-    pub async fn fill(&self, local_runtime_state: SharedOperandState) {
+    pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
         let mut runtime_state = local_runtime_state.write().await;
 
-        runtime_state.state.vms.memory = (self.used_memory(), self.total_memory());
-        runtime_state.state.vms.swap = (self.used_swap(), self.total_swap());
-        runtime_state.state.vms.cpu_load = self.cpu_load();
-        runtime_state.state.vms.uptime = self.uptime();
-        runtime_state.state.vms.timestamp = self.timestamp();
+        runtime_state.state.vms_mut().memory = (self.used_memory(), self.total_memory());
+        runtime_state.state.vms_mut().swap = (self.used_swap(), self.total_swap());
+        runtime_state.state.vms_mut().cpu_load = self.cpu_load();
+        runtime_state.state.vms_mut().uptime = self.uptime();
+        runtime_state.state.vms_mut().timestamp = self.timestamp();
     }
 }

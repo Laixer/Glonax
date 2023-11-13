@@ -1,10 +1,10 @@
-use glonax::runtime::{MotionSender, SharedOperandState};
+use glonax::runtime::MotionSender;
 
-use crate::config::ProxyConfig;
+use crate::{config::ProxyConfig, state::SharedExcavatorState};
 
 pub(super) async fn service(
     config: ProxyConfig,
-    runtime_state: SharedOperandState,
+    runtime_state: SharedExcavatorState,
     sender: MotionSender,
     _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) {

@@ -10,6 +10,7 @@ mod config;
 mod device;
 mod probe;
 mod server;
+mod state;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]

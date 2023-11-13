@@ -1,4 +1,4 @@
-use crate::runtime::SharedOperandState;
+use crate::{runtime::SharedOperandState, RobotState};
 
 pub struct NMEAMessage {
     /// WGS 84 coordinates.
@@ -181,25 +181,25 @@ impl NMEAMessage {
         this
     }
 
-    pub async fn fill(&self, local_runtime_state: SharedOperandState) {
+    pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
         let mut runtime_state = local_runtime_state.write().await;
 
         if let Some((lat, long)) = self.coordinates {
-            runtime_state.state.gnss.location = (lat, long)
+            runtime_state.state.gnss_mut().location = (lat, long)
         }
         if let Some(altitude) = self.altitude {
-            runtime_state.state.gnss.altitude = altitude;
+            runtime_state.state.gnss_mut().altitude = altitude;
         }
         if let Some(speed) = self.speed {
             const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
 
-            runtime_state.state.gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
+            runtime_state.state.gnss_mut().speed = speed * KNOT_TO_METER_PER_SECOND;
         }
         if let Some(heading) = self.heading {
-            runtime_state.state.gnss.heading = heading;
+            runtime_state.state.gnss_mut().heading = heading;
         }
         if let Some(satellites) = self.satellites {
-            runtime_state.state.gnss.satellites = satellites;
+            runtime_state.state.gnss_mut().satellites = satellites;
         }
     }
 }

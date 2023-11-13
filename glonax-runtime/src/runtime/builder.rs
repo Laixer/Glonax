@@ -1,4 +1,4 @@
-use crate::{config::Configurable, Runtime};
+use crate::{config::Configurable, RobotState, Runtime};
 
 /// Runtime builder.
 ///
@@ -8,9 +8,9 @@ use crate::{config::Configurable, Runtime};
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub struct Builder<Cnf>(Runtime<Cnf>);
+pub struct Builder<Cnf, R>(Runtime<Cnf, R>);
 
-impl<Cnf: Configurable> Builder<Cnf> {
+impl<Cnf: Configurable, R: RobotState> Builder<Cnf, R> {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
@@ -19,7 +19,7 @@ impl<Cnf: Configurable> Builder<Cnf> {
 
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
-        Ok(Self(Runtime::<Cnf> {
+        Ok(Self(Runtime::<Cnf, R> {
             config: config.clone(),
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
                 instance,
@@ -55,13 +55,13 @@ impl<Cnf: Configurable> Builder<Cnf> {
     ///
     /// This method will enqueue a motion command to be processed by the runtime.
     pub fn enqueue_startup_motion(self, motion: crate::core::Motion) -> Self {
-        self.0.motion_tx.blocking_send(motion).unwrap();
+        self.0.motion_tx.try_send(motion).unwrap();
         self
     }
 
     /// Build the runtime.
     #[inline]
-    pub fn build(self) -> Runtime<Cnf> {
+    pub fn build(self) -> Runtime<Cnf, R> {
         self.0
     }
 }

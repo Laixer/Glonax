@@ -3,7 +3,7 @@ use glonax_j1939::{
     *,
 };
 
-use crate::runtime::SharedOperandState;
+use crate::{runtime::SharedOperandState, RobotState};
 
 #[derive(Default)]
 pub struct EngineMessage {
@@ -59,12 +59,12 @@ impl EngineMessage {
         vec![frame_builder.set_len(8).build()]
     }
 
-    pub async fn fill(&self, local_runtime_state: SharedOperandState) {
+    pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
         let mut runtime_state = local_runtime_state.write().await;
 
-        runtime_state.state.engine.driver_demand = self.driver_demand.unwrap_or(0);
-        runtime_state.state.engine.actual_engine = self.actual_engine.unwrap_or(0);
-        runtime_state.state.engine.rpm = self.rpm.unwrap_or(0);
+        runtime_state.state.engine_mut().driver_demand = self.driver_demand.unwrap_or(0);
+        runtime_state.state.engine_mut().actual_engine = self.actual_engine.unwrap_or(0);
+        runtime_state.state.engine_mut().rpm = self.rpm.unwrap_or(0);
     }
 }
 

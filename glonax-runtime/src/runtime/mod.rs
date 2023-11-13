@@ -8,15 +8,15 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Motion>;
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
-pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
+pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Operand<R>>>;
 
 pub mod builder;
 
-pub struct Runtime<Conf> {
+pub struct Runtime<Conf, R> {
     /// Runtime configuration.
     pub config: Conf,
     /// Glonax operand.
-    pub operand: SharedOperandState, // TODO: Generic
+    pub operand: SharedOperandState<R>, // TODO: Generic
     /// Motion command sender.
     pub motion_tx: MotionSender,
     /// Motion command receiver.
@@ -28,7 +28,7 @@ pub struct Runtime<Conf> {
     ),
 }
 
-impl<Cnf: Configurable> Runtime<Cnf> {
+impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     /// Listen for shutdown signal.
     #[inline]
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
@@ -39,7 +39,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn spawn_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState) -> Fut)
+    pub fn spawn_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState<R>) -> Fut)
     where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
@@ -51,7 +51,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         &self,
         service: impl FnOnce(
             Cnf,
-            SharedOperandState,
+            SharedOperandState<R>,
             MotionSender,
             tokio::sync::broadcast::Receiver<()>,
         ) -> Fut,
@@ -70,7 +70,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     /// Spawn a motion sink in the background.
     pub fn spawn_motion_sink<Fut>(
         &mut self,
-        service: impl FnOnce(Cnf, SharedOperandState, MotionReceiver) -> Fut,
+        service: impl FnOnce(Cnf, SharedOperandState<R>, MotionReceiver) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
@@ -84,7 +84,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     /// Spawn a middleware service in the background.
     pub fn spawn_middleware_service<Fut>(
         &self,
-        service: impl FnOnce(Cnf, SharedOperandState) -> Fut,
+        service: impl FnOnce(Cnf, SharedOperandState<R>) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
