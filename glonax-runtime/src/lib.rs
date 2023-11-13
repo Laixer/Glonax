@@ -68,10 +68,12 @@ impl EcuState {
         self.motion_lock.store(true, Ordering::Relaxed);
     }
 
+    #[inline]
     pub fn unlock(&self) {
         self.motion_lock.store(false, Ordering::Relaxed);
     }
 
+    #[inline]
     pub fn is_locked(&self) -> bool {
         self.motion_lock.load(Ordering::Relaxed)
     }
@@ -101,6 +103,9 @@ pub struct RobotState {
 }
 
 /// The operand is the current state of the machine.
+///
+/// This is the state that is used by the runtime to control
+/// the machine and the state that is used by the middleware.
 pub struct Operand {
     /// Current machine state.
     pub status: core::Status,
@@ -116,13 +121,8 @@ impl Default for Operand {
     fn default() -> Self {
         Self {
             status: core::Status::Healthy,
-            instance: core::Instance {
-                id: String::new(),
-                model: String::new(),
-                name: String::new(),
-            },
+            instance: core::Instance::default(),
             state: RobotState::default(),
-            ecu_state: EcuState::default(),
         }
     }
 }

@@ -1,8 +1,6 @@
-use glonax::runtime::SharedOperandState;
+use glonax::runtime::{MotionSender, SharedOperandState};
 
 use crate::config::ProxyConfig;
-
-pub type MotionSender = tokio::sync::mpsc::Sender<glonax::core::Motion>;
 
 pub(super) async fn service(
     config: ProxyConfig,

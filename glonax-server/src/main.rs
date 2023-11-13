@@ -79,9 +79,10 @@ async fn main() -> anyhow::Result<()> {
         probe: !args.no_probe,
         simulation: args.simulation,
         simulation_jitter: false,
-        instance: glonax::from_file(args.config)?,
         global: glonax::GlobalConfig::default(),
     };
+
+    let instance: glonax::core::Instance = glonax::from_file(args.config)?;
 
     config.global.bin_name = bin_name.to_string();
     config.global.daemon = args.daemon;
@@ -134,16 +135,16 @@ async fn main() -> anyhow::Result<()> {
         log::warn!("Simulation mode is enabled");
     }
 
-    log::info!("Instance ID: {}", config.instance.id);
-    log::info!("Instance Model: {}", config.instance.model);
-    log::info!("Instance Name: {}", config.instance.name);
+    log::info!("Instance ID: {}", instance.id);
+    log::info!("Instance Model: {}", instance.model);
+    log::info!("Instance Name: {}", instance.name);
 
-    if config.instance.id.starts_with("00000000") {
+    if instance.id.starts_with("00000000") {
         log::warn!("Instance ID is not set or invalid");
     }
 
     // TODO: Enable service termination
-    let mut runtime = glonax::RuntimeBuilder::from_config(&config)?
+    let mut runtime = glonax::RuntimeBuilder::from_config(&config, instance)?
         // .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();

@@ -1,4 +1,4 @@
-use glonax::{core::Instance, Configurable, GlobalConfig};
+use glonax::{Configurable, GlobalConfig};
 
 #[derive(Clone, Debug)]
 pub struct ProxyConfig {
@@ -10,8 +10,6 @@ pub struct ProxyConfig {
     pub interface2: Option<String>,
     /// Refresh host service interval in milliseconds.
     pub host_interval: u64,
-    /// Instance configuration.
-    pub instance: Instance,
     /// Serial device.
     pub gnss_device: Option<std::path::PathBuf>,
     /// Serial baud rate.

@@ -15,8 +15,6 @@ pub mod builder;
 pub struct Runtime<Conf> {
     /// Runtime configuration.
     pub config: Conf,
-    /// Glonax instance.
-    pub instance: crate::core::Instance,
     /// Glonax operand.
     pub operand: SharedOperandState, // TODO: Generic
     /// Motion command sender.

@@ -14,15 +14,17 @@ impl<Cnf: Configurable> Builder<Cnf> {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub fn from_config(config: &Cnf) -> super::Result<Self> {
+    pub fn from_config(config: &Cnf, instance: crate::core::Instance) -> super::Result<Self> {
         use tokio::sync::broadcast;
 
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(Runtime::<Cnf> {
             config: config.clone(),
-            instance: crate::core::Instance::default(),
-            operand: crate::runtime::SharedOperandState::default(),
+            operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
+                instance,
+                ..Default::default()
+            })),
             motion_tx,
             motion_rx: Some(motion_rx),
             shutdown: broadcast::channel(1),
