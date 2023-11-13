@@ -1,6 +1,6 @@
 [package]
 name = "glonax"
-version = "3.2.0"
+version = "3.3.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
