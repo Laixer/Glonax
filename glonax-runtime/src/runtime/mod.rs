@@ -1,6 +1,6 @@
 mod error;
 
-use crate::Configurable;
+use crate::{Configurable, RobotState};
 
 pub use self::error::Error;
 
@@ -11,6 +11,16 @@ pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
 pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Operand<R>>>;
 
 pub mod builder;
+
+/// Construct runtime service from configuration and instance.
+///
+/// Note that this method is certain to block.
+pub fn builder<Cnf: Configurable, R: RobotState>(
+    config: &Cnf,
+    instance: crate::core::Instance,
+) -> self::Result<builder::Builder<Cnf, R>> {
+    builder::Builder::new(config, instance)
+}
 
 pub struct Runtime<Conf, R> {
     /// Runtime configuration.

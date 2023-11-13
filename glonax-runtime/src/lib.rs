@@ -18,7 +18,6 @@ mod config;
 pub use self::config::*;
 
 pub mod runtime;
-pub use self::runtime::builder::Builder as RuntimeBuilder;
 pub use self::runtime::Error;
 pub use self::runtime::Runtime;
 

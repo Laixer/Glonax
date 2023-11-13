@@ -145,7 +145,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // TODO: Enable service termination
-    let mut runtime = glonax::RuntimeBuilder::from_config(&config, instance)?
+    let mut runtime = glonax::runtime::builder(&config, instance)?
         // .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();

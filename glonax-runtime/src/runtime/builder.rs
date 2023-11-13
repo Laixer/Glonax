@@ -11,10 +11,10 @@ use crate::{config::Configurable, RobotState, Runtime};
 pub struct Builder<Cnf, R>(Runtime<Cnf, R>);
 
 impl<Cnf: Configurable, R: RobotState> Builder<Cnf, R> {
-    /// Construct runtime service from configuration.
+    /// Construct runtime service from configuration and instance.
     ///
     /// Note that this method is certain to block.
-    pub fn from_config(config: &Cnf, instance: crate::core::Instance) -> super::Result<Self> {
+    pub fn new(config: &Cnf, instance: crate::core::Instance) -> super::Result<Self> {
         use tokio::sync::broadcast;
 
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
@@ -54,6 +54,7 @@ impl<Cnf: Configurable, R: RobotState> Builder<Cnf, R> {
     /// Enqueue a motion command.
     ///
     /// This method will enqueue a motion command to be processed by the runtime.
+    /// The motion command will be processed in the order it was received.
     pub fn enqueue_startup_motion(self, motion: crate::core::Motion) -> Self {
         self.0.motion_tx.try_send(motion).unwrap();
         self
