@@ -108,10 +108,6 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    daemonize(&config).await
-}
-
-async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await?;
 
     let mut input_state = input::InputState {
@@ -138,6 +134,27 @@ async fn daemonize(config: &config::InputConfig) -> anyhow::Result<()> {
             format!("{}/{}", config.global.bin_name, glonax::consts::VERSION),
         )
         .await?;
+
+    client
+        .send_request(glonax::transport::frame::FrameMessage::Instance)
+        .await?;
+
+    let frame = client.read_frame().await?;
+    match frame.message {
+        glonax::transport::frame::FrameMessage::Instance => {
+            let instance = client
+                .packet::<glonax::core::Instance>(frame.payload_length)
+                .await?;
+
+            log::info!("Instance ID: {}", instance.id);
+            log::info!("Instance Model: {}", instance.model);
+            log::info!("Instance Name: {}", instance.name);
+        }
+        _ => {
+            log::error!("Invalid response from server");
+            return Ok(());
+        }
+    }
 
     log::info!("Connected to {}", config.address);
 
