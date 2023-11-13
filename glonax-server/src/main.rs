@@ -165,7 +165,9 @@ async fn main() -> anyhow::Result<()> {
         runtime.spawn_motion_sink(device::sink_net_actuator);
     }
 
-    runtime.spawn_middleware_service(probe::service);
+    if config.probe {
+        runtime.spawn_middleware_service(probe::service);
+    }
 
     runtime.run_motion_service(server::service).await;
 
