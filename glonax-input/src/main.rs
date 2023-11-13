@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
         device: args.device,
         fail_safe: args.fail_safe,
         full_motion: args.full_motion,
-        global: glonax::GlobalConfig::default(),
+        ..Default::default()
     };
 
     config.global.bin_name = env!("CARGO_BIN_NAME").to_string();

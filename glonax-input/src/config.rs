@@ -19,3 +19,18 @@ impl Configurable for InputConfig {
         &self.global
     }
 }
+
+impl Default for InputConfig {
+    fn default() -> Self {
+        Self {
+            address: std::net::SocketAddr::from((
+                std::net::Ipv4Addr::LOCALHOST,
+                glonax::consts::DEFAULT_NETWORK_PORT,
+            )),
+            device: "/dev/input/js0".to_string(),
+            fail_safe: false,
+            full_motion: false,
+            global: GlobalConfig::default(),
+        }
+    }
+}

@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
         probe: !args.no_probe,
         simulation: args.simulation,
         simulation_jitter: false,
-        global: glonax::GlobalConfig::default(),
+        ..Default::default()
     };
 
     let instance: glonax::core::Instance = glonax::from_file(args.config)?;

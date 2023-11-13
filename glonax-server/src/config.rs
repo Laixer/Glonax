@@ -1,6 +1,6 @@
 use glonax::{Configurable, GlobalConfig};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ProxyConfig {
     /// Server network address.
     pub address: String,
