@@ -67,8 +67,6 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    let bin_name = env!("CARGO_BIN_NAME");
-
     let mut config = config::ProxyConfig {
         address: args.address,
         interface: args.interface,
@@ -85,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
 
     let instance: glonax::core::Instance = glonax::from_file(args.config)?;
 
-    config.global.bin_name = bin_name.to_string();
+    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
     config.global.daemon = args.daemon;
 
     let mut log_config = simplelog::ConfigBuilder::new();
@@ -131,11 +129,6 @@ async fn main() -> anyhow::Result<()> {
     log::trace!("{:#?}", config);
 
     log::debug!("Starting proxy services");
-
-    if config.simulation {
-        log::warn!("Simulation mode is enabled");
-    }
-
     log::info!("Instance ID: {}", instance.id);
     log::info!("Instance Model: {}", instance.model);
     log::info!("Instance Name: {}", instance.name);
@@ -154,6 +147,8 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_service(device::service_gnss);
 
     if config.simulation {
+        log::warn!("Running in simulation mode");
+
         runtime.spawn_service(device::service_net_encoder_sim);
         runtime.spawn_service(device::service_net_ems_sim);
 
