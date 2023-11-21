@@ -260,7 +260,6 @@ pub(super) async fn sink_net_actuator(
                     }
                     Motion::StraightDrive(value) => {
                         let frames = &service.drive_straight(value);
-
                         if let Err(e) = network.send_vectored(frames).await {
                             log::error!("Failed to send motion: {}", e);
                         }

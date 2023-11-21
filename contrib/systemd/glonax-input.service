@@ -3,6 +3,7 @@ Description=Glonax Input Event Handler
 StartLimitIntervalSec=5
 StartLimitBurst=5
 #After=bluetooth.target glonax.service
+After=glonax.service
 ConditionPathExists=/dev/input/js0
 
 [Service]

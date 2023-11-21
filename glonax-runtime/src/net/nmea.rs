@@ -169,8 +169,16 @@ impl NMEAMessage {
                 ));
             }
 
+            if sentence.len() < 8 {
+                return this;
+            }
+
             if !sentence[7].is_empty() {
                 this.speed = Some(sentence[7].parse::<f32>().unwrap());
+            }
+
+            if sentence.len() < 9 {
+                return this;
             }
 
             if !sentence[8].is_empty() {
