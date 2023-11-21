@@ -43,9 +43,13 @@ pub mod consts {
 }
 
 pub trait RobotState: Default {
+    /// Vehicle management system.
     fn vms_mut(&mut self) -> &mut core::Host;
+    /// Engine management system.
     fn gnss_mut(&mut self) -> &mut core::Gnss;
+    /// Engine management system.
     fn engine_mut(&mut self) -> &mut core::Engine;
+    /// Robot pose.
     fn pose_mut(&mut self) -> &mut core::Pose;
 }
 
@@ -59,7 +63,7 @@ pub struct Operand<R> {
     /// Glonax instance.
     pub instance: core::Instance,
     /// Robot state.
-    pub state: R, // TODO: Replace by generic, impl the generic in glonax-server
+    pub state: R,
 }
 
 impl<R: RobotState> Default for Operand<R> {

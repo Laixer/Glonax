@@ -61,21 +61,23 @@ pub struct Excavator {
     pub(crate) ecu_state: EcuState,
 }
 
-impl Excavator {}
-
 impl RobotState for Excavator {
+    /// Vehicle management system.
     fn vms_mut(&mut self) -> &mut core::Host {
         &mut self.vms
     }
 
+    /// Global navigation satellite system.
     fn gnss_mut(&mut self) -> &mut core::Gnss {
         &mut self.gnss
     }
 
+    /// Engine management system.
     fn engine_mut(&mut self) -> &mut core::Engine {
         &mut self.engine
     }
 
+    /// Robot pose.
     fn pose_mut(&mut self) -> &mut core::Pose {
         &mut self.pose
     }
