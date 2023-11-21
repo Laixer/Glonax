@@ -1,1 +1,3 @@
-KERNEL=="js[0-9]*", SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", TAG+="systemd", ENV{SYSTEMD_ALIAS}+="/sys/subsystem/$name", ENV{SYSTEMD_WANTS}+="glonax-inputd@$kernel.service"
+# Trigger glonax-input for the joystick
+#KERNEL=="js[0-9]*", SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", TAG+="systemd", ENV{SYSTEMD_ALIAS}+="/sys/subsystem/$name", ENV{SYSTEMD_WANTS}+="glonax-inputd@$kernel.service"
+KERNEL=="js0", SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", TAG+="systemd", ENV{SYSTEMD_WANTS}+="glonax-input.service"
