@@ -20,5 +20,5 @@ name = "glonax-netctl"
 path = "src/netctl.rs"
 
 [[bin]]
-name = "glonax-diag"
-path = "src/diag.rs"
+name = "glonax-cli"
+path = "src/cli.rs"
