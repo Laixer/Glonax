@@ -95,6 +95,11 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
                 for encoder in &mut encoder_list {
                     if let Some(message) = router.try_accept(encoder) {
                         message.fill(runtime_state.clone()).await;
+
+                        // TODO: Set the encoder state in the runtime state
+                        if let Some(state) = message.state {
+                            log::debug!("0x{:X?} Encoder state: {:?}", message.node, state);
+                        }
                     }
                 }
             }
