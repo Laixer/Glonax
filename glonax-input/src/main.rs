@@ -16,7 +16,7 @@ mod input;
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
     /// Remote network address.
-    #[arg(short = 'c', long = "connect")]
+    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
     address: String,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]

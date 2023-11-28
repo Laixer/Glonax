@@ -91,9 +91,9 @@ async fn spawn_network_session(
                             .unwrap();
                     }
                     FrameMessage::Shutdown => {
-                        log::debug!("Client requested shutdown");
-
                         use tokio::io::AsyncWriteExt;
+
+                        log::debug!("Client requested shutdown");
 
                         client.inner_mut().shutdown().await.ok();
 

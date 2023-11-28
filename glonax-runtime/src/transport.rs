@@ -68,7 +68,7 @@ pub mod frame {
         }
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
     pub enum FrameMessage {
         Null = 0x1,
         Start = 0x10,
