@@ -128,10 +128,6 @@ pub(super) async fn service_net_ems_sim(_config: ProxyConfig, runtime_state: Sha
 pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedExcavatorState) {
     use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
-    if config.interface2.is_none() {
-        return;
-    }
-
     log::debug!("Starting EMS service");
 
     match J1939Network::new(

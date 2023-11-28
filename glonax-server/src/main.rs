@@ -155,7 +155,10 @@ async fn main() -> anyhow::Result<()> {
         runtime.spawn_motion_sink(device::sink_net_actuator_sim);
     } else {
         runtime.spawn_service(device::service_net_encoder);
-        runtime.spawn_service(device::service_net_ems);
+
+        if config.interface2.is_some() {
+            runtime.spawn_service(device::service_net_ems);
+        }
 
         runtime.spawn_motion_sink(device::sink_net_actuator);
     }
