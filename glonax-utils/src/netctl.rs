@@ -154,7 +154,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     }
 }
 
-/// Print raw frames to screen.
+/// Print raw frames to standard output.
 async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
@@ -188,13 +188,14 @@ struct Args {
 
 #[derive(clap::Subcommand)]
 enum Command {
-    /// Target node.
-    Node {
+    /// Hydraulics control unit commands.
+    Hcu {
         /// Target node address.
+        #[arg(long, default_value = "0x4A")]
         address: String,
         /// Node commands.
         #[command(subcommand)]
-        command: NodeCommand,
+        command: HCUCommand,
     },
     /// Show raw frames on screen.
     Dump {
@@ -216,9 +217,8 @@ enum Command {
     },
 }
 
-// TODO: Node should be HCU
 #[derive(clap::Subcommand)]
-enum NodeCommand {
+enum HCUCommand {
     /// Enable or disable identification LED.
     Led { toggle: String },
     /// Assign the node a new address.
@@ -260,90 +260,74 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     match args.command {
-        Command::Node { address, command } => match command {
-            NodeCommand::Led { toggle } => {
-                let node = node_address(address)?;
+        Command::Hcu { address, command } => {
+            let node = node_address(address)?;
+            let service = ActuatorService::new(node);
+            let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
-                info!(
-                    "{} Turn identification LED {}",
-                    style_node(node),
+            match command {
+                HCUCommand::Led { toggle } => {
+                    info!(
+                        "{} Turn identification LED {}",
+                        style_node(node),
+                        if string_to_bool(&toggle).unwrap() {
+                            Green.paint("on")
+                        } else {
+                            Red.paint("off")
+                        },
+                    );
+
+                    net.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
+                        .await
+                        .unwrap();
+                }
+                HCUCommand::Reset => {
+                    info!("{} Reset", style_node(node));
+
+                    net.send_vectored(&service.reset()).await.unwrap();
+                }
+                HCUCommand::Motion { toggle } => {
+                    info!(
+                        "{} Turn motion {}",
+                        style_node(node),
+                        if string_to_bool(&toggle).unwrap() {
+                            Green.paint("on")
+                        } else {
+                            Red.paint("off")
+                        },
+                    );
+
                     if string_to_bool(&toggle).unwrap() {
-                        Green.paint("on")
+                        net.send_vectored(&service.lock()).await.unwrap();
                     } else {
-                        Red.paint("off")
-                    },
-                );
+                        net.send_vectored(&service.unlock()).await.unwrap();
+                    }
+                }
+                HCUCommand::Actuator { actuator, value } => {
+                    info!(
+                        "{} Set actuator {} to {}",
+                        style_node(node),
+                        actuator,
+                        if value.is_positive() {
+                            Blue.paint(value.to_string())
+                        } else {
+                            Green.paint(value.abs().to_string())
+                        },
+                    );
 
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new(node);
+                    net.send_vectored(&service.actuator_command([(actuator, value)].into()))
+                        .await
+                        .unwrap();
+                }
+                HCUCommand::Assign { address_new } => {
+                    let node_new = node_address(address_new)?;
 
-                net.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
-                    .await
-                    .unwrap();
-            }
-            NodeCommand::Reset => {
-                let node = node_address(address)?;
+                    info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
-                info!("{} Reset", style_node(node));
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new(node);
-
-                net.send_vectored(&service.reset()).await.unwrap();
-            }
-            NodeCommand::Motion { toggle } => {
-                let node = node_address(address)?;
-
-                info!(
-                    "{} Turn motion {}",
-                    style_node(node),
-                    if string_to_bool(&toggle).unwrap() {
-                        Green.paint("on")
-                    } else {
-                        Red.paint("off")
-                    },
-                );
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new(node);
-
-                if string_to_bool(&toggle).unwrap() {
-                    net.send_vectored(&service.lock()).await.unwrap();
-                } else {
-                    net.send_vectored(&service.unlock()).await.unwrap();
+                    net.commanded_address(node, node_new).await;
                 }
             }
-            NodeCommand::Actuator { actuator, value } => {
-                let node = node_address(address)?;
-
-                info!(
-                    "{} Set actuator {} to {}",
-                    style_node(node),
-                    actuator,
-                    if value.is_positive() {
-                        Blue.paint(value.to_string())
-                    } else {
-                        Green.paint(value.abs().to_string())
-                    },
-                );
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                let service = ActuatorService::new(node);
-
-                net.send_vectored(&service.actuator_command([(actuator, value)].into()))
-                    .await
-                    .unwrap();
-            }
-            NodeCommand::Assign { address_new } => {
-                let node = node_address(address)?;
-                let node_new = node_address(address_new)?;
-
-                info!("{} Assign 0x{:X?}", style_node(node), node_new);
-
-                let net = J1939Network::new(args.interface.as_str(), args.address)?;
-                net.commanded_address(node, node_new).await;
-            }
-        },
+        }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
             net.set_promisc_mode(true)?;
