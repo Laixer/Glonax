@@ -18,7 +18,6 @@ const MIN_BUFFER_SIZE: usize = 10;
 pub trait Packetize: TryFrom<Vec<u8>> {
     /// The message type of the packet.
     const MESSAGE: frame::FrameMessage;
-
     /// If the packet has a fixed size, this should be set to that size.
     const MESSAGE_SIZE: Option<usize> = None;
 

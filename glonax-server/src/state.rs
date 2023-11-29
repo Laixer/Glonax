@@ -4,11 +4,13 @@ use glonax::{core, runtime::SharedOperandState, RobotState};
 
 pub(crate) type SharedExcavatorState = SharedOperandState<Excavator>;
 
+// TODO: This is only used for the simulator, rename
 pub struct EcuState {
     /// Frist derivative of the encoder position.
     pub speed: [AtomicI16; 8],
     /// Position of encoder.
     pub position: [AtomicU32; 8],
+    /// Motion lock.
     motion_lock: AtomicBool,
 }
 

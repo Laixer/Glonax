@@ -1,4 +1,7 @@
-use glonax::{runtime::MotionSender, transport::frame::FrameMessage};
+use glonax::{
+    runtime::MotionSender,
+    transport::{frame::FrameMessage, Client},
+};
 
 use crate::{config::ProxyConfig, state::SharedExcavatorState};
 
@@ -11,7 +14,7 @@ async fn spawn_network_session(
 ) {
     log::debug!("Accepted client from: {}", addr);
 
-    let mut client = glonax::transport::Client::new(stream);
+    let mut client = Client::new(stream);
 
     // TODO: Set timeout
     let frame = match client.read_frame().await {

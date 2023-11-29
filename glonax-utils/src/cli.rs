@@ -191,7 +191,6 @@ async fn main() -> anyhow::Result<()> {
             .expect("Failed to read line");
 
         let input = input.trim();
-
         if input.is_empty() {
             continue;
         }
