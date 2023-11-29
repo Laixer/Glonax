@@ -14,8 +14,7 @@ const PROTO_VERSION: u8 = 0x02;
 //     + 3;
 const MIN_BUFFER_SIZE: usize = 10;
 
-// TODO: Add Display
-pub trait Packetize: TryFrom<Vec<u8>> {
+pub trait Packetize: TryFrom<Vec<u8>> + std::fmt::Display + Sized {
     /// The message type of the packet.
     const MESSAGE: frame::FrameMessage;
     /// If the packet has a fixed size, this should be set to that size.
@@ -263,6 +262,19 @@ pub mod frame {
         }
     }
 
+    impl std::fmt::Display for Start {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(
+                f,
+                "{} ({}{}{})",
+                self.name,
+                if self.is_read() { "R" } else { "" },
+                if self.is_write() { "W" } else { "" },
+                if self.is_failsafe() { "F" } else { "" },
+            )
+        }
+    }
+
     pub struct Request {
         message: FrameMessage,
     }
@@ -297,6 +309,12 @@ pub mod frame {
         }
     }
 
+    impl std::fmt::Display for Request {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{:?}", self.message)
+        }
+    }
+
     pub struct Shutdown;
 
     impl Shutdown {
@@ -322,6 +340,12 @@ pub mod frame {
         }
     }
 
+    impl std::fmt::Display for Shutdown {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "")
+        }
+    }
+
     pub struct Null;
 
     impl Null {
@@ -344,6 +368,12 @@ pub mod frame {
 
         fn to_bytes(&self) -> Vec<u8> {
             vec![]
+        }
+    }
+
+    impl std::fmt::Display for Null {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "")
         }
     }
 }
