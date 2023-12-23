@@ -1,4 +1,4 @@
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 
 use crate::{runtime::SharedOperandState, RobotState};
 
@@ -40,7 +40,7 @@ impl HostService {
     /// Returns the uptime in seconds
     #[inline]
     pub fn uptime(&self) -> u64 {
-        self.system.uptime()
+        System::uptime()
     }
 
     /// Returns the current timestamp
@@ -52,7 +52,7 @@ impl HostService {
     /// Returns the CPU load
     #[inline]
     pub fn cpu_load(&self) -> (f64, f64, f64) {
-        let load_avg = self.system.load_average();
+        let load_avg = System::load_average();
         (load_avg.one, load_avg.five, load_avg.fifteen)
     }
 }
