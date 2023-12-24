@@ -5,14 +5,19 @@ const PROTO_VERSION: u8 = 0x02;
 
 // FUTURE: Next protocol version should be 0x03
 // - Payload should end with 0x00
-// - Packets should have an explicit length so that we can read them in one go and check against the length
+// - Vary data should have an explicit length so that we can read them in one go and check against the length
+// - After session is established, the host should send an instance message
 
-// const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
-//     + std::mem::size_of::<u8>()
-//     + std::mem::size_of::<u8>()
-//     + std::mem::size_of::<u16>()
-//     + 3;
-const MIN_BUFFER_SIZE: usize = 10;
+const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
+    + std::mem::size_of::<u8>()
+    + std::mem::size_of::<u8>()
+    + std::mem::size_of::<u16>()
+    + 3;
+const MAX_PAYLOAD_SIZE: usize = 1_024;
+
+const_assert_eq!(MIN_BUFFER_SIZE, 10);
+const_assert!(MIN_BUFFER_SIZE < MAX_PAYLOAD_SIZE);
+const_assert!(MAX_PAYLOAD_SIZE < 1500);
 
 pub trait Packetize: TryFrom<Vec<u8>> + std::fmt::Display + Sized {
     /// The message type of the packet.
@@ -27,7 +32,7 @@ pub trait Packetize: TryFrom<Vec<u8>> + std::fmt::Display + Sized {
 pub mod frame {
     use bytes::{BufMut, BytesMut};
 
-    use super::{MIN_BUFFER_SIZE, PROTO_HEADER, PROTO_VERSION};
+    use super::{MAX_PAYLOAD_SIZE, MIN_BUFFER_SIZE, PROTO_HEADER, PROTO_VERSION};
 
     pub enum FrameError {
         FrameTooSmall,
@@ -176,7 +181,7 @@ pub mod frame {
                 .ok_or_else(|| FrameError::InvalidMessage(buffer[4]))?;
 
             let payload_length = u16::from_be_bytes([buffer[5], buffer[6]]) as usize;
-            if payload_length > 4096 {
+            if payload_length > MAX_PAYLOAD_SIZE {
                 Err(FrameError::ExcessivePayloadLength(payload_length))?
             }
 

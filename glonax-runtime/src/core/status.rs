@@ -1,5 +1,12 @@
 use serde_derive::Deserialize;
 
+/// Robot status.
+///
+/// This message is sent by the robot to the host to indicate the current status of the robot.
+/// The host can use this information to determine if the robot is operating normally, or if
+/// there is a problem that needs to be addressed.
+///
+/// The status message is kept as simple and small as possible to reduce the amount of data.
 #[derive(Clone, Copy, Debug, Deserialize)]
 pub enum Status {
     /// The robot is operating normally.
@@ -31,7 +38,7 @@ impl std::fmt::Display for Status {
 }
 
 impl TryFrom<&[u8]> for Status {
-    type Error = ();
+    type Error = (); // TODO: Error type
 
     fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
         match buffer[0] {
