@@ -79,6 +79,8 @@ async fn spawn_network_session(
 
     log::info!("Session started for: {}", start.name());
 
+    // TODO: In protocol version 3, send instance information to client
+
     while let Ok(frame) = client.read_frame().await {
         match frame.message {
             FrameMessage::Request => {
@@ -87,6 +89,7 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
                 match request.message() {
+                    // TODO: In v3 remove this message
                     FrameMessage::Null => {
                         client
                             .send_packet(&glonax::transport::frame::Null)
@@ -139,6 +142,7 @@ async fn spawn_network_session(
                             .await
                             .unwrap();
                     }
+                    // TODO: In v3 respond with error
                     _ => {}
                 }
             }

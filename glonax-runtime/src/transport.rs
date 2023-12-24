@@ -71,6 +71,7 @@ pub mod frame {
         }
     }
 
+    // TODO: Split connection messages and data messages
     #[derive(Debug, PartialEq, Eq, Clone, Copy)]
     pub enum FrameMessage {
         Null = 0x1,
@@ -85,6 +86,7 @@ pub mod frame {
         VMS = 0x41,
         GNSS = 0x42,
         Engine = 0x43,
+        Error = 0xFF, // TODO: Only for connection messages and set ID to 0x00
     }
 
     impl FrameMessage {
@@ -103,6 +105,7 @@ pub mod frame {
                 0x41 => Some(Self::VMS),
                 0x42 => Some(Self::GNSS),
                 0x43 => Some(Self::Engine),
+                0xFF => Some(Self::Error),
                 _ => None,
             }
         }
@@ -121,6 +124,7 @@ pub mod frame {
                 Self::VMS => 0x41,
                 Self::GNSS => 0x42,
                 Self::Engine => 0x43,
+                Self::Error => 0xFF,
             }
         }
     }
@@ -357,6 +361,8 @@ pub mod frame {
         }
     }
 
+    // TODO: Replace by Echo. This should be a packet that is sent back to the client with the
+    // same payload.
     pub struct Null;
 
     impl Null {
