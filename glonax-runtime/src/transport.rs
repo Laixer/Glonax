@@ -206,13 +206,17 @@ pub mod frame {
         name: String,
     }
 
+    // TODO: Maybe change 'write' to 'control'?
     impl Start {
         pub const MODE_READ: u8 = 0b0000_0001;
         pub const MODE_WRITE: u8 = 0b0000_0010;
         pub const MODE_FAILSAFE: u8 = 0b0001_0000;
 
         pub fn new(mode: u8, name: String) -> Self {
-            Self { flags: mode, name }
+            Self {
+                flags: mode,
+                name: name.chars().take(64).collect::<String>(),
+            }
         }
 
         #[inline]
@@ -240,6 +244,8 @@ pub mod frame {
         type Error = FrameError;
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+            // TODO: Check that the buffer is not empty
+            // TODO: Check all other bits are zero
             let flags = buffer[0];
 
             // TODO: Announce session name length
