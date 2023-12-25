@@ -6,7 +6,8 @@ const PROTO_VERSION: u8 = 0x02;
 // FUTURE: Next protocol version should be 0x03
 // - Payload should end with 0x00
 // - Vary data should have an explicit length so that we can read them in one go and check against the length
-// - After session is established, the host should send an instance message
+// - After session is established, the host should send an instance
+// - Allow sessions without a name
 
 const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
     + std::mem::size_of::<u8>()
@@ -71,28 +72,34 @@ pub mod frame {
         }
     }
 
-    // TODO: Split connection messages and data messages
+    // TODO: Split connection management and data messages
     #[derive(Debug, PartialEq, Eq, Clone, Copy)]
     pub enum FrameMessage {
+        // Connection management messages
+        Error = 0x0,
         Null = 0x1,
         Start = 0x10,
         Shutdown = 0x11,
         Request = 0x12,
+        // Data messages
         Instance = 0x15,
-        Status = 0x16,
+        Status = 0x16, // TODO: Integrate with Instance
+        // Control messages
         Motion = 0x20,
+        // Internal messages
         Signal = 0x31,
+        // Data messages
         Pose = 0x40,
         VMS = 0x41,
         GNSS = 0x42,
         Engine = 0x43,
-        Error = 0xFF, // TODO: Only for connection messages and set ID to 0x00
     }
 
     impl FrameMessage {
         // TODO: TryFrom
         pub fn from_u8(value: u8) -> Option<Self> {
             match value {
+                0x0 => Some(Self::Error),
                 0x1 => Some(Self::Null),
                 0x10 => Some(Self::Start),
                 0x11 => Some(Self::Shutdown),
@@ -105,13 +112,13 @@ pub mod frame {
                 0x41 => Some(Self::VMS),
                 0x42 => Some(Self::GNSS),
                 0x43 => Some(Self::Engine),
-                0xFF => Some(Self::Error),
                 _ => None,
             }
         }
 
         pub fn to_u8(&self) -> u8 {
             match self {
+                Self::Error => 0x0,
                 Self::Null => 0x1,
                 Self::Start => 0x10,
                 Self::Shutdown => 0x11,
@@ -124,7 +131,6 @@ pub mod frame {
                 Self::VMS => 0x41,
                 Self::GNSS => 0x42,
                 Self::Engine => 0x43,
-                Self::Error => 0xFF,
             }
         }
     }
