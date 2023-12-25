@@ -8,7 +8,6 @@ use clap::Parser;
 
 mod config;
 mod device;
-mod probe;
 mod server;
 mod state;
 
@@ -41,12 +40,6 @@ struct Args {
     /// Serial baud rate.
     #[arg(long, default_value_t = 9_600, value_name = "RATE")]
     gnss_baud_rate: usize,
-    /// Probe interval in seconds.
-    #[arg(long, default_value_t = 60, value_name = "INTERVAL")]
-    probe_interval: u64,
-    /// Disable probing.
-    #[arg(long)]
-    no_probe: bool,
     /// Enable simulation mode.
     #[arg(long, default_value_t = false)]
     simulation: bool,
@@ -74,8 +67,8 @@ async fn main() -> anyhow::Result<()> {
         host_interval: args.host_interval,
         gnss_device: args.gnss_device,
         gnss_baud_rate: args.gnss_baud_rate,
-        probe_interval: args.probe_interval,
-        probe: !args.no_probe,
+        probe_interval: 60,
+        probe: false,
         simulation: args.simulation,
         simulation_jitter: false,
         ..Default::default()
@@ -161,10 +154,6 @@ async fn main() -> anyhow::Result<()> {
         }
 
         runtime.spawn_motion_sink(device::sink_net_actuator);
-    }
-
-    if config.probe {
-        runtime.spawn_middleware_service(probe::service);
     }
 
     runtime.run_motion_service(server::service).await;

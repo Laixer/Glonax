@@ -77,6 +77,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         .await;
     }
 
+    // TODO: Rename to `spawn_control_service`
     /// Spawn a motion sink in the background.
     pub fn spawn_motion_sink<Fut>(
         &mut self,
