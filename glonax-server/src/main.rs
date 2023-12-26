@@ -8,6 +8,7 @@ use clap::Parser;
 
 mod config;
 mod device;
+mod kinematic;
 mod server;
 mod state;
 
@@ -136,8 +137,43 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    runtime.spawn_service(device::service_host);
+    // runtime.spawn_service(device::service_host);
+    // TODO: Rename spawn to 'listen'.
     runtime.spawn_service(device::service_gnss);
+
+    // TODO: This becomes the component pipline
+    let tx = runtime.motion_tx.clone();
+    runtime.spawn_service(
+        |_config: config::ProxyConfig, runtime_state: state::SharedExcavatorState| async move {
+            use state::Component;
+            use tokio::time::Duration;
+
+            let mut interval = tokio::time::interval(Duration::from_millis(15));
+
+            let mut host = glonax::net::HostService::default();
+            let mut kinematic = kinematic::KinematicComponent;
+
+            loop {
+                // TODO: Use shutdown signal
+                interval.tick().await;
+
+                let mut runtime_state = runtime_state.write().await;
+
+                let mut ctx = state::ComponentContext::new();
+
+                // Run the registered components in the pipeline in the order they were registered.
+                //
+                // Components get a reference to the runtime state and can modify it
+                host.tick(&mut runtime_state.state).await;
+                kinematic.tick(&mut ctx, &mut runtime_state.state);
+
+                // Collect all motion commands, send them
+                for motion in ctx.motion_queue {
+                    tx.send(motion).await.unwrap();
+                }
+            }
+        },
+    );
 
     if config.simulation {
         log::warn!("Running in simulation mode");

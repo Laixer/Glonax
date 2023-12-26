@@ -2,6 +2,7 @@ use sysinfo::System;
 
 use crate::{runtime::SharedOperandState, RobotState};
 
+// TODO: Rename to HostComponent
 pub struct HostService {
     system: System,
 }
@@ -74,5 +75,17 @@ impl HostService {
         runtime_state.state.vms_mut().cpu_load = self.cpu_load();
         runtime_state.state.vms_mut().uptime = self.uptime();
         runtime_state.state.vms_mut().timestamp = self.timestamp();
+    }
+
+    pub async fn tick<R: RobotState>(&mut self, runtime_state: &mut R) {
+        let vms = runtime_state.vms_mut();
+
+        self.refresh();
+
+        vms.memory = (self.used_memory(), self.total_memory());
+        vms.swap = (self.used_swap(), self.total_swap());
+        vms.cpu_load = self.cpu_load();
+        vms.uptime = self.uptime();
+        vms.timestamp = self.timestamp();
     }
 }

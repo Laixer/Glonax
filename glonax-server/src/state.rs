@@ -49,16 +49,38 @@ impl Default for EcuState {
     }
 }
 
+pub trait Component {
+    fn tick<R: RobotState>(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
+}
+
+pub struct ComponentContext {
+    pub motion_queue: Vec<glonax::core::Motion>,
+    pub store: std::collections::HashMap<String, String>,
+}
+
+impl ComponentContext {
+    pub fn new() -> Self {
+        Self {
+            motion_queue: vec![],
+            store: std::collections::HashMap::new(),
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Excavator {
+    // TODO: Move to core state Robot or something
     /// Vehicle management system data.
     pub(crate) vms: core::Host,
+    // TODO: Move to core state Robot or something
     /// Global navigation satellite system data.
     pub(crate) gnss: core::Gnss,
+    // TODO: Move to core state Robot or something
     /// Engine data.
     pub(crate) engine: core::Engine,
     /// Pose data.
     pub(crate) pose: core::Pose,
+    // TODO: Move to core state Robot or something
     /// Electronic control unit data.
     pub(crate) ecu_state: EcuState,
 }

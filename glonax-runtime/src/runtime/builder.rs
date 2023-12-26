@@ -51,7 +51,7 @@ impl<Cnf: Configurable, R: RobotState> Builder<Cnf, R> {
         self
     }
 
-    /// Enqueue a motion command.
+    /// Enqueue a motion command to be processed by the runtime on startup.
     ///
     /// This method will enqueue a motion command to be processed by the runtime.
     /// The motion command will be processed in the order it was received.
