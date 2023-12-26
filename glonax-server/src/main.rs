@@ -8,6 +8,8 @@ use clap::Parser;
 
 mod config;
 mod device;
+mod ems;
+mod encoder;
 mod kinematic;
 mod server;
 mod state;
@@ -138,9 +140,12 @@ async fn main() -> anyhow::Result<()> {
         .build();
 
     // runtime.spawn_service(device::service_host);
-    // TODO: Rename spawn to 'listen'.
-    runtime.spawn_service(device::service_gnss);
 
+    if config.gnss_device.is_some() {
+        runtime.schedule_io_service(device::service_gnss);
+    }
+
+    // TODOL: This needs to run in the main thread
     // TODO: This becomes the component pipline
     let tx = runtime.motion_tx.clone();
     runtime.spawn_service(
@@ -178,20 +183,27 @@ async fn main() -> anyhow::Result<()> {
     if config.simulation {
         log::warn!("Running in simulation mode");
 
-        runtime.spawn_service(device::service_net_encoder_sim);
-        runtime.spawn_service(device::service_net_ems_sim);
+        // runtime.listen_io_service(device::service_net_encoder_sim);
+        runtime.schedule_interval_service::<encoder::EncoderSimService>(
+            std::time::Duration::from_millis(5),
+        );
+        // runtime.schedule_io_service(device::service_net_ems_sim);
+        runtime.schedule_interval_service::<ems::EngineSimService>(
+            std::time::Duration::from_millis(10),
+        );
 
         runtime.spawn_motion_sink(device::sink_net_actuator_sim);
     } else {
-        runtime.spawn_service(device::service_net_encoder);
+        runtime.schedule_io_service(device::service_net_encoder);
 
         if config.interface2.is_some() {
-            runtime.spawn_service(device::service_net_ems);
+            runtime.schedule_io_service(device::service_net_ems);
         }
 
         runtime.spawn_motion_sink(device::sink_net_actuator);
     }
 
+    // TODO: Replace with the component pipeline
     runtime.run_motion_service(server::service).await;
 
     // runtime.wait_for_shutdown().await;

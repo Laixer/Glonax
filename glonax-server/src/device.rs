@@ -42,16 +42,11 @@ pub(super) async fn service_net_encoder_sim(
         (0x6D, glonax::core::Actuator::Attachment, encoder_attachment),
     ];
 
-    // let mut encoder_list = vec![
-    //     EncoderService::new(0x6A),
-    //     EncoderService::new(0x6B),
-    //     EncoderService::new(0x6C),
-    //     EncoderService::new(0x6D),
-    // ];
+    let mut interval = tokio::time::interval(Duration::from_millis(5));
 
     loop {
         for (id, actuator, encoder) in control_devices.iter_mut() {
-            sleep(Duration::from_millis(5)).await;
+            interval.tick().await;
 
             // 1st derivative of position
             let velocity = runtime_state.read().await.state.ecu_state.speed[*actuator as usize]
@@ -160,10 +155,6 @@ pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedEx
 
 pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedExcavatorState) {
     use tokio::io::{AsyncBufReadExt, BufReader};
-
-    if config.gnss_device.is_none() {
-        return;
-    }
 
     log::debug!("Starting GNSS service");
 

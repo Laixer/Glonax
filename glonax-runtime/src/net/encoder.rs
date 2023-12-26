@@ -144,6 +144,10 @@ impl EncoderMessage {
             .pose_mut()
             .set_node_position(self.node, self.position);
     }
+
+    pub fn fill2(&self, pose_state: &mut crate::core::Pose) {
+        pose_state.set_node_position(self.node, self.position);
+    }
 }
 
 impl std::fmt::Display for EncoderMessage {

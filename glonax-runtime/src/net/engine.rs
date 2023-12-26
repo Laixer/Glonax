@@ -66,6 +66,12 @@ impl EngineMessage {
         runtime_state.state.engine_mut().actual_engine = self.actual_engine.unwrap_or(0);
         runtime_state.state.engine_mut().rpm = self.rpm.unwrap_or(0);
     }
+
+    pub fn fill2(&self, engine_state: &mut crate::core::Engine) {
+        engine_state.driver_demand = self.driver_demand.unwrap_or(0);
+        engine_state.actual_engine = self.actual_engine.unwrap_or(0);
+        engine_state.rpm = self.rpm.unwrap_or(0);
+    }
 }
 
 impl std::fmt::Display for EngineMessage {

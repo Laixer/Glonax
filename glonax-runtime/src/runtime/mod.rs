@@ -12,6 +12,11 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 
 pub mod builder;
 
+// TODO: Move
+pub trait Service<R>: Default + Send {
+    fn run(&mut self, state: &mut R);
+}
+
 /// Construct runtime service from configuration and instance.
 ///
 /// Note that this method is certain to block.
@@ -54,6 +59,39 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
+    }
+
+    /// Listen for IO event service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    pub fn schedule_io_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState<R>) -> Fut)
+    where
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
+        tokio::spawn(service(self.config.clone(), self.operand.clone()));
+    }
+
+    pub fn schedule_interval_service<S>(&self, duration: std::time::Duration)
+    where
+        S: Service<R> + 'static,
+        R: RobotState + Send + Sync + 'static,
+    {
+        let mut service = S::default();
+
+        let mut interval = tokio::time::interval(duration);
+
+        let opr = self.operand.clone();
+
+        tokio::spawn(async move {
+            loop {
+                interval.tick().await;
+
+                let q = opr.clone();
+
+                service.run(&mut q.write().await.state);
+            }
+        });
     }
 
     /// Run a motion service.
