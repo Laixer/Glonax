@@ -37,6 +37,21 @@ impl EcuState {
     pub fn is_locked(&self) -> bool {
         self.motion_lock.load(Ordering::Relaxed)
     }
+
+    #[inline]
+    pub fn speed(&self, actuator: &glonax::core::Actuator) -> i16 {
+        self.speed[*actuator as usize].load(Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn position(&self, actuator: &glonax::core::Actuator) -> u32 {
+        self.position[*actuator as usize].load(Ordering::SeqCst)
+    }
+
+    #[inline]
+    pub fn set_position(&self, actuator: &glonax::core::Actuator, position: u32) {
+        self.position[*actuator as usize].store(position, Ordering::Relaxed);
+    }
 }
 
 impl Default for EcuState {

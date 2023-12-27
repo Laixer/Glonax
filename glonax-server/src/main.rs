@@ -148,8 +148,8 @@ async fn main() -> anyhow::Result<()> {
     if config.simulation {
         log::warn!("Running in simulation mode");
 
-        runtime.schedule_interval_component::<encoder::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_interval_component::<glonax::net::EngineManagementSystemSimulator>(
+        runtime.schedule_interval::<encoder::EncoderSimulator>(Duration::from_millis(5));
+        runtime.schedule_interval::<glonax::net::EngineManagementSystemSimulator>(
             Duration::from_millis(10),
         );
 
@@ -173,9 +173,7 @@ async fn main() -> anyhow::Result<()> {
     pipe.add::<glonax::components::Host>();
     pipe.add::<kinematic::KinematicComponent>();
 
-    runtime
-        .run_interval_component(pipe, Duration::from_millis(15))
-        .await;
+    runtime.run_interval(pipe, Duration::from_millis(15)).await;
 
     // runtime.wait_for_shutdown().await;
 

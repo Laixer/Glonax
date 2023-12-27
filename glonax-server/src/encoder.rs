@@ -1,5 +1,3 @@
-use std::sync::atomic::Ordering;
-
 use glonax::{
     net::EncoderMessage,
     runtime::{Component, ComponentContext},
@@ -17,15 +15,14 @@ impl Component<Excavator> for EncoderSimulator {
     fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut Excavator) {
         for (id, actuator, encoder) in self.control_devices.iter_mut() {
             // 1st derivative of position
-            let velocity = state.ecu_state.speed[*actuator as usize].load(Ordering::SeqCst);
-            let position = state.ecu_state.position[*actuator as usize].load(Ordering::SeqCst);
+            let velocity = state.ecu_state.speed(actuator);
+            let position = state.ecu_state.position(actuator);
 
             let position = encoder.position(position, velocity);
 
             EncoderMessage::from_position(*id, position).fill2(state.pose_mut());
 
-            state.ecu_state.position[*actuator as usize]
-                .store(position, std::sync::atomic::Ordering::Relaxed);
+            state.ecu_state.set_position(actuator, position);
 
             // log::debug!("0x{:X?} Encoder position: {}", id, position);
         }

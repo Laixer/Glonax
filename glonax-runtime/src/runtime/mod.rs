@@ -77,7 +77,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
-    pub fn schedule_interval_component<C>(&self, duration: std::time::Duration)
+    pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
         C: Component<R> + Default + Send + Sync + 'static,
         R: RobotState + Send + Sync + 'static,
@@ -101,7 +101,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         });
     }
 
-    pub async fn run_interval_component<C>(&self, mut component: C, duration: std::time::Duration)
+    pub async fn run_interval<C>(&self, mut component: C, duration: std::time::Duration)
     where
         C: Component<R>,
         R: RobotState,
