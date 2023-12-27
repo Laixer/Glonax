@@ -89,3 +89,9 @@ impl HostService {
         vms.timestamp = self.timestamp();
     }
 }
+
+impl<R: RobotState> crate::runtime::Service<R> for HostService {
+    fn run(&mut self, state: &mut R) {
+        self.tick(state);
+    }
+}

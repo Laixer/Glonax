@@ -13,6 +13,7 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 pub mod builder;
 
 // TODO: Move
+// TODO: Send should be optional
 pub trait Service<R>: Default + Send {
     fn run(&mut self, state: &mut R);
 }
