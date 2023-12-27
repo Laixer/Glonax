@@ -77,7 +77,7 @@ pub mod frame {
     pub enum FrameMessage {
         // Connection management messages
         Error = 0x0,
-        Null = 0x1,
+        Echo = 0x1,
         Start = 0x10,
         Shutdown = 0x11,
         Request = 0x12,
@@ -100,7 +100,7 @@ pub mod frame {
         pub fn from_u8(value: u8) -> Option<Self> {
             match value {
                 0x0 => Some(Self::Error),
-                0x1 => Some(Self::Null),
+                0x1 => Some(Self::Echo),
                 0x10 => Some(Self::Start),
                 0x11 => Some(Self::Shutdown),
                 0x12 => Some(Self::Request),
@@ -119,7 +119,7 @@ pub mod frame {
         pub fn to_u8(&self) -> u8 {
             match self {
                 Self::Error => 0x0,
-                Self::Null => 0x1,
+                Self::Echo => 0x1,
                 Self::Start => 0x10,
                 Self::Shutdown => 0x11,
                 Self::Request => 0x12,
@@ -365,34 +365,30 @@ pub mod frame {
         }
     }
 
-    // TODO: Replace by Echo. This should be a packet that is sent back to the client with the
-    // same payload.
-    pub struct Null;
-
-    impl Null {
-        pub fn to_bytes(&self) -> Vec<u8> {
-            vec![]
-        }
+    pub struct Echo {
+        payload: i32,
     }
 
-    impl TryFrom<Vec<u8>> for Null {
+    impl TryFrom<Vec<u8>> for Echo {
         type Error = FrameError;
 
-        fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
-            Ok(Self)
+        fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+            Ok(Self {
+                payload: i32::from_be_bytes([value[0], value[1], value[2], value[3]]),
+            })
         }
     }
 
-    impl super::Packetize for Null {
-        const MESSAGE: FrameMessage = FrameMessage::Null;
-        const MESSAGE_SIZE: Option<usize> = Some(0);
+    impl super::Packetize for Echo {
+        const MESSAGE: FrameMessage = FrameMessage::Echo;
+        const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<i32>());
 
         fn to_bytes(&self) -> Vec<u8> {
-            vec![]
+            self.payload.to_be_bytes().to_vec()
         }
     }
 
-    impl std::fmt::Display for Null {
+    impl std::fmt::Display for Echo {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "")
         }

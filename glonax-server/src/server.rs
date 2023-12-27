@@ -89,13 +89,6 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
                 match request.message() {
-                    // TODO: In v3 remove this message
-                    FrameMessage::Null => {
-                        client
-                            .send_packet(&glonax::transport::frame::Null)
-                            .await
-                            .unwrap();
-                    }
                     FrameMessage::Shutdown => {
                         use tokio::io::AsyncWriteExt;
 
@@ -145,6 +138,13 @@ async fn spawn_network_session(
                     // TODO: In v3 respond with error
                     _ => {}
                 }
+            }
+            FrameMessage::Echo => {
+                let echo = client
+                    .packet::<glonax::transport::frame::Echo>(frame.payload_length)
+                    .await
+                    .unwrap();
+                client.send_packet(&echo).await.unwrap();
             }
             FrameMessage::Shutdown => {
                 log::debug!("Client requested shutdown");
