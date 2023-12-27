@@ -91,17 +91,6 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
                 match request.message() {
-                    // TODO: In v3, remove this
-                    FrameMessage::Shutdown => {
-                        use tokio::io::AsyncWriteExt;
-
-                        log::debug!("Client requested shutdown");
-
-                        client.inner_mut().shutdown().await.ok();
-
-                        session_shutdown = true;
-                        break;
-                    }
                     FrameMessage::Instance => {
                         client
                             .send_packet(&runtime_state.read().await.instance)

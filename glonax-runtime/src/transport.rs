@@ -378,16 +378,12 @@ pub mod frame {
     }
 }
 
+#[derive(Default)]
 pub struct ConnectionOptions {
     flags: u8,
 }
 
 impl ConnectionOptions {
-    // TOOD: Remove this
-    pub fn new() -> Self {
-        Self { flags: 0b0000_0000 }
-    }
-
     pub fn control(&mut self, write: bool) -> &mut Self {
         if write {
             self.flags |= frame::Session::MODE_CONTROL;
@@ -425,12 +421,6 @@ impl ConnectionOptions {
     }
 }
 
-impl Default for ConnectionOptions {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub struct Client<T> {
     inner: T,
 }
@@ -440,7 +430,7 @@ impl Client<tokio::net::TcpStream> {
         address: impl tokio::net::ToSocketAddrs,
         session_name: impl ToString,
     ) -> std::io::Result<Self> {
-        let client = ConnectionOptions::new()
+        let client = ConnectionOptions::default()
             .connect(address, session_name)
             .await?;
 

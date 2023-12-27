@@ -125,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", config.address);
 
-    let mut client = glonax::transport::ConnectionOptions::new()
+    let mut client = glonax::transport::ConnectionOptions::default()
         .control(true)
         .failsafe(config.fail_safe)
         .connect(
