@@ -13,19 +13,19 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 pub mod builder;
 
 pub trait Component<R: RobotState> {
-    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
+    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut R);
 }
 
 pub struct ComponentContext {
     pub motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
-    pub store: std::collections::HashMap<String, String>,
+    pub target: Option<crate::core::Target>,
 }
 
 impl ComponentContext {
     pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
         Self {
             motion_tx,
-            store: std::collections::HashMap::new(),
+            target: None,
         }
     }
 }

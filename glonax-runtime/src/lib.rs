@@ -47,6 +47,19 @@ pub mod consts {
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
+// TODO: Rename to `RobotState`
+#[derive(Default)]
+pub struct MachineState {
+    /// Vehicle management system data.
+    pub vms: core::Host,
+    /// Global navigation satellite system data.
+    pub gnss: core::Gnss,
+    /// Engine data.
+    pub engine: core::Engine,
+    /// Encoder data.
+    pub encoders: nalgebra::Rotation3<f32>,
+}
+
 pub trait RobotState: Default {
     /// Vehicle management system.
     fn vms_mut(&mut self) -> &mut core::Host;
