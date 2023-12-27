@@ -49,8 +49,8 @@ impl Default for EcuState {
     }
 }
 
-pub trait Component {
-    fn tick<R: RobotState>(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
+pub trait Component<R: RobotState> {
+    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
 }
 
 pub struct ComponentContext {

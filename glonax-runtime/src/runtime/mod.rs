@@ -77,10 +77,10 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         S: Service<R> + 'static,
         R: RobotState + Send + Sync + 'static,
     {
-        let mut service = S::default();
-
         let mut interval = tokio::time::interval(duration);
 
+        // TODO: Replace with some `new` method accepting a reference to the configuation
+        let mut service = S::default();
         let opr = self.operand.clone();
 
         tokio::spawn(async move {
@@ -92,6 +92,26 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
                 service.run(&mut q.write().await.state);
             }
         });
+    }
+
+    pub async fn run_interval_service<S>(&self, duration: std::time::Duration)
+    where
+        S: Service<R> + 'static,
+        R: RobotState + 'static,
+    {
+        let mut interval = tokio::time::interval(duration);
+
+        // TODO: Replace with some `new` method accepting a reference to the configuation
+        let mut service = S::default();
+        let opr = self.operand.clone();
+
+        loop {
+            interval.tick().await;
+
+            let q = opr.clone();
+
+            service.run(&mut q.write().await.state);
+        }
     }
 
     /// Run a motion service.

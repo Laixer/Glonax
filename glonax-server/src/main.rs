@@ -11,6 +11,7 @@ mod device;
 mod ems;
 mod encoder;
 mod kinematic;
+mod pipeline;
 mod server;
 mod state;
 
@@ -145,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_io_service(device::service_gnss);
     }
 
-    // TODOL: This needs to run in the main thread
+    // TODO: This needs to run in the main thread
     // TODO: This becomes the component pipline
     let tx = runtime.motion_tx.clone();
     runtime.spawn_service(
@@ -169,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
                 // Run the registered components in the pipeline in the order they were registered.
                 //
                 // Components get a reference to the runtime state and can modify it
-                host.tick(&mut runtime_state.state).await;
+                host.tick(&mut runtime_state.state);
                 kinematic.tick(&mut ctx, &mut runtime_state.state);
 
                 // Collect all motion commands, send them
@@ -204,6 +205,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // TODO: Replace with the component pipeline
+    // TODO: The network server is an io service
     runtime.run_motion_service(server::service).await;
 
     // runtime.wait_for_shutdown().await;

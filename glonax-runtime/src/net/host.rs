@@ -77,7 +77,7 @@ impl HostService {
         runtime_state.state.vms_mut().timestamp = self.timestamp();
     }
 
-    pub async fn tick<R: RobotState>(&mut self, runtime_state: &mut R) {
+    pub fn tick<R: RobotState>(&mut self, runtime_state: &mut R) {
         let vms = runtime_state.vms_mut();
 
         self.refresh();
