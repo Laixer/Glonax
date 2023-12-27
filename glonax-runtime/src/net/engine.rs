@@ -2,8 +2,12 @@ use glonax_j1939::{
     decode::{EngineStarterMode, EngineTorqueMode},
     *,
 };
+use rand::Rng;
 
-use crate::{runtime::SharedOperandState, RobotState};
+use crate::{
+    runtime::{Component, ComponentContext, SharedOperandState},
+    RobotState,
+};
 
 #[derive(Default)]
 pub struct EngineMessage {
@@ -121,6 +125,23 @@ impl super::Parsable<EngineMessage> for EngineManagementSystem {
         }
 
         Some(EngineMessage::from_frame(frame))
+    }
+}
+
+#[derive(Default)]
+pub struct EngineManagementSystemSimulator {
+    rng: rand::rngs::OsRng,
+}
+
+impl<R: RobotState> Component<R> for EngineManagementSystemSimulator {
+    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut R) {
+        EngineMessage {
+            driver_demand: Some(self.rng.gen_range(18..=20)),
+            actual_engine: Some(self.rng.gen_range(19..=21)),
+            rpm: Some(self.rng.gen_range(1180..=1200)),
+            ..Default::default()
+        }
+        .fill2(state.engine_mut());
     }
 }
 

@@ -8,7 +8,6 @@ use clap::Parser;
 
 mod config;
 mod device;
-mod ems;
 mod encoder;
 mod kinematic;
 mod pipeline;
@@ -150,7 +149,9 @@ async fn main() -> anyhow::Result<()> {
         log::warn!("Running in simulation mode");
 
         runtime.schedule_interval_component::<encoder::EncoderSimService>(Duration::from_millis(5));
-        runtime.schedule_interval_component::<ems::EngineSimService>(Duration::from_millis(10));
+        runtime.schedule_interval_component::<glonax::net::EngineManagementSystemSimulator>(
+            Duration::from_millis(10),
+        );
 
         runtime.spawn_motion_sink(device::sink_net_actuator_sim);
     } else {
@@ -169,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut pipe = pipeline::PipelineComponent::default();
 
-    pipe.add::<glonax::net::HostComponent>();
+    pipe.add::<glonax::components::Host>();
     pipe.add::<kinematic::KinematicComponent>();
 
     runtime

@@ -5,6 +5,7 @@
 // of the included license.  See the LICENSE file for details.
 
 pub mod channel;
+pub mod components;
 pub mod core;
 pub mod device;
 pub mod net;

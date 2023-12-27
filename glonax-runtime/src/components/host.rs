@@ -6,11 +6,11 @@ use crate::{
 };
 
 #[derive(Default)]
-pub struct HostComponent {
+pub struct Host {
     system: System,
 }
 
-impl<R: RobotState> Component<R> for HostComponent {
+impl<R: RobotState> Component<R> for Host {
     fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
         let vms = runtime_state.vms_mut();
 
