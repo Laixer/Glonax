@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 
-use glonax::{
+use crate::{
     runtime::{Component, ComponentContext},
     RobotState,
 };
 
-pub struct PipelineComponent<R> {
+pub struct Pipeline<R> {
     map: BTreeMap<i32, Box<dyn Component<R>>>,
 }
 
-impl<R> PipelineComponent<R> {
+impl<R> Pipeline<R> {
     pub fn new(components: Vec<(i32, Box<dyn Component<R>>)>) -> Self {
         let mut map = BTreeMap::new();
 
@@ -21,7 +21,7 @@ impl<R> PipelineComponent<R> {
     }
 }
 
-impl<R> PipelineComponent<R> {
+impl<R> Pipeline<R> {
     pub fn make<C>(order: i32) -> (i32, Box<dyn Component<R>>)
     where
         C: Component<R> + Default + Send + Sync + 'static,
@@ -31,7 +31,7 @@ impl<R> PipelineComponent<R> {
     }
 }
 
-impl<R: glonax::RobotState> Component<R> for PipelineComponent<R> {
+impl<R: RobotState> Component<R> for Pipeline<R> {
     fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
         for service in self.map.values_mut() {
             service.tick(_ctx, runtime_state);

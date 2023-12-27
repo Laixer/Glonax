@@ -11,7 +11,6 @@ mod controller;
 mod device;
 mod encoder;
 mod kinematic;
-mod pipeline;
 mod server;
 mod state;
 
@@ -169,10 +168,10 @@ async fn main() -> anyhow::Result<()> {
     // TODO: The network server is an io service
     // runtime.run_motion_service(server::service).await;
 
-    let pipe = pipeline::PipelineComponent::new(vec![
-        pipeline::PipelineComponent::make::<glonax::components::Host>(0),
-        pipeline::PipelineComponent::make::<kinematic::KinematicComponent>(1),
-        pipeline::PipelineComponent::make::<controller::ControllerComponent>(2),
+    let pipe = glonax::components::Pipeline::new(vec![
+        glonax::components::Pipeline::make::<glonax::components::Host>(0),
+        glonax::components::Pipeline::make::<kinematic::KinematicComponent>(1),
+        glonax::components::Pipeline::make::<controller::ControllerComponent>(2),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;
