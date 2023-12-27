@@ -168,10 +168,10 @@ async fn main() -> anyhow::Result<()> {
     // TODO: The network server is an io service
     // runtime.run_motion_service(server::service).await;
 
-    let mut pipe = pipeline::PipelineComponent::default();
-
-    pipe.add::<glonax::components::Host>();
-    pipe.add::<kinematic::KinematicComponent>();
+    let pipe = pipeline::PipelineComponent::new(vec![
+        pipeline::PipelineComponent::make::<glonax::components::Host>(0),
+        pipeline::PipelineComponent::make::<kinematic::KinematicComponent>(1),
+    ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;
 

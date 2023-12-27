@@ -3,24 +3,35 @@ use glonax::{
     RobotState,
 };
 
-#[derive(Default)]
 pub struct PipelineComponent<R> {
-    list: Vec<Box<dyn Component<R>>>,
+    map: std::collections::BTreeMap<i32, Box<dyn Component<R>>>,
 }
 
 impl<R> PipelineComponent<R> {
-    pub fn add<C>(&mut self)
+    pub fn new(components: Vec<(i32, Box<dyn Component<R>>)>) -> Self {
+        let mut map = std::collections::BTreeMap::new();
+
+        for (order, component) in components {
+            map.insert(order, component);
+        }
+
+        Self { map }
+    }
+}
+
+impl<R> PipelineComponent<R> {
+    pub fn make<C>(order: i32) -> (i32, Box<dyn Component<R>>)
     where
         C: Component<R> + Default + Send + Sync + 'static,
         R: RobotState + Send + Sync + 'static,
     {
-        self.list.push(Box::<C>::default());
+        (order, Box::<C>::default())
     }
 }
 
 impl<R: glonax::RobotState> Component<R> for PipelineComponent<R> {
     fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
-        for service in self.list.iter_mut() {
+        for service in self.map.values_mut() {
             service.tick(_ctx, runtime_state);
         }
     }
