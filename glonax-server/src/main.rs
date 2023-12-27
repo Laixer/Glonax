@@ -7,6 +7,7 @@
 use clap::Parser;
 
 mod config;
+mod controller;
 mod device;
 mod encoder;
 mod kinematic;
@@ -171,6 +172,7 @@ async fn main() -> anyhow::Result<()> {
     let pipe = pipeline::PipelineComponent::new(vec![
         pipeline::PipelineComponent::make::<glonax::components::Host>(0),
         pipeline::PipelineComponent::make::<kinematic::KinematicComponent>(1),
+        pipeline::PipelineComponent::make::<controller::ControllerComponent>(2),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;
