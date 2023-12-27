@@ -37,7 +37,7 @@ async fn spawn_network_session(
     };
 
     // TODO: Handle errors
-    let start = if frame.message == FrameMessage::Start {
+    let start = if frame.message == FrameMessage::Session {
         match client
             .packet::<glonax::transport::frame::Session>(frame.payload_length)
             .await
@@ -89,6 +89,7 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
                 match request.message() {
+                    // TODO: In v3, remove this
                     FrameMessage::Shutdown => {
                         use tokio::io::AsyncWriteExt;
 

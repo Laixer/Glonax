@@ -20,7 +20,7 @@ const_assert_eq!(MIN_BUFFER_SIZE, 10);
 const_assert!(MIN_BUFFER_SIZE < MAX_PAYLOAD_SIZE);
 const_assert!(MAX_PAYLOAD_SIZE < 1500);
 
-pub trait Packetize: TryFrom<Vec<u8>> + std::fmt::Display + Sized {
+pub trait Packetize: TryFrom<Vec<u8>> + Sized {
     /// The message type of the packet.
     const MESSAGE: frame::FrameMessage;
     /// If the packet has a fixed size, this should be set to that size.
@@ -42,6 +42,7 @@ pub mod frame {
         InvalidMessage(u8),
         ExcessivePayloadLength(usize),
         InvalidPadding,
+        InvalidSessionFlags,
     }
 
     impl std::error::Error for FrameError {}
@@ -55,6 +56,7 @@ pub mod frame {
                 Self::InvalidMessage(message) => write!(f, "InvalidMessage({})", message),
                 Self::ExcessivePayloadLength(len) => write!(f, "ExcessivePayloadLength({})", len),
                 Self::InvalidPadding => write!(f, "InvalidPadding"),
+                Self::InvalidSessionFlags => write!(f, "InvalidSessionFlags"),
             }
         }
     }
@@ -68,6 +70,7 @@ pub mod frame {
                 Self::InvalidMessage(message) => write!(f, "invalid message type: {}", message),
                 Self::ExcessivePayloadLength(len) => write!(f, "excessive payload length: {}", len),
                 Self::InvalidPadding => write!(f, "invalid padding"),
+                Self::InvalidSessionFlags => write!(f, "invalid session flags"),
             }
         }
     }
@@ -78,7 +81,7 @@ pub mod frame {
         // Connection management messages
         Error = 0x0,
         Echo = 0x1,
-        Start = 0x10,
+        Session = 0x10,
         Shutdown = 0x11,
         Request = 0x12,
         // Data messages
@@ -101,7 +104,7 @@ pub mod frame {
             match value {
                 0x0 => Some(Self::Error),
                 0x1 => Some(Self::Echo),
-                0x10 => Some(Self::Start),
+                0x10 => Some(Self::Session),
                 0x11 => Some(Self::Shutdown),
                 0x12 => Some(Self::Request),
                 0x15 => Some(Self::Instance),
@@ -120,7 +123,7 @@ pub mod frame {
             match self {
                 Self::Error => 0x0,
                 Self::Echo => 0x1,
-                Self::Start => 0x10,
+                Self::Session => 0x10,
                 Self::Shutdown => 0x11,
                 Self::Request => 0x12,
                 Self::Instance => 0x15,
@@ -252,9 +255,12 @@ pub mod frame {
         type Error = FrameError;
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-            // TODO: Check that the buffer is not empty
-            // TODO: Check all other bits are zero
             let flags = buffer[0];
+
+            let mask = 0b11100000;
+            if (flags & mask) != 0 {
+                Err(FrameError::InvalidSessionFlags)?
+            }
 
             // TODO: Announce session name length
 
@@ -266,7 +272,7 @@ pub mod frame {
     }
 
     impl super::Packetize for Session {
-        const MESSAGE: FrameMessage = FrameMessage::Start;
+        const MESSAGE: FrameMessage = FrameMessage::Session;
 
         // TODO: Whenever we have a string, we should send its length first
         fn to_bytes(&self) -> Vec<u8> {
@@ -281,18 +287,29 @@ pub mod frame {
         }
     }
 
-    impl std::fmt::Display for Session {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(
-                f,
-                "{} ({}{}{})",
-                self.name,
-                if self.is_read() { "R" } else { "" },
-                if self.is_control() { "C" } else { "" },
-                if self.is_failsafe() { "F" } else { "" },
-            )
-        }
-    }
+    // pub enum Error {
+    //     InvalidRequest = 0x1,
+    // }
+
+    // impl TryFrom<Vec<u8>> for Error {
+    //     type Error = FrameError;
+
+    //     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+    //         match buffer[0] {
+    //             0x1 => Ok(Self::InvalidRequest),
+    //             _ => Err(FrameError::InvalidMessage(err)),
+    //         }
+    //     }
+    // }
+
+    // impl super::Packetize for Error {
+    //     const MESSAGE: FrameMessage = FrameMessage::Request;
+    //     const MESSAGE_SIZE: Option<usize> = Some(1);
+
+    //     fn to_bytes(&self) -> Vec<u8> {
+    //         vec![*self as u8]
+    //     }
+    // }
 
     pub struct Request {
         message: FrameMessage,
@@ -328,12 +345,6 @@ pub mod frame {
         }
     }
 
-    impl std::fmt::Display for Request {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "{:?}", self.message)
-        }
-    }
-
     pub struct Shutdown;
 
     impl Shutdown {
@@ -359,12 +370,6 @@ pub mod frame {
         }
     }
 
-    impl std::fmt::Display for Shutdown {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "")
-        }
-    }
-
     pub struct Echo {
         payload: i32,
     }
@@ -385,12 +390,6 @@ pub mod frame {
 
         fn to_bytes(&self) -> Vec<u8> {
             self.payload.to_be_bytes().to_vec()
-        }
-    }
-
-    impl std::fmt::Display for Echo {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "")
         }
     }
 }
