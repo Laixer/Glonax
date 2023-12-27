@@ -8,13 +8,12 @@ use glonax::{
 
 use crate::state::Excavator;
 
-pub struct EncoderSimService {
+pub struct EncoderSimulator {
     control_devices: [(u8, glonax::core::Actuator, glonax::net::Encoder); 4],
 }
 
 // impl<R: RobotState> Component<R> for EncoderSimService {
-
-impl Component<Excavator> for EncoderSimService {
+impl Component<Excavator> for EncoderSimulator {
     fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut Excavator) {
         for (id, actuator, encoder) in self.control_devices.iter_mut() {
             // 1st derivative of position
@@ -33,7 +32,7 @@ impl Component<Excavator> for EncoderSimService {
     }
 }
 
-impl Default for EncoderSimService {
+impl Default for EncoderSimulator {
     fn default() -> Self {
         log::debug!("Starting encoder service");
 

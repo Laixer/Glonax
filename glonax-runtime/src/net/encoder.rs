@@ -33,11 +33,6 @@ impl std::fmt::Display for EncoderState {
     }
 }
 
-pub struct EncoderService {
-    /// Node ID.
-    node: u8,
-}
-
 #[derive(Debug, Clone)]
 pub struct EncoderMessage {
     /// Node ID.
@@ -242,6 +237,11 @@ impl Encoder {
             position as u32
         }
     }
+}
+
+pub struct EncoderService {
+    /// Node ID.
+    node: u8,
 }
 
 impl EncoderService {
