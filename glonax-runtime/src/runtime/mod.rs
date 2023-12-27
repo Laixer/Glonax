@@ -12,10 +12,14 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 
 pub mod builder;
 
-// TODO: Move
-// TODO: Send should be optional
-pub trait Service<R>: Default + Send {
-    fn run(&mut self, state: &mut R);
+pub trait Component<R: RobotState> {
+    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
+}
+
+#[derive(Default)]
+pub struct ComponentContext {
+    pub motion_queue: Vec<crate::core::Motion>,
+    pub store: std::collections::HashMap<String, String>,
 }
 
 /// Construct runtime service from configuration and instance.
@@ -73,16 +77,18 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
-    pub fn schedule_interval_service<S>(&self, duration: std::time::Duration)
+    pub fn schedule_interval_component<C>(&self, duration: std::time::Duration)
     where
-        S: Service<R> + 'static,
+        C: Component<R> + Default + Send + Sync + 'static,
         R: RobotState + Send + Sync + 'static,
     {
         let mut interval = tokio::time::interval(duration);
 
         // TODO: Replace with some `new` method accepting a reference to the configuation
-        let mut service = S::default();
+        let mut component = C::default();
         let opr = self.operand.clone();
+
+        let mut ctx = ComponentContext::default();
 
         tokio::spawn(async move {
             loop {
@@ -90,28 +96,26 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
 
                 let q = opr.clone();
 
-                service.run(&mut q.write().await.state);
+                component.tick(&mut ctx, &mut q.write().await.state);
             }
         });
     }
 
-    pub async fn run_interval_service<S>(&self, duration: std::time::Duration)
+    pub async fn run_interval_component<C>(&self, mut component: C, duration: std::time::Duration)
     where
-        S: Service<R> + 'static,
-        R: RobotState + 'static,
+        C: Component<R>,
+        R: RobotState,
     {
         let mut interval = tokio::time::interval(duration);
 
-        // TODO: Replace with some `new` method accepting a reference to the configuation
-        let mut service = S::default();
-        let opr = self.operand.clone();
+        let mut ctx = ComponentContext::default();
 
         loop {
             interval.tick().await;
 
-            let q = opr.clone();
+            let mut runtime_state = self.operand.write().await;
 
-            service.run(&mut q.write().await.state);
+            component.tick(&mut ctx, &mut runtime_state.state);
         }
     }
 

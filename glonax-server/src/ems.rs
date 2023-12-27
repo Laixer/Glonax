@@ -1,14 +1,16 @@
-use glonax::{net::EngineMessage, runtime::Service, RobotState};
+use glonax::{
+    net::EngineMessage,
+    runtime::{Component, ComponentContext},
+    RobotState,
+};
 use rand::Rng;
-
-use crate::state::Excavator;
 
 pub struct EngineSimService {
     rng: rand::rngs::OsRng,
 }
 
-impl Service<Excavator> for EngineSimService {
-    fn run(&mut self, state: &mut Excavator) {
+impl<R: RobotState> Component<R> for EngineSimService {
+    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut R) {
         EngineMessage {
             driver_demand: Some(self.rng.gen_range(18..=20)),
             actual_engine: Some(self.rng.gen_range(19..=21)),

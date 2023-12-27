@@ -27,6 +27,7 @@ impl EncoderAdapter {
     }
 }
 
+// TODO: Move to glonax-server
 pub struct Pose {
     /// Frame rotator.
     frame_rotator: Rotation3<f32>,

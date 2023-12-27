@@ -1,27 +1,38 @@
-use glonax::runtime::Service;
-
-use crate::state::{Component, ComponentContext, Excavator};
+use glonax::{
+    runtime::{Component, ComponentContext},
+    RobotState,
+};
 
 #[derive(Default)]
-pub struct PipelineComponent {
-    services: Vec<Box<dyn Component<Excavator>>>,
+pub struct PipelineComponent<R> {
+    list: Vec<Box<dyn Component<R>>>,
 }
 
-impl PipelineComponent {
-    pub fn new() -> Self {
-        let services: Vec<Box<dyn Component<Excavator>>> = vec![
-            // Box::new(glonax::net::HostService::default()),
-            Box::new(crate::kinematic::KinematicComponent::default()),
-        ];
-
-        Self { services }
+impl<R> PipelineComponent<R> {
+    pub fn add<C>(&mut self)
+    where
+        C: Component<R> + Default + Send + Sync + 'static,
+        R: RobotState + Send + Sync + 'static,
+    {
+        self.list.push(Box::<C>::default());
     }
 }
 
-impl Component<Excavator> for PipelineComponent {
-    fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut Excavator) {
-        for service in self.services.iter_mut() {
+impl<R: glonax::RobotState> Component<R> for PipelineComponent<R> {
+    fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
+        for service in self.list.iter_mut() {
             service.tick(_ctx, runtime_state);
         }
     }
 }
+
+//     let motion_tx = self.motion_tx.clone();
+
+//     loop {
+//         interval.tick().await;
+
+//         // Collect all motion commands, send them
+//         for motion in ctx.motion_queue {
+//             motion_tx.send(motion).await.unwrap();
+//         }
+//     }

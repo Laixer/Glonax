@@ -1,6 +1,10 @@
 use std::sync::atomic::Ordering;
 
-use glonax::{net::EncoderMessage, runtime::Service, RobotState};
+use glonax::{
+    net::EncoderMessage,
+    runtime::{Component, ComponentContext},
+    RobotState,
+};
 
 use crate::state::Excavator;
 
@@ -8,8 +12,10 @@ pub struct EncoderSimService {
     control_devices: [(u8, glonax::core::Actuator, glonax::net::Encoder); 4],
 }
 
-impl Service<Excavator> for EncoderSimService {
-    fn run(&mut self, state: &mut Excavator) {
+// impl<R: RobotState> Component<R> for EncoderSimService {
+
+impl Component<Excavator> for EncoderSimService {
+    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut Excavator) {
         for (id, actuator, encoder) in self.control_devices.iter_mut() {
             // 1st derivative of position
             let velocity = state.ecu_state.speed[*actuator as usize].load(Ordering::SeqCst);

@@ -49,24 +49,6 @@ impl Default for EcuState {
     }
 }
 
-pub trait Component<R: RobotState> {
-    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
-}
-
-pub struct ComponentContext {
-    pub motion_queue: Vec<glonax::core::Motion>,
-    pub store: std::collections::HashMap<String, String>,
-}
-
-impl ComponentContext {
-    pub fn new() -> Self {
-        Self {
-            motion_queue: vec![],
-            store: std::collections::HashMap::new(),
-        }
-    }
-}
-
 #[derive(Default)]
 pub struct Excavator {
     // TODO: Move to core state Robot or something

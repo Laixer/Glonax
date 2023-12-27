@@ -1,6 +1,7 @@
-use glonax::RobotState;
-
-use crate::state::{Component, ComponentContext};
+use glonax::{
+    runtime::{Component, ComponentContext},
+    RobotState,
+};
 
 #[derive(Default)]
 pub struct KinematicComponent;
