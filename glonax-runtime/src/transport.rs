@@ -3,12 +3,6 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x02;
 
-// FUTURE: Next protocol version should be 0x03
-// - Payload should end with 0x00
-// - Vary data should have an explicit length so that we can read them in one go and check against the length
-// - After session is established, the host should send an instance
-// - Allow sessions without a name
-
 const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
     + std::mem::size_of::<u8>()
     + std::mem::size_of::<u8>()
@@ -89,8 +83,6 @@ pub mod frame {
         Status = 0x16, // TODO: Integrate with Instance
         // Control messages
         Motion = 0x20,
-        // Internal messages
-        Signal = 0x31,
         // Data messages
         Pose = 0x40,
         VMS = 0x41,
@@ -110,7 +102,6 @@ pub mod frame {
                 0x15 => Some(Self::Instance),
                 0x16 => Some(Self::Status),
                 0x20 => Some(Self::Motion),
-                0x31 => Some(Self::Signal),
                 0x40 => Some(Self::Pose),
                 0x41 => Some(Self::VMS),
                 0x42 => Some(Self::GNSS),
@@ -129,7 +120,6 @@ pub mod frame {
                 Self::Instance => 0x15,
                 Self::Status => 0x16,
                 Self::Motion => 0x20,
-                Self::Signal => 0x31,
                 Self::Pose => 0x40,
                 Self::VMS => 0x41,
                 Self::GNSS => 0x42,
@@ -219,7 +209,6 @@ pub mod frame {
     }
 
     impl Session {
-        pub const MODE_READ: u8 = 0b0000_0001;
         pub const MODE_CONTROL: u8 = 0b0000_0010;
         pub const MODE_FAILSAFE: u8 = 0b0001_0000;
 
@@ -228,11 +217,6 @@ pub mod frame {
                 flags: mode,
                 name: name.chars().take(64).collect::<String>(),
             }
-        }
-
-        #[inline]
-        pub fn is_read(&self) -> bool {
-            self.flags & Self::MODE_READ != 0
         }
 
         #[inline]
@@ -401,9 +385,7 @@ pub struct ConnectionOptions {
 impl ConnectionOptions {
     // TOOD: Remove this
     pub fn new() -> Self {
-        Self {
-            flags: frame::Session::MODE_READ,
-        }
+        Self { flags: 0b0000_0000 }
     }
 
     pub fn control(&mut self, write: bool) -> &mut Self {
@@ -411,16 +393,6 @@ impl ConnectionOptions {
             self.flags |= frame::Session::MODE_CONTROL;
         } else {
             self.flags &= !frame::Session::MODE_CONTROL;
-        }
-
-        self
-    }
-
-    pub fn read(&mut self, read: bool) -> &mut Self {
-        if read {
-            self.flags |= frame::Session::MODE_READ;
-        } else {
-            self.flags &= !frame::Session::MODE_READ;
         }
 
         self

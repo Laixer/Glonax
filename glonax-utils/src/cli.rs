@@ -60,7 +60,6 @@ async fn main() -> anyhow::Result<()> {
     log::debug!("Waiting for connection to {}", address);
 
     let mut client = glonax::transport::ConnectionOptions::new()
-        .read(true)
         .control(true)
         .connect(
             address.to_owned(),

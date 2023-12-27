@@ -16,6 +16,8 @@ async fn spawn_network_session(
 
     let mut client = Client::new(stream);
 
+    let mut session2 = glonax::transport::frame::Session::new(0, String::new());
+
     // TODO: Set timeout
     let frame = match client.read_frame().await {
         Ok(frame) => frame,
@@ -37,7 +39,7 @@ async fn spawn_network_session(
     };
 
     // TODO: Handle errors
-    let start = if frame.message == FrameMessage::Session {
+    let session = if frame.message == FrameMessage::Session {
         match client
             .packet::<glonax::transport::frame::Session>(frame.payload_length)
             .await
@@ -77,7 +79,7 @@ async fn spawn_network_session(
 
     let mut session_shutdown = false;
 
-    log::info!("Session started for: {}", start.name());
+    log::info!("Session started for: {}", session.name());
 
     // TODO: In protocol version 3, send instance information to client
 
@@ -100,27 +102,21 @@ async fn spawn_network_session(
                         session_shutdown = true;
                         break;
                     }
-                    FrameMessage::Status => {
-                        client
-                            .send_packet(&runtime_state.read().await.status)
-                            .await
-                            .unwrap();
-                    }
                     FrameMessage::Instance => {
                         client
                             .send_packet(&runtime_state.read().await.instance)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::Pose => {
+                    FrameMessage::Status => {
                         client
-                            .send_packet(&runtime_state.read().await.state.pose)
+                            .send_packet(&runtime_state.read().await.status)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::Engine => {
+                    FrameMessage::Pose => {
                         client
-                            .send_packet(&runtime_state.read().await.state.engine)
+                            .send_packet(&runtime_state.read().await.state.pose)
                             .await
                             .unwrap();
                     }
@@ -136,9 +132,29 @@ async fn spawn_network_session(
                             .await
                             .unwrap();
                     }
+                    FrameMessage::Engine => {
+                        client
+                            .send_packet(&runtime_state.read().await.state.engine)
+                            .await
+                            .unwrap();
+                    }
                     // TODO: In v3 respond with error
                     _ => {}
                 }
+            }
+            FrameMessage::Session => {
+                log::warn!("Client started session twice");
+
+                use tokio::io::AsyncWriteExt;
+
+                client
+                    .send_packet(&glonax::transport::frame::Shutdown)
+                    .await
+                    .ok();
+                client.inner_mut().shutdown().await.ok();
+
+                session_shutdown = true;
+                break;
             }
             FrameMessage::Echo => {
                 let echo = client
@@ -163,7 +179,7 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
 
-                if start.is_control() {
+                if session.is_control() {
                     if let Err(e) = motion_sender.send(motion).await {
                         log::error!("Failed to send motion: {}", e);
                         break;
@@ -176,15 +192,15 @@ async fn spawn_network_session(
         }
     }
 
-    if !session_shutdown && start.is_control() && start.is_failsafe() {
-        log::warn!("Enacting failsafe for: {}", start.name());
+    if !session_shutdown && session.is_control() && session.is_failsafe() {
+        log::warn!("Enacting failsafe for: {}", session.name());
 
         if let Err(e) = motion_sender.send(glonax::core::Motion::StopAll).await {
             log::error!("Failed to send motion: {}", e);
         }
     }
 
-    log::info!("Session shutdown for: {}", start.name());
+    log::info!("Session shutdown for: {}", session.name());
 }
 
 pub(super) async fn service(
