@@ -16,10 +16,18 @@ pub trait Component<R: RobotState> {
     fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut R);
 }
 
-#[derive(Default)]
 pub struct ComponentContext {
-    pub motion_queue: Vec<crate::core::Motion>,
+    pub motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
     pub store: std::collections::HashMap<String, String>,
+}
+
+impl ComponentContext {
+    pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
+        Self {
+            motion_tx,
+            store: std::collections::HashMap::new(),
+        }
+    }
 }
 
 /// Construct runtime service from configuration and instance.
@@ -88,7 +96,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         let mut component = C::default();
         let opr = self.operand.clone();
 
-        let mut ctx = ComponentContext::default();
+        let mut ctx = ComponentContext::new(self.motion_tx.clone());
 
         tokio::spawn(async move {
             loop {
@@ -108,11 +116,10 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     {
         let mut interval = tokio::time::interval(duration);
 
-        let mut ctx = ComponentContext::default();
-
         loop {
             interval.tick().await;
 
+            let mut ctx = ComponentContext::new(self.motion_tx.clone());
             let mut runtime_state = self.operand.write().await;
 
             component.tick(&mut ctx, &mut runtime_state.state);
