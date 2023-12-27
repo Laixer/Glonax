@@ -28,6 +28,11 @@ impl ComponentContext {
             target: None,
         }
     }
+
+    // TODO: Handle errors
+    pub fn commit(&mut self, motion: crate::core::Motion) {
+        self.motion_tx.try_send(motion).unwrap();
+    }
 }
 
 /// Construct runtime service from configuration and instance.
