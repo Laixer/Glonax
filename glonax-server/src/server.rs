@@ -39,7 +39,7 @@ async fn spawn_network_session(
     // TODO: Handle errors
     let start = if frame.message == FrameMessage::Start {
         match client
-            .packet::<glonax::transport::frame::Start>(frame.payload_length)
+            .packet::<glonax::transport::frame::Session>(frame.payload_length)
             .await
         {
             Ok(start) => start,
@@ -162,7 +162,7 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
 
-                if start.is_write() {
+                if start.is_control() {
                     if let Err(e) = motion_sender.send(motion).await {
                         log::error!("Failed to send motion: {}", e);
                         break;
@@ -175,7 +175,7 @@ async fn spawn_network_session(
         }
     }
 
-    if !session_shutdown && start.is_write() && start.is_failsafe() {
+    if !session_shutdown && start.is_control() && start.is_failsafe() {
         log::warn!("Enacting failsafe for: {}", start.name());
 
         if let Err(e) = motion_sender.send(glonax::core::Motion::StopAll).await {

@@ -127,7 +127,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(false)
-        .write(true)
+        .control(true)
         .failsafe(config.fail_safe)
         .connect(
             config.address.to_owned(),

@@ -13,11 +13,17 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 pub mod builder;
 
 pub trait Component<R: RobotState> {
+    /// Tick the component.
+    ///
+    /// This method will be called on each tick of the runtime.
+    /// How often the runtime ticks is determined by the runtime configuration.
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut R);
 }
 
 pub struct ComponentContext {
+    /// Motion command sender.
     pub motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+    /// Target position.
     pub target: Option<crate::core::Target>,
 }
 
@@ -101,6 +107,8 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         let mut component = C::default();
         let opr = self.operand.clone();
 
+        // TODO: Add `instance` to `ComponentContext
+        // TODO: Reset on every tick
         let mut ctx = ComponentContext::new(self.motion_tx.clone());
 
         tokio::spawn(async move {
@@ -129,6 +137,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         loop {
             interval.tick().await;
 
+            // TODO: Add `instance` to `ComponentContext
             let mut ctx = ComponentContext::new(self.motion_tx.clone());
             let mut runtime_state = self.operand.write().await;
 
@@ -170,16 +179,6 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
             self.operand.clone(),
             self.motion_rx.take().unwrap(),
         ));
-    }
-
-    /// Spawn a middleware service in the background.
-    pub fn spawn_middleware_service<Fut>(
-        &self,
-        service: impl FnOnce(Cnf, SharedOperandState<R>) -> Fut,
-    ) where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
-    {
-        tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
     /// Wait for the runtime to shutdown.

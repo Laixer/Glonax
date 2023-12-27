@@ -210,16 +210,14 @@ pub mod frame {
         }
     }
 
-    // TODO: maybe this should be a session?
-    pub struct Start {
+    pub struct Session {
         flags: u8,
         name: String,
     }
 
-    // TODO: Maybe change 'write' to 'control'?
-    impl Start {
+    impl Session {
         pub const MODE_READ: u8 = 0b0000_0001;
-        pub const MODE_WRITE: u8 = 0b0000_0010;
+        pub const MODE_CONTROL: u8 = 0b0000_0010;
         pub const MODE_FAILSAFE: u8 = 0b0001_0000;
 
         pub fn new(mode: u8, name: String) -> Self {
@@ -235,8 +233,8 @@ pub mod frame {
         }
 
         #[inline]
-        pub fn is_write(&self) -> bool {
-            self.flags & Self::MODE_WRITE != 0
+        pub fn is_control(&self) -> bool {
+            self.flags & Self::MODE_CONTROL != 0
         }
 
         #[inline]
@@ -250,7 +248,7 @@ pub mod frame {
         }
     }
 
-    impl TryFrom<Vec<u8>> for Start {
+    impl TryFrom<Vec<u8>> for Session {
         type Error = FrameError;
 
         fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
@@ -267,7 +265,7 @@ pub mod frame {
         }
     }
 
-    impl super::Packetize for Start {
+    impl super::Packetize for Session {
         const MESSAGE: FrameMessage = FrameMessage::Start;
 
         // TODO: Whenever we have a string, we should send its length first
@@ -283,14 +281,14 @@ pub mod frame {
         }
     }
 
-    impl std::fmt::Display for Start {
+    impl std::fmt::Display for Session {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(
                 f,
                 "{} ({}{}{})",
                 self.name,
                 if self.is_read() { "R" } else { "" },
-                if self.is_write() { "W" } else { "" },
+                if self.is_control() { "C" } else { "" },
                 if self.is_failsafe() { "F" } else { "" },
             )
         }
@@ -409,15 +407,15 @@ impl ConnectionOptions {
     // TOOD: Remove this
     pub fn new() -> Self {
         Self {
-            flags: frame::Start::MODE_READ,
+            flags: frame::Session::MODE_READ,
         }
     }
 
-    pub fn write(&mut self, write: bool) -> &mut Self {
+    pub fn control(&mut self, write: bool) -> &mut Self {
         if write {
-            self.flags |= frame::Start::MODE_WRITE;
+            self.flags |= frame::Session::MODE_CONTROL;
         } else {
-            self.flags &= !frame::Start::MODE_WRITE;
+            self.flags &= !frame::Session::MODE_CONTROL;
         }
 
         self
@@ -425,9 +423,9 @@ impl ConnectionOptions {
 
     pub fn read(&mut self, read: bool) -> &mut Self {
         if read {
-            self.flags |= frame::Start::MODE_READ;
+            self.flags |= frame::Session::MODE_READ;
         } else {
-            self.flags &= !frame::Start::MODE_READ;
+            self.flags &= !frame::Session::MODE_READ;
         }
 
         self
@@ -435,9 +433,9 @@ impl ConnectionOptions {
 
     pub fn failsafe(&mut self, failsafe: bool) -> &mut Self {
         if failsafe {
-            self.flags |= frame::Start::MODE_FAILSAFE;
+            self.flags |= frame::Session::MODE_FAILSAFE;
         } else {
-            self.flags &= !frame::Start::MODE_FAILSAFE;
+            self.flags &= !frame::Session::MODE_FAILSAFE;
         }
 
         self
@@ -453,7 +451,7 @@ impl ConnectionOptions {
         let mut client = Client::new(stream);
 
         client
-            .send_packet(&frame::Start::new(self.flags, session_name.to_string()))
+            .send_packet(&frame::Session::new(self.flags, session_name.to_string()))
             .await?;
 
         Ok(client)

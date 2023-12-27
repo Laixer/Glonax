@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut client = glonax::transport::ConnectionOptions::new()
         .read(true)
-        .write(true)
+        .control(true)
         .connect(
             address.to_owned(),
             format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
