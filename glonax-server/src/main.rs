@@ -134,64 +134,23 @@ async fn main() -> anyhow::Result<()> {
         log::warn!("Instance ID is not set or invalid");
     }
 
+    use std::time::Duration;
+
     // TODO: Enable service termination
     let mut runtime = glonax::runtime::builder(&config, instance)?
         // .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    // runtime.spawn_service(device::service_host);
-
     if config.gnss_device.is_some() {
         runtime.schedule_io_service(device::service_gnss);
     }
 
-    // TODO: This needs to run in the main thread
-    // TODO: This becomes the component pipline
-    let tx = runtime.motion_tx.clone();
-    runtime.spawn_service(
-        |_config: config::ProxyConfig, runtime_state: state::SharedExcavatorState| async move {
-            use state::Component;
-            use tokio::time::Duration;
-
-            let mut interval = tokio::time::interval(Duration::from_millis(15));
-
-            let mut host = glonax::net::HostService::default();
-            let mut kinematic = kinematic::KinematicComponent;
-
-            loop {
-                // TODO: Use shutdown signal
-                interval.tick().await;
-
-                let mut runtime_state = runtime_state.write().await;
-
-                let mut ctx = state::ComponentContext::new();
-
-                // Run the registered components in the pipeline in the order they were registered.
-                //
-                // Components get a reference to the runtime state and can modify it
-                host.tick(&mut runtime_state.state);
-                kinematic.tick(&mut ctx, &mut runtime_state.state);
-
-                // Collect all motion commands, send them
-                for motion in ctx.motion_queue {
-                    tx.send(motion).await.unwrap();
-                }
-            }
-        },
-    );
-
     if config.simulation {
         log::warn!("Running in simulation mode");
 
-        // runtime.listen_io_service(device::service_net_encoder_sim);
-        runtime.schedule_interval_service::<encoder::EncoderSimService>(
-            std::time::Duration::from_millis(5),
-        );
-        // runtime.schedule_io_service(device::service_net_ems_sim);
-        runtime.schedule_interval_service::<ems::EngineSimService>(
-            std::time::Duration::from_millis(10),
-        );
+        runtime.schedule_interval_component::<encoder::EncoderSimService>(Duration::from_millis(5));
+        runtime.schedule_interval_component::<ems::EngineSimService>(Duration::from_millis(10));
 
         runtime.spawn_motion_sink(device::sink_net_actuator_sim);
     } else {
@@ -206,7 +165,16 @@ async fn main() -> anyhow::Result<()> {
 
     // TODO: Replace with the component pipeline
     // TODO: The network server is an io service
-    runtime.run_motion_service(server::service).await;
+    // runtime.run_motion_service(server::service).await;
+
+    let mut pipe = pipeline::PipelineComponent::default();
+
+    pipe.add::<glonax::net::HostComponent>();
+    pipe.add::<kinematic::KinematicComponent>();
+
+    runtime
+        .run_interval_component(pipe, Duration::from_millis(15))
+        .await;
 
     // runtime.wait_for_shutdown().await;
 
