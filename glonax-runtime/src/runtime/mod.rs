@@ -109,6 +109,11 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         });
     }
 
+    /// Run a component in the main thread.
+    ///
+    /// This method will run a component in the main thread until the runtime is shutdown.
+    /// On each tick, the component will be provided with a component context and a mutable
+    /// reference to the runtime state.
     pub async fn run_interval<C>(&self, mut component: C, duration: std::time::Duration)
     where
         C: Component<R>,

@@ -404,6 +404,7 @@ dependencies = [
  "glonax",
  "glonax-serial",
  "log",
+ "nalgebra",
  "simplelog",
  "tokio 1.35.1",
 ]
