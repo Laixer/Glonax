@@ -8,6 +8,7 @@ pub mod channel;
 pub mod components;
 pub mod core;
 pub mod device;
+pub mod geometry;
 pub mod net;
 pub mod transport;
 

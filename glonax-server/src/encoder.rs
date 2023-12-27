@@ -6,6 +6,7 @@ use glonax::{
 
 use crate::state::Excavator;
 
+// TODO: Move into net/encoder.rs
 pub struct EncoderSimulator {
     control_devices: [(u8, glonax::core::Actuator, glonax::net::Encoder); 4],
 }
@@ -38,6 +39,7 @@ impl Default for EncoderSimulator {
         let encoder_arm = glonax::net::Encoder::new(5_000, (685, 2_760), false, true);
         let encoder_attachment = glonax::net::Encoder::new(5_000, (0, 3_100), false, false);
 
+        // TODO: Make this into a struct and move it to /robot
         let control_devices = [
             (0x6A, glonax::core::Actuator::Slew, encoder_frame),
             (0x6B, glonax::core::Actuator::Boom, encoder_boom),
