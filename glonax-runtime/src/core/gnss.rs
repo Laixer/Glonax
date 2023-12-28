@@ -59,8 +59,7 @@ impl TryFrom<Vec<u8>> for Gnss {
 }
 
 impl crate::protocol::Packetize for Gnss {
-    const MESSAGE: crate::protocol::frame::FrameMessage =
-        crate::protocol::frame::FrameMessage::GNSS;
+    const MESSAGE_TYPE: u8 = 0x42;
     const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 5) + 1);
 
     fn to_bytes(&self) -> Vec<u8> {

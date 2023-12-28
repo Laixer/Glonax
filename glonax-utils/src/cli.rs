@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", address);
 
-    let mut client = glonax::protocol::Connection::default()
+    let (mut client, instance) = glonax::protocol::Connection::default()
         .connect(
             address.to_owned(),
             format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
@@ -68,46 +68,9 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected to {}", address);
 
-    let frame = client.read_frame().await?;
-    match frame.message {
-        glonax::protocol::frame::FrameMessage::Instance => {
-            let instance = client
-                .recv_packet::<glonax::core::Instance>(frame.payload_length)
-                .await?;
-
-            println!("Instance ID: {}", instance.id);
-            println!("Instance Model: {}", instance.model);
-            println!("Instance Name: {}", instance.name);
-        }
-        _ => {
-            eprintln!("Invalid response from server");
-            return Ok(());
-        }
-    }
-
-    let random_number = glonax::rand::random::<i32>();
-
-    client
-        .send_packet(&glonax::protocol::frame::Echo::new(random_number))
-        .await?;
-
-    let frame = client.read_frame().await?;
-    match frame.message {
-        glonax::protocol::frame::FrameMessage::Echo => {
-            let echo = client
-                .recv_packet::<glonax::protocol::frame::Echo>(frame.payload_length)
-                .await?;
-
-            if random_number != echo.payload() {
-                eprintln!("Invalid echo response from server");
-                return Ok(());
-            }
-        }
-        _ => {
-            eprintln!("Invalid response from server");
-            return Ok(());
-        }
-    }
+    println!("Instance ID: {}", instance.id);
+    println!("Instance Model: {}", instance.model);
+    println!("Instance Name: {}", instance.name);
 
     fn print_help() {
         println!("Commands:");
@@ -130,16 +93,18 @@ async fn main() -> anyhow::Result<()> {
     async fn print_frame(
         client: &mut glonax::protocol::Client<tokio::net::TcpStream>,
     ) -> std::io::Result<()> {
+        use glonax::protocol::Packetize;
+
         let frame = client.read_frame().await?;
         match frame.message {
-            glonax::protocol::frame::FrameMessage::Status => {
+            glonax::core::Status::MESSAGE_TYPE => {
                 let status = client
                     .recv_packet::<glonax::core::Status>(frame.payload_length)
                     .await?;
 
                 println!("{}", status);
             }
-            glonax::protocol::frame::FrameMessage::Instance => {
+            glonax::core::Instance::MESSAGE_TYPE => {
                 let instance = client
                     .recv_packet::<glonax::core::Instance>(frame.payload_length)
                     .await?;
@@ -148,28 +113,28 @@ async fn main() -> anyhow::Result<()> {
                 println!("Model: {}", instance.model);
                 println!("Name: {}", instance.name);
             }
-            glonax::protocol::frame::FrameMessage::Pose => {
+            glonax::core::Pose::MESSAGE_TYPE => {
                 let pose = client
                     .recv_packet::<glonax::core::Pose>(frame.payload_length)
                     .await?;
 
                 println!("{}", pose);
             }
-            glonax::protocol::frame::FrameMessage::Engine => {
+            glonax::core::Engine::MESSAGE_TYPE => {
                 let engine = client
                     .recv_packet::<glonax::core::Engine>(frame.payload_length)
                     .await?;
 
                 println!("{}", engine);
             }
-            glonax::protocol::frame::FrameMessage::VMS => {
+            glonax::core::Host::MESSAGE_TYPE => {
                 let host = client
                     .recv_packet::<glonax::core::Host>(frame.payload_length)
                     .await?;
 
                 println!("{}", host);
             }
-            glonax::protocol::frame::FrameMessage::GNSS => {
+            glonax::core::Gnss::MESSAGE_TYPE => {
                 let gnss = client
                     .recv_packet::<glonax::core::Gnss>(frame.payload_length)
                     .await?;

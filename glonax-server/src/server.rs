@@ -1,4 +1,10 @@
-use glonax::{runtime::MotionSender, protocol::{Client, frame::{Session, FrameMessage, Echo}}};
+use glonax::{
+    protocol::{
+        frame::{Echo, FrameMessage, Session},
+        Client,
+    },
+    runtime::MotionSender,
+};
 
 use crate::{config::ProxyConfig, state::SharedExcavatorState};
 
@@ -19,7 +25,8 @@ async fn spawn_network_session(
     let mut session_shutdown = false;
 
     while let Ok(frame) = client.read_frame().await {
-        match frame.message {
+        // TODO: This is a bug in the making...
+        match FrameMessage::from_u8(frame.message).unwrap() {
             FrameMessage::Request => {
                 let request = client
                     .recv_packet::<glonax::protocol::frame::Request>(frame.payload_length)
@@ -80,7 +87,10 @@ async fn spawn_network_session(
                     .unwrap();
             }
             FrameMessage::Echo => {
-                let echo = client.recv_packet::<Echo>(frame.payload_length).await.unwrap();
+                let echo = client
+                    .recv_packet::<Echo>(frame.payload_length)
+                    .await
+                    .unwrap();
                 client.send_packet(&echo).await.unwrap();
             }
             FrameMessage::Shutdown => {

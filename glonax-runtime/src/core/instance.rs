@@ -85,8 +85,7 @@ impl TryFrom<Vec<u8>> for Instance {
 }
 
 impl crate::protocol::Packetize for Instance {
-    const MESSAGE: crate::protocol::frame::FrameMessage =
-        crate::protocol::frame::FrameMessage::Instance;
+    const MESSAGE_TYPE: u8 = 0x15;
 
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes()

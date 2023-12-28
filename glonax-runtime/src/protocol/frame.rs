@@ -63,6 +63,12 @@ pub enum FrameMessage {
     Engine = 0x43,
 }
 
+impl From<FrameMessage> for u8 {
+    fn from(message: FrameMessage) -> Self {
+        message.to_u8()
+    }
+}
+
 impl FrameMessage {
     // TODO: TryFrom
     pub fn from_u8(value: u8) -> Option<Self> {
@@ -83,7 +89,7 @@ impl FrameMessage {
         }
     }
 
-    pub fn to_u8(&self) -> u8 {
+    pub const fn to_u8(&self) -> u8 {
         match self {
             Self::Error => 0x0,
             Self::Echo => 0x1,
@@ -103,17 +109,17 @@ impl FrameMessage {
 
 pub struct Frame {
     buffer: BytesMut,
-    pub message: FrameMessage,
+    pub message: u8,
     pub payload_length: usize,
 }
 
 impl Frame {
-    pub fn new(message: FrameMessage, payload_length: usize) -> Self {
+    pub fn new(message: u8, payload_length: usize) -> Self {
         let mut buffer = BytesMut::with_capacity(MIN_BUFFER_SIZE + payload_length);
 
         buffer.put(&PROTO_HEADER[..]);
         buffer.put_u8(PROTO_VERSION);
-        buffer.put_u8(message.to_u8());
+        buffer.put_u8(message);
         buffer.put_u16(payload_length as u16);
         buffer.put(&[0u8; 3][..]);
 
@@ -155,8 +161,9 @@ impl TryFrom<&[u8]> for Frame {
         }
 
         // Check message type
-        let message = FrameMessage::from_u8(buffer[4])
-            .ok_or_else(|| FrameError::InvalidMessage(buffer[4]))?;
+        // let message = FrameMessage::from_u8(buffer[4])
+        //     .ok_or_else(|| FrameError::InvalidMessage(buffer[4]))?;
+        let message = buffer[4];
 
         let payload_length = u16::from_be_bytes([buffer[5], buffer[6]]) as usize;
         if payload_length > MAX_PAYLOAD_SIZE {
@@ -231,7 +238,7 @@ impl TryFrom<Vec<u8>> for Session {
 }
 
 impl super::Packetize for Session {
-    const MESSAGE: FrameMessage = FrameMessage::Session;
+    const MESSAGE_TYPE: u8 = FrameMessage::Session.to_u8(); // TODO: Use `into`
 
     // TODO: Whenever we have a string, we should send its length first
     fn to_bytes(&self) -> Vec<u8> {
@@ -296,7 +303,7 @@ impl TryFrom<Vec<u8>> for Request {
 }
 
 impl super::Packetize for Request {
-    const MESSAGE: FrameMessage = FrameMessage::Request;
+    const MESSAGE_TYPE: u8 = FrameMessage::Request.to_u8();
     const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<u8>());
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -321,7 +328,7 @@ impl TryFrom<Vec<u8>> for Shutdown {
 }
 
 impl super::Packetize for Shutdown {
-    const MESSAGE: FrameMessage = FrameMessage::Shutdown;
+    const MESSAGE_TYPE: u8 = FrameMessage::Shutdown.to_u8();
     const MESSAGE_SIZE: Option<usize> = Some(0);
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -355,7 +362,7 @@ impl TryFrom<Vec<u8>> for Echo {
 }
 
 impl super::Packetize for Echo {
-    const MESSAGE: FrameMessage = FrameMessage::Echo;
+    const MESSAGE_TYPE: u8 = FrameMessage::Echo.to_u8();
     const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<i32>());
 
     fn to_bytes(&self) -> Vec<u8> {

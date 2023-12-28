@@ -39,8 +39,7 @@ impl TryFrom<Vec<u8>> for Engine {
 }
 
 impl crate::protocol::Packetize for Engine {
-    const MESSAGE: crate::protocol::frame::FrameMessage =
-        crate::protocol::frame::FrameMessage::Engine;
+    const MESSAGE_TYPE: u8 = 0x43;
     const MESSAGE_SIZE: Option<usize> = Some(4);
 
     fn to_bytes(&self) -> Vec<u8> {

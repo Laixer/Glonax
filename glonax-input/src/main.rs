@@ -125,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", config.address);
 
-    let mut client = glonax::protocol::Connection::default()
+    let (mut client, instance) = glonax::protocol::Connection::default()
         .control(true)
         .failsafe(config.fail_safe)
         .connect(
@@ -134,24 +134,11 @@ async fn main() -> anyhow::Result<()> {
         )
         .await?;
 
-    let frame = client.read_frame().await?;
-    match frame.message {
-        glonax::protocol::frame::FrameMessage::Instance => {
-            let instance = client
-                .recv_packet::<glonax::core::Instance>(frame.payload_length)
-                .await?;
-
-            log::info!("Instance ID: {}", instance.id);
-            log::info!("Instance Model: {}", instance.model);
-            log::info!("Instance Name: {}", instance.name);
-        }
-        _ => {
-            log::error!("Invalid response from server");
-            return Ok(());
-        }
-    }
-
     log::info!("Connected to {}", config.address);
+
+    log::info!("Instance ID: {}", instance.id);
+    log::info!("Instance Model: {}", instance.model);
+    log::info!("Instance Name: {}", instance.name);
 
     while let Ok(input) = input_device.next().await {
         if let Some(motion) = input_state.try_from(input) {

@@ -173,8 +173,7 @@ impl TryFrom<Vec<u8>> for Motion {
 }
 
 impl crate::protocol::Packetize for Motion {
-    const MESSAGE: crate::protocol::frame::FrameMessage =
-        crate::protocol::frame::FrameMessage::Motion;
+    const MESSAGE_TYPE: u8 = 0x20;
 
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes()
