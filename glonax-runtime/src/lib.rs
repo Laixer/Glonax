@@ -10,7 +10,7 @@ pub mod core;
 pub mod device;
 pub mod math;
 pub mod net;
-pub mod transport;
+pub mod protocol;
 
 #[macro_use]
 extern crate log;

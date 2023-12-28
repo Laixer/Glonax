@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", address);
 
-    let mut client = glonax::transport::ConnectionOptions::default()
+    let mut client = glonax::protocol::Connection::default()
         .connect(
             address.to_owned(),
             format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
 
     let frame = client.read_frame().await?;
     match frame.message {
-        glonax::transport::frame::FrameMessage::Instance => {
+        glonax::protocol::frame::FrameMessage::Instance => {
             let instance = client
                 .packet::<glonax::core::Instance>(frame.payload_length)
                 .await?;
@@ -88,23 +88,14 @@ async fn main() -> anyhow::Result<()> {
     let random_number = glonax::rand::random::<i32>();
 
     client
-        .send_packet(&glonax::transport::frame::Echo::new(random_number))
+        .send_packet(&glonax::protocol::frame::Echo::new(random_number))
         .await?;
 
     let frame = client.read_frame().await?;
     match frame.message {
-        glonax::transport::frame::FrameMessage::Instance => {
-            let instance = client
-                .packet::<glonax::core::Instance>(frame.payload_length)
-                .await?;
-
-            println!("Instance ID: {}", instance.id);
-            println!("Instance Model: {}", instance.model);
-            println!("Instance Name: {}", instance.name);
-        }
-        glonax::transport::frame::FrameMessage::Echo => {
+        glonax::protocol::frame::FrameMessage::Echo => {
             let echo = client
-                .packet::<glonax::transport::frame::Echo>(frame.payload_length)
+                .packet::<glonax::protocol::frame::Echo>(frame.payload_length)
                 .await?;
 
             if random_number != echo.payload() {
@@ -120,7 +111,7 @@ async fn main() -> anyhow::Result<()> {
 
     fn print_help() {
         println!("Commands:");
-        println!("  req | request <class>");
+        println!("  r | request <class>");
         println!("  w | watch");
         println!();
         println!("Classes:");
@@ -137,18 +128,18 @@ async fn main() -> anyhow::Result<()> {
     }
 
     async fn print_frame(
-        client: &mut glonax::transport::Client<tokio::net::TcpStream>,
+        client: &mut glonax::protocol::Client<tokio::net::TcpStream>,
     ) -> std::io::Result<()> {
         let frame = client.read_frame().await?;
         match frame.message {
-            glonax::transport::frame::FrameMessage::Status => {
+            glonax::protocol::frame::FrameMessage::Status => {
                 let status = client
                     .packet::<glonax::core::Status>(frame.payload_length)
                     .await?;
 
                 println!("{}", status);
             }
-            glonax::transport::frame::FrameMessage::Instance => {
+            glonax::protocol::frame::FrameMessage::Instance => {
                 let instance = client
                     .packet::<glonax::core::Instance>(frame.payload_length)
                     .await?;
@@ -157,28 +148,28 @@ async fn main() -> anyhow::Result<()> {
                 println!("Model: {}", instance.model);
                 println!("Name: {}", instance.name);
             }
-            glonax::transport::frame::FrameMessage::Pose => {
+            glonax::protocol::frame::FrameMessage::Pose => {
                 let pose = client
                     .packet::<glonax::core::Pose>(frame.payload_length)
                     .await?;
 
                 println!("{}", pose);
             }
-            glonax::transport::frame::FrameMessage::Engine => {
+            glonax::protocol::frame::FrameMessage::Engine => {
                 let engine = client
                     .packet::<glonax::core::Engine>(frame.payload_length)
                     .await?;
 
                 println!("{}", engine);
             }
-            glonax::transport::frame::FrameMessage::VMS => {
+            glonax::protocol::frame::FrameMessage::VMS => {
                 let host = client
                     .packet::<glonax::core::Host>(frame.payload_length)
                     .await?;
 
                 println!("{}", host);
             }
-            glonax::transport::frame::FrameMessage::GNSS => {
+            glonax::protocol::frame::FrameMessage::GNSS => {
                 let gnss = client
                     .packet::<glonax::core::Gnss>(frame.payload_length)
                     .await?;
@@ -193,14 +184,14 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     }
 
-    fn str_to_class(s: &str) -> Option<glonax::transport::frame::FrameMessage> {
+    fn str_to_class(s: &str) -> Option<glonax::protocol::frame::FrameMessage> {
         match s {
-            "s" | "status" => Some(glonax::transport::frame::FrameMessage::Status),
-            "i" | "instance" => Some(glonax::transport::frame::FrameMessage::Instance),
-            "p" | "pose" => Some(glonax::transport::frame::FrameMessage::Pose),
-            "e" | "engine" => Some(glonax::transport::frame::FrameMessage::Engine),
-            "h" | "host" | "vms" => Some(glonax::transport::frame::FrameMessage::VMS),
-            "g" | "gps" | "gnss" => Some(glonax::transport::frame::FrameMessage::GNSS),
+            "s" | "status" => Some(glonax::protocol::frame::FrameMessage::Status),
+            "i" | "instance" => Some(glonax::protocol::frame::FrameMessage::Instance),
+            "p" | "pose" => Some(glonax::protocol::frame::FrameMessage::Pose),
+            "e" | "engine" => Some(glonax::protocol::frame::FrameMessage::Engine),
+            "h" | "host" | "vms" => Some(glonax::protocol::frame::FrameMessage::VMS),
+            "g" | "gps" | "gnss" => Some(glonax::protocol::frame::FrameMessage::GNSS),
             _ => None,
         }
     }
@@ -223,7 +214,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         match input {
-            s if s.starts_with("request ") || s.starts_with("req ") => {
+            s if s.starts_with("request ") || s.starts_with("r ") => {
                 let mut parts = s.split_whitespace();
                 parts.next();
 

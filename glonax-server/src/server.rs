@@ -1,10 +1,4 @@
-use glonax::{
-    runtime::MotionSender,
-    transport::{
-        frame::{Echo, FrameMessage, Session},
-        Client,
-    },
-};
+use glonax::{runtime::MotionSender, protocol::{Client, frame::{Session, FrameMessage, Echo}}};
 
 use crate::{config::ProxyConfig, state::SharedExcavatorState};
 
@@ -28,7 +22,7 @@ async fn spawn_network_session(
         match frame.message {
             FrameMessage::Request => {
                 let request = client
-                    .packet::<glonax::transport::frame::Request>(frame.payload_length)
+                    .packet::<glonax::protocol::frame::Request>(frame.payload_length)
                     .await
                     .unwrap();
                 match request.message() {

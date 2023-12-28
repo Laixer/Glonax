@@ -185,9 +185,9 @@ impl TryFrom<Vec<u8>> for Pose {
     }
 }
 
-impl crate::transport::Packetize for Pose {
-    const MESSAGE: crate::transport::frame::FrameMessage =
-        crate::transport::frame::FrameMessage::Pose;
+impl crate::protocol::Packetize for Pose {
+    const MESSAGE: crate::protocol::frame::FrameMessage =
+        crate::protocol::frame::FrameMessage::Pose;
     const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<f32>() * 12);
 
     fn to_bytes(&self) -> Vec<u8> {

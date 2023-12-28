@@ -59,9 +59,9 @@ impl TryFrom<Vec<u8>> for Status {
     }
 }
 
-impl crate::transport::Packetize for Status {
-    const MESSAGE: crate::transport::frame::FrameMessage =
-        crate::transport::frame::FrameMessage::Status;
+impl crate::protocol::Packetize for Status {
+    const MESSAGE: crate::protocol::frame::FrameMessage =
+        crate::protocol::frame::FrameMessage::Status;
     const MESSAGE_SIZE: Option<usize> = Some(1);
 
     fn to_bytes(&self) -> Vec<u8> {

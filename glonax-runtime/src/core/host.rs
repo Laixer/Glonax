@@ -68,9 +68,9 @@ impl TryFrom<Vec<u8>> for Host {
     }
 }
 
-impl crate::transport::Packetize for Host {
-    const MESSAGE: crate::transport::frame::FrameMessage =
-        crate::transport::frame::FrameMessage::VMS;
+impl crate::protocol::Packetize for Host {
+    const MESSAGE: crate::protocol::frame::FrameMessage =
+        crate::protocol::frame::FrameMessage::VMS;
     const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<u64>() * 9);
 
     fn to_bytes(&self) -> Vec<u8> {
