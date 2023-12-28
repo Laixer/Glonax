@@ -1,7 +1,7 @@
 use glonax::{
     protocol::{
-        frame::{Echo, FrameMessage, Session},
-        Client,
+        frame::{Echo, FrameMessage, Request, Session},
+        Stream,
     },
     runtime::MotionSender,
 };
@@ -17,7 +17,7 @@ async fn spawn_network_session(
 ) {
     log::debug!("Accepted client from: {}", addr);
 
-    let mut client = Client::new(stream);
+    let mut client = Stream::new(stream);
 
     // Always start with an anonymous session
     let mut session = Session::new(0, addr.to_string());
@@ -29,7 +29,7 @@ async fn spawn_network_session(
         match FrameMessage::from_u8(frame.message).unwrap() {
             FrameMessage::Request => {
                 let request = client
-                    .recv_packet::<glonax::protocol::frame::Request>(frame.payload_length)
+                    .recv_packet::<Request>(frame.payload_length)
                     .await
                     .unwrap();
                 match request.message() {

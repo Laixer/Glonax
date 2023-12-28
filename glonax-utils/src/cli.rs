@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", address);
 
-    let (mut client, instance) = glonax::protocol::Connection::default()
+    let (mut client, instance) = glonax::protocol::Client::default()
         .connect(
             address.to_owned(),
             format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
@@ -91,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     async fn print_frame(
-        client: &mut glonax::protocol::Client<tokio::net::TcpStream>,
+        client: &mut glonax::protocol::Stream<tokio::net::TcpStream>,
     ) -> std::io::Result<()> {
         use glonax::protocol::Packetize;
 

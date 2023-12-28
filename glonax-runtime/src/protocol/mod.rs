@@ -28,11 +28,11 @@ pub trait Packetize: TryFrom<Vec<u8>> + Sized {
 }
 
 #[derive(Default)]
-pub struct Connection {
+pub struct Client {
     flags: u8,
 }
 
-impl Connection {
+impl Client {
     pub fn control(&mut self, write: bool) -> &mut Self {
         if write {
             self.flags |= frame::Session::MODE_CONTROL;
@@ -57,10 +57,8 @@ impl Connection {
         &mut self,
         address: impl tokio::net::ToSocketAddrs,
         session_name: impl ToString,
-    ) -> std::io::Result<(Client<tokio::net::TcpStream>, crate::core::Instance)> {
-        let stream = tokio::net::TcpStream::connect(address).await?;
-
-        let mut client = Client::new(stream);
+    ) -> std::io::Result<(Stream<tokio::net::TcpStream>, crate::core::Instance)> {
+        let mut client = Stream::new(tokio::net::TcpStream::connect(address).await?);
 
         let random_number = rand::random::<i32>();
 
@@ -105,11 +103,11 @@ impl Connection {
     }
 }
 
-pub struct Client<T> {
+pub struct Stream<T> {
     inner: T,
 }
 
-impl Client<std::fs::File> {
+impl Stream<std::fs::File> {
     pub fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
         let file = std::fs::OpenOptions::new().write(true).open(path)?;
 
@@ -123,7 +121,7 @@ impl Client<std::fs::File> {
     }
 }
 
-impl Client<tokio::fs::File> {
+impl Stream<tokio::fs::File> {
     pub async fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
         let file = tokio::fs::OpenOptions::new().write(true).open(path).await?;
 
@@ -137,7 +135,7 @@ impl Client<tokio::fs::File> {
     }
 }
 
-impl<T> Client<T> {
+impl<T> Stream<T> {
     pub fn new(inner: T) -> Self {
         Self { inner }
     }
@@ -151,7 +149,7 @@ impl<T> Client<T> {
     }
 }
 
-impl<T: AsyncWrite + Unpin> Client<T> {
+impl<T: AsyncWrite + Unpin> Stream<T> {
     pub async fn send_packet<P: Packetize>(&mut self, packet: &P) -> std::io::Result<()> {
         let payload = packet.to_bytes();
 
@@ -170,7 +168,7 @@ impl<T: AsyncWrite + Unpin> Client<T> {
     }
 }
 
-impl<T: AsyncRead + Unpin> Client<T> {
+impl<T: AsyncRead + Unpin> Stream<T> {
     pub async fn read_frame(&mut self) -> std::io::Result<frame::Frame> {
         let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
 
