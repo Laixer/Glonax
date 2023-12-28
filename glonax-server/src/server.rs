@@ -78,6 +78,7 @@ async fn spawn_network_session(
     };
 
     let mut session_shutdown = false;
+    let mut session_state = 1;
 
     log::info!("Session started for: {}", session.name());
 
@@ -132,18 +133,26 @@ async fn spawn_network_session(
                 }
             }
             FrameMessage::Session => {
-                log::warn!("Client started session twice");
+                if session_state == 1 {
+                    use tokio::io::AsyncWriteExt;
 
-                use tokio::io::AsyncWriteExt;
+                    client
+                        .send_packet(&glonax::transport::frame::Shutdown)
+                        .await
+                        .ok();
+                    client.inner_mut().shutdown().await.ok();
 
-                client
-                    .send_packet(&glonax::transport::frame::Shutdown)
+                    session_shutdown = true;
+                    break;
+                }
+                session2 = client
+                    .packet::<glonax::transport::frame::Session>(frame.payload_length)
                     .await
-                    .ok();
-                client.inner_mut().shutdown().await.ok();
+                    .unwrap();
 
-                session_shutdown = true;
-                break;
+                log::info!("Session started for: {}", session2.name());
+
+                session_state = 1
             }
             FrameMessage::Echo => {
                 let echo = client

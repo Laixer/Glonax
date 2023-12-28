@@ -2,9 +2,9 @@ use nalgebra::{Point3, UnitQuaternion};
 
 #[derive(Clone, Copy)]
 pub struct Target {
-    /// The point in space to move to
+    /// The point in space.
     pub point: Point3<f32>,
-    /// The orientation to move to
+    /// The orientation of the target.
     pub orientation: UnitQuaternion<f32>,
 }
 
