@@ -27,6 +27,7 @@ pub trait Packetize: TryFrom<Vec<u8>> + Sized {
     fn to_bytes(&self) -> Vec<u8>;
 }
 
+// TODO: This is the TCP client implementation
 pub mod client {
     use super::{frame, Packetize, Stream};
 
@@ -106,33 +107,33 @@ pub struct Stream<T> {
     inner: T,
 }
 
-impl Stream<std::fs::File> {
-    pub fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-        let file = std::fs::OpenOptions::new().write(true).open(path)?;
+// impl Stream<std::fs::File> {
+//     pub fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+//         let file = std::fs::OpenOptions::new().write(true).open(path)?;
 
-        Ok(Self::new(file))
-    }
+//         Ok(Self::new(file))
+//     }
 
-    pub fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-        let file = std::fs::OpenOptions::new().read(true).open(path)?;
+//     pub fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+//         let file = std::fs::OpenOptions::new().read(true).open(path)?;
 
-        Ok(Self::new(file))
-    }
-}
+//         Ok(Self::new(file))
+//     }
+// }
 
-impl Stream<tokio::fs::File> {
-    pub async fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-        let file = tokio::fs::OpenOptions::new().write(true).open(path).await?;
+// impl Stream<tokio::fs::File> {
+//     pub async fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+//         let file = tokio::fs::OpenOptions::new().write(true).open(path).await?;
 
-        Ok(Self::new(file))
-    }
+//         Ok(Self::new(file))
+//     }
 
-    pub async fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-        let file = tokio::fs::OpenOptions::new().read(true).open(path).await?;
+//     pub async fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+//         let file = tokio::fs::OpenOptions::new().read(true).open(path).await?;
 
-        Ok(Self::new(file))
-    }
-}
+//         Ok(Self::new(file))
+//     }
+// }
 
 impl<T> Stream<T> {
     pub fn new(inner: T) -> Self {
@@ -159,10 +160,7 @@ impl<T: AsyncWrite + Unpin> Stream<T> {
     }
 
     #[inline]
-    pub async fn send_request(
-        &mut self,
-        frame_message: frame::FrameMessage,
-    ) -> std::io::Result<()> {
+    pub async fn send_request(&mut self, frame_message: u8) -> std::io::Result<()> {
         self.send_packet(&frame::Request::new(frame_message)).await
     }
 }

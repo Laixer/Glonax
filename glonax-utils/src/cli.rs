@@ -148,14 +148,16 @@ async fn main() -> anyhow::Result<()> {
         Ok(())
     }
 
-    fn str_to_class(s: &str) -> Option<glonax::protocol::frame::FrameMessage> {
+    fn str_to_class(s: &str) -> Option<u8> {
+        use glonax::protocol::Packetize;
+
         match s {
-            "s" | "status" => Some(glonax::protocol::frame::FrameMessage::Status),
-            "i" | "instance" => Some(glonax::protocol::frame::FrameMessage::Instance),
-            "p" | "pose" => Some(glonax::protocol::frame::FrameMessage::Pose),
-            "e" | "engine" => Some(glonax::protocol::frame::FrameMessage::Engine),
-            "h" | "host" | "vms" => Some(glonax::protocol::frame::FrameMessage::VMS),
-            "g" | "gps" | "gnss" => Some(glonax::protocol::frame::FrameMessage::GNSS),
+            "s" | "status" => Some(glonax::core::Status::MESSAGE_TYPE),
+            "i" | "instance" => Some(glonax::core::Instance::MESSAGE_TYPE),
+            "p" | "pose" => Some(glonax::core::Pose::MESSAGE_TYPE),
+            "e" | "engine" => Some(glonax::core::Engine::MESSAGE_TYPE),
+            "h" | "host" | "vms" => Some(glonax::core::Host::MESSAGE_TYPE),
+            "g" | "gps" | "gnss" => Some(glonax::core::Gnss::MESSAGE_TYPE),
             _ => None,
         }
     }

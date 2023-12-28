@@ -1,6 +1,6 @@
 use glonax::{
     protocol::{
-        frame::{Echo, FrameMessage, Request, Session},
+        frame::{Echo, Request, Session},
         Stream,
     },
     runtime::MotionSender,
@@ -15,6 +15,8 @@ async fn spawn_network_session(
     motion_sender: MotionSender,
     _permit: tokio::sync::OwnedSemaphorePermit,
 ) {
+    use glonax::protocol::Packetize;
+
     log::debug!("Accepted client from: {}", addr);
 
     let mut client = Stream::new(stream);
@@ -25,45 +27,44 @@ async fn spawn_network_session(
     let mut session_shutdown = false;
 
     while let Ok(frame) = client.read_frame().await {
-        // TODO: This is a bug in the making...
-        match FrameMessage::from_u8(frame.message).unwrap() {
-            FrameMessage::Request => {
+        match frame.message {
+            glonax::protocol::frame::Request::MESSAGE_TYPE => {
                 let request = client
                     .recv_packet::<Request>(frame.payload_length)
                     .await
                     .unwrap();
                 match request.message() {
-                    FrameMessage::Instance => {
+                    glonax::core::Instance::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.instance)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::Status => {
+                    glonax::core::Status::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.status)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::Pose => {
+                    glonax::core::Pose::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.state.pose)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::VMS => {
+                    glonax::core::Host::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.state.vms)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::GNSS => {
+                    glonax::core::Gnss::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.state.gnss)
                             .await
                             .unwrap();
                     }
-                    FrameMessage::Engine => {
+                    glonax::core::Engine::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.state.engine)
                             .await
@@ -73,7 +74,7 @@ async fn spawn_network_session(
                     _ => {}
                 }
             }
-            FrameMessage::Session => {
+            glonax::protocol::frame::Session::MESSAGE_TYPE => {
                 session = client
                     .recv_packet::<Session>(frame.payload_length)
                     .await
@@ -86,14 +87,14 @@ async fn spawn_network_session(
                     .await
                     .unwrap();
             }
-            FrameMessage::Echo => {
+            glonax::protocol::frame::Echo::MESSAGE_TYPE => {
                 let echo = client
                     .recv_packet::<Echo>(frame.payload_length)
                     .await
                     .unwrap();
                 client.send_packet(&echo).await.unwrap();
             }
-            FrameMessage::Shutdown => {
+            glonax::protocol::frame::Shutdown::MESSAGE_TYPE => {
                 log::debug!("Client requested shutdown");
 
                 use tokio::io::AsyncWriteExt;
@@ -103,7 +104,7 @@ async fn spawn_network_session(
                 session_shutdown = true;
                 break;
             }
-            FrameMessage::Motion => {
+            glonax::core::Motion::MESSAGE_TYPE => {
                 let motion = client
                     .recv_packet::<glonax::core::Motion>(frame.payload_length)
                     .await

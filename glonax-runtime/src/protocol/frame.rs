@@ -42,69 +42,23 @@ impl std::fmt::Display for FrameError {
     }
 }
 
-// TODO: Split connection management and data messages
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum FrameMessage {
+enum FrameMessage {
     // Connection management messages
-    Error = 0x0,
+    _Error = 0x0,
     Echo = 0x1,
     Session = 0x10,
     Shutdown = 0x11,
     Request = 0x12,
     // Data messages
-    Instance = 0x15,
-    Status = 0x16, // TODO: Integrate with Instance
+    _Instance = 0x15,
+    _Status = 0x16, // TODO: Integrate with Instance
     // Control messages
-    Motion = 0x20,
+    _Motion = 0x20,
     // Data messages
-    Pose = 0x40,
-    VMS = 0x41,
-    GNSS = 0x42,
-    Engine = 0x43,
-}
-
-impl From<FrameMessage> for u8 {
-    fn from(message: FrameMessage) -> Self {
-        message.to_u8()
-    }
-}
-
-impl FrameMessage {
-    // TODO: TryFrom
-    pub fn from_u8(value: u8) -> Option<Self> {
-        match value {
-            0x0 => Some(Self::Error),
-            0x1 => Some(Self::Echo),
-            0x10 => Some(Self::Session),
-            0x11 => Some(Self::Shutdown),
-            0x12 => Some(Self::Request),
-            0x15 => Some(Self::Instance),
-            0x16 => Some(Self::Status),
-            0x20 => Some(Self::Motion),
-            0x40 => Some(Self::Pose),
-            0x41 => Some(Self::VMS),
-            0x42 => Some(Self::GNSS),
-            0x43 => Some(Self::Engine),
-            _ => None,
-        }
-    }
-
-    pub const fn to_u8(&self) -> u8 {
-        match self {
-            Self::Error => 0x0,
-            Self::Echo => 0x1,
-            Self::Session => 0x10,
-            Self::Shutdown => 0x11,
-            Self::Request => 0x12,
-            Self::Instance => 0x15,
-            Self::Status => 0x16,
-            Self::Motion => 0x20,
-            Self::Pose => 0x40,
-            Self::VMS => 0x41,
-            Self::GNSS => 0x42,
-            Self::Engine => 0x43,
-        }
-    }
+    _Pose = 0x40,
+    _VMS = 0x41,
+    _GNSS = 0x42,
+    _Engine = 0x43,
 }
 
 pub struct Frame {
@@ -160,11 +114,6 @@ impl TryFrom<&[u8]> for Frame {
             Err(FrameError::VersionMismatch(version))?
         }
 
-        // Check message type
-        // let message = FrameMessage::from_u8(buffer[4])
-        //     .ok_or_else(|| FrameError::InvalidMessage(buffer[4]))?;
-        let message = buffer[4];
-
         let payload_length = u16::from_be_bytes([buffer[5], buffer[6]]) as usize;
         if payload_length > MAX_PAYLOAD_SIZE {
             Err(FrameError::ExcessivePayloadLength(payload_length))?
@@ -175,7 +124,7 @@ impl TryFrom<&[u8]> for Frame {
             Err(FrameError::InvalidPadding)?
         }
 
-        Ok(Self::new(message, payload_length))
+        Ok(Self::new(buffer[4], payload_length))
     }
 }
 
@@ -238,7 +187,7 @@ impl TryFrom<Vec<u8>> for Session {
 }
 
 impl super::Packetize for Session {
-    const MESSAGE_TYPE: u8 = FrameMessage::Session.to_u8(); // TODO: Use `into`
+    const MESSAGE_TYPE: u8 = FrameMessage::Session as u8;
 
     // TODO: Whenever we have a string, we should send its length first
     fn to_bytes(&self) -> Vec<u8> {
@@ -278,17 +227,17 @@ impl super::Packetize for Session {
 // }
 
 pub struct Request {
-    message: FrameMessage,
+    message: u8,
 }
 
 impl Request {
-    pub fn new(message: FrameMessage) -> Self {
+    pub fn new(message: u8) -> Self {
         Self { message }
     }
 
     #[inline]
-    pub fn message(&self) -> &FrameMessage {
-        &self.message
+    pub fn message(&self) -> u8 {
+        self.message
     }
 }
 
@@ -296,18 +245,19 @@ impl TryFrom<Vec<u8>> for Request {
     type Error = FrameError;
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-        FrameMessage::from_u8(buffer[0])
-            .ok_or_else(|| FrameError::InvalidMessage(buffer[0]))
-            .map(Self::new)
+        // FrameMessage::from_u8(buffer[0])
+        //     .ok_or_else(|| FrameError::InvalidMessage(buffer[0]))
+        //     .map(Self::new)
+        Ok(Self::new(buffer[0]))
     }
 }
 
 impl super::Packetize for Request {
-    const MESSAGE_TYPE: u8 = FrameMessage::Request.to_u8();
+    const MESSAGE_TYPE: u8 = FrameMessage::Request as u8;
     const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<u8>());
 
     fn to_bytes(&self) -> Vec<u8> {
-        vec![self.message.to_u8()]
+        vec![self.message]
     }
 }
 
@@ -328,7 +278,7 @@ impl TryFrom<Vec<u8>> for Shutdown {
 }
 
 impl super::Packetize for Shutdown {
-    const MESSAGE_TYPE: u8 = FrameMessage::Shutdown.to_u8();
+    const MESSAGE_TYPE: u8 = FrameMessage::Shutdown as u8;
     const MESSAGE_SIZE: Option<usize> = Some(0);
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -362,7 +312,7 @@ impl TryFrom<Vec<u8>> for Echo {
 }
 
 impl super::Packetize for Echo {
-    const MESSAGE_TYPE: u8 = FrameMessage::Echo.to_u8();
+    const MESSAGE_TYPE: u8 = FrameMessage::Echo as u8;
     const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<i32>());
 
     fn to_bytes(&self) -> Vec<u8> {
