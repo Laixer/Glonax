@@ -146,27 +146,19 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     }
 
     /// Run a motion service.
-    pub async fn run_motion_service<Fut>(
+    pub fn spawn_motion_service<Fut>(
         &self,
-        service: impl FnOnce(
-            Cnf,
-            SharedOperandState<R>,
-            MotionSender,
-            tokio::sync::broadcast::Receiver<()>,
-        ) -> Fut,
+        service: impl FnOnce(Cnf, SharedOperandState<R>, MotionSender) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        service(
+        tokio::spawn(service(
             self.config.clone(),
             self.operand.clone(),
             self.motion_tx.clone(),
-            self.shutdown_signal(),
-        )
-        .await;
+        ));
     }
 
-    // TODO: Rename to `spawn_control_service`
     /// Spawn a motion sink in the background.
     pub fn spawn_motion_sink<Fut>(
         &mut self,

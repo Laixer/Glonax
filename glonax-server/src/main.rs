@@ -166,9 +166,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.spawn_motion_sink(device::sink_net_actuator);
     }
 
-    // TODO: Replace with the component pipeline
-    // TODO: The network server is an io service
-    // runtime.run_motion_service(server::service).await;
+    runtime.spawn_motion_service(server::service);
 
     let pipe = glonax::components::Pipeline::new(vec![
         glonax::components::Pipeline::make::<glonax::components::Host>(0),

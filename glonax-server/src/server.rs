@@ -205,7 +205,6 @@ pub(super) async fn service(
     config: ProxyConfig,
     runtime_state: SharedExcavatorState,
     motion_sender: MotionSender,
-    _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) {
     use tokio::net::TcpListener;
 
