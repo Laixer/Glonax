@@ -160,7 +160,7 @@ impl<T: AsyncRead + Unpin> Client<T> {
         })
     }
 
-    pub async fn packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
+    pub async fn recv_packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
         if P::MESSAGE_SIZE.is_some() && size != P::MESSAGE_SIZE.unwrap() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,

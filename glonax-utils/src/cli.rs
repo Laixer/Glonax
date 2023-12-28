@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
     match frame.message {
         glonax::protocol::frame::FrameMessage::Instance => {
             let instance = client
-                .packet::<glonax::core::Instance>(frame.payload_length)
+                .recv_packet::<glonax::core::Instance>(frame.payload_length)
                 .await?;
 
             println!("Instance ID: {}", instance.id);
@@ -95,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
     match frame.message {
         glonax::protocol::frame::FrameMessage::Echo => {
             let echo = client
-                .packet::<glonax::protocol::frame::Echo>(frame.payload_length)
+                .recv_packet::<glonax::protocol::frame::Echo>(frame.payload_length)
                 .await?;
 
             if random_number != echo.payload() {
@@ -134,14 +134,14 @@ async fn main() -> anyhow::Result<()> {
         match frame.message {
             glonax::protocol::frame::FrameMessage::Status => {
                 let status = client
-                    .packet::<glonax::core::Status>(frame.payload_length)
+                    .recv_packet::<glonax::core::Status>(frame.payload_length)
                     .await?;
 
                 println!("{}", status);
             }
             glonax::protocol::frame::FrameMessage::Instance => {
                 let instance = client
-                    .packet::<glonax::core::Instance>(frame.payload_length)
+                    .recv_packet::<glonax::core::Instance>(frame.payload_length)
                     .await?;
 
                 println!("ID: {}", instance.id);
@@ -150,28 +150,28 @@ async fn main() -> anyhow::Result<()> {
             }
             glonax::protocol::frame::FrameMessage::Pose => {
                 let pose = client
-                    .packet::<glonax::core::Pose>(frame.payload_length)
+                    .recv_packet::<glonax::core::Pose>(frame.payload_length)
                     .await?;
 
                 println!("{}", pose);
             }
             glonax::protocol::frame::FrameMessage::Engine => {
                 let engine = client
-                    .packet::<glonax::core::Engine>(frame.payload_length)
+                    .recv_packet::<glonax::core::Engine>(frame.payload_length)
                     .await?;
 
                 println!("{}", engine);
             }
             glonax::protocol::frame::FrameMessage::VMS => {
                 let host = client
-                    .packet::<glonax::core::Host>(frame.payload_length)
+                    .recv_packet::<glonax::core::Host>(frame.payload_length)
                     .await?;
 
                 println!("{}", host);
             }
             glonax::protocol::frame::FrameMessage::GNSS => {
                 let gnss = client
-                    .packet::<glonax::core::Gnss>(frame.payload_length)
+                    .recv_packet::<glonax::core::Gnss>(frame.payload_length)
                     .await?;
 
                 println!("{}", gnss);

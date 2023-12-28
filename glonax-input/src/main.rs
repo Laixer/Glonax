@@ -138,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
     match frame.message {
         glonax::protocol::frame::FrameMessage::Instance => {
             let instance = client
-                .packet::<glonax::core::Instance>(frame.payload_length)
+                .recv_packet::<glonax::core::Instance>(frame.payload_length)
                 .await?;
 
             log::info!("Instance ID: {}", instance.id);

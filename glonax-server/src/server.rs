@@ -22,7 +22,7 @@ async fn spawn_network_session(
         match frame.message {
             FrameMessage::Request => {
                 let request = client
-                    .packet::<glonax::protocol::frame::Request>(frame.payload_length)
+                    .recv_packet::<glonax::protocol::frame::Request>(frame.payload_length)
                     .await
                     .unwrap();
                 match request.message() {
@@ -68,7 +68,7 @@ async fn spawn_network_session(
             }
             FrameMessage::Session => {
                 session = client
-                    .packet::<Session>(frame.payload_length)
+                    .recv_packet::<Session>(frame.payload_length)
                     .await
                     .unwrap();
 
@@ -80,7 +80,7 @@ async fn spawn_network_session(
                     .unwrap();
             }
             FrameMessage::Echo => {
-                let echo = client.packet::<Echo>(frame.payload_length).await.unwrap();
+                let echo = client.recv_packet::<Echo>(frame.payload_length).await.unwrap();
                 client.send_packet(&echo).await.unwrap();
             }
             FrameMessage::Shutdown => {
@@ -95,7 +95,7 @@ async fn spawn_network_session(
             }
             FrameMessage::Motion => {
                 let motion = client
-                    .packet::<glonax::core::Motion>(frame.payload_length)
+                    .recv_packet::<glonax::core::Motion>(frame.payload_length)
                     .await
                     .unwrap();
 
