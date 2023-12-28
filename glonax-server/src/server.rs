@@ -116,6 +116,14 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     log::warn!("Client is not authorized to send motion");
                 }
             }
+            glonax::core::Target::MESSAGE_TYPE => {
+                let target = client
+                    .recv_packet::<glonax::core::Target>(frame.payload_length)
+                    .await
+                    .unwrap();
+
+                log::debug!("Received target: {}", target);
+            }
             _ => {}
         }
     }

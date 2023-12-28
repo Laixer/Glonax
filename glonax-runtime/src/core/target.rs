@@ -109,3 +109,41 @@ impl From<Point3<f32>> for Target {
         }
     }
 }
+
+impl TryFrom<Vec<u8>> for Target {
+    type Error = ();
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        use bytes::Buf;
+
+        let mut buf = bytes::Bytes::copy_from_slice(value.as_slice());
+
+        let point = Point3::new(buf.get_f32(), buf.get_f32(), buf.get_f32());
+        let orientation =
+            UnitQuaternion::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+
+        Ok(Self { point, orientation })
+    }
+}
+
+impl crate::protocol::Packetize for Target {
+    const MESSAGE_TYPE: u8 = 0x44;
+    const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<f32>() * 6);
+
+    fn to_bytes(&self) -> Vec<u8> {
+        use bytes::BufMut;
+
+        let mut buf = bytes::BytesMut::with_capacity(std::mem::size_of::<f32>() * 6);
+
+        buf.put_f32(self.point.coords[0]);
+        buf.put_f32(self.point.coords[1]);
+        buf.put_f32(self.point.coords[2]);
+
+        let (roll, pitch, yaw) = self.orientation.euler_angles();
+        buf.put_f32(roll);
+        buf.put_f32(pitch);
+        buf.put_f32(yaw);
+
+        buf.to_vec()
+    }
+}
