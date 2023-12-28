@@ -43,22 +43,14 @@ impl std::fmt::Display for FrameError {
 }
 
 enum FrameMessage {
-    // Connection management messages
     _Error = 0x0,
     Echo = 0x1,
     Session = 0x10,
     Shutdown = 0x11,
     Request = 0x12,
-    // Data messages
+    // TODO: Data messages, remove from here
     _Instance = 0x15,
     _Status = 0x16, // TODO: Integrate with Instance
-    // Control messages
-    _Motion = 0x20,
-    // Data messages
-    _Pose = 0x40,
-    _VMS = 0x41,
-    _GNSS = 0x42,
-    _Engine = 0x43,
 }
 
 pub struct Frame {
@@ -202,30 +194,6 @@ impl super::Packetize for Session {
     }
 }
 
-// pub enum Error {
-//     InvalidRequest = 0x1,
-// }
-
-// impl TryFrom<Vec<u8>> for Error {
-//     type Error = FrameError;
-
-//     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-//         match buffer[0] {
-//             0x1 => Ok(Self::InvalidRequest),
-//             _ => Err(FrameError::InvalidMessage(err)),
-//         }
-//     }
-// }
-
-// impl super::Packetize for Error {
-//     const MESSAGE: FrameMessage = FrameMessage::Request;
-//     const MESSAGE_SIZE: Option<usize> = Some(1);
-
-//     fn to_bytes(&self) -> Vec<u8> {
-//         vec![*self as u8]
-//     }
-// }
-
 pub struct Request {
     message: u8,
 }
@@ -245,9 +213,6 @@ impl TryFrom<Vec<u8>> for Request {
     type Error = FrameError;
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-        // FrameMessage::from_u8(buffer[0])
-        //     .ok_or_else(|| FrameError::InvalidMessage(buffer[0]))
-        //     .map(Self::new)
         Ok(Self::new(buffer[0]))
     }
 }
@@ -287,18 +252,7 @@ impl super::Packetize for Shutdown {
 }
 
 pub struct Echo {
-    payload: i32,
-}
-
-impl Echo {
-    pub fn new(payload: i32) -> Self {
-        Self { payload }
-    }
-
-    #[inline]
-    pub fn payload(&self) -> i32 {
-        self.payload
-    }
+    pub payload: i32,
 }
 
 impl TryFrom<Vec<u8>> for Echo {

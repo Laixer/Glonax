@@ -148,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if config.simulation {
-        log::warn!("Running in simulation mode");
+        log::info!("Running in simulation mode");
 
         runtime.schedule_interval::<encoder::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_interval::<glonax::net::EngineManagementSystemSimulator>(
