@@ -1,6 +1,9 @@
 use glonax::{
     runtime::MotionSender,
-    transport::{frame::FrameMessage, Client},
+    transport::{
+        frame::{Echo, FrameMessage, Session},
+        Client,
+    },
 };
 
 use crate::{config::ProxyConfig, state::SharedExcavatorState};
@@ -16,73 +19,10 @@ async fn spawn_network_session(
 
     let mut client = Client::new(stream);
 
-    let mut session2 = glonax::transport::frame::Session::new(0, String::new());
-
-    // TODO: Set timeout
-    let frame = match client.read_frame().await {
-        Ok(frame) => frame,
-        Err(e) => {
-            use tokio::io::AsyncWriteExt;
-
-            log::warn!("Failed to read frame: {}", e);
-
-            client
-                .send_packet(&glonax::transport::frame::Shutdown)
-                .await
-                .ok();
-            client.inner_mut().shutdown().await.ok();
-
-            log::debug!("Client shutdown");
-
-            return;
-        }
-    };
-
-    // TODO: Handle errors
-    let session = if frame.message == FrameMessage::Session {
-        match client
-            .packet::<glonax::transport::frame::Session>(frame.payload_length)
-            .await
-        {
-            Ok(start) => start,
-            Err(e) => {
-                use tokio::io::AsyncWriteExt;
-
-                log::warn!("Failed to read frame: {}", e);
-
-                client
-                    .send_packet(&glonax::transport::frame::Shutdown)
-                    .await
-                    .ok();
-                client.inner_mut().shutdown().await.ok();
-
-                log::debug!("Client shutdown");
-
-                return;
-            }
-        }
-    } else {
-        use tokio::io::AsyncWriteExt;
-
-        log::warn!("Client did not start session");
-
-        client
-            .send_packet(&glonax::transport::frame::Shutdown)
-            .await
-            .ok();
-        client.inner_mut().shutdown().await.ok();
-
-        log::debug!("Client shutdown");
-
-        return;
-    };
+    // Always start with an anonymous session
+    let mut session = Session::new(0, addr.to_string());
 
     let mut session_shutdown = false;
-    let mut session_state = 1;
-
-    log::info!("Session started for: {}", session.name());
-
-    // TODO: In protocol version 3, send instance information to client
 
     while let Ok(frame) = client.read_frame().await {
         match frame.message {
@@ -133,32 +73,20 @@ async fn spawn_network_session(
                 }
             }
             FrameMessage::Session => {
-                if session_state == 1 {
-                    use tokio::io::AsyncWriteExt;
-
-                    client
-                        .send_packet(&glonax::transport::frame::Shutdown)
-                        .await
-                        .ok();
-                    client.inner_mut().shutdown().await.ok();
-
-                    session_shutdown = true;
-                    break;
-                }
-                session2 = client
-                    .packet::<glonax::transport::frame::Session>(frame.payload_length)
+                session = client
+                    .packet::<Session>(frame.payload_length)
                     .await
                     .unwrap();
 
-                log::info!("Session started for: {}", session2.name());
+                log::info!("Session started for: {}", session.name());
 
-                session_state = 1
+                client
+                    .send_packet(&runtime_state.read().await.instance)
+                    .await
+                    .unwrap();
             }
             FrameMessage::Echo => {
-                let echo = client
-                    .packet::<glonax::transport::frame::Echo>(frame.payload_length)
-                    .await
-                    .unwrap();
+                let echo = client.packet::<Echo>(frame.payload_length).await.unwrap();
                 client.send_packet(&echo).await.unwrap();
             }
             FrameMessage::Shutdown => {
