@@ -60,7 +60,6 @@ async fn main() -> anyhow::Result<()> {
     log::debug!("Waiting for connection to {}", address);
 
     let mut client = glonax::transport::ConnectionOptions::default()
-        .control(true)
         .connect(
             address.to_owned(),
             format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
@@ -69,8 +68,27 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected to {}", address);
 
+    let frame = client.read_frame().await?;
+    match frame.message {
+        glonax::transport::frame::FrameMessage::Instance => {
+            let instance = client
+                .packet::<glonax::core::Instance>(frame.payload_length)
+                .await?;
+
+            println!("Instance ID: {}", instance.id);
+            println!("Instance Model: {}", instance.model);
+            println!("Instance Name: {}", instance.name);
+        }
+        _ => {
+            eprintln!("Invalid response from server");
+            return Ok(());
+        }
+    }
+
+    let random_number = glonax::rand::random::<i32>();
+
     client
-        .send_request(glonax::transport::frame::FrameMessage::Instance)
+        .send_packet(&glonax::transport::frame::Echo::new(random_number))
         .await?;
 
     let frame = client.read_frame().await?;
@@ -83,6 +101,16 @@ async fn main() -> anyhow::Result<()> {
             println!("Instance ID: {}", instance.id);
             println!("Instance Model: {}", instance.model);
             println!("Instance Name: {}", instance.name);
+        }
+        glonax::transport::frame::FrameMessage::Echo => {
+            let echo = client
+                .packet::<glonax::transport::frame::Echo>(frame.payload_length)
+                .await?;
+
+            if random_number != echo.payload() {
+                eprintln!("Invalid echo response from server");
+                return Ok(());
+            }
         }
         _ => {
             eprintln!("Invalid response from server");
