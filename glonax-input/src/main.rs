@@ -134,10 +134,6 @@ async fn main() -> anyhow::Result<()> {
         )
         .await?;
 
-    client
-        .send_request(glonax::transport::frame::FrameMessage::Instance)
-        .await?;
-
     let frame = client.read_frame().await?;
     match frame.message {
         glonax::transport::frame::FrameMessage::Instance => {

@@ -358,6 +358,17 @@ pub mod frame {
         payload: i32,
     }
 
+    impl Echo {
+        pub fn new(payload: i32) -> Self {
+            Self { payload }
+        }
+
+        #[inline]
+        pub fn payload(&self) -> i32 {
+            self.payload
+        }
+    }
+
     impl TryFrom<Vec<u8>> for Echo {
         type Error = FrameError;
 

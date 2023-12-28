@@ -22,6 +22,8 @@ mod config;
 
 pub use self::config::*;
 
+pub use rand;
+
 pub mod runtime;
 pub use self::runtime::Error;
 pub use self::runtime::Runtime;
