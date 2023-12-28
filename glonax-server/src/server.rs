@@ -9,20 +9,23 @@ use glonax::{
 use crate::{config::ProxyConfig, state::SharedExcavatorState};
 
 async fn spawn_network_session(
-    stream: tokio::net::TcpStream,
-    addr: std::net::SocketAddr,
+    // stream: tokio::net::TcpStream,
+    stream: tokio::net::UnixStream,
+    // addr: std::net::SocketAddr,
+    addr: tokio::net::unix::SocketAddr,
     runtime_state: SharedExcavatorState,
     motion_sender: MotionSender,
     _permit: tokio::sync::OwnedSemaphorePermit,
 ) {
     use glonax::protocol::Packetize;
 
-    log::debug!("Accepted client from: {}", addr);
+    // log::debug!("Accepted client from: {}", addr);
 
     let mut client = Stream::new(stream);
 
     // Always start with an anonymous session
-    let mut session = Session::new(0, addr.to_string());
+    // let mut session = Session::new(0, addr.to_string());
+    let mut session = Session::new(0, String::new());
 
     let mut session_shutdown = false;
 
@@ -134,19 +137,68 @@ async fn spawn_network_session(
     log::info!("Session shutdown for: {}", session.name());
 }
 
-pub(super) async fn service(
+// pub(super) async fn tcp_listen(
+//     config: ProxyConfig,
+//     runtime_state: SharedExcavatorState,
+//     motion_sender: MotionSender,
+// ) {
+//     use tokio::net::TcpListener;
+
+//     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
+//         glonax::consts::NETWORK_MAX_CLIENTS,
+//     ));
+
+//     log::debug!("Listening on: {}", config.address);
+//     let listener = TcpListener::bind(config.address.clone()).await.unwrap();
+
+//     loop {
+//         let (stream, addr) = listener.accept().await.unwrap();
+
+//         let permit = match semaphore.clone().try_acquire_owned() {
+//             Ok(permit) => permit,
+//             Err(_) => {
+//                 log::warn!("Too many connections");
+//                 continue;
+//             }
+//         };
+
+//         let active_client_count =
+//             glonax::consts::NETWORK_MAX_CLIENTS - semaphore.available_permits();
+
+//         log::trace!(
+//             "Connections: {}/{}",
+//             active_client_count,
+//             glonax::consts::NETWORK_MAX_CLIENTS
+//         );
+
+//         tokio::spawn(spawn_network_session(
+//             stream,
+//             addr,
+//             runtime_state.clone(),
+//             motion_sender.clone(),
+//             permit,
+//         ));
+//     }
+// }
+
+pub(super) async fn unix_listen(
     config: ProxyConfig,
     runtime_state: SharedExcavatorState,
     motion_sender: MotionSender,
 ) {
-    use tokio::net::TcpListener;
+    use tokio::net::UnixListener;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    log::debug!("Listening on: {}", config.address);
-    let listener = TcpListener::bind(config.address.clone()).await.unwrap();
+    // Remove the socket if it already exists
+    if std::path::Path::new(glonax::consts::DEFAULT_SOCKET_PATH).exists() {
+        std::fs::remove_file(glonax::consts::DEFAULT_SOCKET_PATH).unwrap();
+    }
+
+    log::debug!("Listening on: {}", glonax::consts::DEFAULT_SOCKET_PATH);
+    let listener = UnixListener::bind(glonax::consts::DEFAULT_SOCKET_PATH).unwrap();
 
     loop {
         let (stream, addr) = listener.accept().await.unwrap();
