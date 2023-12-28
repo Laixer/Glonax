@@ -24,9 +24,23 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for KinematicComponent 
         //     // The order is Transform, Rotate, Scale
         //     let translation = Matrix4::new_translation(&Vector3::new(length, 0.0, 0.0));
         //     let rotation = Matrix4::new_rotation(Vector3::new(0.0, 0.0, theta));
-
         //     translation * rotation
         // }
+
+        fn transformation_matrix(theta: f32, length: f32) -> Matrix4<f32> {
+            // The order is Transform, Rotate, Scale
+
+            // Rotation (in radians)
+            let rotation = Rotation3::new(Vector3::z() * theta);
+
+            // Translation
+            let translation = Translation3::new(length, 0.0, 0.0);
+
+            // Scale
+            let scale = Matrix4::new_nonuniform_scaling(&Vector3::new(1.0, 1.0, 1.0));
+
+            translation.to_homogeneous() * rotation.to_homogeneous() * scale
+        }
 
         // TODO: Calculate the forward kinematics
         // TODO: Store the forward kinematics in the pose
@@ -35,29 +49,7 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for KinematicComponent 
             let mut t = Matrix4::identity();
 
             for (theta, length) in joint_angles.iter().zip(link_lengths.iter()) {
-                // The order is Transform, Rotate, Scale
-
-                // Rotation (in radians)
-                // let angle = std::f32::consts::PI / 4.0; // 45 degrees
-                let theta = *theta;
-                let rotation = Rotation3::new(Vector3::z() * theta);
-
-                // Translation
-                let length = *length;
-                let translation = Translation3::new(length, 0.0, 0.0);
-
-                // For scaling, you can directly use a diagonal matrix
-                // let scale = Matrix3::new_nonuniform_scaling(&Vector3::new(1.5, 1.5, 1.0));
-
-                // Combine them into an affine transformation matrix
-                let affine_transform = translation.to_homogeneous() * rotation.to_homogeneous();
-                // * scale;
-
-                t *= affine_transform;
-
-                // let R = rotation_matrix_z(*angle); // Replace with appropriate rotation matrix
-                // let D = translation_matrix(*length, 0.0, 0.0); // Adjust translation direction
-                // T = matrix_multiply(&T, &matrix_multiply(&R, &D));
+                t *= transformation_matrix(*theta, *length);
             }
 
             t
