@@ -438,6 +438,20 @@ impl Client<tokio::net::TcpStream> {
     }
 }
 
+impl Client<std::fs::File> {
+    pub fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let file = std::fs::OpenOptions::new().write(true).open(path)?;
+
+        Ok(Self::new(file))
+    }
+
+    pub fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
+        let file = std::fs::OpenOptions::new().read(true).open(path)?;
+
+        Ok(Self::new(file))
+    }
+}
+
 impl Client<tokio::fs::File> {
     pub async fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
         let file = tokio::fs::OpenOptions::new().write(true).open(path).await?;
