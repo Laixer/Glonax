@@ -166,7 +166,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.spawn_motion_sink(device::sink_net_actuator);
     }
 
-    // runtime.spawn_motion_service(server::tcp_listen);
+    runtime.spawn_motion_service(server::tcp_listen);
     runtime.spawn_motion_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![

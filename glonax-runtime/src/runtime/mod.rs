@@ -106,16 +106,13 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
 
     pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
-        C: Component<Cnf, R> + Default + Send + Sync + 'static,
+        C: Component<Cnf, R> + Send + Sync + 'static,
         Cnf: Configurable,
         R: RobotState + Send + Sync + 'static,
     {
         let mut interval = tokio::time::interval(duration);
 
-        // TODO: Replace with some `new` method accepting a reference to the configuation
-        let mut component = C::default();
-
-        C::new(self.config.clone());
+        let mut component = C::new(self.config.clone());
 
         let motion_tx = self.motion_tx.clone();
         let operand = self.operand.clone();
