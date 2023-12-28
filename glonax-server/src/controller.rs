@@ -20,12 +20,38 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for ControllerComponent
         if let Some(_target) = ctx.target {
             // TODO: Calculate the inverse kinematics
             // TODO: Store the inverse kinematics in the pose
-            // TODO: Translate resulting error into a control signal
-            // TODO: Control signal to motion via motion profile
 
-            // glonax::math::linear_motion(delta, lower_bound, offset, scale, inverse)
+            let frame_error = 0.5;
+            let boom_error = 0.5;
+            let arm_error = 0.5;
+            let attachment_error = 0.5;
 
-            // ctx.commit(glonax::core::Motion::StopAll);
+            let frame_value =
+                glonax::math::linear_motion(frame_error, 0.01, 5_000.0, 12_000.0, false);
+            let boom_value =
+                glonax::math::linear_motion(boom_error, 0.01, 5_000.0, 12_000.0, false);
+            let arm_value = glonax::math::linear_motion(arm_error, 0.01, 5_000.0, 12_000.0, false);
+            let attachment_value =
+                glonax::math::linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
+
+            let is_done = frame_value.is_none()
+                && boom_value.is_none()
+                && arm_value.is_none()
+                && attachment_value.is_none();
+
+            if is_done {
+                ctx.commit(glonax::core::Motion::StopAll);
+            } else {
+                ctx.commit(glonax::core::Motion::from_iter(vec![
+                    (glonax::core::Actuator::Slew, frame_value.unwrap_or(0)),
+                    (glonax::core::Actuator::Boom, boom_value.unwrap_or(0)),
+                    (glonax::core::Actuator::Arm, arm_value.unwrap_or(0)),
+                    (
+                        glonax::core::Actuator::Attachment,
+                        attachment_value.unwrap_or(0),
+                    ),
+                ]));
+            }
         }
     }
 }

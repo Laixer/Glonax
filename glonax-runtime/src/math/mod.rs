@@ -40,13 +40,13 @@ pub fn linear_motion(
     offset: f32,
     scale: f32,
     inverse: bool,
-) -> Option<i32> {
+) -> Option<i16> {
     if delta.abs() < lower_bound {
         return None;
     }
 
     let delta_normal =
-        ((delta.abs() * scale).min(std::i16::MAX as f32 - offset) + offset).round() as i32;
+        ((delta.abs() * scale).min(std::i16::MAX as f32 - offset) + offset).round() as i16;
 
     let value = if delta.is_sign_negative() {
         -delta_normal

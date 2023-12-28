@@ -172,6 +172,16 @@ impl TryFrom<Vec<u8>> for Motion {
     }
 }
 
+impl FromIterator<(Actuator, MotionValueType)> for Motion {
+    fn from_iter<T: IntoIterator<Item = (Actuator, MotionValueType)>>(iter: T) -> Self {
+        Self::Change(
+            iter.into_iter()
+                .map(|(actuator, value)| ChangeSet { actuator, value })
+                .collect(),
+        )
+    }
+}
+
 impl crate::protocol::Packetize for Motion {
     const MESSAGE_TYPE: u8 = 0x20;
 

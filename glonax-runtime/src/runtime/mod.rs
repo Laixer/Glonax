@@ -43,9 +43,10 @@ impl ComponentContext {
         }
     }
 
-    // TODO: Handle errors
     pub fn commit(&mut self, motion: crate::core::Motion) {
-        self.motion_tx.try_send(motion).unwrap();
+        if let Err(e) = self.motion_tx.try_send(motion) {
+            log::error!("Failed to send motion command: {}", e);
+        }
     }
 }
 
