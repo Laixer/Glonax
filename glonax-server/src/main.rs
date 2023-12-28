@@ -23,7 +23,8 @@ struct Args {
     #[arg(short = 'b', long = "bind", default_value = "0.0.0.0:30051")]
     address: String,
     /// CAN network interface.
-    interface: String,
+    #[arg(required_unless_present = "simulation")]
+    interface: Option<String>,
     /// CAN network interface.
     interface2: Option<String>,
     /// Refresh host service interval in milliseconds.
@@ -33,6 +34,7 @@ struct Args {
     #[arg(
         short = 'c',
         long = "config",
+        alias = "conf",
         default_value = "/etc/glonax.conf",
         value_name = "FILE"
     )]

@@ -71,7 +71,7 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
 
     log::debug!("Starting encoder service");
 
-    match J1939Network::new(&config.interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
+    match J1939Network::new(&config.interface.unwrap(), glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let mut router = Router::new(network);
 
@@ -226,7 +226,7 @@ pub(super) async fn sink_net_actuator(
 
     log::debug!("Starting motion listener");
 
-    match J1939Network::new(&config.interface, glonax::consts::DEFAULT_J1939_ADDRESS) {
+    match J1939Network::new(&config.interface.unwrap(), glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let service = ActuatorService::new(0x4A);
 
