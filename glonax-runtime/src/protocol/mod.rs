@@ -27,37 +27,36 @@ pub trait Packetize: TryFrom<Vec<u8>> + Sized {
     fn to_bytes(&self) -> Vec<u8>;
 }
 
-#[derive(Default)]
-pub struct Client {
-    flags: u8,
-}
-
-impl Client {
-    pub fn control(&mut self, write: bool) -> &mut Self {
-        if write {
-            self.flags |= frame::Session::MODE_CONTROL;
-        } else {
-            self.flags &= !frame::Session::MODE_CONTROL;
-        }
-
-        self
-    }
-
-    pub fn failsafe(&mut self, failsafe: bool) -> &mut Self {
-        if failsafe {
-            self.flags |= frame::Session::MODE_FAILSAFE;
-        } else {
-            self.flags &= !frame::Session::MODE_FAILSAFE;
-        }
-
-        self
-    }
+pub mod client {
+    use super::{frame, Packetize, Stream};
 
     pub async fn connect(
-        &mut self,
         address: impl tokio::net::ToSocketAddrs,
         session_name: impl ToString,
     ) -> std::io::Result<(Stream<tokio::net::TcpStream>, crate::core::Instance)> {
+        connect_with(address, session_name, false, false).await
+    }
+
+    pub async fn connect_with(
+        address: impl tokio::net::ToSocketAddrs,
+        session_name: impl ToString,
+        control: bool,
+        failsafe: bool,
+    ) -> std::io::Result<(Stream<tokio::net::TcpStream>, crate::core::Instance)> {
+        let mut flags = 0;
+
+        if control {
+            flags |= frame::Session::MODE_CONTROL;
+        } else {
+            flags &= !frame::Session::MODE_CONTROL;
+        }
+
+        if failsafe {
+            flags |= frame::Session::MODE_FAILSAFE;
+        } else {
+            flags &= !frame::Session::MODE_FAILSAFE;
+        }
+
         let mut client = Stream::new(tokio::net::TcpStream::connect(address).await?);
 
         let random_number = rand::random::<i32>();
@@ -84,7 +83,7 @@ impl Client {
         }
 
         client
-            .send_packet(&frame::Session::new(self.flags, session_name.to_string()))
+            .send_packet(&frame::Session::new(flags, session_name.to_string()))
             .await?;
 
         let frame = client.read_frame().await?;
