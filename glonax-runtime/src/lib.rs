@@ -39,8 +39,10 @@ pub mod consts {
     pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
     /// Glonax default J1939 address.
     pub const DEFAULT_J1939_ADDRESS: u8 = 0x9E;
-    /// Glonax default network port for both TCP and UDP.
+    /// Glonax default network port for both TCP.
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
+    /// Glonax default unix socket path.
+    pub const DEFAULT_SOCKET_PATH: &str = "/tmp/glonax.sock";
     /// Glonax default configuration path.
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml";
     /// Glonax default queue size for motion commands.

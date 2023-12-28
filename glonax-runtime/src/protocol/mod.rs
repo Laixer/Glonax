@@ -65,39 +65,49 @@ pub mod client {
             Ok((client, instance))
         }
     }
+
+    pub mod unix {
+        use crate::protocol::{frame, Stream};
+
+        pub async fn connect(
+            path: impl AsRef<std::path::Path>,
+            session_name: impl ToString,
+        ) -> std::io::Result<(Stream<tokio::net::UnixStream>, crate::core::Instance)> {
+            connect_with(path, session_name, false, false).await
+        }
+
+        pub async fn connect_with(
+            path: impl AsRef<std::path::Path>,
+            session_name: impl ToString,
+            control: bool,
+            failsafe: bool,
+        ) -> std::io::Result<(Stream<tokio::net::UnixStream>, crate::core::Instance)> {
+            let mut flags = 0;
+
+            if control {
+                flags |= frame::Session::MODE_CONTROL;
+            } else {
+                flags &= !frame::Session::MODE_CONTROL;
+            }
+
+            if failsafe {
+                flags |= frame::Session::MODE_FAILSAFE;
+            } else {
+                flags &= !frame::Session::MODE_FAILSAFE;
+            }
+
+            let mut client = Stream::new(tokio::net::UnixStream::connect(path).await?);
+
+            let instance = client.handshake(session_name, flags).await?;
+
+            Ok((client, instance))
+        }
+    }
 }
 
 pub struct Stream<T> {
     inner: T,
 }
-
-// impl Stream<std::fs::File> {
-//     pub fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-//         let file = std::fs::OpenOptions::new().write(true).open(path)?;
-
-//         Ok(Self::new(file))
-//     }
-
-//     pub fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-//         let file = std::fs::OpenOptions::new().read(true).open(path)?;
-
-//         Ok(Self::new(file))
-//     }
-// }
-
-// impl Stream<tokio::fs::File> {
-//     pub async fn open_write(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-//         let file = tokio::fs::OpenOptions::new().write(true).open(path).await?;
-
-//         Ok(Self::new(file))
-//     }
-
-//     pub async fn open_read(path: impl AsRef<std::path::Path>) -> std::io::Result<Self> {
-//         let file = tokio::fs::OpenOptions::new().read(true).open(path).await?;
-
-//         Ok(Self::new(file))
-//     }
-// }
 
 impl<T> Stream<T> {
     pub fn new(inner: T) -> Self {

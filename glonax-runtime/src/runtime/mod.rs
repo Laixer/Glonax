@@ -13,6 +13,10 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 pub mod builder;
 
 pub trait Component<Cnf: Configurable, R: RobotState> {
+    /// Construct a new component.
+    ///
+    /// This method will be called once on startup.
+    /// The component should use this method to initialize itself.
     fn new(config: Cnf) -> Self
     where
         Self: Sized;
