@@ -6,7 +6,7 @@ use rand::Rng;
 
 use crate::{
     runtime::{Component, ComponentContext, SharedOperandState},
-    RobotState,
+    Configurable, RobotState,
 };
 
 #[derive(Default)]
@@ -133,7 +133,14 @@ pub struct EngineManagementSystemSimulator {
     rng: rand::rngs::OsRng,
 }
 
-impl<R: RobotState> Component<R> for EngineManagementSystemSimulator {
+impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for EngineManagementSystemSimulator {
+    fn new(_config: Cnf) -> Self
+    where
+        Self: Sized,
+    {
+        Self::default()
+    }
+
     fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut R) {
         EngineMessage {
             driver_demand: Some(self.rng.gen_range(18..=20)),

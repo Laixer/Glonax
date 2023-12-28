@@ -1,7 +1,7 @@
 use glonax::{
     net::EncoderMessage,
     runtime::{Component, ComponentContext},
-    RobotState,
+    Configurable, RobotState,
 };
 
 use crate::state::Excavator;
@@ -12,7 +12,14 @@ pub struct EncoderSimulator {
 }
 
 // impl<R: RobotState> Component<R> for EncoderSimService {
-impl Component<Excavator> for EncoderSimulator {
+impl<Cnf: Configurable> Component<Cnf, Excavator> for EncoderSimulator {
+    fn new(_config: Cnf) -> Self
+    where
+        Self: Sized,
+    {
+        Self::default()
+    }
+
     fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut Excavator) {
         for (id, actuator, encoder) in self.control_devices.iter_mut() {
             // 1st derivative of position

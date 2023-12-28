@@ -12,7 +12,11 @@ pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Opera
 
 pub mod builder;
 
-pub trait Component<R: RobotState> {
+pub trait Component<Cnf: Configurable, R: RobotState> {
+    fn new(config: Cnf) -> Self
+    where
+        Self: Sized;
+
     /// Tick the component.
     ///
     /// This method will be called on each tick of the runtime.
@@ -98,26 +102,29 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
 
     pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
-        C: Component<R> + Default + Send + Sync + 'static,
+        C: Component<Cnf, R> + Default + Send + Sync + 'static,
+        Cnf: Configurable,
         R: RobotState + Send + Sync + 'static,
     {
         let mut interval = tokio::time::interval(duration);
 
         // TODO: Replace with some `new` method accepting a reference to the configuation
         let mut component = C::default();
-        let opr = self.operand.clone();
 
-        // TODO: Add `instance` to `ComponentContext
-        // TODO: Reset on every tick
-        let mut ctx = ComponentContext::new(self.motion_tx.clone());
+        C::new(self.config.clone());
+
+        let motion_tx = self.motion_tx.clone();
+        let operand = self.operand.clone();
 
         tokio::spawn(async move {
             loop {
                 interval.tick().await;
 
-                let q = opr.clone();
+                // TODO: Add `instance` to `ComponentContext
+                let mut ctx = ComponentContext::new(motion_tx.clone());
+                let mut runtime_state = operand.write().await;
 
-                component.tick(&mut ctx, &mut q.write().await.state);
+                component.tick(&mut ctx, &mut runtime_state.state);
             }
         });
     }
@@ -129,7 +136,8 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     /// reference to the runtime state.
     pub async fn run_interval<C>(&self, mut component: C, duration: std::time::Duration)
     where
-        C: Component<R>,
+        C: Component<Cnf, R>,
+        Cnf: Configurable,
         R: RobotState,
     {
         let mut interval = tokio::time::interval(duration);

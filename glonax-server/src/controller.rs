@@ -1,12 +1,19 @@
 use glonax::{
     runtime::{Component, ComponentContext},
-    RobotState,
+    Configurable, RobotState,
 };
 
 #[derive(Default)]
 pub struct ControllerComponent;
 
-impl<R: RobotState> Component<R> for ControllerComponent {
+impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for ControllerComponent {
+    fn new(_config: Cnf) -> Self
+    where
+        Self: Sized,
+    {
+        Self
+    }
+
     fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut R) {
         // let _pose = runtime_state.pose_mut();
 

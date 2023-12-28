@@ -1,13 +1,20 @@
 use glonax::{
     runtime::{Component, ComponentContext},
-    RobotState,
+    Configurable, RobotState,
 };
 use nalgebra::{Rotation3, Translation3, Vector3};
 
 #[derive(Default)]
 pub struct KinematicComponent;
 
-impl<R: RobotState> Component<R> for KinematicComponent {
+impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for KinematicComponent {
+    fn new(_config: Cnf) -> Self
+    where
+        Self: Sized,
+    {
+        Self
+    }
+
     fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
         let _pose = runtime_state.pose_mut();
 

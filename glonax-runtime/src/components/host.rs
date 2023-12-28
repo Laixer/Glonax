@@ -2,7 +2,7 @@ use sysinfo::System;
 
 use crate::{
     runtime::{Component, ComponentContext},
-    RobotState,
+    Configurable, RobotState,
 };
 
 #[derive(Default)]
@@ -10,7 +10,14 @@ pub struct Host {
     system: System,
 }
 
-impl<R: RobotState> Component<R> for Host {
+impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for Host {
+    fn new(_config: Cnf) -> Self
+    where
+        Self: Sized,
+    {
+        Self::default()
+    }
+
     fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
         let vms = runtime_state.vms_mut();
 
