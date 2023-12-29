@@ -21,17 +21,6 @@ impl<Cnf> Pipeline<Cnf> {
     }
 }
 
-// TODO: Move into runtime
-impl<Cnf> Pipeline<Cnf> {
-    pub fn make<C>(order: i32, config: Cnf) -> (i32, Box<dyn Component<Cnf>>)
-    where
-        C: Component<Cnf> + Send + Sync + 'static,
-        Cnf: Configurable,
-    {
-        (order, Box::new(C::new(config)))
-    }
-}
-
 impl<Cnf: Configurable> Component<Cnf> for Pipeline<Cnf> {
     fn new(_config: Cnf) -> Self
     where

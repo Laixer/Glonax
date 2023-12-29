@@ -3,10 +3,9 @@ use glonax::{
     Configurable, MachineState,
 };
 
-#[derive(Default)]
-pub struct ControllerComponent;
+pub struct Controller;
 
-impl<Cnf: Configurable> Component<Cnf> for ControllerComponent {
+impl<Cnf: Configurable> Component<Cnf> for Controller {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

@@ -2,12 +2,11 @@ use glonax::{
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
-use nalgebra::{Matrix, Matrix4, Point3, Rotation3, Translation3, Vector3};
+use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
 
-#[derive(Default)]
-pub struct KinematicComponent;
+pub struct Kinematic;
 
-impl<Cnf: Configurable> Component<Cnf> for KinematicComponent {
+impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -15,13 +14,12 @@ impl<Cnf: Configurable> Component<Cnf> for KinematicComponent {
         Self
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
+    // TODO: Calculate the forward kinematics
+    // TODO: Store the forward kinematics in the context
+    // TODO: Calculate the inverse kinematics, if there is a target
+    // TODO: Store the inverse kinematics in the context, if there is a target
+    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         let point = Point3::new(1.0, 2.0, 3.0);
-
-        // TODO: Calculate the forward kinematics
-        // TODO: Store the forward kinematics in the context
-        // TODO: Calculate the inverse kinematics
-        // TODO: Store the inverse kinematics in the context
 
         // fn transformation_matrix(theta: f32, length: f32) -> Matrix4<f32> {
         //     // The order is Transform, Rotate, Scale

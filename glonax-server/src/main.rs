@@ -168,9 +168,9 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_motion_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![
-        glonax::components::Pipeline::make::<glonax::components::Host>(0, config.clone()),
-        glonax::components::Pipeline::make::<kinematic::KinematicComponent>(1, config.clone()),
-        glonax::components::Pipeline::make::<controller::ControllerComponent>(2, config.clone()),
+        runtime.make_dynamic::<glonax::components::Host>(0),
+        runtime.make_dynamic::<kinematic::Kinematic>(1),
+        runtime.make_dynamic::<controller::Controller>(2),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;

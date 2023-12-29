@@ -131,6 +131,14 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
+    pub fn make_dynamic<C>(&self, order: i32) -> (i32, Box<dyn Component<Cnf>>)
+    where
+        C: Component<Cnf> + Send + Sync + 'static,
+        Cnf: Configurable,
+    {
+        (order, Box::new(C::new(self.config.clone())))
+    }
+
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
