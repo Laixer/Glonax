@@ -24,7 +24,14 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         let actor_location = Point3::new(0.0, 0.0, 0.0);
 
-        let boom_location = Point3::new(0.0, 25.0, 140.0);
+        // let undercarriage_location = Point3::new(0.0, 0.0, 0.0);
+        // let body_location = Point3::new(-4.0, 5.0, 107.0);
+        // let boom_location = Point3::new(4.0, 20.0, 33.0);
+        // let arm_location = Point3::new(510.0, 20.0, 5.0);
+        // let bucket_location = Point3::new(310.0, -35.0, 45.0);
+
+        // TODO: This is a world location, it has already been transformed
+        let boom_world_location = Point3::new(0.0, 25.0, 140.0);
         let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
 
         let boom_length = 510.0;
@@ -33,7 +40,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         let abs_target_distance = nalgebra::distance(&actor_location, &target.point);
         log::debug!("Absolute target distance: {}", abs_target_distance);
 
-        let target_distance = nalgebra::distance(&boom_location, &target.point);
+        let target_distance = nalgebra::distance(&boom_world_location, &target.point);
         log::debug!("Target distance: {}", target_distance);
 
         let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
@@ -48,13 +55,12 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         // let yy = nalgebra::Rotation3::look_at_lh(&target.point.coords, &Vector3::y());
         // log::debug!("YY: {:?}", yy.euler_angles());
 
-        let target_vector = target.point.coords - boom_location.coords;
+        let target_vector = target.point.coords - boom_world_location.coords;
         log::debug!("Target vector: {:?}", target_vector);
 
         // arget angle X: -10.4698925
         // 16:37:43 [DEBUG] (1) Target angle Y: 21.585747
         // 16:37:43 [DEBUG] (1) Target angle Z: -51.3402
-        
 
         let target_angle = nalgebra::Rotation3::rotation_between(&target_vector, &Vector3::x());
         log::debug!("Target angle X: {}", target_angle.unwrap().euler_angles().0.to_degrees());
