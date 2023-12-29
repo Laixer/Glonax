@@ -2,7 +2,7 @@ use glonax::{
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
-use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
+use nalgebra::{Matrix4, Point3, Vector3};
 
 pub struct Kinematic;
 
@@ -20,15 +20,35 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     // TODO: Store the inverse kinematics in the context, if there is a target
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        let point = Point3::new(1.0, 2.0, 3.0);
+        // let point = Point3::new(1.0, 2.0, 3.0);
 
         let actor_location = Point3::new(0.0, 0.0, 0.0);
 
-        // let undercarriage_location = Point3::new(0.0, 0.0, 0.0);
-        // let body_location = Point3::new(-4.0, 5.0, 107.0);
-        // let boom_location = Point3::new(4.0, 20.0, 33.0);
-        // let arm_location = Point3::new(510.0, 20.0, 5.0);
-        // let bucket_location = Point3::new(310.0, -35.0, 45.0);
+        // The order is Transform, Rotate, Scale
+        fn transformation(rotation: Vector3<f32>, translation: Vector3<f32>) -> Matrix4<f32> {
+            let translation = Matrix4::new_translation(&translation);
+            let rotation = Matrix4::new_rotation(rotation);
+            translation * rotation
+        }
+
+        {
+            let undercarriage_location = Vector3::new(0.0, 0.0, 0.0);
+            let body_location = Vector3::new(-4.0, 5.0, 107.0);
+            let boom_location = Vector3::new(4.0, 20.0, 33.0);
+            let arm_location = Vector3::new(510.0, 20.0, 5.0);
+            let bucket_location = Vector3::new(310.0, -35.0, 45.0);
+
+            let mut t = Matrix4::identity();
+            t *= transformation(Vector3::zeros(), undercarriage_location);
+            t *= transformation(Vector3::zeros(), body_location);
+            t *= transformation(Vector3::zeros(), boom_location);
+            t *= transformation(Vector3::zeros(), arm_location);
+            t *= transformation(Vector3::zeros(), bucket_location);
+
+            let p = t.transform_point(&Point3::new(0.0, 0.0, 0.0));
+
+            log::debug!("End effector point: {:?}", p);
+        }
 
         // TODO: This is a world location, it has already been transformed
         let boom_world_location = Point3::new(0.0, 25.0, 140.0);
@@ -63,9 +83,18 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         // 16:37:43 [DEBUG] (1) Target angle Z: -51.3402
 
         let target_angle = nalgebra::Rotation3::rotation_between(&target_vector, &Vector3::x());
-        log::debug!("Target angle X: {}", target_angle.unwrap().euler_angles().0.to_degrees());
-        log::debug!("Target angle Y: {}", target_angle.unwrap().euler_angles().1.to_degrees());
-        log::debug!("Target angle Z: {}", target_angle.unwrap().euler_angles().2.to_degrees());
+        log::debug!(
+            "Target angle X: {}",
+            target_angle.unwrap().euler_angles().0.to_degrees()
+        );
+        log::debug!(
+            "Target angle Y: {}",
+            target_angle.unwrap().euler_angles().1.to_degrees()
+        );
+        log::debug!(
+            "Target angle Z: {}",
+            target_angle.unwrap().euler_angles().2.to_degrees()
+        );
 
         // let qq = nalgebra::Rotation3::face_towards(&target.point.coords, &boom_location.coords);
         // log::debug!("QQ X: {}", qq.euler_angles().0.to_degrees());
@@ -75,60 +104,9 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         // let qq = nalgebra::Matrix4::look_at_lh(&boom_location, &target.point, &Vector3::y());
         // log::debug!("QQ: {:?}", qq);
 
-        // let rotation = nalgebra::Matrix3::<f32>::from_matrix_unchecked(nalgebra::Matrix4::identity());
-
-        // qq.
-
-        // nalgebra::Rotation::from
-
-        // fn transformation_matrix(theta: f32, length: f32) -> Matrix4<f32> {
-        //     // The order is Transform, Rotate, Scale
-        //     let translation = Matrix4::new_translation(&Vector3::new(length, 0.0, 0.0));
-        //     let rotation = Matrix4::new_rotation(Vector3::new(0.0, 0.0, theta));
-        //     translation * rotation
-        // }
-
-        fn transformation_matrix(theta: f32, length: f32) -> Matrix4<f32> {
-            // The order is Transform, Rotate, Scale
-
-            // Rotation (in radians)
-            let rotation = Rotation3::new(Vector3::z() * theta);
-
-            // Translation
-            let translation = Translation3::new(length, 0.0, 0.0);
-
-            // Scale
-            let scale = Matrix4::new_nonuniform_scaling(&Vector3::new(1.0, 1.0, 1.0));
-
-            translation.to_homogeneous() * rotation.to_homogeneous() * scale
-        }
-
-        fn forward_kinematics(joint_angles: Vec<f32>, link_lengths: Vec<f32>) -> Matrix4<f32> {
-            let mut t = Matrix4::identity();
-
-            for (theta, length) in joint_angles.iter().zip(link_lengths.iter()) {
-                t *= transformation_matrix(*theta, *length);
-            }
-
-            t
-        }
-
-        let joint_angles = [
-            std::f32::consts::PI / 2.0,
-            std::f32::consts::PI / 4.0,
-            -std::f32::consts::PI / 6.0,
-        ];
-        let link_lengths = [6.0, 2.97, 1.5];
-
-        let enf_effector_pose = forward_kinematics(joint_angles.to_vec(), link_lengths.to_vec());
-
-        ctx.map("forward_kinematic", enf_effector_pose);
+        // ctx.map("forward_kinematic", enf_effector_pose);
 
         // println!("End effector pose: {:?}", enf_effector_pose);
-
-        let _p = enf_effector_pose.transform_point(&point);
-
-        // println!("Transformed point: {:?}", p);
 
         // let mut relative_error = nalgebra::Matrix4::zeros();
         // relative_error[glonax::core::Actuator::Slew as usize] = 24.4353;
