@@ -2,7 +2,7 @@ use glonax::{
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
-use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
+use nalgebra::{Matrix, Matrix4, Point3, Rotation3, Translation3, Vector3};
 
 #[derive(Default)]
 pub struct KinematicComponent;
@@ -15,9 +15,13 @@ impl<Cnf: Configurable> Component<Cnf> for KinematicComponent {
         Self
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut MachineState) {
-
+    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
         let point = Point3::new(1.0, 2.0, 3.0);
+
+        // TODO: Calculate the forward kinematics
+        // TODO: Store the forward kinematics in the context
+        // TODO: Calculate the inverse kinematics
+        // TODO: Store the inverse kinematics in the context
 
         // fn transformation_matrix(theta: f32, length: f32) -> Matrix4<f32> {
         //     // The order is Transform, Rotate, Scale
@@ -41,9 +45,6 @@ impl<Cnf: Configurable> Component<Cnf> for KinematicComponent {
             translation.to_homogeneous() * rotation.to_homogeneous() * scale
         }
 
-        // TODO: Calculate the forward kinematics
-        // TODO: Store the forward kinematics in the pose
-
         fn forward_kinematics(joint_angles: Vec<f32>, link_lengths: Vec<f32>) -> Matrix4<f32> {
             let mut t = Matrix4::identity();
 
@@ -63,10 +64,17 @@ impl<Cnf: Configurable> Component<Cnf> for KinematicComponent {
 
         let enf_effector_pose = forward_kinematics(joint_angles.to_vec(), link_lengths.to_vec());
 
+        ctx.map("forward_kinematic", enf_effector_pose);
+
         // println!("End effector pose: {:?}", enf_effector_pose);
 
-        let p = enf_effector_pose.transform_point(&point);
+        let _p = enf_effector_pose.transform_point(&point);
 
-        println!("Transformed point: {:?}", p);
+        // println!("Transformed point: {:?}", p);
+
+        // let mut relative_error = nalgebra::Matrix4::zeros();
+        // relative_error[glonax::core::Actuator::Slew as usize] = 24.4353;
+        // relative_error[glonax::core::Actuator::Arm as usize] = 87.8354;
+        // ctx.map("relative_error", relative_error);
     }
 }

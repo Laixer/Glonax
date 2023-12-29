@@ -14,7 +14,7 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
     where
         Self: Sized,
     {
-        log::debug!("Starting encoder service");
+        log::debug!("Starting encoder simulator component");
 
         let encoder_frame = Encoder::new(2_500, (0, 6_280), true, false);
         let encoder_boom = Encoder::new(5_000, (0, 1_832), false, false);

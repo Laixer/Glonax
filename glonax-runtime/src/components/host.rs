@@ -14,7 +14,7 @@ impl<Cnf: Configurable> Component<Cnf> for Host {
     where
         Self: Sized,
     {
-        log::debug!("Starting host service");
+        log::debug!("Starting host component");
 
         Self {
             system: System::new_all(),

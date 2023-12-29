@@ -33,11 +33,15 @@ pub trait Component<Cnf: Configurable> {
 /// The component context is provided to each component on each tick. All
 /// data provided to the component is non-persistent and will be lost on
 /// the next tick.
+///
+/// The component context is used to communicate within the component pipeline.
 pub struct ComponentContext {
     /// Motion command sender.
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
     /// Instance.
     instance: crate::core::Instance,
+    /// Key value store.
+    map: std::collections::HashMap<String, nalgebra::Matrix4<f32>>,
 }
 
 impl ComponentContext {
@@ -47,8 +51,8 @@ impl ComponentContext {
     ) -> Self {
         Self {
             motion_tx,
-            target: None,
             instance,
+            map: std::collections::HashMap::new(),
         }
     }
 
@@ -63,6 +67,21 @@ impl ComponentContext {
     #[inline]
     pub fn instance(&self) -> &crate::core::Instance {
         &self.instance
+    }
+
+    /// Insert a value into the context.
+    pub fn map(&mut self, key: &str, value: nalgebra::Matrix4<f32>) {
+        self.map.insert(key.to_string(), value);
+    }
+
+    /// Retrieve a value from the context.
+    pub fn get(&self, key: &str) -> Option<&nalgebra::Matrix4<f32>> {
+        self.map.get(key)
+    }
+
+    /// Reset the context.
+    fn reset(&mut self) {
+        self.map.clear();
     }
 }
 
@@ -132,15 +151,14 @@ impl<Cnf: Configurable> Runtime<Cnf> {
 
         let mut component = C::new(self.config.clone());
 
-        let motion_tx = self.motion_tx.clone();
-        let instance = self.instance.clone();
         let operand = self.operand.clone();
 
+        let mut ctx = ComponentContext::new(self.motion_tx.clone(), self.instance.clone());
         tokio::spawn(async move {
             loop {
                 interval.tick().await;
+                ctx.reset();
 
-                let mut ctx = ComponentContext::new(motion_tx.clone(), instance.clone());
                 let mut runtime_state = operand.write().await;
 
                 component.tick(&mut ctx, &mut runtime_state.state);
@@ -160,10 +178,11 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     {
         let mut interval = tokio::time::interval(duration);
 
+        let mut ctx = ComponentContext::new(self.motion_tx.clone(), self.instance.clone());
         loop {
             interval.tick().await;
+            ctx.reset();
 
-            let mut ctx = ComponentContext::new(self.motion_tx.clone(), self.instance.clone());
             let mut runtime_state = self.operand.write().await;
 
             component.tick(&mut ctx, &mut runtime_state.state);
