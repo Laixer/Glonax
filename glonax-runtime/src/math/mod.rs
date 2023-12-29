@@ -72,4 +72,16 @@ mod tests {
 
         // TODO: More tests
     }
+
+    #[test]
+    fn test_linear_motion() {
+        assert_eq!(
+            linear_motion(-43.659_f32.to_radians(), 0.01, 12_000.0, 15_000.0, false),
+            Some(23_430),
+        );
+        assert_eq!(
+            linear_motion(-28.455_f32.to_radians(), 0.005, 12_000.0, 15_000.0, true),
+            Some(-19_450),
+        );
+    }
 }
