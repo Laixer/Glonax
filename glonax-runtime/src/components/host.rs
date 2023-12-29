@@ -5,7 +5,6 @@ use crate::{
     Configurable, MachineState,
 };
 
-#[derive(Default)]
 pub struct Host {
     system: System,
 }
@@ -15,7 +14,11 @@ impl<Cnf: Configurable> Component<Cnf> for Host {
     where
         Self: Sized,
     {
-        Self::default()
+        log::debug!("Starting host service");
+
+        Self {
+            system: System::new_all(),
+        }
     }
 
     fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {

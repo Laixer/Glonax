@@ -63,6 +63,8 @@ pub struct MachineState {
     pub pose: core::Pose,
     /// Encoder data.
     pub encoders: nalgebra::Rotation3<f32>,
+    /// Target position.
+    pub target: Option<crate::core::Target>,
     /// Electronic control unit data.
     pub ecu_state: device::VirtualHCU,
 }

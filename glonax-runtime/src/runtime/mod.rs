@@ -36,9 +36,6 @@ pub trait Component<Cnf: Configurable> {
 pub struct ComponentContext {
     /// Motion command sender.
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
-    // TODO: Maybe target needs to be moved to state.
-    /// Target position.
-    pub target: Option<crate::core::Target>,
     /// Instance.
     instance: crate::core::Instance,
 }

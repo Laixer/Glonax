@@ -9,7 +9,6 @@ use clap::Parser;
 mod config;
 mod controller;
 mod device;
-mod encoder;
 mod kinematic;
 mod server;
 
@@ -149,7 +148,7 @@ async fn main() -> anyhow::Result<()> {
     if config.simulation {
         log::info!("Running in simulation mode");
 
-        runtime.schedule_interval::<encoder::EncoderSimulator>(Duration::from_millis(5));
+        runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_interval::<glonax::net::EngineManagementSystemSimulator>(
             Duration::from_millis(10),
         );
@@ -169,9 +168,9 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_motion_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![
-        glonax::components::Pipeline::make::<glonax::components::Host>(0),
-        glonax::components::Pipeline::make::<kinematic::KinematicComponent>(1),
-        glonax::components::Pipeline::make::<controller::ControllerComponent>(2),
+        glonax::components::Pipeline::make::<glonax::components::Host>(0, config.clone()),
+        glonax::components::Pipeline::make::<kinematic::KinematicComponent>(1, config.clone()),
+        glonax::components::Pipeline::make::<controller::ControllerComponent>(2, config.clone()),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;

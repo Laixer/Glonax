@@ -21,13 +21,14 @@ impl<Cnf> Pipeline<Cnf> {
     }
 }
 
+// TODO: Move into runtime
 impl<Cnf> Pipeline<Cnf> {
-    pub fn make<C>(order: i32) -> (i32, Box<dyn Component<Cnf>>)
+    pub fn make<C>(order: i32, config: Cnf) -> (i32, Box<dyn Component<Cnf>>)
     where
-        C: Component<Cnf> + Default + Send + Sync + 'static,
+        C: Component<Cnf> + Send + Sync + 'static,
         Cnf: Configurable,
     {
-        (order, Box::<C>::default())
+        (order, Box::new(C::new(config)))
     }
 }
 
