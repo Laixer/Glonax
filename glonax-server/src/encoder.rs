@@ -1,18 +1,15 @@
 use glonax::{
     net::EncoderMessage,
     runtime::{Component, ComponentContext},
-    Configurable, RobotState,
+    Configurable, MachineState,
 };
-
-use crate::state::Excavator;
 
 // TODO: Move into net/encoder.rs
 pub struct EncoderSimulator {
     control_devices: [(u8, glonax::core::Actuator, glonax::net::Encoder); 4],
 }
 
-// impl<R: RobotState> Component<R> for EncoderSimService {
-impl<Cnf: Configurable> Component<Cnf, Excavator> for EncoderSimulator {
+impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -20,7 +17,7 @@ impl<Cnf: Configurable> Component<Cnf, Excavator> for EncoderSimulator {
         Self::default()
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut Excavator) {
+    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
         for (id, actuator, encoder) in self.control_devices.iter_mut() {
             // 1st derivative of position
             let velocity = state.ecu_state.speed(actuator);
@@ -28,7 +25,7 @@ impl<Cnf: Configurable> Component<Cnf, Excavator> for EncoderSimulator {
 
             let position = encoder.position(position, velocity);
 
-            EncoderMessage::from_position(*id, position).fill2(state.pose_mut());
+            EncoderMessage::from_position(*id, position).fill2(&mut state.pose);
 
             state.ecu_state.set_position(actuator, position);
 

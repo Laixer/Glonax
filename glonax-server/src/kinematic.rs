@@ -1,13 +1,13 @@
 use glonax::{
     runtime::{Component, ComponentContext},
-    Configurable, RobotState,
+    Configurable, MachineState,
 };
 use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
 
 #[derive(Default)]
 pub struct KinematicComponent;
 
-impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for KinematicComponent {
+impl<Cnf: Configurable> Component<Cnf> for KinematicComponent {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -15,8 +15,7 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for KinematicComponent 
         Self
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut R) {
-        let _pose = runtime_state.pose_mut();
+    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut MachineState) {
 
         let point = Point3::new(1.0, 2.0, 3.0);
 

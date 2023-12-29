@@ -1,6 +1,6 @@
 mod error;
 
-use crate::{Configurable, RobotState};
+use crate::{Configurable, MachineState};
 
 pub use self::error::Error;
 
@@ -8,11 +8,11 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Motion>;
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
-pub type SharedOperandState<R> = std::sync::Arc<tokio::sync::RwLock<crate::Operand<R>>>;
+pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
 
 pub mod builder;
 
-pub trait Component<Cnf: Configurable, R: RobotState> {
+pub trait Component<Cnf: Configurable> {
     /// Construct a new component.
     ///
     /// This method will be called once on startup.
@@ -25,7 +25,7 @@ pub trait Component<Cnf: Configurable, R: RobotState> {
     ///
     /// This method will be called on each tick of the runtime.
     /// How often the runtime ticks is determined by the runtime configuration.
-    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut R);
+    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState);
 }
 
 /// Component context.
@@ -72,20 +72,20 @@ impl ComponentContext {
 /// Construct runtime service from configuration and instance.
 ///
 /// Note that this method is certain to block.
-pub fn builder<Cnf: Configurable, R: RobotState>(
+pub fn builder<Cnf: Configurable>(
     config: &Cnf,
     instance: crate::core::Instance,
-) -> self::Result<builder::Builder<Cnf, R>> {
+) -> self::Result<builder::Builder<Cnf>> {
     builder::Builder::new(config, instance)
 }
 
-pub struct Runtime<Conf, R> {
+pub struct Runtime<Conf> {
     /// Runtime configuration.
     pub config: Conf,
     /// Instance.
     pub instance: crate::core::Instance,
     /// Glonax operand.
-    pub operand: SharedOperandState<R>, // TODO: Generic, TODO: Remove instance from operand.
+    pub operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
     /// Motion command sender.
     pub motion_tx: MotionSender,
     /// Motion command receiver.
@@ -97,7 +97,7 @@ pub struct Runtime<Conf, R> {
     ),
 }
 
-impl<Cnf: Configurable, R> Runtime<Cnf, R> {
+impl<Cnf: Configurable> Runtime<Cnf> {
     /// Listen for shutdown signal.
     #[inline]
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
@@ -108,7 +108,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn spawn_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState<R>) -> Fut)
+    pub fn spawn_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState) -> Fut)
     where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
@@ -119,7 +119,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState<R>) -> Fut)
+    pub fn schedule_io_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState) -> Fut)
     where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
@@ -128,9 +128,8 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
 
     pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
-        C: Component<Cnf, R> + Send + Sync + 'static,
+        C: Component<Cnf> + Send + Sync + 'static,
         Cnf: Configurable,
-        R: RobotState + Send + Sync + 'static,
     {
         let mut interval = tokio::time::interval(duration);
 
@@ -159,9 +158,8 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     /// reference to the runtime state.
     pub async fn run_interval<C>(&self, mut component: C, duration: std::time::Duration)
     where
-        C: Component<Cnf, R>,
+        C: Component<Cnf>,
         Cnf: Configurable,
-        R: RobotState,
     {
         let mut interval = tokio::time::interval(duration);
 
@@ -178,7 +176,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     /// Run a motion service.
     pub fn spawn_motion_service<Fut>(
         &self,
-        service: impl FnOnce(Cnf, SharedOperandState<R>, MotionSender) -> Fut,
+        service: impl FnOnce(Cnf, SharedOperandState, MotionSender) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
@@ -192,7 +190,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
     /// Spawn a motion sink in the background.
     pub fn spawn_motion_sink<Fut>(
         &mut self,
-        service: impl FnOnce(Cnf, SharedOperandState<R>, MotionReceiver) -> Fut,
+        service: impl FnOnce(Cnf, SharedOperandState, MotionReceiver) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {

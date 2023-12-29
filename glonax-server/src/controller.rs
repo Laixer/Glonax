@@ -1,12 +1,12 @@
 use glonax::{
     runtime::{Component, ComponentContext},
-    Configurable, RobotState,
+    Configurable, MachineState,
 };
 
 #[derive(Default)]
 pub struct ControllerComponent;
 
-impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for ControllerComponent {
+impl<Cnf: Configurable> Component<Cnf> for ControllerComponent {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -14,9 +14,7 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for ControllerComponent
         Self
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut R) {
-        // let _pose = runtime_state.pose_mut();
-
+    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
         if let Some(_target) = ctx.target {
             // TODO: Calculate the inverse kinematics
             // TODO: Store the inverse kinematics in the pose

@@ -51,7 +51,6 @@ pub mod consts {
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
-// TODO: Rename to `RobotState`
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.
@@ -60,40 +59,33 @@ pub struct MachineState {
     pub gnss: core::Gnss,
     /// Engine data.
     pub engine: core::Engine,
+    /// Pose data.
+    pub pose: core::Pose,
     /// Encoder data.
     pub encoders: nalgebra::Rotation3<f32>,
-}
-
-pub trait RobotState: Default {
-    /// Vehicle management system.
-    fn vms_mut(&mut self) -> &mut core::Host;
-    /// Engine management system.
-    fn gnss_mut(&mut self) -> &mut core::Gnss;
-    /// Engine management system.
-    fn engine_mut(&mut self) -> &mut core::Engine;
-    /// Robot pose.
-    fn pose_mut(&mut self) -> &mut core::Pose;
+    /// Electronic control unit data.
+    pub ecu_state: device::VirtualHCU,
 }
 
 /// The operand is the current state of the machine.
 ///
 /// This is the state that is used by the runtime to control
 /// the machine and the state that is used by the middleware.
-pub struct Operand<R> {
+pub struct Operand {
     /// Current machine state.
     pub status: core::Status,
     /// Glonax instance.
     pub instance: core::Instance,
     /// Robot state.
-    pub state: R,
+    pub state: MachineState,
 }
 
-impl<R: RobotState> Default for Operand<R> {
+impl Default for Operand {
     fn default() -> Self {
         Self {
             status: core::Status::Healthy,
             instance: core::Instance::default(),
-            state: R::default(),
+            state: MachineState::default(),
         }
     }
 }

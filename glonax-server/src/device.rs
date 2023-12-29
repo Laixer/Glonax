@@ -1,10 +1,10 @@
-use glonax::core::Motion;
+use glonax::{core::Motion, runtime::SharedOperandState};
 
-use crate::{config::ProxyConfig, state::SharedExcavatorState};
+use crate::config::ProxyConfig;
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
-pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedExcavatorState) {
+pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedOperandState) {
     use glonax::net::{EncoderService, J1939Network, Router};
 
     log::debug!("Starting encoder service");
@@ -30,7 +30,10 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
 
                 for encoder in &mut encoder_list {
                     if let Some(message) = router.try_accept(encoder) {
-                        message.fill(runtime_state.clone()).await;
+                        // message.fill(runtime_state.clone()).await;
+
+                        let mut runtime_state = runtime_state.write().await;
+                        message.fill2(&mut runtime_state.state.pose);
 
                         // TODO: Set the encoder state in the runtime state
                         if let Some(state) = message.state {
@@ -44,7 +47,7 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
     }
 }
 
-pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedExcavatorState) {
+pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedOperandState) {
     use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
     log::debug!("Starting EMS service");
@@ -64,7 +67,10 @@ pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedEx
                 }
 
                 if let Some(message) = router.try_accept(&mut engine_management_service) {
-                    message.fill(runtime_state.clone()).await;
+                    // message.fill(runtime_state.clone()).await;
+
+                    let mut runtime_state = runtime_state.write().await;
+                    message.fill2(&mut runtime_state.state.engine);
                 }
             }
         }
@@ -72,7 +78,7 @@ pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedEx
     }
 }
 
-pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedExcavatorState) {
+pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedOperandState) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
     log::debug!("Starting GNSS service");
@@ -89,7 +95,10 @@ pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedExcav
 
             while let Ok(Some(line)) = lines.next_line().await {
                 if let Some(message) = service.decode(line) {
-                    message.fill(runtime_state.clone()).await;
+                    // message.fill(runtime_state.clone()).await;
+
+                    let mut runtime_state = runtime_state.write().await;
+                    message.fill2(&mut runtime_state.state.gnss);
                 }
             }
         }
@@ -102,7 +111,7 @@ pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedExcav
 
 pub(super) async fn sink_net_actuator_sim(
     _config: ProxyConfig,
-    runtime_state: SharedExcavatorState,
+    runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
     log::debug!("Starting motion listener");
@@ -138,7 +147,7 @@ pub(super) async fn sink_net_actuator_sim(
 
 pub(super) async fn sink_net_actuator(
     config: ProxyConfig,
-    _runtime_state: SharedExcavatorState,
+    _runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
     use glonax::net::{ActuatorService, J1939Network};

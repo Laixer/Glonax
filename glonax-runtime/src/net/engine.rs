@@ -5,8 +5,8 @@ use glonax_j1939::{
 use rand::Rng;
 
 use crate::{
-    runtime::{Component, ComponentContext, SharedOperandState},
-    Configurable, RobotState,
+    runtime::{Component, ComponentContext},
+    Configurable, MachineState,
 };
 
 #[derive(Default)]
@@ -63,13 +63,13 @@ impl EngineMessage {
         vec![frame_builder.set_len(8).build()]
     }
 
-    pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
-        let mut runtime_state = local_runtime_state.write().await;
+    // pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
+    //     let mut runtime_state = local_runtime_state.write().await;
 
-        runtime_state.state.engine_mut().driver_demand = self.driver_demand.unwrap_or(0);
-        runtime_state.state.engine_mut().actual_engine = self.actual_engine.unwrap_or(0);
-        runtime_state.state.engine_mut().rpm = self.rpm.unwrap_or(0);
-    }
+    //     runtime_state.state.engine_mut().driver_demand = self.driver_demand.unwrap_or(0);
+    //     runtime_state.state.engine_mut().actual_engine = self.actual_engine.unwrap_or(0);
+    //     runtime_state.state.engine_mut().rpm = self.rpm.unwrap_or(0);
+    // }
 
     pub fn fill2(&self, engine_state: &mut crate::core::Engine) {
         engine_state.driver_demand = self.driver_demand.unwrap_or(0);
@@ -133,7 +133,7 @@ pub struct EngineManagementSystemSimulator {
     rng: rand::rngs::OsRng,
 }
 
-impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for EngineManagementSystemSimulator {
+impl<Cnf: Configurable> Component<Cnf> for EngineManagementSystemSimulator {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -141,14 +141,14 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for EngineManagementSys
         Self::default()
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut R) {
+    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
         EngineMessage {
             driver_demand: Some(self.rng.gen_range(18..=20)),
             actual_engine: Some(self.rng.gen_range(19..=21)),
             rpm: Some(self.rng.gen_range(1180..=1200)),
             ..Default::default()
         }
-        .fill2(state.engine_mut());
+        .fill2(&mut state.engine);
     }
 }
 

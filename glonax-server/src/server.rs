@@ -3,14 +3,14 @@ use glonax::{
         frame::{Echo, Request, Session},
         Stream,
     },
-    runtime::MotionSender,
+    runtime::{MotionSender, SharedOperandState},
 };
 
-use crate::{config::ProxyConfig, state::SharedExcavatorState};
+use crate::config::ProxyConfig;
 
 async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
     stream: T,
-    runtime_state: SharedExcavatorState,
+    runtime_state: SharedOperandState,
     motion_sender: MotionSender,
     _permit: tokio::sync::OwnedSemaphorePermit,
 ) {
@@ -141,7 +141,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
 pub(super) async fn tcp_listen(
     config: ProxyConfig,
-    runtime_state: SharedExcavatorState,
+    runtime_state: SharedOperandState,
     motion_sender: MotionSender,
 ) {
     use tokio::net::TcpListener;
@@ -186,7 +186,7 @@ pub(super) async fn tcp_listen(
 
 pub(super) async fn unix_listen(
     _config: ProxyConfig,
-    runtime_state: SharedExcavatorState,
+    runtime_state: SharedOperandState,
     motion_sender: MotionSender,
 ) {
     use tokio::net::UnixListener;

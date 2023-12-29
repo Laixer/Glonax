@@ -1,7 +1,5 @@
 use glonax_j1939::*;
 
-use crate::{runtime::SharedOperandState, RobotState};
-
 use super::Parsable;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -131,14 +129,14 @@ impl EncoderMessage {
         vec![frame_builder.set_len(8).build()]
     }
 
-    pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
-        local_runtime_state
-            .write()
-            .await
-            .state
-            .pose_mut()
-            .set_node_position(self.node, self.position);
-    }
+    // pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
+    //     local_runtime_state
+    //         .write()
+    //         .await
+    //         .state
+    //         .pose_mut()
+    //         .set_node_position(self.node, self.position);
+    // }
 
     pub fn fill2(&self, pose_state: &mut crate::core::Pose) {
         pose_state.set_node_position(self.node, self.position);

@@ -12,7 +12,6 @@ mod device;
 mod encoder;
 mod kinematic;
 mod server;
-mod state;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
