@@ -9,16 +9,22 @@ struct Actor {
 }
 
 impl Actor {
-    fn root_segment(&self) -> &ActorSegment {
-        &self.segments[0].1
+    fn new() -> Self {
+        Self {
+            segments: Vec::new(),
+        }
+    }
+
+    fn attach_segment(&mut self, name: impl ToString, segment: ActorSegment) {
+        self.segments.push((name.to_string(), segment));
     }
 
     fn location(&self) -> Translation3<f32> {
-        self.root_segment().isometry.translation
+        self.segments[0].1.isometry.translation
     }
 
     fn rotation(&self) -> Rotation3<f32> {
-        self.root_segment().isometry.rotation
+        self.segments[0].1.isometry.rotation
     }
 
     fn set_location(&mut self, location: Vector3<f32>) {
@@ -29,22 +35,18 @@ impl Actor {
         self.segments[0].1.isometry.rotation = rotation;
     }
 
-    fn end_effector_segment(&self) -> &ActorSegment {
-        &self.segments[self.segments.len() - 1].1
-    }
-
-    fn attach_segment(&mut self, name: impl ToString, segment: ActorSegment) {
-        self.segments.push((name.to_string(), segment));
-    }
-
-    fn end_effector_transform(&self) -> Matrix4<f32> {
+    fn segment_location(&self, name: impl ToString) -> Point3<f32> {
         let mut transform = Matrix4::identity();
 
-        for (_, segment) in self.segments.iter() {
+        for (sname, segment) in self.segments.iter() {
             transform *= segment.transformation();
+
+            if sname == &name.to_string() {
+                break;
+            }
         }
 
-        transform
+        transform.transform_point(&Point3::new(0.0, 0.0, 0.0))
     }
 }
 
@@ -91,9 +93,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     // TODO: Store the inverse kinematics in the context, if there is a target
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        let mut robot = Actor {
-            segments: Vec::new(),
-        };
+        let mut robot = Actor::new();
+
         robot.attach_segment(
             "undercarriage",
             ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -108,11 +109,13 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         // robot.set_location(Vector3::new(80.0, 0.0, 0.0));
 
-        let bucket_world_location = robot
-            .end_effector_transform()
-            .transform_point(&Point3::new(0.0, 0.0, 0.0));
+        {
+            let boom_world_location = robot.segment_location("boom");
+            log::debug!("Boom world location: {:?}", boom_world_location);
 
-        log::debug!("Bucket world location: {:?}", bucket_world_location);
+            let bucket_world_location = robot.segment_location("bucket");
+            log::debug!("Bucket world location: {:?}", bucket_world_location);
+        }
 
         ///////////////
 
