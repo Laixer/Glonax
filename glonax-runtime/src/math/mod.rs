@@ -61,6 +61,11 @@ pub fn linear_motion(
     }
 }
 
+/// Linear interpolation.
+pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
+    a + (b - a) * t
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
