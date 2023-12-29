@@ -29,11 +29,11 @@ pub fn law_of_cosines(a: f32, b: f32, c: f32) -> f32 {
 
 /// Calculate linear motion profile.
 ///
-/// This function calculates a linear motion profile based on the given delta value.
+/// This function calculates a linear motion profile based on the given delta.
 /// The profile is scaled to the given scale and offset. The profile is bounded by the
-/// given lower bound.
+/// lower bound. The profile is inverted if the inverse flag is set.
 ///
-/// If the delta value is less than the lower bound, `None` is returned.
+/// If the delta is less than the lower bound, `None` is returned.
 pub fn linear_motion(
     delta: f32,
     lower_bound: f32,

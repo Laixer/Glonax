@@ -17,6 +17,9 @@ const_assert_eq!(MIN_BUFFER_SIZE, 10);
 const_assert!(MIN_BUFFER_SIZE < MAX_PAYLOAD_SIZE);
 const_assert!(MAX_PAYLOAD_SIZE < 1500);
 
+/// A packet that can be sent over the network.
+///
+/// This trait is implemented for all packets that can be sent over the network.
 pub trait Packetize: TryFrom<Vec<u8>> + Sized {
     /// The message type of the packet.
     const MESSAGE_TYPE: u8;

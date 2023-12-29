@@ -31,22 +31,35 @@ pub trait Component<Cnf: Configurable, R: RobotState> {
 pub struct ComponentContext {
     /// Motion command sender.
     pub motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+    // TODO: Maybe target needs to be moved to state.
     /// Target position.
     pub target: Option<crate::core::Target>,
+    /// Instance.
+    instance: crate::core::Instance,
 }
 
 impl ComponentContext {
-    pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
+    pub fn new(
+        motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+        instance: crate::core::Instance,
+    ) -> Self {
         Self {
             motion_tx,
             target: None,
+            instance,
         }
     }
 
+    /// Commit a motion command.
     pub fn commit(&mut self, motion: crate::core::Motion) {
         if let Err(e) = self.motion_tx.try_send(motion) {
             log::error!("Failed to send motion command: {}", e);
         }
+    }
+
+    /// Retrieve the instance.
+    pub fn instance(&self) -> &crate::core::Instance {
+        &self.instance
     }
 }
 
@@ -63,8 +76,10 @@ pub fn builder<Cnf: Configurable, R: RobotState>(
 pub struct Runtime<Conf, R> {
     /// Runtime configuration.
     pub config: Conf,
+    /// Instance.
+    pub instance: crate::core::Instance,
     /// Glonax operand.
-    pub operand: SharedOperandState<R>, // TODO: Generic
+    pub operand: SharedOperandState<R>, // TODO: Generic, TODO: Remove instance from operand.
     /// Motion command sender.
     pub motion_tx: MotionSender,
     /// Motion command receiver.
@@ -116,14 +131,14 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         let mut component = C::new(self.config.clone());
 
         let motion_tx = self.motion_tx.clone();
+        let instance = self.instance.clone();
         let operand = self.operand.clone();
 
         tokio::spawn(async move {
             loop {
                 interval.tick().await;
 
-                // TODO: Add `instance` to `ComponentContext
-                let mut ctx = ComponentContext::new(motion_tx.clone());
+                let mut ctx = ComponentContext::new(motion_tx.clone(), instance.clone());
                 let mut runtime_state = operand.write().await;
 
                 component.tick(&mut ctx, &mut runtime_state.state);
@@ -147,8 +162,7 @@ impl<Cnf: Configurable, R> Runtime<Cnf, R> {
         loop {
             interval.tick().await;
 
-            // TODO: Add `instance` to `ComponentContext
-            let mut ctx = ComponentContext::new(self.motion_tx.clone());
+            let mut ctx = ComponentContext::new(self.motion_tx.clone(), self.instance.clone());
             let mut runtime_state = self.operand.write().await;
 
             component.tick(&mut ctx, &mut runtime_state.state);

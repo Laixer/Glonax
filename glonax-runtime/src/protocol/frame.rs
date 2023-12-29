@@ -48,9 +48,6 @@ enum FrameMessage {
     Session = 0x10,
     Shutdown = 0x11,
     Request = 0x12,
-    // TODO: Data messages, remove from here
-    _Instance = 0x15,
-    _Status = 0x16, // TODO: Integrate with Instance
 }
 
 pub struct Frame {

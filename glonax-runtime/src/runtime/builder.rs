@@ -21,6 +21,7 @@ impl<Cnf: Configurable, R: RobotState> Builder<Cnf, R> {
 
         Ok(Self(Runtime::<Cnf, R> {
             config: config.clone(),
+            instance: instance.clone(),
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
                 instance,
                 ..Default::default()
