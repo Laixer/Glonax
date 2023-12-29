@@ -34,13 +34,14 @@ impl<Cnf: Configurable, R: RobotState> Component<Cnf, R> for ControllerComponent
             let attachment_value =
                 glonax::math::linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
 
-            let is_done = frame_value.is_none()
-                && boom_value.is_none()
-                && arm_value.is_none()
-                && attachment_value.is_none();
+            let is_tri_arm_done =
+                frame_value.is_none() && boom_value.is_none() && arm_value.is_none();
+            let is_done = is_tri_arm_done && attachment_value.is_none();
 
             if is_done {
                 ctx.commit(glonax::core::Motion::StopAll);
+
+                ctx.target = None;
             } else {
                 ctx.commit(glonax::core::Motion::from_iter(vec![
                     (glonax::core::Actuator::Slew, frame_value.unwrap_or(0)),

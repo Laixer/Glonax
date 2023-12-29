@@ -28,9 +28,14 @@ pub trait Component<Cnf: Configurable, R: RobotState> {
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut R);
 }
 
+/// Component context.
+///
+/// The component context is provided to each component on each tick. All
+/// data provided to the component is non-persistent and will be lost on
+/// the next tick.
 pub struct ComponentContext {
     /// Motion command sender.
-    pub motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+    motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
     // TODO: Maybe target needs to be moved to state.
     /// Target position.
     pub target: Option<crate::core::Target>,
@@ -58,6 +63,7 @@ impl ComponentContext {
     }
 
     /// Retrieve the instance.
+    #[inline]
     pub fn instance(&self) -> &crate::core::Instance {
         &self.instance
     }
