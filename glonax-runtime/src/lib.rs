@@ -51,6 +51,7 @@ pub mod consts {
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
+// TODO: Integrate into the operand
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.
@@ -64,7 +65,7 @@ pub struct MachineState {
     /// Encoder data.
     pub encoders: nalgebra::Rotation3<f32>,
     /// Target position.
-    pub target: Option<crate::core::Target>,
+    pub target: Option<core::Target>,
     /// Electronic control unit data.
     pub ecu_state: device::VirtualHCU,
 }
