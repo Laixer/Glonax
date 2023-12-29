@@ -6,6 +6,7 @@ const PROTO_TYPE_RESET_ALL: u8 = 0x02;
 const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
 const PROTO_TYPE_CHANGE: u8 = 0x10;
 
+// TODO: Dervice hash
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Actuator {
     /// Boom actuator.

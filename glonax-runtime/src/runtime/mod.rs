@@ -40,6 +40,8 @@ pub struct ComponentContext {
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
     /// Instance.
     instance: crate::core::Instance,
+    /// Actuator values.
+    actuators: std::collections::HashMap<u16, f32>,
     /// Key value store.
     map: std::collections::HashMap<String, nalgebra::Matrix4<f32>>,
 }
@@ -52,6 +54,7 @@ impl ComponentContext {
         Self {
             motion_tx,
             instance,
+            actuators: std::collections::HashMap::new(),
             map: std::collections::HashMap::new(),
         }
     }
@@ -70,17 +73,18 @@ impl ComponentContext {
     }
 
     /// Insert a value into the context.
-    pub fn map(&mut self, key: &str, value: nalgebra::Matrix4<f32>) {
-        self.map.insert(key.to_string(), value);
+    pub fn map(&mut self, key: u16, value: f32) {
+        self.actuators.insert(key, value);
     }
 
     /// Retrieve a value from the context.
-    pub fn get(&self, key: &str) -> Option<&nalgebra::Matrix4<f32>> {
-        self.map.get(key)
+    pub fn get(&self, key: u16) -> Option<&f32> {
+        self.actuators.get(&key)
     }
 
     /// Reset the context.
     fn reset(&mut self) {
+        self.actuators.clear();
         self.map.clear();
     }
 }
