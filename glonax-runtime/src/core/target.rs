@@ -16,6 +16,22 @@ pub enum Constraint {
     VerticalPriority = 22,
 }
 
+impl TryFrom<u8> for Constraint {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Constraint::Unconstrained),
+            1 => Ok(Constraint::DelayAttachment),
+            2 => Ok(Constraint::StationaryAttachment),
+            20 => Ok(Constraint::LinearPriority),
+            21 => Ok(Constraint::LateralPriority),
+            22 => Ok(Constraint::VerticalPriority),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct Target {
     /// The point in space.
@@ -158,15 +174,7 @@ impl TryFrom<Vec<u8>> for Target {
         Ok(Self {
             point,
             orientation,
-            constraint: match buf.get_u8() {
-                0 => Constraint::Unconstrained,
-                1 => Constraint::DelayAttachment,
-                2 => Constraint::StationaryAttachment,
-                20 => Constraint::LinearPriority,
-                21 => Constraint::LateralPriority,
-                22 => Constraint::VerticalPriority,
-                _ => return Err(()),
-            },
+            constraint: Constraint::try_from(buf.get_u8()).unwrap(),
         })
     }
 }
