@@ -49,9 +49,9 @@ pub fn linear_motion(
         ((delta.abs() * scale).min(std::i16::MAX as f32 - offset) + offset).round() as i16;
 
     let value = if delta.is_sign_negative() {
-        -delta_normal
-    } else {
         delta_normal
+    } else {
+        -delta_normal
     };
 
     if inverse {
