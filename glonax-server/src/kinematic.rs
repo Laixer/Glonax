@@ -175,13 +175,13 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         // let qq = nalgebra::Matrix4::look_at_lh(&boom_location, &target.point, &Vector3::y());
         // log::debug!("QQ: {:?}", qq);
 
-        // ctx.map("forward_kinematic", enf_effector_pose);
-
-        // println!("End effector pose: {:?}", enf_effector_pose);
-
-        // let mut relative_error = nalgebra::Matrix4::zeros();
-        // relative_error[glonax::core::Actuator::Slew as usize] = 24.4353;
-        // relative_error[glonax::core::Actuator::Arm as usize] = 87.8354;
-        // ctx.map("relative_error", relative_error);
+        // ctx.map(
+        //     glonax::core::Actuator::Slew as u16,
+        //     std::f32::consts::FRAC_PI_2,
+        // );
+        // ctx.map(
+        //     glonax::core::Actuator::Boom as u16,
+        //     std::f32::consts::FRAC_PI_3,
+        // );
     }
 }
