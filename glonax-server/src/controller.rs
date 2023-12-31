@@ -13,6 +13,7 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
         Self
     }
 
+    // TODO: Write the result back to the component context
     // TODO: If no errors are set, ignore the tick
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         use glonax::core::Actuator;

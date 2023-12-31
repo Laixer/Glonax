@@ -93,6 +93,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     // TODO: Store the inverse kinematics in the context, if there is a target
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+        // TODO: Add the robot to the context
         let mut robot = Actor::new();
 
         robot.attach_segment(

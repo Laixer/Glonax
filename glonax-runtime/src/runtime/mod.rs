@@ -135,6 +135,10 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
+    /// Create a dynamic component with the given order.
+    ///
+    /// This method will create a dynamic component with the given order. The component will be
+    /// provided with a copy of the runtime configuration.
     pub fn make_dynamic<C>(&self, order: i32) -> (i32, Box<dyn Component<Cnf>>)
     where
         C: Component<Cnf> + Send + Sync + 'static,
