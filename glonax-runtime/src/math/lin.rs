@@ -18,7 +18,7 @@ impl Linear {
     }
 
     /// Method to update the linear controller based on the current error
-    pub fn update(&mut self, error: f32) -> f32 {
+    pub fn update(&self, error: f32) -> f32 {
         let normal = (error.abs() * self.kp).min(std::i16::MAX as f32 - self.offset) + self.offset;
 
         let value = if error.is_sign_negative() {
@@ -32,5 +32,28 @@ impl Linear {
         } else {
             value
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_linear_1() {
+        let linear = Linear::new(15_000.0, 12_000.0, false);
+
+        let tolerance = 0.01;
+        assert!((linear.update(-43.659_f32.to_radians()) - 23_429.9).abs() < tolerance);
+    }
+
+    #[test]
+    fn test_linear_2() {
+        let linear = Linear::new(15_000.0, 12_000.0, true);
+
+        print!("{}", linear.update(-28.455_f32.to_radians()));
+
+        let tolerance = 0.01;
+        assert!((linear.update(-28.455_f32.to_radians()) + 19_449.5).abs() < tolerance);
     }
 }
