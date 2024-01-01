@@ -1,6 +1,21 @@
 use bytes::{BufMut, BytesMut};
 use serde_derive::Deserialize;
 
+#[derive(Copy, Clone, Debug)]
+pub enum MachineType {
+    Excavator,
+    WheelLoader,
+    Dozer,
+    Grader,
+    Hauler,
+    Forestry,
+}
+
+// TODO: Rename to 'Machine'
+// TODO: Change id to uuid
+// TODO: Add a machine type
+// TODO: Remove name
+// TODO: Change model to a integer
 // TODO: Include version
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct Instance {

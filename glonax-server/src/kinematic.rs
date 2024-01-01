@@ -27,6 +27,7 @@ impl Actor {
         self.segments[0].1.isometry.rotation
     }
 
+    // TODO: Call this on the segment
     fn set_location(&mut self, location: Vector3<f32>) {
         self.segments[0].1.isometry.translation = Translation3::from(location);
     }
@@ -133,16 +134,16 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         log::debug!("Absolute target distance: {}", abs_target_distance);
 
         let target_distance = nalgebra::distance(&boom_world_location, &target.point);
-        log::debug!("Target distance: {}", target_distance);
+        log::debug!("Tri-Arm target distance: {}", target_distance);
 
         let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
-        log::debug!("Theta0: {}", theta0);
+        log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
 
         let theta1 = glonax::math::law_of_cosines(boom_length, target_distance, arm_length);
-        log::debug!("Theta1: {}", theta1);
+        log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
 
         let arm_angle = -(std::f32::consts::PI - theta0);
-        log::debug!("Arm angle: {}", arm_angle);
+        log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
 
         // let yy = nalgebra::Rotation3::look_at_lh(&target.point.coords, &Vector3::y());
         // log::debug!("YY: {:?}", yy.euler_angles());
