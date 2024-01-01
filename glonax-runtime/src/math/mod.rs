@@ -1,8 +1,11 @@
 use std::f32::consts::PI;
 
 pub use geometry::*;
+pub use pid::*;
 
 mod geometry;
+mod lin;
+mod pid;
 
 /// Calculate the shortest rotation between two points on a circle
 pub fn shortest_rotation(distance: f32) -> f32 {
