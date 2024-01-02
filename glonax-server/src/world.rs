@@ -1,23 +1,21 @@
 use glonax::{
-    robot::{ActorBuilder, ActorSegment},
+    robot::{Actor, ActorBuilder, ActorSegment},
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
 use nalgebra::Vector3;
 
-pub struct World;
+pub struct World {
+    actor: Actor,
+}
 
 impl<Cnf: Configurable> Component<Cnf> for World {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
     {
-        Self
-    }
-
-    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
-        ctx.replace_actor(
-            ActorBuilder::new(vec![
+        Self {
+            actor: ActorBuilder::new(vec![
                 (
                     "undercarriage".to_string(),
                     ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -40,6 +38,11 @@ impl<Cnf: Configurable> Component<Cnf> for World {
                 ),
             ])
             .build(),
-        );
+        }
+    }
+
+    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
+        // TODO: Build the actor from configuration
+        ctx.replace_actor(self.actor.clone());
     }
 }

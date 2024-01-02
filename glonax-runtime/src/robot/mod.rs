@@ -27,6 +27,7 @@ impl ActorBuilder {
     }
 }
 
+#[derive(Clone)]
 pub struct Actor {
     segments: Vec<(String, ActorSegment)>,
 }
@@ -76,6 +77,7 @@ impl Actor {
     }
 }
 
+#[derive(Clone)]
 pub struct ActorSegment {
     isometry: nalgebra::IsometryMatrix3<f32>,
 }
