@@ -24,28 +24,28 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         // Set relative rotations
         {
-            ctx.actor
-                .set_relative_rotation("body", state.pose.frame_rotator);
-            ctx.actor
-                .set_relative_rotation("boom", state.pose.boom_rotator);
-            ctx.actor
-                .set_relative_rotation("arm", state.pose.arm_rotator);
-            ctx.actor
-                .set_relative_rotation("bucket", state.pose.attachment_rotator);
+            let actor = ctx.actor_mut();
+
+            actor.set_relative_rotation("body", state.pose.frame_rotator);
+            actor.set_relative_rotation("boom", state.pose.boom_rotator);
+            actor.set_relative_rotation("arm", state.pose.arm_rotator);
+            actor.set_relative_rotation("bucket", state.pose.attachment_rotator);
         }
 
         // Print world locations
         {
-            let body_world_location = ctx.actor.world_location("body");
+            let actor = ctx.actor_mut();
+
+            let body_world_location = actor.world_location("body");
             log::debug!("F world location: {:?}", body_world_location);
 
-            let boom_world_location = ctx.actor.world_location("boom");
+            let boom_world_location = actor.world_location("boom");
             log::debug!("B world location: {:?}", boom_world_location);
 
-            let arm_world_location = ctx.actor.world_location("arm");
+            let arm_world_location = actor.world_location("arm");
             log::debug!("A world location: {:?}", arm_world_location);
 
-            let bucket_world_location = ctx.actor.world_location("bucket");
+            let bucket_world_location = actor.world_location("bucket");
             log::debug!("U world location: {:?}", bucket_world_location);
         }
 

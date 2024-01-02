@@ -1,6 +1,32 @@
 use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
 
 #[derive(Default)]
+pub struct ActorBuilder {
+    segments: Vec<(String, ActorSegment)>,
+}
+
+impl ActorBuilder {
+    pub fn new(segments: Vec<(String, ActorSegment)>) -> Self {
+        Self { segments }
+    }
+
+    pub fn attach_segment(&mut self, name: impl ToString, segment: ActorSegment) {
+        self.segments.push((name.to_string(), segment));
+    }
+
+    pub fn build(self) -> Actor {
+        let root = ActorSegment::new(Vector3::new(0.0, 0.0, 0.0));
+
+        Actor {
+            segments: if self.segments.is_empty() {
+                vec![("root".to_string(), root)]
+            } else {
+                self.segments
+            },
+        }
+    }
+}
+
 pub struct Actor {
     segments: Vec<(String, ActorSegment)>,
 }

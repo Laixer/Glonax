@@ -11,7 +11,7 @@ mod controller;
 mod device;
 mod kinematic;
 mod server;
-mod vehicle;
+mod world;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
@@ -170,7 +170,7 @@ async fn main() -> anyhow::Result<()> {
 
     let pipe = glonax::components::Pipeline::new(vec![
         runtime.make_dynamic::<glonax::components::Host>(0),
-        runtime.make_dynamic::<vehicle::Vehicle>(1),
+        runtime.make_dynamic::<world::World>(1),
         runtime.make_dynamic::<kinematic::Kinematic>(2),
         runtime.make_dynamic::<controller::Controller>(3),
     ]);
