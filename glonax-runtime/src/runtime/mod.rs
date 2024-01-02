@@ -41,8 +41,6 @@ pub trait Component<Cnf: Configurable> {
 pub struct ComponentContext {
     /// Motion command sender.
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
-    /// Instance.
-    instance: crate::core::Instance,
     /// World actor.
     actor: Actor,
     /// Actuator values.
@@ -52,13 +50,9 @@ pub struct ComponentContext {
 }
 
 impl ComponentContext {
-    pub fn new(
-        motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
-        instance: crate::core::Instance,
-    ) -> Self {
+    pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
         Self {
             motion_tx,
-            instance,
             actor: ActorBuilder::default().build(),
             actuators: std::collections::HashMap::new(),
             map: std::collections::HashMap::new(),
@@ -70,12 +64,6 @@ impl ComponentContext {
         if let Err(e) = self.motion_tx.try_send(motion) {
             log::error!("Failed to send motion command: {}", e);
         }
-    }
-
-    /// Retrieve the instance.
-    #[inline]
-    pub fn instance(&self) -> &crate::core::Instance {
-        &self.instance
     }
 
     /// Replace the world actor.
@@ -153,6 +141,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
+    // TODO: Add instance to new
     /// Create a dynamic component with the given order.
     ///
     /// This method will create a dynamic component with the given order. The component will be
@@ -187,7 +176,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
 
         let operand = self.operand.clone();
 
-        let mut ctx = ComponentContext::new(self.motion_tx.clone(), self.instance.clone());
+        let mut ctx = ComponentContext::new(self.motion_tx.clone());
         tokio::spawn(async move {
             loop {
                 interval.tick().await;
@@ -212,7 +201,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     {
         let mut interval = tokio::time::interval(duration);
 
-        let mut ctx = ComponentContext::new(self.motion_tx.clone(), self.instance.clone());
+        let mut ctx = ComponentContext::new(self.motion_tx.clone());
         loop {
             interval.tick().await;
             ctx.reset();

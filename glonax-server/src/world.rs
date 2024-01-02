@@ -14,6 +14,7 @@ impl<Cnf: Configurable> Component<Cnf> for World {
     where
         Self: Sized,
     {
+        // TODO: Build the actor from configuration
         Self {
             actor: ActorBuilder::new(vec![
                 (
@@ -41,8 +42,9 @@ impl<Cnf: Configurable> Component<Cnf> for World {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
-        // TODO: Build the actor from configuration
+    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         ctx.replace_actor(self.actor.clone());
+
+        state.target = Some(glonax::core::Target::from_point(300.0, 400.0, 330.0));
     }
 }

@@ -62,6 +62,16 @@ impl Actor {
         }
     }
 
+    pub fn relative_location(&self, name: impl ToString) -> Option<Translation3<f32>> {
+        for (sname, segment) in &self.segments {
+            if sname == &name.to_string() {
+                return Some(segment.location());
+            }
+        }
+
+        None
+    }
+
     pub fn world_location(&self, name: impl ToString) -> Point3<f32> {
         let mut transform = Matrix4::identity();
 
