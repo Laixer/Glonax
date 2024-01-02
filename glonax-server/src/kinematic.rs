@@ -63,44 +63,27 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         // let actor_target_distance = nalgebra::distance(&actor_world_location, &target.point);
         // log::debug!("Actor target distance: {}", actor_target_distance);
 
-        // let target_distance = nalgebra::distance(&boom_world_location, &target.point);
-        // log::debug!("Tri-Arm target distance: {}", target_distance);
+        let target_distance = nalgebra::distance(&boom_world_location, &target.point);
+        log::debug!("Tri-Arm target distance: {}", target_distance);
 
-        // let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
-        // log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
+        let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
+        log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
 
-        // let theta1 = glonax::math::law_of_cosines(boom_length, target_distance, arm_length);
-        // log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
+        let arm_angle = -(std::f32::consts::PI - theta0);
+        log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
 
-        // let arm_angle = -(std::f32::consts::PI - theta0);
-        // log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
-
-        // let yy = nalgebra::Rotation3::look_at_lh(&target.point.coords, &Vector3::y());
-        // log::debug!("YY: {:?}", yy.euler_angles());
+        let theta1 = glonax::math::law_of_cosines(boom_length, target_distance, arm_length);
+        log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
 
         let target_direction = target.point.coords - boom_world_location.coords;
         log::debug!("Target direction: {:?}", target_direction);
 
         let direction_norm = target_direction.normalize();
-        log::debug!("Direction normalized: {:?}", direction_norm);
+        // log::debug!("Direction normalized: {:?}", direction_norm);
 
-        // Target angle X: -10.4698925
-        // Target angle Y: 21.585747
-        // Target angle Z: -51.3402
+        // Correct: X: 0.0 Y: 21.585747 Z: 51.3402
 
-        let target_angle = nalgebra::Rotation3::rotation_between(&direction_norm, &Vector3::x());
-        log::debug!(
-            "Target angle X: {}",
-            target_angle.unwrap().euler_angles().0.to_degrees()
-        );
-        log::debug!(
-            "Target angle Y: {}",
-            target_angle.unwrap().euler_angles().1.to_degrees()
-        );
-        log::debug!(
-            "Target angle Z: {}",
-            target_angle.unwrap().euler_angles().2.to_degrees()
-        );
+        //// MANUAL ////
 
         let pitch = direction_norm
             .z
@@ -110,13 +93,12 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         log::debug!("Pitch: {}deg", pitch.to_degrees());
         log::debug!("Yaw: {}deg", yaw.to_degrees());
 
-        // let qq = nalgebra::Rotation3::face_towards(&target.point.coords, &boom_location.coords);
-        // log::debug!("QQ X: {}", qq.euler_angles().0.to_degrees());
-        // log::debug!("QQ Y: {}", qq.euler_angles().1.to_degrees());
-        // log::debug!("QQ Z: {}", qq.euler_angles().2.to_degrees());
-
-        // let qq = nalgebra::Matrix4::look_at_lh(&boom_location, &target.point, &Vector3::y());
-        // log::debug!("QQ: {:?}", qq);
+        let boom_angle = theta1 + pitch;
+        log::debug!(
+            "Boom angle: {}rad {}deg",
+            boom_angle,
+            boom_angle.to_degrees()
+        );
 
         // ctx.map(
         //     glonax::core::Actuator::Slew as u16,
