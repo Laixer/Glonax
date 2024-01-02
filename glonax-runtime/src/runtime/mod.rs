@@ -1,6 +1,6 @@
 mod error;
 
-use crate::{Configurable, MachineState};
+use crate::{robot::Actor, Configurable, MachineState};
 
 pub use self::error::Error;
 
@@ -40,6 +40,8 @@ pub struct ComponentContext {
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
     /// Instance.
     instance: crate::core::Instance,
+    /// World actor.
+    pub actor: Actor,
     /// Actuator values.
     actuators: std::collections::HashMap<u16, f32>,
     /// Key value store.
@@ -54,6 +56,7 @@ impl ComponentContext {
         Self {
             motion_tx,
             instance,
+            actor: Actor::default(),
             actuators: std::collections::HashMap::new(),
             map: std::collections::HashMap::new(),
         }
@@ -84,6 +87,7 @@ impl ComponentContext {
 
     /// Reset the context.
     fn reset(&mut self) {
+        self.actor = Actor::default();
         self.actuators.clear();
         self.map.clear();
     }

@@ -1,9 +1,7 @@
 use glonax::{
-    robot::{Actor, ActorSegment},
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
-use nalgebra::{Point3, Vector3};
 
 pub struct Kinematic;
 
@@ -15,47 +13,39 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         Self
     }
 
-    // TODO: Calculate the forward kinematics from encoders
-    // TODO: Store the forward kinematics in the context
     // TODO: Calculate the inverse kinematics, if there is a target
     // TODO: Store the inverse kinematics in the context, if there is a target
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        // TODO: Add the robot to the context
-        let mut robot = Actor::default();
-
-        robot.attach_segment(
-            "undercarriage",
-            ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
-        );
-        robot.attach_segment("body", ActorSegment::new(Vector3::new(-4.0, 5.0, 107.0)));
-        robot.attach_segment("boom", ActorSegment::new(Vector3::new(4.0, 20.0, 33.0)));
-        robot.attach_segment("arm", ActorSegment::new(Vector3::new(510.0, 20.0, 5.0)));
-        robot.attach_segment(
-            "bucket",
-            ActorSegment::new(Vector3::new(310.0, -35.0, 45.0)),
-        );
-
+        // Set actor location
         {
-            robot.set_relative_rotation("body", state.pose.frame_rotator);
-            robot.set_relative_rotation("boom", state.pose.boom_rotator);
-            robot.set_relative_rotation("arm", state.pose.arm_rotator);
-            robot.set_relative_rotation("bucket", state.pose.attachment_rotator);
+            // robot.set_location(Vector3::new(80.0, 0.0, 0.0));
         }
 
-        // robot.set_location(Vector3::new(80.0, 0.0, 0.0));
-
+        // Set relative rotations
         {
-            let body_world_location = robot.world_location("body");
+            ctx.actor
+                .set_relative_rotation("body", state.pose.frame_rotator);
+            ctx.actor
+                .set_relative_rotation("boom", state.pose.boom_rotator);
+            ctx.actor
+                .set_relative_rotation("arm", state.pose.arm_rotator);
+            ctx.actor
+                .set_relative_rotation("bucket", state.pose.attachment_rotator);
+        }
+
+        // Print world locations
+        {
+            let body_world_location = ctx.actor.world_location("body");
             log::debug!("F world location: {:?}", body_world_location);
 
-            let boom_world_location = robot.world_location("boom");
+            let boom_world_location = ctx.actor.world_location("boom");
             log::debug!("B world location: {:?}", boom_world_location);
 
-            let arm_world_location = robot.world_location("arm");
+            let arm_world_location = ctx.actor.world_location("arm");
             log::debug!("A world location: {:?}", arm_world_location);
 
-            let bucket_world_location = robot.world_location("bucket");
+            let bucket_world_location = ctx.actor.world_location("bucket");
             log::debug!("U world location: {:?}", bucket_world_location);
         }
 

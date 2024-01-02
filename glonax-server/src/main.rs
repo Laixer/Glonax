@@ -170,8 +170,8 @@ async fn main() -> anyhow::Result<()> {
 
     let pipe = glonax::components::Pipeline::new(vec![
         runtime.make_dynamic::<glonax::components::Host>(0),
-        runtime.make_dynamic::<kinematic::Kinematic>(1),
-        runtime.make_dynamic::<vehicle::Vehicle>(2),
+        runtime.make_dynamic::<vehicle::Vehicle>(1),
+        runtime.make_dynamic::<kinematic::Kinematic>(2),
         runtime.make_dynamic::<controller::Controller>(3),
     ]);
 
