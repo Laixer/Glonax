@@ -11,6 +11,7 @@ pub mod device;
 pub mod math;
 pub mod net;
 pub mod protocol;
+pub mod robot;
 
 #[macro_use]
 extern crate log;
