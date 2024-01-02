@@ -26,7 +26,16 @@ impl Actor {
         self.segments[0].1.set_rotation(rotation);
     }
 
-    pub fn segment_location(&self, name: impl ToString) -> Point3<f32> {
+    pub fn set_relative_rotation(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
+        for (sname, segment) in self.segments.iter_mut() {
+            if sname == &name.to_string() {
+                segment.set_rotation(rotation);
+                break;
+            }
+        }
+    }
+
+    pub fn world_location(&self, name: impl ToString) -> Point3<f32> {
         let mut transform = Matrix4::identity();
 
         for (sname, segment) in self.segments.iter() {

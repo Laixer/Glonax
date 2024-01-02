@@ -38,67 +38,78 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         // robot.set_location(Vector3::new(80.0, 0.0, 0.0));
 
-        // {
-        //     let boom_world_location = robot.segment_location("boom");
-        //     log::debug!("Boom world location: {:?}", boom_world_location);
+        // X=-13.792 Y=22.892 Z=140.000
+        // X=510.000 Y=45.000 Z=145.000
 
-        //     let bucket_world_location = robot.segment_location("bucket");
-        //     log::debug!("Bucket world location: {:?}", bucket_world_location);
-        // }
+        {
+            // robot.set_relative_rotation(
+            //     "body",
+            //     nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 300.0_f32.to_radians()),
+            // );
+            robot.set_relative_rotation(
+                "boom",
+                nalgebra::Rotation3::from_euler_angles(0.0, -30.0_f32.to_radians(), 0.0),
+            );
+
+            let boom_world_location = robot.world_location("boom");
+            log::debug!("B world location: {:?}", boom_world_location);
+
+            let arm_world_location = robot.world_location("arm");
+            log::debug!("A world location: {:?}", arm_world_location);
+
+            let bucket_world_location = robot.world_location("bucket");
+            log::debug!("U world location: {:?}", bucket_world_location);
+        }
 
         /////////////// IF THERE IS A TARGET ///////////////
 
-        let actor_world_location = Point3::from(robot.location().vector);
+        // let actor_world_location = Point3::from(robot.location().vector);
 
-        // TODO: This is a world location, it has already been transformed by the forward kinematics
-        let boom_world_location = Point3::new(0.0, 25.0, 140.0);
-        // TODO: This is given by the machine state
-        let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
+        // // TODO: This is a world location, it has already been transformed by the forward kinematics
+        // let boom_world_location = Point3::new(0.0, 25.0, 140.0);
+        // // TODO: This is given by the machine state
+        // let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
 
-        // TODO: Can ask this from the robot
-        let boom_length = 510.0;
-        // TODO: Can ask this from the robot
-        let arm_length = 310.0;
+        // // TODO: Can ask this from the robot
+        // let boom_length = 510.0;
+        // // TODO: Can ask this from the robot
+        // let arm_length = 310.0;
 
         // let actor_target_distance = nalgebra::distance(&actor_world_location, &target.point);
         // log::debug!("Actor target distance: {}", actor_target_distance);
 
-        let target_distance = nalgebra::distance(&boom_world_location, &target.point);
-        log::debug!("Tri-Arm target distance: {}", target_distance);
+        // let target_distance = nalgebra::distance(&boom_world_location, &target.point);
+        // log::debug!("Tri-Arm target distance: {}", target_distance);
 
-        let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
-        log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
+        // let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
+        // log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
 
-        let arm_angle = -(std::f32::consts::PI - theta0);
-        log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
+        // let arm_angle = -(std::f32::consts::PI - theta0);
+        // log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
 
-        let theta1 = glonax::math::law_of_cosines(boom_length, target_distance, arm_length);
-        log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
+        // let theta1 = glonax::math::law_of_cosines(boom_length, target_distance, arm_length);
+        // log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
 
-        let target_direction = target.point.coords - boom_world_location.coords;
-        log::debug!("Target direction: {:?}", target_direction);
+        // let target_direction = target.point.coords - boom_world_location.coords;
+        // // log::debug!("Target direction: {:?}", target_direction);
 
-        let direction_norm = target_direction.normalize();
-        // log::debug!("Direction normalized: {:?}", direction_norm);
+        // let direction_norm = target_direction.normalize();
+        // // log::debug!("Direction normalized: {:?}", direction_norm);
 
-        // Correct: X: 0.0 Y: 21.585747 Z: 51.3402
+        // let pitch = direction_norm
+        //     .z
+        //     .atan2((direction_norm.x.powi(2) + direction_norm.y.powi(2)).sqrt());
+        // let yaw = direction_norm.y.atan2(direction_norm.x);
 
-        //// MANUAL ////
+        // log::debug!("Pitch: {}deg", pitch.to_degrees());
+        // log::debug!("Yaw: {}deg", yaw.to_degrees());
 
-        let pitch = direction_norm
-            .z
-            .atan2((direction_norm.x.powi(2) + direction_norm.y.powi(2)).sqrt());
-        let yaw = direction_norm.y.atan2(direction_norm.x);
-
-        log::debug!("Pitch: {}deg", pitch.to_degrees());
-        log::debug!("Yaw: {}deg", yaw.to_degrees());
-
-        let boom_angle = theta1 + pitch;
-        log::debug!(
-            "Boom angle: {}rad {}deg",
-            boom_angle,
-            boom_angle.to_degrees()
-        );
+        // let boom_angle = theta1 + pitch;
+        // log::debug!(
+        //     "Boom angle: {}rad {}deg",
+        //     boom_angle,
+        //     boom_angle.to_degrees()
+        // );
 
         // ctx.map(
         //     glonax::core::Actuator::Slew as u16,
