@@ -36,20 +36,18 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             ActorSegment::new(Vector3::new(310.0, -35.0, 45.0)),
         );
 
+        {
+            robot.set_relative_rotation("body", state.pose.frame_rotator);
+            robot.set_relative_rotation("boom", state.pose.boom_rotator);
+            robot.set_relative_rotation("arm", state.pose.arm_rotator);
+            robot.set_relative_rotation("bucket", state.pose.attachment_rotator);
+        }
+
         // robot.set_location(Vector3::new(80.0, 0.0, 0.0));
 
-        // X=-13.792 Y=22.892 Z=140.000
-        // X=510.000 Y=45.000 Z=145.000
-
         {
-            // robot.set_relative_rotation(
-            //     "body",
-            //     nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 300.0_f32.to_radians()),
-            // );
-            robot.set_relative_rotation(
-                "boom",
-                nalgebra::Rotation3::from_euler_angles(0.0, -30.0_f32.to_radians(), 0.0),
-            );
+            let body_world_location = robot.world_location("body");
+            log::debug!("F world location: {:?}", body_world_location);
 
             let boom_world_location = robot.world_location("boom");
             log::debug!("B world location: {:?}", boom_world_location);
