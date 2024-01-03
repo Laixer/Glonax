@@ -23,31 +23,97 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             let actor = ctx.world_mut().get_actor_mut(ACTOR_SELF).unwrap();
 
             {
-                let r = state.pose.frame_rotator.euler_angles().0.to_degrees();
-                let p = state.pose.frame_rotator.euler_angles().1.to_degrees();
-                let y = state.pose.frame_rotator.euler_angles().2.to_degrees();
-                log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                // let r = state.pose.frame_rotator.euler_angles().0.to_degrees();
+                // let p = state.pose.frame_rotator.euler_angles().1.to_degrees();
+                // let y = state.pose.frame_rotator.euler_angles().2.to_degrees();
+                // log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+
+                if let Some(value) = state.encoders.get(&0x6A) {
+                    log::debug!("Body encoder: {}", value);
+
+                    let frame_enc_conv = glonax::device::EncoderConverter::new(
+                        1000.0,
+                        0.0,
+                        true,
+                        nalgebra::Vector3::z_axis(),
+                    );
+
+                    let frame_rotator = frame_enc_conv.to_rotation(*value as u32);
+
+                    let r = frame_rotator.euler_angles().0.to_degrees();
+                    let p = frame_rotator.euler_angles().1.to_degrees();
+                    let y = frame_rotator.euler_angles().2.to_degrees();
+
+                    log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                }
             }
 
             {
-                let r = state.pose.boom_rotator.euler_angles().0.to_degrees();
-                let p = state.pose.boom_rotator.euler_angles().1.to_degrees();
-                let y = state.pose.boom_rotator.euler_angles().2.to_degrees();
-                log::debug!("Boom: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                // let r = state.pose.boom_rotator.euler_angles().0.to_degrees();
+                // let p = state.pose.boom_rotator.euler_angles().1.to_degrees();
+                // let y = state.pose.boom_rotator.euler_angles().2.to_degrees();
+                // log::debug!("Boom: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+
+                if let Some(value) = state.encoders.get(&0x6B) {
+                    log::debug!("Boom encoder: {}", value);
+
+                    // let offset = 60_f32.to_radians();
+                    // let position = position as f32 / 1000.0;
+                    // let position = (position - offset) * -1.0;
+                    // self.boom_rotator = Rotation3::from_euler_angles(0.0, position, 0.0);
+                }
             }
 
             {
-                let r = state.pose.arm_rotator.euler_angles().0.to_degrees();
-                let p = state.pose.arm_rotator.euler_angles().1.to_degrees();
-                let y = state.pose.arm_rotator.euler_angles().2.to_degrees();
-                log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                // let r = state.pose.arm_rotator.euler_angles().0.to_degrees();
+                // let p = state.pose.arm_rotator.euler_angles().1.to_degrees();
+                // let y = state.pose.arm_rotator.euler_angles().2.to_degrees();
+                // log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+
+                if let Some(value) = state.encoders.get(&0x6C) {
+                    log::debug!("Arm encoder: {}", value);
+
+                    let arm_enc_conv = glonax::device::EncoderConverter::new(
+                        1000.0,
+                        0.0,
+                        true,
+                        nalgebra::Vector3::y_axis(),
+                    );
+
+                    let arm_rotator = arm_enc_conv.to_rotation(*value as u32);
+
+                    let r = arm_rotator.euler_angles().0.to_degrees();
+                    let p = arm_rotator.euler_angles().1.to_degrees();
+                    let y = arm_rotator.euler_angles().2.to_degrees();
+
+                    log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                }
             }
 
             {
-                let r = state.pose.attachment_rotator.euler_angles().0.to_degrees();
-                let p = state.pose.attachment_rotator.euler_angles().1.to_degrees();
-                let y = state.pose.attachment_rotator.euler_angles().2.to_degrees();
-                log::debug!("Bucket: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                // let r = state.pose.attachment_rotator.euler_angles().0.to_degrees();
+                // let p = state.pose.attachment_rotator.euler_angles().1.to_degrees();
+                // let y = state.pose.attachment_rotator.euler_angles().2.to_degrees();
+                // log::debug!("Bucket: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+
+                if let Some(value) = state.encoders.get(&0x6D) {
+                    log::debug!("Attachment encoder: {}", value);
+
+                    let attachment_enc_conv = glonax::device::EncoderConverter::new(
+                        1000.0,
+                        0.0,
+                        true,
+                        nalgebra::Vector3::y_axis(),
+                    );
+
+                    let attachment_rotator = attachment_enc_conv.to_rotation(*value as u32);
+
+                    let r = attachment_rotator.euler_angles().0.to_degrees();
+                    let p = attachment_rotator.euler_angles().1.to_degrees();
+                    let y = attachment_rotator.euler_angles().2.to_degrees();
+
+                    log::debug!("Attachment: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                }
             }
 
             actor.set_relative_rotation("body", state.pose.frame_rotator);
