@@ -36,4 +36,11 @@ impl EncoderConverter {
 
         Rotation3::from_axis_angle(&self.axis, position)
     }
+
+    // TODO: This is incomplete
+    pub fn from_rotation(&self, rotation: Rotation3<f32>) -> u32 {
+        let position = (std::f32::consts::PI * 2.0) - rotation.angle();
+
+        ((position + self.offset) * self.factor) as u32
+    }
 }
