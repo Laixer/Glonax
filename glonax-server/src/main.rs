@@ -146,6 +146,8 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_io_service(device::service_gnss);
     }
 
+    runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(200));
+
     if config.simulation {
         log::info!("Running in simulation mode");
 
@@ -169,10 +171,9 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_motion_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![
-        runtime.make_dynamic::<glonax::components::Host>(0),
-        runtime.make_dynamic::<world::World>(1),
-        runtime.make_dynamic::<kinematic::Kinematic>(2),
-        runtime.make_dynamic::<controller::Controller>(3),
+        runtime.make_dynamic::<world::World>(0),
+        runtime.make_dynamic::<kinematic::Kinematic>(1),
+        runtime.make_dynamic::<controller::Controller>(2),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;

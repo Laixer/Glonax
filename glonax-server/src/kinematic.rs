@@ -34,7 +34,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         // Print segment world locations
         {
-            let actor = ctx.actor_mut();
+            let actor = ctx.actor();
 
             let body_world_location = actor.world_location("body");
             log::debug!("FRAM world location: {:?}", body_world_location);
@@ -52,7 +52,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         /////////////// IF THERE IS A TARGET ///////////////
 
         if let Some(target) = &state.target {
-            let actor = ctx.actor_mut();
+            let actor = ctx.actor();
 
             let actor_target_distance = nalgebra::distance(&actor.location(), &target.point);
             log::debug!("Actor target distance: {}", actor_target_distance);
@@ -66,7 +66,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         }
 
         if let Some(target) = &state.target {
-            let actor = ctx.actor_mut();
+            let actor = ctx.actor();
 
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);

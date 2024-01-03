@@ -74,6 +74,12 @@ impl ComponentContext {
         &mut self.actor
     }
 
+    /// Retrieve the world actor.
+    #[inline]
+    pub fn actor(&self) -> &Actor {
+        &self.actor
+    }
+
     /// Insert a value into the context.
     #[inline]
     pub fn map(&mut self, key: u16, value: f32) {
