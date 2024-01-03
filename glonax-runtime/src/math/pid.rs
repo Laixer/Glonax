@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 struct Pid {
     /// Proportional gain
     kp: f32,
@@ -11,6 +12,7 @@ struct Pid {
     integral: f32,
 }
 
+#[allow(dead_code)]
 impl Pid {
     /// Constructor to create a new PID controller
     pub fn new(kp: f32, ki: f32, kd: f32) -> Pid {
