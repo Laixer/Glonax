@@ -33,12 +33,8 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn attach_segment(&mut self, name: impl ToString, segment: ActorSegment) {
-        self.segments.push((name.to_string(), segment));
-    }
-
-    pub fn location(&self) -> Translation3<f32> {
-        self.segments[0].1.location()
+    pub fn location(&self) -> Vector3<f32> {
+        self.segments[0].1.location().vector
     }
 
     pub fn rotation(&self) -> Rotation3<f32> {

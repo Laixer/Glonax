@@ -55,16 +55,14 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         if let Some(target) = &state.target {
             let actor = ctx.actor_mut();
 
-            let actor_world_location = Point3::from(actor.location().vector);
-
-            let actor_target_distance = nalgebra::distance(&actor_world_location, &target.point);
+            let actor_target_distance = nalgebra::distance(&actor.location().into(), &target.point);
             log::debug!("Actor target distance: {}", actor_target_distance);
 
             let boom_vector = actor.relative_location("boom").unwrap().vector;
 
             let tt = target.point - boom_vector;
 
-            let kinematic_target_distance = nalgebra::distance(&actor_world_location, &tt);
+            let kinematic_target_distance = nalgebra::distance(&actor.location().into(), &tt);
             log::debug!("Kinematic target distance: {}", kinematic_target_distance);
         }
 
