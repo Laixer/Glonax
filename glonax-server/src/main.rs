@@ -171,7 +171,7 @@ async fn main() -> anyhow::Result<()> {
     runtime.spawn_motion_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![
-        runtime.make_dynamic::<world::World>(0),
+        runtime.make_dynamic::<world::WorldBuilder>(0),
         runtime.make_dynamic::<kinematic::Kinematic>(1),
         runtime.make_dynamic::<controller::Controller>(2),
     ]);

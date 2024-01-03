@@ -47,11 +47,6 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
             attachment_error
         );
 
-        // let frame_value = linear_motion(frame_error, 0.01, 5_000.0, 12_000.0, false);
-        // let boom_value = linear_motion(boom_error, 0.01, 5_000.0, 12_000.0, false);
-        // let arm_value = linear_motion(arm_error, 0.01, 5_000.0, 12_000.0, false);
-        // let attachment_value = linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
-
         let _frame_value = self.frame_profile.update(frame_error);
         let _boom_value = self.boom_profile.update(boom_error);
         let _arm_value = self.arm_profile.update(arm_error);

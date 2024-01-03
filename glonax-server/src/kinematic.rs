@@ -3,6 +3,8 @@ use glonax::{
     Configurable, MachineState,
 };
 
+const ACTOR_SELF: usize = 0;
+
 pub struct Kinematic;
 
 impl<Cnf: Configurable> Component<Cnf> for Kinematic {
@@ -15,16 +17,9 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        // Set actor location
-        {
-            let _actor = ctx.actor_mut();
-
-            // actor.set_location(Vector3::new(80.0, 0.0, 0.0));
-        }
-
         // Set relative rotations
         {
-            let actor = ctx.actor_mut();
+            let actor = ctx.world_mut().get_actor_mut(ACTOR_SELF).unwrap();
 
             {
                 let r = state.pose.frame_rotator.euler_angles().0.to_degrees();
@@ -62,7 +57,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         // Print segment world locations
         {
-            let actor = ctx.actor();
+            let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
 
             let body_world_location = actor.world_location("body");
             log::debug!("FRAM world location: {:?}", body_world_location);
@@ -80,7 +75,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         /////////////// IF THERE IS A TARGET ///////////////
 
         if let Some(target) = &state.target {
-            let actor = ctx.actor();
+            let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
 
             let actor_target_distance = nalgebra::distance(&actor.location(), &target.point);
             log::debug!("Actor target distance: {}", actor_target_distance);
@@ -94,7 +89,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         }
 
         if let Some(target) = &state.target {
-            let actor = ctx.actor();
+            let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
 
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);

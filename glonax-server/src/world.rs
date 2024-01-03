@@ -1,15 +1,15 @@
 use glonax::{
-    robot::{Actor, ActorBuilder, ActorSegment},
     runtime::{Component, ComponentContext},
+    world::{Actor, ActorBuilder, ActorSegment},
     Configurable, MachineState,
 };
 use nalgebra::Vector3;
 
-pub struct World {
+pub struct WorldBuilder {
     actor: Actor,
 }
 
-impl<Cnf: Configurable> Component<Cnf> for World {
+impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -33,7 +33,7 @@ impl<Cnf: Configurable> Component<Cnf> for World {
     }
 
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        ctx.replace_actor(self.actor.clone());
+        ctx.world_mut().add_actor(self.actor.clone());
 
         state.target = Some(glonax::core::Target::from_point(300.0, 400.0, 330.0));
     }

@@ -1,9 +1,6 @@
 mod error;
 
-use crate::{
-    robot::{Actor, ActorBuilder},
-    Configurable, MachineState,
-};
+use crate::{world::World, Configurable, MachineState};
 
 pub use self::error::Error;
 
@@ -41,8 +38,8 @@ pub trait Component<Cnf: Configurable> {
 pub struct ComponentContext {
     /// Motion command sender.
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
-    /// World actor.
-    actor: Actor,
+    /// World.
+    world: World,
     /// Actuator values.
     actuators: std::collections::HashMap<u16, f32>,
 }
@@ -51,7 +48,7 @@ impl ComponentContext {
     pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
         Self {
             motion_tx,
-            actor: ActorBuilder::default().build(),
+            world: World::default(),
             actuators: std::collections::HashMap::new(),
         }
     }
@@ -63,21 +60,16 @@ impl ComponentContext {
         }
     }
 
-    /// Replace the world actor.
-    pub fn replace_actor(&mut self, actor: Actor) {
-        self.actor = actor;
+    /// Retrieve the world mutably.
+    #[inline]
+    pub fn world_mut(&mut self) -> &mut World {
+        &mut self.world
     }
 
-    /// Retrieve the world actor.
+    /// Retrieve the world.
     #[inline]
-    pub fn actor_mut(&mut self) -> &mut Actor {
-        &mut self.actor
-    }
-
-    /// Retrieve the world actor.
-    #[inline]
-    pub fn actor(&self) -> &Actor {
-        &self.actor
+    pub fn world(&self) -> &World {
+        &self.world
     }
 
     /// Insert a value into the context.
@@ -94,7 +86,7 @@ impl ComponentContext {
 
     /// Reset the context.
     fn reset(&mut self) {
-        self.actor = ActorBuilder::default().build();
+        self.world.clear();
         self.actuators.clear();
     }
 }
