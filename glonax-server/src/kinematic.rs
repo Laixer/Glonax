@@ -2,6 +2,7 @@ use glonax::{
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
+use nalgebra::Point3;
 
 const ACTOR_SELF: usize = 0;
 
@@ -74,17 +75,21 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
         /////////////// IF THERE IS A TARGET ///////////////
 
+        // Print distances
         if let Some(target) = &state.target {
             let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
+
+            let actor_world_distance =
+                nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));
+            log::debug!("Actor world distance: {}", actor_world_distance);
 
             let actor_target_distance = nalgebra::distance(&actor.location(), &target.point);
             log::debug!("Actor target distance: {}", actor_target_distance);
 
             let boom_point = actor.relative_location("boom").unwrap();
 
-            let tt = target.point - boom_point.coords;
-
-            let kinematic_target_distance = nalgebra::distance(&actor.location(), &tt);
+            let kinematic_target_distance =
+                nalgebra::distance(&actor.location(), &(target.point - boom_point.coords));
             log::debug!("Kinematic target distance: {}", kinematic_target_distance);
         }
 

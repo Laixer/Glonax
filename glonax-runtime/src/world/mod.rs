@@ -123,23 +123,38 @@ impl ActorSegment {
         }
     }
 
+    #[inline]
     pub fn location(&self) -> Point3<f32> {
         self.isometry.translation.vector.into()
     }
 
+    #[inline]
     pub fn rotation(&self) -> Rotation3<f32> {
         self.isometry.rotation
     }
 
+    #[inline]
     pub fn transformation(&self) -> Matrix4<f32> {
         self.isometry.to_homogeneous()
     }
 
+    #[inline]
     pub fn set_location(&mut self, location: Vector3<f32>) {
         self.isometry.translation = Translation3::from(location);
     }
 
+    #[inline]
     pub fn set_rotation(&mut self, rotation: Rotation3<f32>) {
         self.isometry.rotation = rotation;
+    }
+
+    #[inline]
+    pub fn add_location(&mut self, location: Vector3<f32>) {
+        self.isometry.translation.vector += location;
+    }
+
+    #[inline]
+    pub fn add_rotation(&mut self, rotation: Rotation3<f32>) {
+        self.isometry.rotation *= rotation;
     }
 }
