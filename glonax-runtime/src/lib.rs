@@ -64,7 +64,7 @@ pub struct MachineState {
     /// Pose data.
     pub pose: core::Pose,
     /// Encoder data.
-    pub encoders: nalgebra::Rotation3<f32>,
+    pub encoders: std::collections::HashMap<u8, f32>,
     /// Target position.
     pub target: Option<core::Target>,
     /// Electronic control unit data.

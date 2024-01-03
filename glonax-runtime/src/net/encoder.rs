@@ -31,6 +31,7 @@ impl std::fmt::Display for EncoderState {
     }
 }
 
+// TODO: This may not be necessary
 #[derive(Debug, Clone)]
 pub struct EncoderMessage {
     /// Node ID.
@@ -128,19 +129,6 @@ impl EncoderMessage {
 
         vec![frame_builder.set_len(8).build()]
     }
-
-    // pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
-    //     local_runtime_state
-    //         .write()
-    //         .await
-    //         .state
-    //         .pose_mut()
-    //         .set_node_position(self.node, self.position);
-    // }
-
-    pub fn fill2(&self, pose_state: &mut crate::core::Pose) {
-        pose_state.set_node_position(self.node, self.position);
-    }
 }
 
 impl std::fmt::Display for EncoderMessage {
@@ -156,84 +144,6 @@ impl std::fmt::Display for EncoderMessage {
                 .as_ref()
                 .map_or_else(|| "-".to_owned(), |f| f.to_string()),
         )
-    }
-}
-
-pub struct Encoder {
-    rng: rand::rngs::OsRng,
-    position: u32,
-    factor: i16,
-    bounds: (i16, i16),
-    multiturn: bool,
-    invert: bool,
-}
-
-impl Encoder {
-    pub fn new(factor: i16, bounds: (i16, i16), multiturn: bool, invert: bool) -> Self {
-        Self {
-            rng: rand::rngs::OsRng,
-            position: bounds.0 as u32, // TODO: Remove, we dont keep track of position here
-            factor,
-            bounds,
-            multiturn,
-            invert,
-        }
-    }
-
-    pub fn update_position(&mut self, velocity: i16, jitter: bool) -> u32 {
-        use rand::Rng;
-
-        let velocity_norm = velocity / self.factor;
-        let velocity_norm = if self.invert {
-            -velocity_norm
-        } else {
-            velocity_norm
-        };
-
-        if self.multiturn {
-            let mut position = (self.position as i16 + velocity_norm) % self.bounds.1;
-            if position < 0 {
-                position += self.bounds.1;
-            }
-            self.position = position as u32;
-        } else {
-            let mut position =
-                (self.position as i16 + velocity_norm).clamp(self.bounds.0, self.bounds.1);
-            if position < 0 {
-                position += self.bounds.1;
-            }
-            self.position = position as u32;
-        }
-
-        if jitter && self.position < self.bounds.1 as u32 && self.position > 0 {
-            self.position + self.rng.gen_range(0..=1)
-        } else {
-            self.position
-        }
-    }
-
-    // TODO: Add optional jitter
-    pub fn position(&self, possie: u32, velocity: i16) -> u32 {
-        let velocity_norm = velocity / self.factor;
-        let velocity_norm = if self.invert {
-            -velocity_norm
-        } else {
-            velocity_norm
-        };
-
-        if self.multiturn {
-            let mut position = (possie as i16 + velocity_norm) % self.bounds.1;
-            if position < 0 {
-                position += self.bounds.1;
-            }
-            position as u32
-        } else {
-            let mut position = (possie as i16 + velocity_norm).clamp(self.bounds.0, self.bounds.1);
-            if position < 0 {
-                position += self.bounds.1;
-            }
-            position as u32
-        }
     }
 }
 

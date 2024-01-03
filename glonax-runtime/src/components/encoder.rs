@@ -1,12 +1,12 @@
 use crate::{
     core::Actuator,
-    net::{Encoder, EncoderMessage},
+    device::VirtualEncoder,
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
 
 pub struct EncoderSimulator {
-    control_devices: [(u8, Actuator, Encoder); 4],
+    control_devices: [(u8, Actuator, VirtualEncoder); 4],
 }
 
 impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
@@ -16,12 +16,11 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
     {
         log::debug!("Starting encoder simulator component");
 
-        let encoder_frame = Encoder::new(2_500, (0, 6_280), true, false);
-        let encoder_boom = Encoder::new(5_000, (0, 1_832), false, false);
-        let encoder_arm = Encoder::new(5_000, (685, 2_760), false, true);
-        let encoder_attachment = Encoder::new(5_000, (0, 3_100), false, false);
+        let encoder_frame = VirtualEncoder::new(2_500, (0, 6_280), true, false);
+        let encoder_boom = VirtualEncoder::new(5_000, (0, 1_832), false, false);
+        let encoder_arm = VirtualEncoder::new(5_000, (685, 2_760), false, true);
+        let encoder_attachment = VirtualEncoder::new(5_000, (0, 3_100), false, false);
 
-        // TODO: Make this into a struct and move it to /robot
         let control_devices = [
             (0x6A, Actuator::Slew, encoder_frame),
             (0x6B, Actuator::Boom, encoder_boom),
@@ -33,15 +32,21 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
     }
 
     fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
-        for (id, actuator, encoder) in self.control_devices.iter_mut() {
-            let velocity = state.ecu_state.speed(actuator);
-            let position = state.ecu_state.position(actuator);
+        // for (id, actuator, encoder) in self.control_devices.iter_mut() {
+        //     let velocity = state.ecu_state.speed(actuator);
+        //     let position = state.ecu_state.position(actuator);
 
-            let position = encoder.position(position, velocity);
+        // let position = encoder.position(position, velocity);
 
-            EncoderMessage::from_position(*id, position).fill2(&mut state.pose);
+        // EncoderMessage::from_position(*id, position).fill2(&mut state.pose);
 
-            state.ecu_state.set_position(actuator, position);
-        }
+        // state.ecu_state.set_position(actuator, position);
+        // }
+
+        let frame = &mut self.control_devices[0];
+        let position = frame.2.position_from_angle(340_f32.to_radians());
+
+        state.encoders.insert(frame.0, position as f32);
+        state.pose.set_node_position(frame.0, position);
     }
 }
