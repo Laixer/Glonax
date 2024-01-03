@@ -3,13 +3,11 @@ use std::io;
 use glonax_j1939::*;
 
 pub use actuator::*;
-pub use encoder::*;
 pub use engine::*;
 pub use nmea::*;
 pub use service::*;
 
 mod actuator;
-mod encoder;
 mod engine;
 mod nmea;
 mod service;

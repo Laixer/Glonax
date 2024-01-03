@@ -5,7 +5,8 @@ use crate::config::ProxyConfig;
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
 pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedOperandState) {
-    use glonax::net::{EncoderService, J1939Network, Router};
+    use glonax::device::KueblerEncoder;
+    use glonax::net::{J1939Network, Router};
 
     log::debug!("Starting encoder service");
 
@@ -17,10 +18,10 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
             let mut router = Router::new(network);
 
             let mut encoder_list = vec![
-                EncoderService::new(0x6A),
-                EncoderService::new(0x6B),
-                EncoderService::new(0x6C),
-                EncoderService::new(0x6D),
+                KueblerEncoder::new(0x6A),
+                KueblerEncoder::new(0x6B),
+                KueblerEncoder::new(0x6C),
+                KueblerEncoder::new(0x6D),
             ];
 
             loop {

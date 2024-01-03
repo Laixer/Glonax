@@ -6,7 +6,7 @@
 
 use ansi_term::Colour::{Blue, Green, Purple, Red, Yellow};
 use clap::Parser;
-use glonax::net::*;
+use glonax::{device::KueblerEncoder, net::*};
 
 use log::{debug, info};
 
@@ -41,10 +41,10 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut engine_management_service = EngineManagementSystem;
-    let mut frame_encoder = EncoderService::new(0x6A);
-    let mut boom_encoder = EncoderService::new(0x6B);
-    let mut arm_encoder = EncoderService::new(0x6C);
-    let mut attachment_encoder = EncoderService::new(0x6D);
+    let mut frame_encoder = KueblerEncoder::new(0x6A);
+    let mut boom_encoder = KueblerEncoder::new(0x6B);
+    let mut arm_encoder = KueblerEncoder::new(0x6C);
+    let mut attachment_encoder = KueblerEncoder::new(0x6D);
     let mut hcu = ActuatorService::new(0x4A);
     let mut app_inspector = J1939ApplicationInspector;
 

@@ -1,6 +1,6 @@
 use glonax_j1939::*;
 
-use super::Parsable;
+use crate::net::Parsable;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EncoderState {
@@ -147,19 +147,19 @@ impl std::fmt::Display for EncoderMessage {
     }
 }
 
-pub struct EncoderService {
+pub struct KueblerEncoder {
     /// Node ID.
     node: u8,
 }
 
-impl EncoderService {
+impl KueblerEncoder {
     /// Construct a new encoder service.
     pub fn new(node: u8) -> Self {
         Self { node }
     }
 }
 
-impl Parsable<EncoderMessage> for EncoderService {
+impl Parsable<EncoderMessage> for KueblerEncoder {
     fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
         if frame.len() != 8 {
             return None;
