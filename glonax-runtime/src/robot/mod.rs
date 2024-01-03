@@ -34,8 +34,8 @@ pub struct Actor {
 }
 
 impl Actor {
-    pub fn location(&self) -> Vector3<f32> {
-        self.segments[0].1.location().vector
+    pub fn location(&self) -> Point3<f32> {
+        self.segments[0].1.location().vector.into()
     }
 
     pub fn rotation(&self) -> Rotation3<f32> {
@@ -59,10 +59,10 @@ impl Actor {
         }
     }
 
-    pub fn relative_location(&self, name: impl ToString) -> Option<Translation3<f32>> {
+    pub fn relative_location(&self, name: impl ToString) -> Option<Point3<f32>> {
         for (sname, segment) in &self.segments {
             if sname == &name.to_string() {
-                return Some(segment.location());
+                return Some(segment.location().vector.into());
             }
         }
 

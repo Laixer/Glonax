@@ -54,24 +54,24 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         if let Some(target) = &state.target {
             let actor = ctx.actor_mut();
 
-            let actor_target_distance = nalgebra::distance(&actor.location().into(), &target.point);
+            let actor_target_distance = nalgebra::distance(&actor.location(), &target.point);
             log::debug!("Actor target distance: {}", actor_target_distance);
 
-            let boom_vector = actor.relative_location("boom").unwrap().vector;
+            let boom_point = actor.relative_location("boom").unwrap();
 
-            let tt = target.point - boom_vector;
+            let tt = target.point - boom_point.coords;
 
-            let kinematic_target_distance = nalgebra::distance(&actor.location().into(), &tt);
+            let kinematic_target_distance = nalgebra::distance(&actor.location(), &tt);
             log::debug!("Kinematic target distance: {}", kinematic_target_distance);
         }
 
         if let Some(target) = &state.target {
             let actor = ctx.actor_mut();
 
-            let boom_length = actor.relative_location("arm").unwrap().vector.x;
+            let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);
 
-            let arm_length = actor.relative_location("bucket").unwrap().vector.x;
+            let arm_length = actor.relative_location("bucket").unwrap().x;
             // log::debug!("Arm length: {:?}", arm_length);
 
             let boom_world_location = actor.world_location("boom");
