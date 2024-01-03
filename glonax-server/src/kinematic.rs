@@ -26,6 +26,34 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         {
             let actor = ctx.actor_mut();
 
+            {
+                let r = state.pose.frame_rotator.euler_angles().0.to_degrees();
+                let p = state.pose.frame_rotator.euler_angles().1.to_degrees();
+                let y = state.pose.frame_rotator.euler_angles().2.to_degrees();
+                log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+            }
+
+            {
+                let r = state.pose.boom_rotator.euler_angles().0.to_degrees();
+                let p = state.pose.boom_rotator.euler_angles().1.to_degrees();
+                let y = state.pose.boom_rotator.euler_angles().2.to_degrees();
+                log::debug!("Boom: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+            }
+
+            {
+                let r = state.pose.arm_rotator.euler_angles().0.to_degrees();
+                let p = state.pose.arm_rotator.euler_angles().1.to_degrees();
+                let y = state.pose.arm_rotator.euler_angles().2.to_degrees();
+                log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+            }
+
+            {
+                let r = state.pose.attachment_rotator.euler_angles().0.to_degrees();
+                let p = state.pose.attachment_rotator.euler_angles().1.to_degrees();
+                let y = state.pose.attachment_rotator.euler_angles().2.to_degrees();
+                log::debug!("Bucket: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+            }
+
             actor.set_relative_rotation("body", state.pose.frame_rotator);
             actor.set_relative_rotation("boom", state.pose.boom_rotator);
             actor.set_relative_rotation("arm", state.pose.arm_rotator);
