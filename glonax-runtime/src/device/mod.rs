@@ -1,9 +1,8 @@
 pub use error::{DeviceError, ErrorKind, Result};
-pub use vencoder::VirtualEncoder;
-pub use vhcu::VirtualHCU;
-pub use encoder::KueblerEncoder;
+pub use hardware::encoder::KueblerEncoder;
+pub use r#virtual::encoder::VirtualEncoder;
+pub use r#virtual::hcu::VirtualHCU;
 
-mod encoder;
 mod error;
-mod vencoder;
-mod vhcu;
+mod hardware;
+mod r#virtual;
