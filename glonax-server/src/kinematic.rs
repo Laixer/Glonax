@@ -14,8 +14,6 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         Self
     }
 
-    // TODO: Calculate the inverse kinematics, if there is a target
-    // TODO: Store the inverse kinematics in the context, if there is a target
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         // Set actor location
@@ -61,16 +59,23 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
             let actor_target_distance = nalgebra::distance(&actor_world_location, &target.point);
             log::debug!("Actor target distance: {}", actor_target_distance);
+
+            let boom_vector = actor.relative_location("boom").unwrap().vector;
+
+            let tt = target.point - boom_vector;
+
+            let kinematic_target_distance = nalgebra::distance(&actor_world_location, &tt);
+            log::debug!("Kinematic target distance: {}", kinematic_target_distance);
         }
 
         if let Some(target) = &state.target {
             let actor = ctx.actor_mut();
 
             let boom_length = actor.relative_location("arm").unwrap().vector.x;
-            log::debug!("Boom length: {:?}", boom_length);
+            // log::debug!("Boom length: {:?}", boom_length);
 
             let arm_length = actor.relative_location("bucket").unwrap().vector.x;
-            log::debug!("Arm length: {:?}", arm_length);
+            // log::debug!("Arm length: {:?}", arm_length);
 
             let boom_world_location = actor.world_location("boom");
 
@@ -82,7 +87,11 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             /////////////// SLEW YAW ANGLE ///////////////
 
             let slew_angle = target_direction.y.atan2(target_direction.x);
-            log::debug!("Slew angle: {}deg", slew_angle.to_degrees());
+            log::debug!(
+                "  Slew angle: {:.3}rad {:.2}deg",
+                slew_angle,
+                slew_angle.to_degrees()
+            );
 
             ctx.map(glonax::core::Actuator::Slew as u16, slew_angle);
 
@@ -98,7 +107,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
             let boom_angle = theta1 + pitch;
             log::debug!(
-                "Boom angle: {}rad {}deg",
+                "  Boom angle: {:.3}rad {:.2}deg",
                 boom_angle,
                 boom_angle.to_degrees()
             );
@@ -111,7 +120,11 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             // log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
 
             let arm_angle = -(std::f32::consts::PI - theta0);
-            log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
+            log::debug!(
+                "  Arm angle: {:.3}rad {:.2}deg",
+                arm_angle,
+                arm_angle.to_degrees()
+            );
 
             ctx.map(glonax::core::Actuator::Arm as u16, arm_angle);
         }
