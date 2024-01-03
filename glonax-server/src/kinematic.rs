@@ -2,7 +2,6 @@ use glonax::{
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };
-use nalgebra::Point3;
 
 pub struct Kinematic;
 

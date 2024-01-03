@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 pub use geometry::*;
+pub use lin::*;
 pub use pid::*;
 
 mod geometry;

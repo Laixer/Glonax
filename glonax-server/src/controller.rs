@@ -32,10 +32,15 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
             attachment_error
         );
 
-        // let frame_value = linear_motion(frame_error, 0.01, 5_000.0, 12_000.0, false);
-        // let boom_value = linear_motion(boom_error, 0.01, 5_000.0, 12_000.0, false);
-        // let arm_value = linear_motion(arm_error, 0.01, 5_000.0, 12_000.0, false);
-        // let attachment_value = linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
+        let frame_profile = glonax::math::Linear::new(12_000.0, 5_000.0, false);
+        let boom_profile = glonax::math::Linear::new(12_000.0, 5_000.0, false);
+        let arm_profile = glonax::math::Linear::new(12_000.0, 5_000.0, true);
+        let attachment_profile = glonax::math::Linear::new(12_000.0, 5_000.0, true);
+
+        let frame_value = linear_motion(frame_error, 0.01, 5_000.0, 12_000.0, false);
+        let boom_value = linear_motion(boom_error, 0.01, 5_000.0, 12_000.0, false);
+        let arm_value = linear_motion(arm_error, 0.01, 5_000.0, 12_000.0, false);
+        let attachment_value = linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
 
         // let is_tri_arm_done = frame_value.is_none() && boom_value.is_none() && arm_value.is_none();
         // let is_done = is_tri_arm_done && attachment_value.is_none();

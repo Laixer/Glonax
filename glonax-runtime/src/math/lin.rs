@@ -1,4 +1,4 @@
-struct Linear {
+pub struct Linear {
     /// Proportional gain
     kp: f32,
     /// Derivative gain
