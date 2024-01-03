@@ -82,7 +82,9 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             /////////////// SLEW YAW ANGLE ///////////////
 
             let slew_angle = target_direction.y.atan2(target_direction.x);
-            log::debug!("Yaw: {}deg", slew_angle.to_degrees());
+            log::debug!("Slew angle: {}deg", slew_angle.to_degrees());
+
+            ctx.map(glonax::core::Actuator::Slew as u16, slew_angle);
 
             /////////////// BOOM PITCH ANGLE ///////////////
 
@@ -101,6 +103,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 boom_angle.to_degrees()
             );
 
+            ctx.map(glonax::core::Actuator::Boom as u16, boom_angle);
+
             /////////////// ARM PITCH ANGLE ///////////////
 
             let theta0 = glonax::math::law_of_cosines(boom_length, arm_length, target_distance);
@@ -108,15 +112,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
             let arm_angle = -(std::f32::consts::PI - theta0);
             log::debug!("Arm angle: {}rad {}deg", arm_angle, arm_angle.to_degrees());
-        }
 
-        // ctx.map(
-        //     glonax::core::Actuator::Slew as u16,
-        //     std::f32::consts::FRAC_PI_2,
-        // );
-        // ctx.map(
-        //     glonax::core::Actuator::Boom as u16,
-        //     std::f32::consts::FRAC_PI_3,
-        // );
+            ctx.map(glonax::core::Actuator::Arm as u16, arm_angle);
+        }
     }
 }

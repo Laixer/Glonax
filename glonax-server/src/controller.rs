@@ -24,26 +24,34 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
         let arm_error = *ctx.get(Actuator::Arm as u16).unwrap_or(&0.0);
         let attachment_error = *ctx.get(Actuator::Attachment as u16).unwrap_or(&0.0);
 
-        let frame_value = linear_motion(frame_error, 0.01, 5_000.0, 12_000.0, false);
-        let boom_value = linear_motion(boom_error, 0.01, 5_000.0, 12_000.0, false);
-        let arm_value = linear_motion(arm_error, 0.01, 5_000.0, 12_000.0, false);
-        let attachment_value = linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
+        log::debug!(
+            "Frame error: {}, boom error: {}, arm error: {}, attachment error: {}",
+            frame_error,
+            boom_error,
+            arm_error,
+            attachment_error
+        );
 
-        let is_tri_arm_done = frame_value.is_none() && boom_value.is_none() && arm_value.is_none();
-        let is_done = is_tri_arm_done && attachment_value.is_none();
+        // let frame_value = linear_motion(frame_error, 0.01, 5_000.0, 12_000.0, false);
+        // let boom_value = linear_motion(boom_error, 0.01, 5_000.0, 12_000.0, false);
+        // let arm_value = linear_motion(arm_error, 0.01, 5_000.0, 12_000.0, false);
+        // let attachment_value = linear_motion(attachment_error, 0.01, 5_000.0, 12_000.0, false);
 
-        if is_done {
-            ctx.commit(glonax::core::Motion::StopAll);
+        // let is_tri_arm_done = frame_value.is_none() && boom_value.is_none() && arm_value.is_none();
+        // let is_done = is_tri_arm_done && attachment_value.is_none();
 
-            // TODO: Keep the target, but set 'finished' to true
-            state.target = None;
-        } else {
-            ctx.commit(glonax::core::Motion::from_iter(vec![
-                (Actuator::Slew, frame_value.unwrap_or(0)),
-                (Actuator::Boom, boom_value.unwrap_or(0)),
-                (Actuator::Arm, arm_value.unwrap_or(0)),
-                (Actuator::Attachment, attachment_value.unwrap_or(0)),
-            ]));
-        }
+        // if is_done {
+        //     ctx.commit(glonax::core::Motion::StopAll);
+
+        //     // TODO: Keep the target, but set 'finished' to true
+        //     state.target = None;
+        // } else {
+        //     ctx.commit(glonax::core::Motion::from_iter(vec![
+        //         (Actuator::Slew, frame_value.unwrap_or(0)),
+        //         (Actuator::Boom, boom_value.unwrap_or(0)),
+        //         (Actuator::Arm, arm_value.unwrap_or(0)),
+        //         (Actuator::Attachment, attachment_value.unwrap_or(0)),
+        //     ]));
+        // }
     }
 }
