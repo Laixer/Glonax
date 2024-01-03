@@ -10,8 +10,9 @@ impl ActorBuilder {
         Self { segments }
     }
 
-    pub fn attach_segment(&mut self, name: impl ToString, segment: ActorSegment) {
+    pub fn attach_segment(mut self, name: impl ToString, segment: ActorSegment) -> Self {
         self.segments.push((name.to_string(), segment));
+        self
     }
 
     pub fn build(self) -> Actor {

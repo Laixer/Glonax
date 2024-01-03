@@ -15,31 +15,21 @@ impl<Cnf: Configurable> Component<Cnf> for World {
         Self: Sized,
     {
         // TODO: Build the actor from configuration
-        Self {
-            actor: ActorBuilder::new(vec![
-                (
-                    "undercarriage".to_string(),
-                    ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
-                ),
-                (
-                    "body".to_string(),
-                    ActorSegment::new(Vector3::new(-4.0, 5.0, 107.0)),
-                ),
-                (
-                    "boom".to_string(),
-                    ActorSegment::new(Vector3::new(4.0, 20.0, 33.0)),
-                ),
-                (
-                    "arm".to_string(),
-                    ActorSegment::new(Vector3::new(510.0, 20.0, 5.0)),
-                ),
-                (
-                    "bucket".to_string(),
-                    ActorSegment::new(Vector3::new(310.0, -35.0, 45.0)),
-                ),
-            ])
-            .build(),
-        }
+        let actor = ActorBuilder::default()
+            .attach_segment(
+                "undercarriage",
+                ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
+            )
+            .attach_segment("body", ActorSegment::new(Vector3::new(-4.0, 5.0, 107.0)))
+            .attach_segment("boom", ActorSegment::new(Vector3::new(4.0, 20.0, 33.0)))
+            .attach_segment("arm", ActorSegment::new(Vector3::new(510.0, 20.0, 5.0)))
+            .attach_segment(
+                "bucket",
+                ActorSegment::new(Vector3::new(310.0, -35.0, 45.0)),
+            )
+            .build();
+
+        Self { actor }
     }
 
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {

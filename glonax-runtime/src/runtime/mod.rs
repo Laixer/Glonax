@@ -45,8 +45,6 @@ pub struct ComponentContext {
     actor: Actor,
     /// Actuator values.
     actuators: std::collections::HashMap<u16, f32>,
-    /// Key value store.
-    map: std::collections::HashMap<String, nalgebra::Matrix4<f32>>,
 }
 
 impl ComponentContext {
@@ -55,7 +53,6 @@ impl ComponentContext {
             motion_tx,
             actor: ActorBuilder::default().build(),
             actuators: std::collections::HashMap::new(),
-            map: std::collections::HashMap::new(),
         }
     }
 
@@ -78,11 +75,13 @@ impl ComponentContext {
     }
 
     /// Insert a value into the context.
+    #[inline]
     pub fn map(&mut self, key: u16, value: f32) {
         self.actuators.insert(key, value);
     }
 
     /// Retrieve a value from the context.
+    #[inline]
     pub fn get(&self, key: u16) -> Option<&f32> {
         self.actuators.get(&key)
     }
@@ -91,7 +90,6 @@ impl ComponentContext {
     fn reset(&mut self) {
         self.actor = ActorBuilder::default().build();
         self.actuators.clear();
-        self.map.clear();
     }
 }
 
