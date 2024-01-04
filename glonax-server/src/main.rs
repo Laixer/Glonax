@@ -152,9 +152,7 @@ async fn main() -> anyhow::Result<()> {
         log::info!("Running in simulation mode");
 
         runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_interval::<glonax::net::EngineManagementSystemSimulator>(
-            Duration::from_millis(10),
-        );
+        runtime.schedule_interval::<glonax::components::EngineSimulator>(Duration::from_millis(10));
 
         runtime.spawn_motion_sink(device::sink_net_actuator_sim);
     } else {

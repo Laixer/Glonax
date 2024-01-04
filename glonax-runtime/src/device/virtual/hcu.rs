@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicBool, AtomicI16, AtomicU32, Ordering};
 
 use crate::core::Actuator;
 
-// TODO: This is only used for the simulator, rename
+#[derive(Default)]
 pub struct VirtualHCU {
     /// Frist derivative of the encoder position.
     pub speed: [AtomicI16; 8],
@@ -49,15 +49,5 @@ impl VirtualHCU {
     #[inline]
     pub fn set_position(&self, actuator: &Actuator, position: u32) {
         self.position[*actuator as usize].store(position, Ordering::Relaxed);
-    }
-}
-
-impl Default for VirtualHCU {
-    fn default() -> Self {
-        Self {
-            speed: [0; 8].map(|_| AtomicI16::new(0)),
-            position: [0; 8].map(|_| AtomicU32::new(0)),
-            motion_lock: AtomicBool::new(false),
-        }
     }
 }

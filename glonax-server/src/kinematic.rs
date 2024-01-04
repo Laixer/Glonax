@@ -16,6 +16,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         Self
     }
 
+    // TODO: Move the IK into a helper function
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         // Set relative rotations
@@ -28,7 +29,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.frame_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&0x6A) {
+                if let Some(value) = state.encoders.get(&(glonax::core::Actuator::Slew as u8)) {
                     log::debug!("Body encoder: {}", value);
 
                     let frame_enc_conv = glonax::device::EncoderConverter::new(
@@ -54,7 +55,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.boom_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Boom: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&0x6B) {
+                if let Some(value) = state.encoders.get(&(glonax::core::Actuator::Boom as u8)) {
                     log::debug!("Boom encoder: {}", value);
 
                     // let offset = 60_f32.to_radians();
@@ -70,7 +71,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.arm_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&0x6C) {
+                if let Some(value) = state.encoders.get(&(glonax::core::Actuator::Arm as u8)) {
                     log::debug!("Arm encoder: {}", value);
 
                     let arm_enc_conv = glonax::device::EncoderConverter::new(
@@ -96,7 +97,10 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.attachment_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Bucket: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&0x6D) {
+                if let Some(value) = state
+                    .encoders
+                    .get(&(glonax::core::Actuator::Attachment as u8))
+                {
                     log::debug!("Attachment encoder: {}", value);
 
                     let attachment_enc_conv = glonax::device::EncoderConverter::new(

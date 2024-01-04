@@ -74,10 +74,11 @@ pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedOp
                 }
 
                 if let Some(message) = router.try_accept(&mut engine_management_service) {
-                    // message.fill(runtime_state.clone()).await;
-
                     let mut runtime_state = runtime_state.write().await;
-                    message.fill2(&mut runtime_state.state.engine);
+
+                    runtime_state.state.engine.driver_demand = message.driver_demand.unwrap_or(0);
+                    runtime_state.state.engine.actual_engine = message.actual_engine.unwrap_or(0);
+                    runtime_state.state.engine.rpm = message.rpm.unwrap_or(0);
                 }
             }
         }

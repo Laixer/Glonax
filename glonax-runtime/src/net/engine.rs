@@ -2,12 +2,6 @@ use glonax_j1939::{
     decode::{EngineStarterMode, EngineTorqueMode},
     *,
 };
-use rand::Rng;
-
-use crate::{
-    runtime::{Component, ComponentContext},
-    Configurable, MachineState,
-};
 
 #[derive(Default)]
 pub struct EngineMessage {
@@ -62,20 +56,6 @@ impl EngineMessage {
 
         vec![frame_builder.set_len(8).build()]
     }
-
-    // pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
-    //     let mut runtime_state = local_runtime_state.write().await;
-
-    //     runtime_state.state.engine_mut().driver_demand = self.driver_demand.unwrap_or(0);
-    //     runtime_state.state.engine_mut().actual_engine = self.actual_engine.unwrap_or(0);
-    //     runtime_state.state.engine_mut().rpm = self.rpm.unwrap_or(0);
-    // }
-
-    pub fn fill2(&self, engine_state: &mut crate::core::Engine) {
-        engine_state.driver_demand = self.driver_demand.unwrap_or(0);
-        engine_state.actual_engine = self.actual_engine.unwrap_or(0);
-        engine_state.rpm = self.rpm.unwrap_or(0);
-    }
 }
 
 impl std::fmt::Display for EngineMessage {
@@ -125,30 +105,6 @@ impl super::Parsable<EngineMessage> for EngineManagementSystem {
         }
 
         Some(EngineMessage::from_frame(frame))
-    }
-}
-
-#[derive(Default)]
-pub struct EngineManagementSystemSimulator {
-    rng: rand::rngs::OsRng,
-}
-
-impl<Cnf: Configurable> Component<Cnf> for EngineManagementSystemSimulator {
-    fn new(_config: Cnf) -> Self
-    where
-        Self: Sized,
-    {
-        Self::default()
-    }
-
-    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
-        EngineMessage {
-            driver_demand: Some(self.rng.gen_range(18..=20)),
-            actual_engine: Some(self.rng.gen_range(19..=21)),
-            rpm: Some(self.rng.gen_range(1180..=1200)),
-            ..Default::default()
-        }
-        .fill2(&mut state.engine);
     }
 }
 
