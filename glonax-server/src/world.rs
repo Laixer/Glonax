@@ -15,7 +15,7 @@ impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
     where
         Self: Sized,
     {
-        // TODO: Build the actor from configuration
+        // TODO: Build the actor from configuration and machine instance
         let actor = ActorBuilder::new("volvo_ec240cl", MachineType::Excavator)
             .attach_segment(
                 "undercarriage",

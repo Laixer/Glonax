@@ -99,10 +99,10 @@ pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedOpera
             let reader = BufReader::new(serial);
             let mut lines = reader.lines();
 
-            let service = glonax::net::NMEAService;
+            let driver = glonax::device::Nmea;
 
             while let Ok(Some(line)) = lines.next_line().await {
-                if let Some(message) = service.decode(line) {
+                if let Some(message) = driver.decode(line) {
                     let mut runtime_state = runtime_state.write().await;
 
                     if let Some((lat, long)) = message.coordinates {

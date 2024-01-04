@@ -4,12 +4,10 @@ use glonax_j1939::*;
 
 pub use actuator::*;
 pub use engine::*;
-pub use nmea::*;
 pub use service::*;
 
 mod actuator;
 mod engine;
-mod nmea;
 mod service;
 
 // TODO: Implement connection management.

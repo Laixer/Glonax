@@ -214,9 +214,9 @@ impl std::fmt::Display for NMEAMessage {
 }
 
 #[derive(Default)]
-pub struct NMEAService;
+pub struct Nmea;
 
-impl NMEAService {
+impl Nmea {
     pub fn decode(&self, line: String) -> Option<NMEAMessage> {
         if line.starts_with("$GNGGA") || line.starts_with("$GNGLL") || line.starts_with("$GNRMC") {
             Some(NMEAMessage::decode(line))
