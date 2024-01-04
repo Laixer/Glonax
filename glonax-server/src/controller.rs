@@ -15,6 +15,7 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
     where
         Self: Sized,
     {
+        // TODO: Build the profile from configuration
         let frame_profile = glonax::math::Linear::new(7_000.0, 12_000.0, false);
         let boom_profile = glonax::math::Linear::new(15_000.0, 12_000.0, false);
         let arm_profile = glonax::math::Linear::new(15_000.0, 12_000.0, true);

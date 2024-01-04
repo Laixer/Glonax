@@ -25,7 +25,7 @@ pub trait Component<Cnf: Configurable> {
     ///
     /// This method will be called once on startup.
     /// The component should use this method to initialize itself.
-    fn once(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {}
+    fn once(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {}
 
     /// Tick the component.
     ///
@@ -36,11 +36,8 @@ pub trait Component<Cnf: Configurable> {
 
 /// Component context.
 ///
-/// The component context is provided to each component on each tick. All
-/// data provided to the component is non-persistent and will be lost on
-/// the next tick.
-///
-/// The component context is used to communicate within the component pipeline.
+/// The component context is provided to each component on each tick. The
+/// component context is used to communicate within the component pipeline.
 pub struct ComponentContext {
     /// Motion command sender.
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
@@ -51,6 +48,7 @@ pub struct ComponentContext {
 }
 
 impl ComponentContext {
+    /// Construct a new component context.
     pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
         Self {
             motion_tx,
@@ -88,12 +86,6 @@ impl ComponentContext {
     #[inline]
     pub fn get(&self, key: u16) -> Option<&f32> {
         self.actuators.get(&key)
-    }
-
-    /// Reset the context.
-    fn reset(&mut self) {
-        self.world.clear();
-        self.actuators.clear();
     }
 }
 
@@ -167,7 +159,6 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
-    // TODO: Do not reset the context on each tick
     pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
         C: Component<Cnf> + Send + Sync + 'static,
@@ -181,9 +172,10 @@ impl<Cnf: Configurable> Runtime<Cnf> {
 
         let mut ctx = ComponentContext::new(self.motion_tx.clone());
         tokio::spawn(async move {
+            component.once(&mut ctx, &mut operand.write().await.state);
+
             loop {
                 interval.tick().await;
-                ctx.reset();
 
                 let mut runtime_state = operand.write().await;
 
@@ -192,7 +184,6 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         });
     }
 
-    // TODO: Do not reset the context on each tick
     /// Run a component in the main thread.
     ///
     /// This method will run a component in the main thread until the runtime is shutdown.
@@ -206,9 +197,11 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         let mut interval = tokio::time::interval(duration);
 
         let mut ctx = ComponentContext::new(self.motion_tx.clone());
+
+        component.once(&mut ctx, &mut self.operand.write().await.state);
+
         loop {
             interval.tick().await;
-            ctx.reset();
 
             let mut runtime_state = self.operand.write().await;
 
