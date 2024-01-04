@@ -1,4 +1,5 @@
 use glonax::{
+    core::MachineType,
     runtime::{Component, ComponentContext},
     world::{Actor, ActorBuilder, ActorSegment},
     Configurable, MachineState,
@@ -15,7 +16,7 @@ impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
         Self: Sized,
     {
         // TODO: Build the actor from configuration
-        let actor = ActorBuilder::default()
+        let actor = ActorBuilder::new("volvo_ec240cl", MachineType::Excavator)
             .attach_segment(
                 "undercarriage",
                 ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),

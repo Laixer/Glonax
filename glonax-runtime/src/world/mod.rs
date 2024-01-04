@@ -1,36 +1,48 @@
 use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
 
+use crate::core::MachineType;
+
 #[derive(Default)]
 pub struct World {
     actors: Vec<Actor>,
 }
 
 impl World {
+    /// Construct new world.
+    #[inline]
     pub fn add_actor(&mut self, actor: Actor) {
         self.actors.push(actor);
     }
 
+    /// Retrieve actor by index.
+    #[inline]
     pub fn get_actor(&self, index: usize) -> Option<&Actor> {
         self.actors.get(index)
     }
 
+    /// Retrieve actor by index mutably.
+    #[inline]
     pub fn get_actor_mut(&mut self, index: usize) -> Option<&mut Actor> {
         self.actors.get_mut(index)
     }
-
-    pub fn clear(&mut self) {
-        self.actors.clear();
-    }
 }
 
-#[derive(Default)]
 pub struct ActorBuilder {
+    /// Actor name.
+    name: String,
+    /// Actor type.
+    ty: MachineType,
+    /// Actor segments.
     segments: Vec<(String, ActorSegment)>,
 }
 
 impl ActorBuilder {
-    pub fn new(segments: Vec<(String, ActorSegment)>) -> Self {
-        Self { segments }
+    pub fn new(name: impl ToString, ty: MachineType) -> Self {
+        Self {
+            name: name.to_string(),
+            ty,
+            segments: Vec::new(),
+        }
     }
 
     pub fn attach_segment(mut self, name: impl ToString, segment: ActorSegment) -> Self {
@@ -42,6 +54,8 @@ impl ActorBuilder {
         let root = ActorSegment::new(Vector3::new(0.0, 0.0, 0.0));
 
         Actor {
+            name: self.name,
+            ty: self.ty,
             segments: if self.segments.is_empty() {
                 vec![("root".to_string(), root)]
             } else {
@@ -52,25 +66,43 @@ impl ActorBuilder {
 }
 
 // TODO: Convert to and from bytes
-// TODO: Add name, type, and id to actor
 #[derive(Clone)]
 pub struct Actor {
+    /// Actor name.
+    name: String,
+    /// Actor type.
+    ty: MachineType,
+    /// Actor segments.
     segments: Vec<(String, ActorSegment)>,
 }
 
 impl Actor {
+    /// Actor name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Actor type.
+    pub fn ty(&self) -> MachineType {
+        self.ty
+    }
+
+    /// Actor root location.
     pub fn location(&self) -> Point3<f32> {
         self.segments[0].1.location()
     }
 
+    /// Actor root rotation.
     pub fn rotation(&self) -> Rotation3<f32> {
         self.segments[0].1.rotation()
     }
 
+    /// Set actor root location.
     pub fn set_location(&mut self, location: Vector3<f32>) {
         self.segments[0].1.set_location(location);
     }
 
+    /// Set actor root rotation.
     pub fn set_rotation(&mut self, rotation: Rotation3<f32>) {
         self.segments[0].1.set_rotation(rotation);
     }
