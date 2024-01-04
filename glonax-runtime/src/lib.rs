@@ -53,6 +53,7 @@ pub mod consts {
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
+// TODO: Return the machine state in its entirety over the network
 // TODO: Integrate into the operand
 #[derive(Default)]
 pub struct MachineState {

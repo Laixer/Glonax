@@ -29,9 +29,15 @@ impl<Cnf: Configurable> Component<Cnf> for Pipeline<Cnf> {
         unimplemented!()
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, runtime_state: &mut MachineState) {
+    fn once(&mut self, ctx: &mut ComponentContext, _runtime_state: &mut MachineState) {
         for service in self.map.values_mut() {
-            service.tick(_ctx, runtime_state);
+            service.once(ctx, _runtime_state);
+        }
+    }
+
+    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut MachineState) {
+        for service in self.map.values_mut() {
+            service.tick(ctx, runtime_state);
         }
     }
 }

@@ -21,6 +21,12 @@ pub trait Component<Cnf: Configurable> {
     where
         Self: Sized;
 
+    /// Run the component once.
+    ///
+    /// This method will be called once on startup.
+    /// The component should use this method to initialize itself.
+    fn once(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {}
+
     /// Tick the component.
     ///
     /// This method will be called on each tick of the runtime.
@@ -161,6 +167,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
+    // TODO: Do not reset the context on each tick
     pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
         C: Component<Cnf> + Send + Sync + 'static,
@@ -185,6 +192,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         });
     }
 
+    // TODO: Do not reset the context on each tick
     /// Run a component in the main thread.
     ///
     /// This method will run a component in the main thread until the runtime is shutdown.

@@ -51,6 +51,7 @@ impl ActorBuilder {
     }
 }
 
+// TODO: Convert to and from bytes
 // TODO: Add name, type, and id to actor
 #[derive(Clone)]
 pub struct Actor {
