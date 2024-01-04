@@ -103,10 +103,25 @@ pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedOpera
 
             while let Ok(Some(line)) = lines.next_line().await {
                 if let Some(message) = service.decode(line) {
-                    // message.fill(runtime_state.clone()).await;
-
                     let mut runtime_state = runtime_state.write().await;
-                    message.fill2(&mut runtime_state.state.gnss);
+
+                    if let Some((lat, long)) = message.coordinates {
+                        runtime_state.state.gnss.location = (lat, long)
+                    }
+                    if let Some(altitude) = message.altitude {
+                        runtime_state.state.gnss.altitude = altitude;
+                    }
+                    if let Some(speed) = message.speed {
+                        const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
+
+                        runtime_state.state.gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
+                    }
+                    if let Some(heading) = message.heading {
+                        runtime_state.state.gnss.heading = heading;
+                    }
+                    if let Some(satellites) = message.satellites {
+                        runtime_state.state.gnss.satellites = satellites;
+                    }
                 }
             }
         }

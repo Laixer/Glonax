@@ -186,48 +186,6 @@ impl NMEAMessage {
 
         this
     }
-
-    // pub async fn fill<R: RobotState>(&self, local_runtime_state: SharedOperandState<R>) {
-    //     let mut runtime_state = local_runtime_state.write().await;
-
-    //     if let Some((lat, long)) = self.coordinates {
-    //         runtime_state.state.gnss_mut().location = (lat, long)
-    //     }
-    //     if let Some(altitude) = self.altitude {
-    //         runtime_state.state.gnss_mut().altitude = altitude;
-    //     }
-    //     if let Some(speed) = self.speed {
-    //         const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
-
-    //         runtime_state.state.gnss_mut().speed = speed * KNOT_TO_METER_PER_SECOND;
-    //     }
-    //     if let Some(heading) = self.heading {
-    //         runtime_state.state.gnss_mut().heading = heading;
-    //     }
-    //     if let Some(satellites) = self.satellites {
-    //         runtime_state.state.gnss_mut().satellites = satellites;
-    //     }
-    // }
-
-    pub fn fill2(&self, gnss_state: &mut crate::core::Gnss) {
-        if let Some((lat, long)) = self.coordinates {
-            gnss_state.location = (lat, long)
-        }
-        if let Some(altitude) = self.altitude {
-            gnss_state.altitude = altitude;
-        }
-        if let Some(speed) = self.speed {
-            const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
-
-            gnss_state.speed = speed * KNOT_TO_METER_PER_SECOND;
-        }
-        if let Some(heading) = self.heading {
-            gnss_state.heading = heading;
-        }
-        if let Some(satellites) = self.satellites {
-            gnss_state.satellites = satellites;
-        }
-    }
 }
 
 impl std::fmt::Display for NMEAMessage {

@@ -16,3 +16,19 @@ mod motion;
 mod pose;
 mod status;
 mod target;
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum MachineType {
+    /// Excavator.
+    Excavator,
+    /// Wheel loader.
+    WheelLoader,
+    /// Dozer.
+    Dozer,
+    /// Grader.
+    Grader,
+    /// Hauler.
+    Hauler,
+    /// Forestry.
+    Forestry,
+}

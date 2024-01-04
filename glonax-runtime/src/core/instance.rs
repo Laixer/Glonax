@@ -1,22 +1,6 @@
 use bytes::{BufMut, BytesMut};
 use serde_derive::Deserialize;
 
-#[derive(Copy, Clone, Debug)]
-pub enum MachineType {
-    /// Excavator.
-    Excavator,
-    /// Wheel loader.
-    WheelLoader,
-    /// Dozer.
-    Dozer,
-    /// Grader.
-    Grader,
-    /// Hauler.
-    Hauler,
-    /// Forestry.
-    Forestry,
-}
-
 // TODO: Rename to 'Machine'
 // TODO: Change id to uuid
 // TODO: Add a machine type
