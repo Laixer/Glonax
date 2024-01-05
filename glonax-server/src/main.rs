@@ -126,11 +126,9 @@ async fn main() -> anyhow::Result<()> {
     log::trace!("{:#?}", config);
 
     log::debug!("Starting proxy services");
-    log::info!("Instance ID: {}", instance.id);
-    log::info!("Instance Model: {}", instance.model);
-    log::info!("Instance Name: {}", instance.name);
+    log::info!("{}", instance);
 
-    if instance.id.starts_with("00000000") {
+    if instance.id.is_nil() {
         log::warn!("Instance ID is not set or invalid");
     }
 

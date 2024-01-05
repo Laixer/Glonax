@@ -63,8 +63,6 @@ pub struct MachineState {
     pub gnss: core::Gnss,
     /// Engine data.
     pub engine: core::Engine,
-    /// Pose data.
-    pub pose: core::Pose,
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>,
     /// Target position.
@@ -84,14 +82,4 @@ pub struct Operand {
     pub instance: core::Instance,
     /// Robot state.
     pub state: MachineState,
-}
-
-impl Default for Operand {
-    fn default() -> Self {
-        Self {
-            status: core::Status::Healthy,
-            instance: core::Instance::default(),
-            state: MachineState::default(),
-        }
-    }
 }

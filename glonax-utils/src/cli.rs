@@ -72,9 +72,7 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected to {}", address);
 
-    println!("Instance ID: {}", instance.id);
-    println!("Instance Model: {}", instance.model);
-    println!("Instance Name: {}", instance.name);
+    println!("{}", instance);
 
     fn print_help() {
         println!("Commands:");

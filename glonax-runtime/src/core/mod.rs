@@ -17,18 +17,34 @@ mod pose;
 mod status;
 mod target;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
 pub enum MachineType {
     /// Excavator.
-    Excavator,
+    Excavator = 1,
     /// Wheel loader.
-    WheelLoader,
+    WheelLoader = 2,
     /// Dozer.
-    Dozer,
+    Dozer = 3,
     /// Grader.
-    Grader,
+    Grader = 4,
     /// Hauler.
-    Hauler,
+    Hauler = 5,
     /// Forestry.
-    Forestry,
+    Forestry = 6,
+}
+
+impl TryFrom<u8> for MachineType {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            1 => Ok(Self::Excavator),
+            2 => Ok(Self::WheelLoader),
+            3 => Ok(Self::Dozer),
+            4 => Ok(Self::Grader),
+            5 => Ok(Self::Hauler),
+            6 => Ok(Self::Forestry),
+            _ => Err(()),
+        }
+    }
 }

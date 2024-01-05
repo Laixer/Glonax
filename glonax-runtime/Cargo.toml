@@ -16,6 +16,7 @@ glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
 rand = "0.8"
 chrono = "0.4"
 bytes = "1.5"
+uuid = { version = "1.6.1", features = ["serde", "v4"] }
 toml = "0.8"
 serde = "1.0"
 serde_derive = "1.0"

@@ -135,9 +135,7 @@ async fn main() -> anyhow::Result<()> {
 
     log::info!("Connected to {}", config.address);
 
-    log::info!("Instance ID: {}", instance.id);
-    log::info!("Instance Model: {}", instance.model);
-    log::info!("Instance Name: {}", instance.name);
+    log::info!("{}", instance);
 
     while let Ok(input) = input_device.next().await {
         if let Some(motion) = input_state.try_from(input) {
