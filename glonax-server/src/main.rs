@@ -9,6 +9,7 @@ use clap::Parser;
 mod config;
 mod controller;
 mod device;
+mod fusion;
 mod kinematic;
 mod server;
 mod world;
@@ -168,8 +169,9 @@ async fn main() -> anyhow::Result<()> {
 
     let pipe = glonax::components::Pipeline::new(vec![
         runtime.make_dynamic::<world::WorldBuilder>(0),
-        runtime.make_dynamic::<kinematic::Kinematic>(1),
-        runtime.make_dynamic::<controller::Controller>(2),
+        runtime.make_dynamic::<fusion::SensorFusion>(2),
+        runtime.make_dynamic::<kinematic::Kinematic>(5),
+        runtime.make_dynamic::<controller::Controller>(10),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;
