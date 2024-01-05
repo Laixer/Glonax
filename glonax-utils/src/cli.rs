@@ -220,21 +220,9 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
             s if s.starts_with('x') => {
-                // let point = nalgebra::Point3::new(2.5, 1.97, 75.27);
+                let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
 
-                // client
-                //     .send_packet(&glonax::core::Target::from((
-                //         2.5,
-                //         1.97,
-                //         75.27,
-                //         std::f32::consts::PI,
-                //         0.0,
-                //         0.0,
-                //     )))
-                //     .await?;
-
-                client.send_request(0x69).await?;
-                print_frame(&mut client).await?;
+                client.send_packet(&target).await?;
             }
             "q" | "quit" => {
                 return Ok(());

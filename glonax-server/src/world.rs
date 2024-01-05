@@ -35,7 +35,7 @@ impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
 
     fn once(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         ctx.world_mut().add_actor(self.actor.clone());
-        state.target = Some(glonax::core::Target::from_point(300.0, 400.0, 330.0));
+        // state.target = Some(glonax::core::Target::from_point(300.0, 400.0, 330.0));
     }
 
     fn tick(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {}

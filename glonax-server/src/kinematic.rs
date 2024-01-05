@@ -183,6 +183,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 bucket_world_location.z
             );
 
+            // TODO: Move to setup?
             state.actor = Some(actor.clone());
         }
 
