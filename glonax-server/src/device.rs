@@ -37,10 +37,6 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
                             .state
                             .encoders
                             .insert(message.node, message.position as f32);
-                        runtime_state
-                            .state
-                            .pose
-                            .set_node_position(message.node, message.position);
 
                         // TODO: Set the encoder state in the runtime state
                         if let Some(state) = message.state {

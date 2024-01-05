@@ -19,6 +19,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     // TODO: Move the IK into a helper function
     // TODO: Store if target is reachable in the context, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+        // TODO: Move to setup?
         // Set relative rotations
         {
             let actor = ctx.world_mut().get_actor_mut(ACTOR_SELF).unwrap();
@@ -191,16 +192,19 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
             let actor_world_distance =
                 nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));
-            log::debug!("Actor world distance: {}", actor_world_distance);
+            log::debug!("Actor world distance: {:.2}", actor_world_distance);
 
             let actor_target_distance = nalgebra::distance(&actor.location(), &target.point);
-            log::debug!("Actor target distance: {}", actor_target_distance);
+            log::debug!("Actor target distance: {:.2}", actor_target_distance);
 
             let boom_point = actor.relative_location("boom").unwrap();
 
             let kinematic_target_distance =
                 nalgebra::distance(&actor.location(), &(target.point - boom_point.coords));
-            log::debug!("Kinematic target distance: {}", kinematic_target_distance);
+            log::debug!(
+                "Kinematic target distance: {:.2}",
+                kinematic_target_distance
+            );
         }
 
         if let Some(target) = &state.target {
@@ -215,7 +219,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             let boom_world_location = actor.world_location("boom");
 
             let target_distance = nalgebra::distance(&boom_world_location, &target.point);
-            log::debug!("Tri-Arm target distance: {}", target_distance);
+            log::debug!("Tri-Arm target distance: {:.2}", target_distance);
 
             let target_direction = (target.point.coords - boom_world_location.coords).normalize();
 

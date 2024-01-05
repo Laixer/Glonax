@@ -111,16 +111,7 @@ async fn main() -> anyhow::Result<()> {
                     .recv_packet::<glonax::core::Instance>(frame.payload_length)
                     .await?;
 
-                println!("ID: {}", instance.id);
-                println!("Model: {}", instance.model);
-                println!("Name: {}", instance.name);
-            }
-            glonax::core::Pose::MESSAGE_TYPE => {
-                let pose = client
-                    .recv_packet::<glonax::core::Pose>(frame.payload_length)
-                    .await?;
-
-                println!("{}", pose);
+                println!("{}", instance);
             }
             glonax::core::Engine::MESSAGE_TYPE => {
                 let engine = client

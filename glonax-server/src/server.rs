@@ -43,12 +43,6 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                             .await
                             .unwrap();
                     }
-                    glonax::core::Pose::MESSAGE_TYPE => {
-                        client
-                            .send_packet(&runtime_state.read().await.state.pose)
-                            .await
-                            .unwrap();
-                    }
                     glonax::core::Host::MESSAGE_TYPE => {
                         client
                             .send_packet(&runtime_state.read().await.state.vms)
