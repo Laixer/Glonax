@@ -4,7 +4,6 @@ pub use self::host::Host;
 pub use self::instance::Instance;
 pub use self::motion::Actuator; // TODO: maybe access via motion::Actuator
 pub use self::motion::Motion;
-pub use self::pose::Pose;
 pub use self::status::Status;
 pub use self::target::Target;
 

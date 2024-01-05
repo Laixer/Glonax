@@ -6,8 +6,7 @@ const PROTO_TYPE_RESET_ALL: u8 = 0x02;
 const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
 const PROTO_TYPE_CHANGE: u8 = 0x10;
 
-// TODO: Dervice hash
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Actuator {
     /// Boom actuator.
     Boom = 0,
@@ -41,7 +40,7 @@ impl TryFrom<u16> for Actuator {
 
 type MotionValueType = i16;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ChangeSet {
     /// Actuator ID.
     pub actuator: Actuator,
@@ -49,7 +48,7 @@ pub struct ChangeSet {
     pub value: MotionValueType,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Motion {
     /// Stop all motion until resumed.
     StopAll,
@@ -188,5 +187,19 @@ impl crate::protocol::Packetize for Motion {
 
     fn to_bytes(&self) -> Vec<u8> {
         self.to_bytes()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_motion() {
+        let motion = Motion::new(Actuator::Boom, Motion::POWER_MAX);
+        let bytes = motion.to_bytes();
+        let motion2 = Motion::try_from(&bytes[..]).unwrap();
+
+        assert_eq!(motion, motion2);
     }
 }

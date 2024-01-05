@@ -62,7 +62,10 @@ impl std::fmt::Display for Instance {
 impl TryFrom<&[u8]> for Instance {
     type Error = ();
 
+    // TODO: Use BytesMut
     fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
+        // let mut buf = Bytes::copy_from_slice(value);
+
         if buffer.len() < 6 {
             log::warn!("Invalid buffer size");
             return Err(());
