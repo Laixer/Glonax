@@ -24,10 +24,10 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         {
             let actor = ctx.world_mut().get_actor_mut(ACTOR_SELF).unwrap();
 
-            // actor.add_relative_rotation(
-            //     "body",
-            //     nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
-            // );
+            actor.add_relative_rotation(
+                "frame",
+                nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
+            );
 
             {
                 // let r = state.pose.frame_rotator.euler_angles().0.to_degrees();
@@ -54,7 +54,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                         rotator.euler_angles().2.to_degrees()
                     );
 
-                    actor.set_relative_rotation("body", rotator);
+                    actor.set_relative_rotation("frame", rotator);
                 }
             }
 
@@ -137,7 +137,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                         rotator.euler_angles().2.to_degrees()
                     );
 
-                    actor.set_relative_rotation("bucket", rotator);
+                    actor.set_relative_rotation("attachment", rotator);
                 }
             }
 
@@ -151,9 +151,9 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         {
             let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
 
-            let body_world_location = actor.world_location("body");
+            let body_world_location = actor.world_location("frame");
             log::debug!(
-                "Body: world location: X={:.2} Y={:.2} Z={:.2}",
+                "Frame: world location: X={:.2} Y={:.2} Z={:.2}",
                 body_world_location.x,
                 body_world_location.y,
                 body_world_location.z
@@ -175,13 +175,15 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 arm_world_location.z
             );
 
-            let bucket_world_location = actor.world_location("bucket");
+            let bucket_world_location = actor.world_location("attachment");
             log::debug!(
-                "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
+                "Attachment: world location: X={:.2} Y={:.2} Z={:.2}",
                 bucket_world_location.x,
                 bucket_world_location.y,
                 bucket_world_location.z
             );
+
+            state.actor = Some(actor.clone());
         }
 
         /////////////// IF THERE IS A TARGET ///////////////
@@ -213,7 +215,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);
 
-            let arm_length = actor.relative_location("bucket").unwrap().x;
+            let arm_length = actor.relative_location("attachment").unwrap().x;
             // log::debug!("Arm length: {:?}", arm_length);
 
             let boom_world_location = actor.world_location("boom");

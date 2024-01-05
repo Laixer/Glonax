@@ -21,11 +21,11 @@ impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
                 "undercarriage",
                 ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
             )
-            .attach_segment("body", ActorSegment::new(Vector3::new(-4.0, 5.0, 107.0)))
+            .attach_segment("frame", ActorSegment::new(Vector3::new(-4.0, 5.0, 107.0)))
             .attach_segment("boom", ActorSegment::new(Vector3::new(4.0, 20.0, 33.0)))
             .attach_segment("arm", ActorSegment::new(Vector3::new(510.0, 20.0, 5.0)))
             .attach_segment(
-                "bucket",
+                "attachment",
                 ActorSegment::new(Vector3::new(310.0, -35.0, 45.0)),
             )
             .build();

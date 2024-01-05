@@ -65,6 +65,8 @@ pub struct MachineState {
     pub engine: core::Engine,
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>,
+    /// Robot as an actor.
+    pub actor: Option<crate::world::Actor>, // TODO: Remove from here
     /// Target position.
     pub target: Option<core::Target>,
     /// Electronic control unit data.

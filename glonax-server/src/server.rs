@@ -59,6 +59,11 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                             .await
                             .unwrap();
                     }
+                    glonax::world::Actor::MESSAGE_TYPE => {
+                        if let Some(actor) = &runtime_state.read().await.state.actor {
+                            client.send_packet(actor).await.unwrap();
+                        }
+                    }
                     // TODO: In v3 respond with error
                     _ => {}
                 }

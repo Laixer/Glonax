@@ -13,6 +13,7 @@ pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>
 pub mod builder;
 
 pub trait Component<Cnf: Configurable> {
+    // TODO: Add instance to new
     /// Construct a new component.
     ///
     /// This method will be called once on startup.

@@ -176,6 +176,58 @@ impl Actor {
     }
 }
 
+impl TryFrom<Vec<u8>> for Actor {
+    type Error = ();
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        use bytes::Buf;
+
+        let mut buf = bytes::Bytes::copy_from_slice(&value);
+
+        let ty = buf.get_u8();
+        let name_len = buf.get_u16() as usize;
+        let name = String::from_utf8_lossy(&buf[..name_len]).to_string();
+        buf.advance(name_len);
+
+        let segment_count = buf.get_u8() as usize;
+
+        let mut segments = Vec::with_capacity(segment_count);
+
+        for _ in 0..segment_count {
+            let name_len = buf.get_u16() as usize;
+            let name = String::from_utf8_lossy(&buf[..name_len]).to_string();
+            buf.advance(name_len);
+
+            let segment = ActorSegment::try_from(&buf[..]).unwrap();
+            buf.advance(24); // TODO: Remove magic number
+
+            segments.push((name, segment));
+        }
+
+        // log::debug!("Actor: {} {}", name, ty);
+        // log::debug!("segment_count: {}", segment_count);
+
+        // segments.iter().for_each(|(name, segment)| {
+        //     let (roll, pitch, yaw) = segment.rotation().euler_angles();
+        //     log::debug!("segment: {} R={} P={} Y={}", name, roll, pitch, yaw);
+        // });
+
+        Ok(Self {
+            name,
+            ty: MachineType::try_from(ty)?,
+            segments,
+        })
+    }
+}
+
+impl crate::protocol::Packetize for Actor {
+    const MESSAGE_TYPE: u8 = 0x69; // 0x40
+
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes()
+    }
+}
+
 #[derive(Clone)]
 pub struct ActorSegment {
     isometry: nalgebra::IsometryMatrix3<f32>,

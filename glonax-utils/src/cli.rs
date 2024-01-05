@@ -78,6 +78,7 @@ async fn main() -> anyhow::Result<()> {
         println!("Commands:");
         println!("  r | request <class>");
         println!("  w | watch");
+        println!("  x");
         println!();
         println!("Classes:");
         println!("  s | status");
@@ -134,6 +135,21 @@ async fn main() -> anyhow::Result<()> {
 
                 println!("{}", gnss);
             }
+            glonax::world::Actor::MESSAGE_TYPE => {
+                let actor = client
+                    .recv_packet::<glonax::world::Actor>(frame.payload_length)
+                    .await?;
+
+                let bucket_world_location = actor.world_location("bucket");
+                log::debug!(
+                    "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
+                    bucket_world_location.x,
+                    bucket_world_location.y,
+                    bucket_world_location.z
+                );
+
+                // println!("{}", actor);
+            }
             _ => {
                 eprintln!("Invalid response from server");
             }
@@ -152,6 +168,7 @@ async fn main() -> anyhow::Result<()> {
             "e" | "engine" => Some(glonax::core::Engine::MESSAGE_TYPE),
             "h" | "host" | "vms" => Some(glonax::core::Host::MESSAGE_TYPE),
             "g" | "gps" | "gnss" => Some(glonax::core::Gnss::MESSAGE_TYPE),
+            "a" | "actor" => Some(glonax::world::Actor::MESSAGE_TYPE),
             _ => None,
         }
     }
@@ -201,6 +218,23 @@ async fn main() -> anyhow::Result<()> {
                     eprintln!("Invalid request");
                     continue;
                 }
+            }
+            s if s.starts_with('x') => {
+                // let point = nalgebra::Point3::new(2.5, 1.97, 75.27);
+
+                // client
+                //     .send_packet(&glonax::core::Target::from((
+                //         2.5,
+                //         1.97,
+                //         75.27,
+                //         std::f32::consts::PI,
+                //         0.0,
+                //         0.0,
+                //     )))
+                //     .await?;
+
+                client.send_request(0x69).await?;
+                print_frame(&mut client).await?;
             }
             "q" | "quit" => {
                 return Ok(());
