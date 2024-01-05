@@ -150,6 +150,32 @@ impl Actor {
     }
 }
 
+impl Actor {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        use bytes::BufMut;
+
+        let mut buf = bytes::BytesMut::with_capacity(64);
+
+        buf.put_u8(self.ty as u8);
+
+        let name_bytes = self.name.as_bytes();
+        buf.put_u16(name_bytes.len() as u16);
+        buf.put(name_bytes);
+
+        buf.put_u8(self.segments.len() as u8);
+
+        for (name, segment) in &self.segments {
+            let name_bytes = name.as_bytes();
+            buf.put_u16(name_bytes.len() as u16);
+            buf.put(name_bytes);
+
+            buf.put(&segment.to_bytes()[..]);
+        }
+
+        buf.to_vec()
+    }
+}
+
 #[derive(Clone)]
 pub struct ActorSegment {
     isometry: nalgebra::IsometryMatrix3<f32>,
@@ -198,5 +224,77 @@ impl ActorSegment {
     #[inline]
     pub fn add_rotation(&mut self, rotation: Rotation3<f32>) {
         self.isometry.rotation *= rotation;
+    }
+}
+
+impl ActorSegment {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        use bytes::BufMut;
+
+        let mut buf = bytes::BytesMut::with_capacity(64);
+
+        buf.put_f32(self.isometry.translation.vector.x);
+        buf.put_f32(self.isometry.translation.vector.y);
+        buf.put_f32(self.isometry.translation.vector.z);
+
+        let (roll, pitch, yaw) = self.isometry.rotation.euler_angles();
+        buf.put_f32(roll);
+        buf.put_f32(pitch);
+        buf.put_f32(yaw);
+
+        buf.to_vec()
+    }
+}
+
+impl TryFrom<&[u8]> for ActorSegment {
+    type Error = ();
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        use bytes::Buf;
+
+        let mut buf = bytes::Bytes::copy_from_slice(value);
+
+        let translation = Vector3::new(buf.get_f32(), buf.get_f32(), buf.get_f32());
+        let rotation = Rotation3::from_euler_angles(buf.get_f32(), buf.get_f32(), buf.get_f32());
+
+        Ok(Self {
+            isometry: nalgebra::IsometryMatrix3::from_parts(
+                nalgebra::Translation3::from(translation),
+                rotation,
+            ),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_actor_segment() {
+        let segment = ActorSegment::new(Vector3::new(1.0, 2.0, 3.0));
+
+        assert_eq!(segment.location(), Point3::new(1.0, 2.0, 3.0));
+        assert_eq!(segment.rotation(), Rotation3::identity());
+
+        let mut segment = ActorSegment::new(Vector3::new(1.0, 2.0, 3.0));
+
+        segment.set_location(Vector3::new(4.0, 5.0, 6.0));
+        segment.set_rotation(Rotation3::from_euler_angles(0.0, 0.0, std::f32::consts::PI));
+
+        assert_eq!(segment.location(), Point3::new(4.0, 5.0, 6.0));
+        assert_eq!(
+            segment.rotation(),
+            Rotation3::from_euler_angles(0.0, 0.0, std::f32::consts::PI)
+        );
+
+        segment.add_location(Vector3::new(1.0, 2.0, 3.0));
+        segment.add_rotation(Rotation3::from_euler_angles(0.0, 0.0, std::f32::consts::PI));
+
+        assert_eq!(segment.location(), Point3::new(5.0, 7.0, 9.0));
+        assert_eq!(
+            segment.rotation(),
+            Rotation3::from_euler_angles(0.0, 0.0, 2.0 * std::f32::consts::PI)
+        );
     }
 }
