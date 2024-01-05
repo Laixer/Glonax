@@ -4,8 +4,6 @@ use glonax::{
 };
 use nalgebra::Point3;
 
-const ACTOR_SELF: usize = 0;
-
 const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 
 pub struct Kinematic;
@@ -22,7 +20,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     // TODO: Check if target is reachable, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         if let Some(target) = &state.target {
-            let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
+            let actor = ctx.world_mut().get_actor_by_name("volvo_ec240cl").unwrap();
 
             let actor_world_distance =
                 nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));
@@ -45,7 +43,7 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         }
 
         if let Some(target) = &state.target {
-            let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
+            let actor = ctx.world_mut().get_actor_by_name("volvo_ec240cl").unwrap();
 
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);

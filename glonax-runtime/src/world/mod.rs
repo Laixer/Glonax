@@ -8,10 +8,11 @@ pub struct World {
 }
 
 impl World {
-    /// Construct new world.
+    /// Add actor to world and return index.
     #[inline]
-    pub fn add_actor(&mut self, actor: Actor) {
+    pub fn add_actor(&mut self, actor: Actor) -> usize {
         self.actors.push(actor);
+        self.actors.len() - 1
     }
 
     /// Retrieve actor by index.
@@ -24,6 +25,20 @@ impl World {
     #[inline]
     pub fn get_actor_mut(&mut self, index: usize) -> Option<&mut Actor> {
         self.actors.get_mut(index)
+    }
+
+    /// Retrieve actor by name.
+    pub fn get_actor_by_name(&self, name: impl ToString) -> Option<&Actor> {
+        self.actors
+            .iter()
+            .find(|actor| actor.name() == name.to_string())
+    }
+
+    /// Retrieve actor by name mutably.
+    pub fn get_actor_by_name_mut(&mut self, name: impl ToString) -> Option<&mut Actor> {
+        self.actors
+            .iter_mut()
+            .find(|actor| actor.name() == name.to_string())
     }
 }
 

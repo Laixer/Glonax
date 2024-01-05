@@ -6,6 +6,7 @@ const PROTO_TYPE_RESET_ALL: u8 = 0x02;
 const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
 const PROTO_TYPE_CHANGE: u8 = 0x10;
 
+// TODO: Move to glonax-server or an excatavator module
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Actuator {
     /// Boom actuator.
@@ -70,6 +71,7 @@ impl Motion {
     /// Minimum power setting.
     pub const POWER_MIN: MotionValueType = MotionValueType::MIN;
 
+    /// Create a new motion command.
     pub fn new<T: Into<MotionValueType>>(actuator: Actuator, value: T) -> Self {
         Self::Change(vec![ChangeSet {
             actuator,

@@ -4,8 +4,6 @@ use glonax::{
     Configurable, MachineState,
 };
 
-const ACTOR_SELF: usize = 0;
-
 const FRAME_ENCODER: u8 = 0x6A;
 const BOOM_ENCODER: u8 = 0x6B;
 const ARM_ENCODER: u8 = 0x6C;
@@ -39,8 +37,12 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
     }
 
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        let actor = ctx.world_mut().get_actor_mut(ACTOR_SELF).unwrap();
+        let actor = ctx
+            .world_mut()
+            .get_actor_by_name_mut("volvo_ec240cl")
+            .unwrap();
 
+        // TODO: This is just for testing
         actor.add_relative_rotation(
             "frame",
             nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
