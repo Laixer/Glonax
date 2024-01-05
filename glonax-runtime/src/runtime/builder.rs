@@ -24,7 +24,6 @@ impl<Cnf: Configurable> Builder<Cnf> {
             instance: instance.clone(),
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
                 status: crate::core::Status::Healthy,
-                instance,
                 state: crate::MachineState::default(),
             })),
             motion_tx,

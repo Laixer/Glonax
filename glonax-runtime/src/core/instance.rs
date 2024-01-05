@@ -7,13 +7,13 @@ use super::MachineType;
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Instance {
     /// Instance unique identifier.
-    pub id: uuid::Uuid,
+    id: uuid::Uuid,
     /// Machine model.
-    pub model: String,
+    model: String,
     /// Machine machine type.
-    pub ty: MachineType,
+    ty: MachineType,
     /// Machine version.
-    pub version: (u8, u8, u8),
+    version: (u8, u8, u8),
 }
 
 impl Instance {
@@ -32,6 +32,14 @@ impl Instance {
         }
     }
 
+    /// Retrieve the instance unique identifier.
+    #[inline]
+    pub fn id(&self) -> &uuid::Uuid {
+        &self.id
+    }
+}
+
+impl Instance {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(64);
 

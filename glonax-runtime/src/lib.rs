@@ -78,8 +78,6 @@ pub struct MachineState {
 pub struct Operand {
     /// Current machine state.
     pub status: core::Status,
-    /// Glonax instance.
-    pub instance: core::Instance,
     /// Robot state.
     pub state: MachineState,
 }

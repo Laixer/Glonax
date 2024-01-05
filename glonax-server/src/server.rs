@@ -10,6 +10,7 @@ use crate::config::ProxyConfig;
 
 async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
     stream: T,
+    instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
     _permit: tokio::sync::OwnedSemaphorePermit,
@@ -32,10 +33,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .unwrap();
                 match request.message() {
                     glonax::core::Instance::MESSAGE_TYPE => {
-                        client
-                            .send_packet(&runtime_state.read().await.instance)
-                            .await
-                            .unwrap();
+                        client.send_packet(&instance).await.unwrap();
                     }
                     glonax::core::Status::MESSAGE_TYPE => {
                         client
@@ -73,10 +71,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
                 log::info!("Session started for: {}", session.name());
 
-                client
-                    .send_packet(&runtime_state.read().await.instance)
-                    .await
-                    .unwrap();
+                client.send_packet(&instance).await.unwrap();
             }
             glonax::protocol::frame::Echo::MESSAGE_TYPE => {
                 let echo = client
@@ -86,7 +81,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                 client.send_packet(&echo).await.unwrap();
             }
             glonax::protocol::frame::Shutdown::MESSAGE_TYPE => {
-                log::debug!("Client requested shutdown");
+                log::debug!("Client initiated shutdown");
 
                 use tokio::io::AsyncWriteExt;
 
@@ -116,7 +111,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .await
                     .unwrap();
 
-                log::debug!("Received target: {}", target);
+                runtime_state.write().await.state.target = Some(target);
             }
             _ => {}
         }
@@ -135,6 +130,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
 pub(super) async fn tcp_listen(
     config: ProxyConfig,
+    instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
 ) {
@@ -171,6 +167,7 @@ pub(super) async fn tcp_listen(
 
         tokio::spawn(spawn_client_session(
             stream,
+            instance.clone(),
             runtime_state.clone(),
             motion_sender.clone(),
             permit,
@@ -180,6 +177,7 @@ pub(super) async fn tcp_listen(
 
 pub(super) async fn unix_listen(
     _config: ProxyConfig,
+    instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
 ) {
@@ -219,6 +217,7 @@ pub(super) async fn unix_listen(
 
         tokio::spawn(spawn_client_session(
             stream,
+            instance.clone(),
             runtime_state.clone(),
             motion_sender.clone(),
             permit,

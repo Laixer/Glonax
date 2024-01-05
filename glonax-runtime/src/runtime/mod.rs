@@ -1,6 +1,6 @@
 mod error;
 
-use crate::{world::World, Configurable, MachineState};
+use crate::{core::Instance, world::World, Configurable, MachineState};
 
 pub use self::error::Error;
 
@@ -218,12 +218,13 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     /// Run a motion service.
     pub fn spawn_motion_service<Fut>(
         &self,
-        service: impl FnOnce(Cnf, SharedOperandState, MotionSender) -> Fut,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut,
     ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
         tokio::spawn(service(
             self.config.clone(),
+            self.instance.clone(),
             self.operand.clone(),
             self.motion_tx.clone(),
         ));
