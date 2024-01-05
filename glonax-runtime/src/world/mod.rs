@@ -116,6 +116,15 @@ impl Actor {
         }
     }
 
+    pub fn add_relative_rotation(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
+        for (sname, segment) in self.segments.iter_mut() {
+            if sname == &name.to_string() {
+                segment.add_rotation(rotation);
+                break;
+            }
+        }
+    }
+
     pub fn relative_location(&self, name: impl ToString) -> Option<Point3<f32>> {
         for (sname, segment) in &self.segments {
             if sname == &name.to_string() {

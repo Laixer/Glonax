@@ -159,6 +159,11 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
+    // TODO: Add tick delta
+    /// Schedule a component to run in the background.
+    ///
+    /// This method will schedule a component to run in the background. On each tick, the component
+    /// will be provided with a component context and a mutable reference to the runtime state.
     pub fn schedule_interval<C>(&self, duration: std::time::Duration)
     where
         C: Component<Cnf> + Send + Sync + 'static,
@@ -184,6 +189,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         });
     }
 
+    // TODO: Add tick delta
     /// Run a component in the main thread.
     ///
     /// This method will run a component in the main thread until the runtime is shutdown.

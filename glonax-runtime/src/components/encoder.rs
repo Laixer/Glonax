@@ -30,20 +30,25 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
         Self { encoder_list }
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
-        // for (id, actuator, encoder) in self.control_devices.iter_mut() {
+    fn tick(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {
+        // for (id, encoder) in self.encoder_list.iter_mut() {
         //     let velocity = state.ecu_state.speed(actuator);
         //     let position = state.ecu_state.position(actuator);
 
-        // let position = encoder.position(position, velocity);
+        //     let position = encoder.position(position, velocity);
 
-        // state.ecu_state.set_position(actuator, position);
+        //     state.ecu_state.set_position(actuator, position);
         // }
 
-        let frame = &mut self.encoder_list[0];
-        let position = frame.1.position_from_angle(100_f32.to_radians());
+        // let frame = &mut self.encoder_list[0];
+        // let position = frame.1.position_from_angle(100_f32.to_radians());
 
-        state.encoders.insert(frame.0, position as f32);
-        state.pose.set_node_position(frame.0, position);
+        // state.encoders.insert(frame.0, position as f32);
+        // state.pose.set_node_position(frame.0, position);
+
+        // state.encoders.insert(0x6A, 0.0);
+        // state.encoders.insert(0x6B, 0.0);
+        // state.encoders.insert(0x6C, 0.0);
+        // state.encoders.insert(0x6D, 0.0);
     }
 }

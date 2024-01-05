@@ -23,14 +23,19 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         {
             let actor = ctx.world_mut().get_actor_mut(ACTOR_SELF).unwrap();
 
+            // actor.add_relative_rotation(
+            //     "body",
+            //     nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
+            // );
+
             {
                 // let r = state.pose.frame_rotator.euler_angles().0.to_degrees();
                 // let p = state.pose.frame_rotator.euler_angles().1.to_degrees();
                 // let y = state.pose.frame_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&(glonax::core::Actuator::Slew as u8)) {
-                    log::debug!("Body encoder: {}", value);
+                if let Some(value) = state.encoders.get(&0x6A) {
+                    log::trace!("Body encoder: {}", value);
 
                     let frame_enc_conv = glonax::device::EncoderConverter::new(
                         1000.0,
@@ -39,13 +44,16 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                         nalgebra::Vector3::z_axis(),
                     );
 
-                    let frame_rotator = frame_enc_conv.to_rotation(*value as u32);
+                    let rotator = frame_enc_conv.to_rotation(*value as u32);
 
-                    let r = frame_rotator.euler_angles().0.to_degrees();
-                    let p = frame_rotator.euler_angles().1.to_degrees();
-                    let y = frame_rotator.euler_angles().2.to_degrees();
+                    log::debug!(
+                        "Body: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                        rotator.euler_angles().0.to_degrees(),
+                        rotator.euler_angles().1.to_degrees(),
+                        rotator.euler_angles().2.to_degrees()
+                    );
 
-                    log::debug!("Body: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                    actor.set_relative_rotation("body", rotator);
                 }
             }
 
@@ -55,13 +63,22 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.boom_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Boom: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&(glonax::core::Actuator::Boom as u8)) {
-                    log::debug!("Boom encoder: {}", value);
+                if let Some(value) = state.encoders.get(&0x6B) {
+                    log::trace!("Boom encoder: {}", value);
 
                     // let offset = 60_f32.to_radians();
                     // let position = position as f32 / 1000.0;
                     // let position = (position - offset) * -1.0;
-                    // self.boom_rotator = Rotation3::from_euler_angles(0.0, position, 0.0);
+                    // let rotator = Rotation3::from_euler_angles(0.0, position, 0.0);
+
+                    // log::debug!(
+                    //     "Boom: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                    //     rotator.euler_angles().0.to_degrees(),
+                    //     rotator.euler_angles().1.to_degrees(),
+                    //     rotator.euler_angles().2.to_degrees()
+                    // );
+
+                    // actor.set_relative_rotation("boom", rotator);
                 }
             }
 
@@ -71,8 +88,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.arm_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state.encoders.get(&(glonax::core::Actuator::Arm as u8)) {
-                    log::debug!("Arm encoder: {}", value);
+                if let Some(value) = state.encoders.get(&0x6C) {
+                    log::trace!("Arm encoder: {}", value);
 
                     let arm_enc_conv = glonax::device::EncoderConverter::new(
                         1000.0,
@@ -81,13 +98,16 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                         nalgebra::Vector3::y_axis(),
                     );
 
-                    let arm_rotator = arm_enc_conv.to_rotation(*value as u32);
+                    let rotator = arm_enc_conv.to_rotation(*value as u32);
 
-                    let r = arm_rotator.euler_angles().0.to_degrees();
-                    let p = arm_rotator.euler_angles().1.to_degrees();
-                    let y = arm_rotator.euler_angles().2.to_degrees();
+                    log::debug!(
+                        "Arm: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                        rotator.euler_angles().0.to_degrees(),
+                        rotator.euler_angles().1.to_degrees(),
+                        rotator.euler_angles().2.to_degrees()
+                    );
 
-                    log::debug!("Arm: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                    actor.set_relative_rotation("arm", rotator);
                 }
             }
 
@@ -97,11 +117,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 // let y = state.pose.attachment_rotator.euler_angles().2.to_degrees();
                 // log::debug!("Bucket: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
 
-                if let Some(value) = state
-                    .encoders
-                    .get(&(glonax::core::Actuator::Attachment as u8))
-                {
-                    log::debug!("Attachment encoder: {}", value);
+                if let Some(value) = state.encoders.get(&0x6D) {
+                    log::trace!("Attachment encoder: {}", value);
 
                     let attachment_enc_conv = glonax::device::EncoderConverter::new(
                         1000.0,
@@ -110,20 +127,23 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                         nalgebra::Vector3::y_axis(),
                     );
 
-                    let attachment_rotator = attachment_enc_conv.to_rotation(*value as u32);
+                    let rotator = attachment_enc_conv.to_rotation(*value as u32);
 
-                    let r = attachment_rotator.euler_angles().0.to_degrees();
-                    let p = attachment_rotator.euler_angles().1.to_degrees();
-                    let y = attachment_rotator.euler_angles().2.to_degrees();
+                    log::debug!(
+                        "Attachment: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                        rotator.euler_angles().0.to_degrees(),
+                        rotator.euler_angles().1.to_degrees(),
+                        rotator.euler_angles().2.to_degrees()
+                    );
 
-                    log::debug!("Attachment: Roll: {:.2} Pitch: {:.2} Yaw: {:.2}", r, p, y);
+                    actor.set_relative_rotation("bucket", rotator);
                 }
             }
 
-            actor.set_relative_rotation("body", state.pose.frame_rotator);
-            actor.set_relative_rotation("boom", state.pose.boom_rotator);
-            actor.set_relative_rotation("arm", state.pose.arm_rotator);
-            actor.set_relative_rotation("bucket", state.pose.attachment_rotator);
+            // actor.set_relative_rotation("body", state.pose.frame_rotator);
+            // actor.set_relative_rotation("boom", state.pose.boom_rotator);
+            // actor.set_relative_rotation("arm", state.pose.arm_rotator);
+            // actor.set_relative_rotation("bucket", state.pose.attachment_rotator);
         }
 
         // Print segment world locations
@@ -131,16 +151,36 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
 
             let body_world_location = actor.world_location("body");
-            log::debug!("FRAM world location: {:?}", body_world_location);
+            log::debug!(
+                "Body: world location: X={:.2} Y={:.2} Z={:.2}",
+                body_world_location.x,
+                body_world_location.y,
+                body_world_location.z
+            );
 
             let boom_world_location = actor.world_location("boom");
-            log::debug!("BOOM world location: {:?}", boom_world_location);
+            log::debug!(
+                "Boom: world location: X={:.2} Y={:.2} Z={:.2}",
+                boom_world_location.x,
+                boom_world_location.y,
+                boom_world_location.z
+            );
 
             let arm_world_location = actor.world_location("arm");
-            log::debug!("ARMM world location: {:?}", arm_world_location);
+            log::debug!(
+                "Arm: world location: X={:.2} Y={:.2} Z={:.2}",
+                arm_world_location.x,
+                arm_world_location.y,
+                arm_world_location.z
+            );
 
             let bucket_world_location = actor.world_location("bucket");
-            log::debug!("BUKT world location: {:?}", bucket_world_location);
+            log::debug!(
+                "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
+                bucket_world_location.x,
+                bucket_world_location.y,
+                bucket_world_location.z
+            );
         }
 
         /////////////// IF THERE IS A TARGET ///////////////
