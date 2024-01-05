@@ -6,6 +6,8 @@ use nalgebra::Point3;
 
 const ACTOR_SELF: usize = 0;
 
+const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
+
 pub struct Kinematic;
 
 impl<Cnf: Configurable> Component<Cnf> for Kinematic {
@@ -17,29 +19,29 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     }
 
     // TODO: Move the IK into a helper function
-    // TODO: Store if target is reachable in the context, if there is a target
+    // TODO: Check if target is reachable, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        /////////////// IF THERE IS A TARGET ///////////////
-
-        // Print distances
         if let Some(target) = &state.target {
             let actor = ctx.world().get_actor(ACTOR_SELF).unwrap();
 
             let actor_world_distance =
                 nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));
-            log::debug!("Actor world distance: {:.2}", actor_world_distance);
+            log::debug!("Actor origin distance: {:.2}", actor_world_distance);
 
             let actor_target_distance = nalgebra::distance(&actor.location(), &target.point);
             log::debug!("Actor target distance: {:.2}", actor_target_distance);
 
             let boom_point = actor.relative_location("boom").unwrap();
-
             let kinematic_target_distance =
                 nalgebra::distance(&actor.location(), &(target.point - boom_point.coords));
             log::debug!(
                 "Kinematic target distance: {:.2}",
                 kinematic_target_distance
             );
+
+            if kinematic_target_distance > MAX_KINEMATIC_DISTANCE {
+                log::warn!("Target is out of reach");
+            }
         }
 
         if let Some(target) = &state.target {

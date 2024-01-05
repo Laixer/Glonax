@@ -6,6 +6,11 @@ use glonax::{
 
 const ACTOR_SELF: usize = 0;
 
+const FRAME_ENCODER: u8 = 0x6A;
+const BOOM_ENCODER: u8 = 0x6B;
+const ARM_ENCODER: u8 = 0x6C;
+const ATTACHMENT_ENCODER: u8 = 0x6D;
+
 pub struct SensorFusion {
     frame_encoder_converter: EncoderConverter,
     arm_encoder_converter: EncoderConverter,
@@ -41,7 +46,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
             nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
         );
 
-        if let Some(value) = state.encoders.get(&0x6A) {
+        if let Some(value) = state.encoders.get(&FRAME_ENCODER) {
             log::trace!("Frame encoder: {}", value);
 
             let rotator = self.frame_encoder_converter.to_rotation(*value as u32);
@@ -56,7 +61,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
             actor.set_relative_rotation("frame", rotator);
         }
 
-        if let Some(value) = state.encoders.get(&0x6B) {
+        if let Some(value) = state.encoders.get(&BOOM_ENCODER) {
             log::trace!("Boom encoder: {}", value);
 
             // let offset = 60_f32.to_radians();
@@ -74,7 +79,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
             // actor.set_relative_rotation("boom", rotator);
         }
 
-        if let Some(value) = state.encoders.get(&0x6C) {
+        if let Some(value) = state.encoders.get(&ARM_ENCODER) {
             log::trace!("Arm encoder: {}", value);
 
             let rotator = self.arm_encoder_converter.to_rotation(*value as u32);
@@ -89,7 +94,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
             actor.set_relative_rotation("arm", rotator);
         }
 
-        if let Some(value) = state.encoders.get(&0x6D) {
+        if let Some(value) = state.encoders.get(&ATTACHMENT_ENCODER) {
             log::trace!("Attachment encoder: {}", value);
 
             let rotator = self.attachment_encoder_converter.to_rotation(*value as u32);
@@ -104,15 +109,10 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
             actor.set_relative_rotation("attachment", rotator);
         }
 
-        // actor.set_relative_rotation("body", state.pose.frame_rotator);
-        // actor.set_relative_rotation("boom", state.pose.boom_rotator);
-        // actor.set_relative_rotation("arm", state.pose.arm_rotator);
-        // actor.set_relative_rotation("bucket", state.pose.attachment_rotator);
-
         // Print segment world locations
         let body_world_location = actor.world_location("frame");
         log::debug!(
-            "Frame: world location: X={:.2} Y={:.2} Z={:.2}",
+            "Frame: X={:.2} Y={:.2} Z={:.2}",
             body_world_location.x,
             body_world_location.y,
             body_world_location.z
@@ -120,7 +120,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
         let boom_world_location = actor.world_location("boom");
         log::debug!(
-            "Boom: world location: X={:.2} Y={:.2} Z={:.2}",
+            "Boom: X={:.2} Y={:.2} Z={:.2}",
             boom_world_location.x,
             boom_world_location.y,
             boom_world_location.z
@@ -128,7 +128,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
         let arm_world_location = actor.world_location("arm");
         log::debug!(
-            "Arm: world location: X={:.2} Y={:.2} Z={:.2}",
+            "Arm: X={:.2} Y={:.2} Z={:.2}",
             arm_world_location.x,
             arm_world_location.y,
             arm_world_location.z
@@ -136,7 +136,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
         let bucket_world_location = actor.world_location("attachment");
         log::debug!(
-            "Attachment: world location: X={:.2} Y={:.2} Z={:.2}",
+            "Attachment: X={:.2} Y={:.2} Z={:.2}",
             bucket_world_location.x,
             bucket_world_location.y,
             bucket_world_location.z
