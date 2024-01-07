@@ -153,7 +153,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_interval::<glonax::components::EngineSimulator>(Duration::from_millis(10));
 
-        runtime.spawn_motion_sink(device::sink_net_actuator_sim);
+        runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
         runtime.schedule_io_service(device::service_net_encoder);
 
@@ -161,11 +161,11 @@ async fn main() -> anyhow::Result<()> {
             runtime.schedule_io_service(device::service_net_ems);
         }
 
-        runtime.spawn_motion_sink(device::sink_net_actuator);
+        runtime.schedule_motion_sink(device::sink_net_actuator);
     }
 
-    runtime.spawn_motion_service(server::tcp_listen);
-    runtime.spawn_motion_service(server::unix_listen);
+    runtime.schedule_io_service(server::tcp_listen);
+    runtime.schedule_io_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![
         runtime.make_dynamic::<world::WorldBuilder>(0),

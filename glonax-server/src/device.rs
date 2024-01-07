@@ -1,10 +1,18 @@
-use glonax::{core::Motion, runtime::SharedOperandState};
+use glonax::{
+    core::Motion,
+    runtime::{MotionSender, SharedOperandState},
+};
 
 use crate::config::ProxyConfig;
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
-pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: SharedOperandState) {
+pub(super) async fn service_net_encoder(
+    config: ProxyConfig,
+    _instance: glonax::core::Instance,
+    runtime_state: SharedOperandState,
+    _motion_sender: MotionSender,
+) {
     use glonax::device::KueblerEncoder;
     use glonax::net::{J1939Network, Router};
 
@@ -50,7 +58,12 @@ pub(super) async fn service_net_encoder(config: ProxyConfig, runtime_state: Shar
     }
 }
 
-pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedOperandState) {
+pub(super) async fn service_net_ems(
+    config: ProxyConfig,
+    _instance: glonax::core::Instance,
+    runtime_state: SharedOperandState,
+    _motion_sender: MotionSender,
+) {
     use glonax::net::{EngineManagementSystem, J1939Network, Router};
 
     log::debug!("Starting EMS service");
@@ -82,7 +95,12 @@ pub(super) async fn service_net_ems(config: ProxyConfig, runtime_state: SharedOp
     }
 }
 
-pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedOperandState) {
+pub(super) async fn service_gnss(
+    config: ProxyConfig,
+    _instance: glonax::core::Instance,
+    runtime_state: SharedOperandState,
+    _motion_sender: MotionSender,
+) {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
     log::debug!("Starting GNSS service");
@@ -130,6 +148,7 @@ pub(super) async fn service_gnss(config: ProxyConfig, runtime_state: SharedOpera
 
 pub(super) async fn sink_net_actuator_sim(
     _config: ProxyConfig,
+    _instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
@@ -166,6 +185,7 @@ pub(super) async fn sink_net_actuator_sim(
 
 pub(super) async fn sink_net_actuator(
     config: ProxyConfig,
+    _instance: glonax::core::Instance,
     _runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {

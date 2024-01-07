@@ -161,11 +161,33 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState) -> Fut)
-    where
+    pub fn schedule_io_service<Fut>(
+        &self,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut,
+    ) where
         Fut: std::future::Future<Output = ()> + Send + 'static,
     {
-        tokio::spawn(service(self.config.clone(), self.operand.clone()));
+        tokio::spawn(service(
+            self.config.clone(),
+            self.instance.clone(),
+            self.operand.clone(),
+            self.motion_tx.clone(),
+        ));
+    }
+
+    /// Spawn a motion sink in the background.
+    pub fn schedule_motion_sink<Fut>(
+        &mut self,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionReceiver) -> Fut,
+    ) where
+        Fut: std::future::Future<Output = ()> + Send + 'static,
+    {
+        tokio::spawn(service(
+            self.config.clone(),
+            self.instance.clone(),
+            self.operand.clone(),
+            self.motion_rx.take().unwrap(),
+        ));
     }
 
     /// Schedule a component to run in the background.
@@ -228,35 +250,6 @@ impl<Cnf: Configurable> Runtime<Cnf> {
 
             ctx.last_tick = std::time::Instant::now();
         }
-    }
-
-    /// Run a motion service.
-    pub fn spawn_motion_service<Fut>(
-        &self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut,
-    ) where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
-    {
-        tokio::spawn(service(
-            self.config.clone(),
-            self.instance.clone(),
-            self.operand.clone(),
-            self.motion_tx.clone(),
-        ));
-    }
-
-    /// Spawn a motion sink in the background.
-    pub fn spawn_motion_sink<Fut>(
-        &mut self,
-        service: impl FnOnce(Cnf, SharedOperandState, MotionReceiver) -> Fut,
-    ) where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
-    {
-        tokio::spawn(service(
-            self.config.clone(),
-            self.operand.clone(),
-            self.motion_rx.take().unwrap(),
-        ));
     }
 
     /// Wait for the runtime to shutdown.
