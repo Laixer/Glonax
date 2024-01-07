@@ -93,31 +93,37 @@ pub struct Actor {
 
 impl Actor {
     /// Actor name.
+    #[inline]
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Actor type.
+    #[inline]
     pub fn ty(&self) -> MachineType {
         self.ty
     }
 
     /// Actor root location.
+    #[inline]
     pub fn location(&self) -> Point3<f32> {
         self.segments[0].1.location()
     }
 
     /// Actor root rotation.
+    #[inline]
     pub fn rotation(&self) -> Rotation3<f32> {
         self.segments[0].1.rotation()
     }
 
     /// Set actor root location.
+    #[inline]
     pub fn set_location(&mut self, location: Vector3<f32>) {
         self.segments[0].1.set_location(location);
     }
 
     /// Set actor root rotation.
+    #[inline]
     pub fn set_rotation(&mut self, rotation: Rotation3<f32>) {
         self.segments[0].1.set_rotation(rotation);
     }
@@ -249,6 +255,7 @@ pub struct ActorSegment {
 }
 
 impl ActorSegment {
+    /// Construct a new segment.
     pub fn new(location: Vector3<f32>) -> Self {
         Self {
             isometry: nalgebra::IsometryMatrix3::from_parts(

@@ -46,6 +46,8 @@ pub struct ComponentContext {
     world: World,
     /// Actuator values.
     actuators: std::collections::HashMap<u16, f32>,
+    /// Last tick.
+    last_tick: std::time::Instant,
 }
 
 impl ComponentContext {
@@ -55,6 +57,7 @@ impl ComponentContext {
             motion_tx,
             world: World::default(),
             actuators: std::collections::HashMap::new(),
+            last_tick: std::time::Instant::now(),
         }
     }
 
@@ -87,6 +90,11 @@ impl ComponentContext {
     #[inline]
     pub fn get(&self, key: u16) -> Option<&f32> {
         self.actuators.get(&key)
+    }
+
+    /// Retrieve the tick delta.
+    pub fn delta(&self) -> std::time::Duration {
+        self.last_tick.elapsed()
     }
 }
 
@@ -160,7 +168,6 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
-    // TODO: Add tick delta
     /// Schedule a component to run in the background.
     ///
     /// This method will schedule a component to run in the background. On each tick, the component
@@ -180,17 +187,20 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         tokio::spawn(async move {
             component.once(&mut ctx, &mut operand.write().await.state);
 
+            ctx.last_tick = std::time::Instant::now();
+
             loop {
                 interval.tick().await;
 
                 let mut runtime_state = operand.write().await;
 
                 component.tick(&mut ctx, &mut runtime_state.state);
+
+                ctx.last_tick = std::time::Instant::now();
             }
         });
     }
 
-    // TODO: Add tick delta
     /// Run a component in the main thread.
     ///
     /// This method will run a component in the main thread until the runtime is shutdown.
@@ -207,12 +217,16 @@ impl<Cnf: Configurable> Runtime<Cnf> {
 
         component.once(&mut ctx, &mut self.operand.write().await.state);
 
+        ctx.last_tick = std::time::Instant::now();
+
         loop {
             interval.tick().await;
 
             let mut runtime_state = self.operand.write().await;
 
             component.tick(&mut ctx, &mut runtime_state.state);
+
+            ctx.last_tick = std::time::Instant::now();
         }
     }
 

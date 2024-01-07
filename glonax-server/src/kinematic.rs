@@ -4,6 +4,7 @@ use glonax::{
 };
 use nalgebra::Point3;
 
+// TODO: Calculate this from the actor
 const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 
 pub struct Kinematic;
@@ -17,7 +18,6 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     }
 
     // TODO: Move the IK into a helper function
-    // TODO: Check if target is reachable, if there is a target
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         if let Some(target) = &state.target {
             let actor = ctx.world_mut().get_actor_by_name("volvo_ec240cl").unwrap();

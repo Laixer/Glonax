@@ -12,7 +12,6 @@ mod gnss;
 mod host;
 mod instance;
 mod motion;
-mod pose;
 mod status;
 mod target;
 
