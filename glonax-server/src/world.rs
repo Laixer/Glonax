@@ -33,9 +33,13 @@ impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
         Self { actor }
     }
 
-    fn once(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
+    fn once(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         ctx.world.add_actor(self.actor.clone());
-        // state.target = Some(glonax::core::Target::from_point(300.0, 400.0, 330.0));
+
+        // TODO: For now
+        if ctx.target.is_none() && !state.program.is_empty() {
+            ctx.target = state.program.pop_front();
+        }
     }
 
     fn tick(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {}
