@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Laixer Equipment B.V.
+// Copyright (C) 2024 Laixer Equipment B.V.
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -168,7 +168,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
 }
 
 #[derive(Parser)]
-#[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
+#[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax network diagnosis and system analyzer", long_about = None)]
 struct Args {

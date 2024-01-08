@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Laixer Equipment B.V.
+// Copyright (C) 2024 Laixer Equipment B.V.
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -11,7 +11,7 @@ mod gamepad;
 mod input;
 
 #[derive(Parser)]
-#[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
+#[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {

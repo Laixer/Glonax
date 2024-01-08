@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2021-2023 Laixer B.V.
+# Copyright (c) 2021-2024 Laixer B.V.
 #
 # Build a Debian package for Glonax
 #
