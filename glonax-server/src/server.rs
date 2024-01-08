@@ -116,7 +116,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .await
                     .unwrap();
 
-                runtime_state.write().await.state.target = Some(target);
+                runtime_state.write().await.state.program.push_back(target);
             }
             _ => {}
         }

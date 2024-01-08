@@ -67,8 +67,8 @@ pub struct MachineState {
     pub encoders: std::collections::HashMap<u8, f32>,
     /// Robot as an actor.
     pub actor: Option<crate::world::Actor>, // TODO: Remove from here
-    /// Target position.
-    pub target: Option<core::Target>,
+    /// Current program queue.
+    pub program: std::collections::VecDeque<core::Target>,
     /// Electronic control unit data.
     pub ecu_state: device::VirtualHCU,
 }
