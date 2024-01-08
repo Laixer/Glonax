@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Laixer Equipment B.V.
+// Copyright (C) 2024 Laixer Equipment B.V.
 // All rights reserved.
 //
 // This software may be modified and distributed under the terms
@@ -6,16 +6,13 @@
 
 use clap::Parser;
 
+mod components;
 mod config;
-mod controller;
 mod device;
-mod fusion;
-mod kinematic;
 mod server;
-mod world;
 
 #[derive(Parser)]
-#[command(author = "Copyright (C) 2023 Laixer Equipment B.V.")]
+#[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax proxy daemon", long_about = None)]
 struct Args {
@@ -72,8 +69,6 @@ async fn main() -> anyhow::Result<()> {
         host_interval: args.host_interval,
         gnss_device: args.gnss_device,
         gnss_baud_rate: args.gnss_baud_rate,
-        probe_interval: 60,
-        probe: false,
         simulation: args.simulation,
         simulation_jitter: false,
         ..Default::default()
@@ -168,10 +163,10 @@ async fn main() -> anyhow::Result<()> {
     runtime.schedule_io_service(server::unix_listen);
 
     let pipe = glonax::components::Pipeline::new(vec![
-        runtime.make_dynamic::<world::WorldBuilder>(0),
-        runtime.make_dynamic::<fusion::SensorFusion>(2),
-        runtime.make_dynamic::<kinematic::Kinematic>(5),
-        runtime.make_dynamic::<controller::Controller>(10),
+        runtime.make_dynamic::<components::WorldBuilder>(0),
+        runtime.make_dynamic::<components::SensorFusion>(2),
+        runtime.make_dynamic::<components::Kinematic>(5),
+        runtime.make_dynamic::<components::Controller>(10),
     ]);
 
     runtime.run_interval(pipe, Duration::from_millis(15)).await;

@@ -14,10 +14,6 @@ pub struct ProxyConfig {
     pub gnss_device: Option<std::path::PathBuf>,
     /// Serial baud rate.
     pub gnss_baud_rate: usize,
-    /// Send a probe to remote host.
-    pub probe: bool,
-    /// Probe interval in seconds.
-    pub probe_interval: u64,
     /// Enable simulation mode.
     pub simulation: bool,
     /// Enable simulation jitter.
