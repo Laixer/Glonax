@@ -37,10 +37,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
     }
 
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        let actor = ctx
-            .world_mut()
-            .get_actor_by_name_mut("volvo_ec240cl")
-            .unwrap();
+        let actor = ctx.world.get_actor_by_name_mut("volvo_ec240cl").unwrap();
 
         // TODO: This is just for testing
         actor.add_relative_rotation(

@@ -6,6 +6,7 @@ use nalgebra::Point3;
 
 // TODO: Calculate this from the actor
 const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
+const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
 pub struct Kinematic;
 
@@ -19,8 +20,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
 
     // TODO: Move the IK into a helper function
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        if let Some(target) = &state.target {
-            let actor = ctx.world_mut().get_actor_by_name("volvo_ec240cl").unwrap();
+        if let Some(target) = &ctx.target {
+            let actor = &ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
             let actor_world_distance =
                 nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));
@@ -42,8 +43,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
             }
         }
 
-        if let Some(target) = &state.target {
-            let actor = ctx.world_mut().get_actor_by_name("volvo_ec240cl").unwrap();
+        if let Some(target) = &ctx.target {
+            let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);
@@ -67,7 +68,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 slew_angle.to_degrees()
             );
 
-            ctx.map(glonax::core::Actuator::Slew as u16, slew_angle);
+            ctx.actuators
+                .insert(glonax::core::Actuator::Slew as u16, slew_angle);
 
             /////////////// BOOM PITCH ANGLE ///////////////
 
@@ -86,7 +88,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 boom_angle.to_degrees()
             );
 
-            ctx.map(glonax::core::Actuator::Boom as u16, boom_angle);
+            ctx.actuators
+                .insert(glonax::core::Actuator::Boom as u16, boom_angle);
 
             /////////////// ARM PITCH ANGLE ///////////////
 
@@ -100,7 +103,8 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
                 arm_angle.to_degrees()
             );
 
-            ctx.map(glonax::core::Actuator::Arm as u16, arm_angle);
+            ctx.actuators
+                .insert(glonax::core::Actuator::Arm as u16, arm_angle);
         }
     }
 }

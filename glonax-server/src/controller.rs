@@ -57,18 +57,10 @@ impl ActuatorState {
 }
 
 pub struct Controller {
-    // frame_profile: glonax::math::Linear,
-    // boom_profile: glonax::math::Linear,
-    // arm_profile: glonax::math::Linear,
-    // attachment_profile: glonax::math::Linear,
     frame_state: ActuatorState,
     boom_state: ActuatorState,
     arm_state: ActuatorState,
     attachment_state: ActuatorState,
-    // frame_stop: bool,
-    // boom_stop: bool,
-    // arm_stop: bool,
-    // attachment_stop: bool,
     stopall: bool,
 }
 
@@ -90,28 +82,20 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
             ActuatorState::from_profile(Actuator::Attachment, attachment_profile);
 
         Self {
-            // frame_profile,
-            // boom_profile,
-            // arm_profile,
-            // attachment_profile,
             frame_state,
             boom_state,
             arm_state,
             attachment_state,
-            // frame_stop: false,
-            // boom_stop: false,
-            // arm_stop: false,
-            // attachment_stop: false,
             stopall: false,
         }
     }
 
     // TODO: If no errors are set, ignore the tick
     fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
-        let frame_error = ctx.get(Actuator::Slew as u16);
-        let boom_error = ctx.get(Actuator::Boom as u16);
-        let arm_error = ctx.get(Actuator::Arm as u16);
-        let attachment_error = ctx.get(Actuator::Attachment as u16);
+        let frame_error = ctx.actuators.get(&(Actuator::Slew as u16));
+        let boom_error = ctx.actuators.get(&(Actuator::Boom as u16));
+        let arm_error = ctx.actuators.get(&(Actuator::Arm as u16));
+        let attachment_error = ctx.actuators.get(&(Actuator::Attachment as u16));
 
         // let is_tri_arm_done = frame_error.is_none() && boom_error.is_none() && arm_error.is_none();
         // let is_done = is_tri_arm_done && attachment_error.is_none();

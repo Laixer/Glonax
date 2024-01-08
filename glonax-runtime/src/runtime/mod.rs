@@ -1,6 +1,10 @@
 mod error;
 
-use crate::{core::Instance, world::World, Configurable, MachineState};
+use crate::{
+    core::{Instance, Target},
+    world::World,
+    Configurable, MachineState,
+};
 
 pub use self::error::Error;
 
@@ -43,9 +47,11 @@ pub struct ComponentContext {
     /// Motion command sender.
     motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
     /// World.
-    world: World,
+    pub world: World,
+    /// Current target.
+    pub target: Option<Target>,
     /// Actuator values.
-    actuators: std::collections::HashMap<u16, f32>,
+    pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around.
     /// Last tick.
     last_tick: std::time::Instant,
 }
@@ -56,6 +62,7 @@ impl ComponentContext {
         Self {
             motion_tx,
             world: World::default(),
+            target: None,
             actuators: std::collections::HashMap::new(),
             last_tick: std::time::Instant::now(),
         }
@@ -68,33 +75,15 @@ impl ComponentContext {
         }
     }
 
-    /// Retrieve the world mutably.
-    #[inline]
-    pub fn world_mut(&mut self) -> &mut World {
-        &mut self.world
-    }
-
-    /// Retrieve the world.
-    #[inline]
-    pub fn world(&self) -> &World {
-        &self.world
-    }
-
-    /// Insert a value into the context.
-    #[inline]
-    pub fn map(&mut self, key: u16, value: f32) {
-        self.actuators.insert(key, value);
-    }
-
-    /// Retrieve a value from the context.
-    #[inline]
-    pub fn get(&self, key: u16) -> Option<&f32> {
-        self.actuators.get(&key)
-    }
-
     /// Retrieve the tick delta.
     pub fn delta(&self) -> std::time::Duration {
         self.last_tick.elapsed()
+    }
+
+    /// Called after all components are ticked.
+    fn post_tick(&mut self) {
+        self.actuators.clear();
+        self.last_tick = std::time::Instant::now();
     }
 }
 
@@ -208,8 +197,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         let mut ctx = ComponentContext::new(self.motion_tx.clone());
         tokio::spawn(async move {
             component.once(&mut ctx, &mut operand.write().await.state);
-
-            ctx.last_tick = std::time::Instant::now();
+            ctx.post_tick();
 
             loop {
                 interval.tick().await;
@@ -217,8 +205,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
                 let mut runtime_state = operand.write().await;
 
                 component.tick(&mut ctx, &mut runtime_state.state);
-
-                ctx.last_tick = std::time::Instant::now();
+                ctx.post_tick();
             }
         });
     }
@@ -238,8 +225,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         let mut ctx = ComponentContext::new(self.motion_tx.clone());
 
         component.once(&mut ctx, &mut self.operand.write().await.state);
-
-        ctx.last_tick = std::time::Instant::now();
+        ctx.post_tick();
 
         loop {
             interval.tick().await;
@@ -247,8 +233,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
             let mut runtime_state = self.operand.write().await;
 
             component.tick(&mut ctx, &mut runtime_state.state);
-
-            ctx.last_tick = std::time::Instant::now();
+            ctx.post_tick();
         }
     }
 
