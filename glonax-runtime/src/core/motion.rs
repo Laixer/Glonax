@@ -6,7 +6,7 @@ const PROTO_TYPE_RESET_ALL: u8 = 0x02;
 const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
 const PROTO_TYPE_CHANGE: u8 = 0x10;
 
-// TODO: Move to glonax-server or an excatavator module
+// FUTURE: Move to glonax-server or an excatavator module
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Actuator {
     /// Boom actuator.
@@ -79,7 +79,7 @@ impl Motion {
         }])
     }
 
-    // TODO: Copy into bytes directly
+    // FUTURE: Copy into bytes directly
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(32);
 

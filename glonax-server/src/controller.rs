@@ -90,7 +90,6 @@ impl<Cnf: Configurable> Component<Cnf> for Controller {
         }
     }
 
-    // TODO: If no errors are set, ignore the tick
     fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
         let frame_error = ctx.actuators.get(&(Actuator::Slew as u16));
         let boom_error = ctx.actuators.get(&(Actuator::Boom as u16));

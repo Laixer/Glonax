@@ -19,9 +19,11 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     }
 
     // TODO: Move the IK into a helper function
-    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
         if let Some(target) = &ctx.target {
             let actor = &ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
+
+            log::debug!("Objective target: {}", target);
 
             let actor_world_distance =
                 nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));

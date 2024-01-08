@@ -27,7 +27,6 @@ impl EncoderAdapter {
     }
 }
 
-// TODO: Move to glonax-server
 #[deprecated]
 pub struct Pose {
     /// Frame rotator.
@@ -94,7 +93,6 @@ impl Pose {
         }
     }
 
-    // TODO: Copy into bytes directly
     pub fn to_bytes(&self) -> Vec<u8> {
         use bytes::BufMut;
 
