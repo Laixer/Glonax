@@ -17,14 +17,6 @@ struct ActuatorState {
 }
 
 impl ActuatorState {
-    fn _new(actuator: Actuator, kp: f32, offset: f32, inverse: bool) -> Self {
-        Self {
-            profile: glonax::math::Linear::new(kp, offset, inverse),
-            actuator,
-            stop: false,
-        }
-    }
-
     fn from_profile(actuator: Actuator, profile: glonax::math::Linear) -> Self {
         Self {
             profile,
