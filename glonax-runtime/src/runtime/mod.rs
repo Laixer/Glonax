@@ -90,6 +90,7 @@ impl ComponentContext {
 /// Construct runtime service from configuration and instance.
 ///
 /// Note that this method is certain to block.
+#[inline]
 pub fn builder<Cnf: Configurable>(
     config: &Cnf,
     instance: crate::core::Instance,

@@ -161,6 +161,7 @@ async fn main() -> anyhow::Result<()> {
 
     runtime.schedule_io_service(server::tcp_listen);
     runtime.schedule_io_service(server::unix_listen);
+    runtime.schedule_io_service(server::net_announce);
 
     let pipe = glonax::components::Pipeline::new(vec![
         runtime.make_dynamic::<components::WorldBuilder>(0),

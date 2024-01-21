@@ -229,3 +229,27 @@ pub(super) async fn unix_listen(
         ));
     }
 }
+
+pub(super) async fn net_announce(
+    _config: ProxyConfig,
+    instance: glonax::core::Instance,
+    _runtime_state: SharedOperandState,
+    _motion_sender: MotionSender,
+) {
+    use tokio::net::UdpSocket;
+
+    let socket = UdpSocket::bind("[::]:0").await.unwrap();
+
+    loop {
+        let instance = instance.clone();
+
+        log::debug!("Announcing: {}", instance);
+
+        socket
+            .send_to(&instance.to_bytes()[..], "[ff02::1]:30050")
+            .await
+            .unwrap();
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+}
