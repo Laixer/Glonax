@@ -176,7 +176,7 @@ pub(super) async fn sink_net_actuator_sim(
                 runtime_state.write().await.state.ecu_state.unlock();
             }
             Motion::StraightDrive(_value) => {
-                // TODO: Implement
+                // TODO: Implement, maybe ask ecu_state for straight drive
             }
             Motion::Change(changes) => {
                 if runtime_state.read().await.state.ecu_state.is_locked() {

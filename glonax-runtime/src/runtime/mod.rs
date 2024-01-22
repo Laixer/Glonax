@@ -209,6 +209,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         });
     }
 
+    // TODO: Maybe copy MachineState to component state on each tick?
     /// Run a component in the main thread.
     ///
     /// This method will run a component in the main thread until the runtime is shutdown.
