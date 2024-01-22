@@ -1,5 +1,5 @@
 pub use self::engine::Engine;
-pub use self::gnss::Gnss;
+pub use self::gnss::{Gnss, GnssStatus};
 pub use self::host::Host;
 pub use self::instance::Instance;
 pub use self::motion::Actuator;

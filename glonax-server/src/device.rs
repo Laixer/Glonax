@@ -140,8 +140,11 @@ pub(super) async fn service_gnss(
             }
         }
         Err(e) => {
-            log::error!("Failed to open serial: {}", e);
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            log::error!("Failed to open GNSS device: {}", e);
+            log::warn!("Disabling GNSS service");
+
+            runtime_state.write().await.state.gnss.status =
+                glonax::core::GnssStatus::DeviceNotFound;
         }
     }
 }

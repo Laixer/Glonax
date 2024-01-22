@@ -1,5 +1,25 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
+#[derive(Clone, Copy, Debug)]
+pub enum GnssStatus {
+    Disabled = 0xFF,
+    DeviceNotFound = 0x00,
+    LocationFix = 0x01,
+}
+
+impl TryFrom<u8> for GnssStatus {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0xFF => Ok(GnssStatus::Disabled),
+            0x00 => Ok(GnssStatus::DeviceNotFound),
+            0x01 => Ok(GnssStatus::LocationFix),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct Gnss {
     /// GNSS Latitude and Longitude.
     pub location: (f32, f32),
@@ -11,6 +31,8 @@ pub struct Gnss {
     pub heading: f32,
     /// GNSS Satellites.
     pub satellites: u8,
+    /// GNSS Status.
+    pub status: GnssStatus,
 }
 
 impl Default for Gnss {
@@ -21,6 +43,7 @@ impl Default for Gnss {
             speed: 0.0,
             heading: 0.0,
             satellites: 0,
+            status: GnssStatus::Disabled,
         }
     }
 }
@@ -54,6 +77,7 @@ impl TryFrom<Vec<u8>> for Gnss {
             speed: buf.get_f32(),
             heading: buf.get_f32(),
             satellites: buf.get_u8(),
+            status: GnssStatus::try_from(buf.get_u8())?,
         })
     }
 }
@@ -73,6 +97,8 @@ impl crate::protocol::Packetize for Gnss {
         buf.put_f32(self.heading);
 
         buf.put_u8(self.satellites);
+
+        buf.put_u8(self.status as u8);
 
         buf.to_vec()
     }
