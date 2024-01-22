@@ -1,6 +1,6 @@
 pub use self::engine::{Engine, EngineStatus};
 pub use self::gnss::{Gnss, GnssStatus};
-pub use self::host::Host;
+pub use self::host::{Host, HostStatus};
 pub use self::instance::Instance;
 pub use self::motion::Actuator;
 pub use self::motion::Motion;

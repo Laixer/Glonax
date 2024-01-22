@@ -1,5 +1,31 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HostStatus {
+    /// Host is disabled.
+    Disabled = 0xFF,
+    /// Host memory is low.
+    MemoryLow = 0x00,
+    /// Host CPU is high.
+    CPUHigh = 0x01,
+    /// Engine is nominal.
+    Nominal = 0x02,
+}
+
+impl TryFrom<u8> for HostStatus {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0xFF => Ok(HostStatus::Disabled),
+            0x00 => Ok(HostStatus::MemoryLow),
+            0x01 => Ok(HostStatus::CPUHigh),
+            0x02 => Ok(HostStatus::Nominal),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct Host {
     /// VMS Memory total and used in bytes.
     pub memory: (u64, u64),
@@ -11,6 +37,8 @@ pub struct Host {
     pub uptime: u64,
     /// VMS Timestamp in seconds.
     pub timestamp: chrono::DateTime<chrono::Utc>,
+    /// Host status.
+    pub status: HostStatus,
 }
 
 impl Default for Host {
@@ -21,6 +49,7 @@ impl Default for Host {
             cpu_load: (0.0, 0.0, 0.0),
             uptime: 0,
             timestamp: chrono::Utc::now(),
+            status: HostStatus::Disabled,
         }
     }
 }
@@ -64,13 +93,14 @@ impl TryFrom<Vec<u8>> for Host {
             cpu_load: (buf.get_f64(), buf.get_f64(), buf.get_f64()),
             uptime: buf.get_u64(),
             timestamp: Utc.timestamp_opt(buf.get_i64(), 0).unwrap(),
+            status: HostStatus::try_from(buf.get_u8())?,
         })
     }
 }
 
 impl crate::protocol::Packetize for Host {
     const MESSAGE_TYPE: u8 = 0x41;
-    const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<u64>() * 9);
+    const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<u64>() * 9) + 1);
 
     fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(Self::MESSAGE_SIZE.unwrap());
@@ -88,6 +118,8 @@ impl crate::protocol::Packetize for Host {
         buf.put_u64(self.uptime);
 
         buf.put_i64(self.timestamp.timestamp());
+
+        buf.put_u8(self.status as u8);
 
         buf.to_vec()
     }

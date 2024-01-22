@@ -83,8 +83,22 @@ pub struct Operand {
 
 impl Operand {
     /// Current machine state.
+    ///
+    /// This method returns the current machine state based
+    /// on the current operand state. It is a convenience
+    /// method to avoid having to lock the operand state
     pub fn status(&self) -> core::Status {
         let mut status = crate::core::Status::Healthy;
+
+        match self.state.vms.status {
+            crate::core::HostStatus::MemoryLow => {
+                status = crate::core::Status::Degraded;
+            }
+            crate::core::HostStatus::CPUHigh => {
+                status = crate::core::Status::Degraded;
+            }
+            _ => {}
+        }
 
         if let crate::core::GnssStatus::DeviceNotFound = self.state.gnss.status {
             status = crate::core::Status::Faulty;
