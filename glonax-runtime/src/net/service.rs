@@ -58,6 +58,9 @@ impl J1939Message {
             PGN::AcknowledgmentMessage => {
                 acknowledged = Some(frame.pdu()[0]);
             }
+            PGN::TimeDate => {
+                // TODO
+            }
             _ => {}
         }
 

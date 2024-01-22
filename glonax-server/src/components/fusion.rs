@@ -40,10 +40,10 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         let actor = ctx.world.get_actor_by_name_mut("volvo_ec240cl").unwrap();
 
         // TODO: This is just for testing
-        actor.add_relative_rotation(
-            "frame",
-            nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
-        );
+        // actor.add_relative_rotation(
+        //     "frame",
+        //     nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
+        // );
 
         if let Some(value) = state.encoders.get(&FRAME_ENCODER) {
             log::trace!("Frame encoder: {}", value);
@@ -109,37 +109,37 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         }
 
         // Print segment world locations
-        let body_world_location = actor.world_location("frame");
-        log::debug!(
-            "Frame: X={:.2} Y={:.2} Z={:.2}",
-            body_world_location.x,
-            body_world_location.y,
-            body_world_location.z
-        );
+        // let body_world_location = actor.world_location("frame");
+        // log::debug!(
+        //     "Frame: X={:.2} Y={:.2} Z={:.2}",
+        //     body_world_location.x,
+        //     body_world_location.y,
+        //     body_world_location.z
+        // );
 
-        let boom_world_location = actor.world_location("boom");
-        log::debug!(
-            "Boom: X={:.2} Y={:.2} Z={:.2}",
-            boom_world_location.x,
-            boom_world_location.y,
-            boom_world_location.z
-        );
+        // let boom_world_location = actor.world_location("boom");
+        // log::debug!(
+        //     "Boom: X={:.2} Y={:.2} Z={:.2}",
+        //     boom_world_location.x,
+        //     boom_world_location.y,
+        //     boom_world_location.z
+        // );
 
-        let arm_world_location = actor.world_location("arm");
-        log::debug!(
-            "Arm: X={:.2} Y={:.2} Z={:.2}",
-            arm_world_location.x,
-            arm_world_location.y,
-            arm_world_location.z
-        );
+        // let arm_world_location = actor.world_location("arm");
+        // log::debug!(
+        //     "Arm: X={:.2} Y={:.2} Z={:.2}",
+        //     arm_world_location.x,
+        //     arm_world_location.y,
+        //     arm_world_location.z
+        // );
 
-        let bucket_world_location = actor.world_location("attachment");
-        log::debug!(
-            "Attachment: X={:.2} Y={:.2} Z={:.2}",
-            bucket_world_location.x,
-            bucket_world_location.y,
-            bucket_world_location.z
-        );
+        // let bucket_world_location = actor.world_location("attachment");
+        // log::debug!(
+        //     "Attachment: X={:.2} Y={:.2} Z={:.2}",
+        //     bucket_world_location.x,
+        //     bucket_world_location.y,
+        //     bucket_world_location.z
+        // );
 
         // TODO: This is a hack to get the actor into the state
         state.actor = Some(actor.clone());

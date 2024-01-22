@@ -5,7 +5,7 @@ use crate::{
 };
 
 pub struct EncoderSimulator {
-    encoder_list: [(u8, VirtualEncoder); 4],
+    encoder_list: [(u8, crate::core::Actuator, VirtualEncoder); 4],
 }
 
 impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
@@ -21,24 +21,26 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
         let encoder_attachment = VirtualEncoder::new(5_000, (0, 3_100), false, false);
 
         let encoder_list = [
-            (0x6A, encoder_frame),
-            (0x6B, encoder_boom),
-            (0x6C, encoder_arm),
-            (0x6D, encoder_attachment),
+            (0x6A, crate::core::Actuator::Slew, encoder_frame),
+            (0x6B, crate::core::Actuator::Boom, encoder_boom),
+            (0x6C, crate::core::Actuator::Arm, encoder_arm),
+            (0x6D, crate::core::Actuator::Attachment, encoder_attachment),
         ];
 
         Self { encoder_list }
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {
-        // for (id, encoder) in self.encoder_list.iter_mut() {
-        //     let velocity = state.ecu_state.speed(actuator);
-        //     let position = state.ecu_state.position(actuator);
+    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
+        for (id, actuator, encoder) in self.encoder_list.iter_mut() {
+            let velocity = state.ecu_state.speed(actuator);
+            let position = state.ecu_state.position(actuator);
 
-        //     let position = encoder.position(position, velocity);
+            let position = encoder.position(position, velocity);
 
-        //     state.ecu_state.set_position(actuator, position);
-        // }
+            state.encoders.insert(*id, position as f32);
+
+            state.ecu_state.set_position(actuator, position);
+        }
 
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());
