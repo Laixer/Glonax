@@ -232,23 +232,22 @@ pub(super) async fn unix_listen(
 pub(super) async fn net_announce(
     _config: ProxyConfig,
     instance: glonax::core::Instance,
-    _runtime_state: SharedOperandState,
+    runtime_state: SharedOperandState,
     _motion_sender: MotionSender,
 ) {
     use tokio::net::UdpSocket;
 
     let socket = UdpSocket::bind("[::]:0").await.unwrap();
 
-    // TODO: Also send status
     loop {
         let instance = instance.clone();
+        let status = runtime_state.read().await.status();
 
         log::trace!("Sending instance announcement");
 
-        socket
-            .send_to(&instance.to_bytes()[..], "[ff02::1]:30050")
-            .await
-            .unwrap();
+        let payload = [instance.to_bytes(), status.to_bytes()].concat();
+
+        socket.send_to(&payload, "[ff02::1]:30050").await.unwrap();
 
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
