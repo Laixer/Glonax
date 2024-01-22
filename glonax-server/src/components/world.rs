@@ -6,6 +6,8 @@ use glonax::{
 };
 use nalgebra::Vector3;
 
+const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
+
 pub struct WorldBuilder {
     actor: Actor,
 }
@@ -16,7 +18,7 @@ impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
         Self: Sized,
     {
         // TODO: Build the actor from configuration and machine instance
-        let actor = ActorBuilder::new("volvo_ec240cl", MachineType::Excavator)
+        let actor = ActorBuilder::new(ROBOT_ACTOR_NAME, MachineType::Excavator)
             .attach_segment(
                 "undercarriage",
                 ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
