@@ -6,4 +6,5 @@ pub use world::WorldBuilder;
 mod controller;
 mod fusion;
 mod kinematic;
+mod sintest;
 mod world;

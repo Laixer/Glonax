@@ -9,6 +9,8 @@ const BOOM_ENCODER: u8 = 0x6B;
 const ARM_ENCODER: u8 = 0x6C;
 const ATTACHMENT_ENCODER: u8 = 0x6D;
 
+const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
+
 pub struct SensorFusion {
     frame_encoder_converter: EncoderConverter,
     arm_encoder_converter: EncoderConverter,
@@ -37,13 +39,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
     }
 
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        let actor = ctx.world.get_actor_by_name_mut("volvo_ec240cl").unwrap();
-
-        // TODO: This is just for testing
-        // actor.add_relative_rotation(
-        //     "frame",
-        //     nalgebra::Rotation3::from_euler_angles(0.0, 0.0, 0.1_f32.to_radians()),
-        // );
+        let actor = ctx.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
 
         if let Some(value) = state.encoders.get(&FRAME_ENCODER) {
             log::trace!("Frame encoder: {}", value);
@@ -140,8 +136,5 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         //     bucket_world_location.y,
         //     bucket_world_location.z
         // );
-
-        // TODO: This is a hack to get the actor into the state
-        state.actor = Some(actor.clone());
     }
 }

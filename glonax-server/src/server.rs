@@ -192,7 +192,6 @@ pub(super) async fn unix_listen(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    // Remove the socket if it already exists
     if std::path::Path::new(glonax::consts::DEFAULT_SOCKET_PATH).exists() {
         std::fs::remove_file(glonax::consts::DEFAULT_SOCKET_PATH).unwrap();
     }
@@ -240,10 +239,11 @@ pub(super) async fn net_announce(
 
     let socket = UdpSocket::bind("[::]:0").await.unwrap();
 
+    // TODO: Also send status
     loop {
         let instance = instance.clone();
 
-        log::debug!("Announcing: {}", instance);
+        log::trace!("Sending instance announcement");
 
         socket
             .send_to(&instance.to_bytes()[..], "[ff02::1]:30050")

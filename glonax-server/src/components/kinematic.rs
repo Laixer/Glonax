@@ -19,10 +19,13 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
     }
 
     // TODO: Move the IK into a helper function
-    fn tick(&mut self, ctx: &mut ComponentContext, _state: &mut MachineState) {
-        if let Some(target) = &ctx.target {
-            let actor = &ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
+    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+        let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
+        // TODO: This is a hack to get the actor into the state
+        state.actor = Some(actor.clone());
+
+        if let Some(target) = &ctx.target {
             log::debug!("Objective target: {}", target);
 
             let actor_world_distance =
@@ -46,8 +49,6 @@ impl<Cnf: Configurable> Component<Cnf> for Kinematic {
         }
 
         if let Some(target) = &ctx.target {
-            let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
-
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);
 
