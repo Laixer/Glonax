@@ -1,6 +1,6 @@
 use bytes::{BufMut, BytesMut};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EngineStatus {
     /// Engine is disabled.
     Disabled = 0xFF,
@@ -26,6 +26,7 @@ impl TryFrom<u8> for EngineStatus {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Engine {
     /// Engine Driver Demand in percent.
     pub driver_demand: u8,
@@ -81,7 +82,7 @@ impl TryFrom<Vec<u8>> for Engine {
 
 impl crate::protocol::Packetize for Engine {
     const MESSAGE_TYPE: u8 = 0x43;
-    const MESSAGE_SIZE: Option<usize> = Some(4);
+    const MESSAGE_SIZE: Option<usize> = Some(5);
 
     fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(Self::MESSAGE_SIZE.unwrap());
@@ -93,5 +94,55 @@ impl crate::protocol::Packetize for Engine {
         buf.put_u8(self.status as u8);
 
         buf.to_vec()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::Packetize;
+
+    #[test]
+    fn test_engine_status() {
+        assert_eq!(
+            EngineStatus::try_from(0xFF).unwrap(),
+            EngineStatus::Disabled
+        );
+        assert_eq!(
+            EngineStatus::try_from(0x00).unwrap(),
+            EngineStatus::NetworkDown
+        );
+        assert_eq!(
+            EngineStatus::try_from(0x01).unwrap(),
+            EngineStatus::MessageTimeout
+        );
+        assert_eq!(EngineStatus::try_from(0x02).unwrap(), EngineStatus::Nominal);
+        assert!(EngineStatus::try_from(0x03).is_err());
+    }
+
+    #[test]
+    fn test_engine() {
+        let engine = Engine {
+            driver_demand: 0x01,
+            actual_engine: 0x02,
+            rpm: 0x03,
+            status: EngineStatus::Nominal,
+        };
+
+        let bytes = engine.to_bytes();
+
+        assert_eq!(bytes.len(), 5);
+        assert_eq!(bytes[0], 0x01);
+        assert_eq!(bytes[1], 0x02);
+        assert_eq!(bytes[2], 0x00);
+        assert_eq!(bytes[3], 0x03);
+        assert_eq!(bytes[4], 0x02);
+
+        let engine = Engine::try_from(bytes).unwrap();
+
+        assert_eq!(engine.driver_demand, 0x01);
+        assert_eq!(engine.actual_engine, 0x02);
+        assert_eq!(engine.rpm, 0x03);
+        assert_eq!(engine.status, EngineStatus::Nominal);
     }
 }

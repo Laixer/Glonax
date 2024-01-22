@@ -243,7 +243,7 @@ pub(super) async fn net_announce(
         let instance = instance.clone();
         let status = runtime_state.read().await.status();
 
-        log::trace!("Sending instance announcement");
+        log::trace!("Sending instance and status broadcast");
 
         let payload = [instance.to_bytes(), status.to_bytes()].concat();
 
