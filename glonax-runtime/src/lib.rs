@@ -63,7 +63,7 @@ pub struct MachineState {
     /// Engine data.
     pub engine: core::Engine,
     /// Encoder data.
-    pub encoders: std::collections::HashMap<u8, f32>,
+    pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here
     /// Robot as an actor.
     pub actor: Option<crate::world::Actor>, // TODO: Remove from here
     /// Current program queue.
@@ -77,8 +77,29 @@ pub struct MachineState {
 /// This is the state that is used by the runtime to control
 /// the machine and the state that is used by the middleware.
 pub struct Operand {
-    /// Current machine state.
-    pub status: core::Status,
     /// Robot state.
     pub state: MachineState,
+}
+
+impl Operand {
+    /// Current machine state.
+    pub fn status(&self) -> core::Status {
+        let mut status = crate::core::Status::Healthy;
+
+        if let crate::core::GnssStatus::DeviceNotFound = self.state.gnss.status {
+            status = crate::core::Status::Faulty;
+        }
+
+        match self.state.engine.status {
+            crate::core::EngineStatus::NetworkDown => {
+                status = crate::core::Status::Faulty;
+            }
+            crate::core::EngineStatus::MessageTimeout => {
+                status = crate::core::Status::Degraded;
+            }
+            _ => {}
+        }
+
+        status
+    }
 }
