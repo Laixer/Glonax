@@ -1,6 +1,31 @@
 use bytes::{BufMut, BytesMut};
 
-#[derive(Default)]
+#[derive(Clone, Copy, Debug)]
+pub enum EngineStatus {
+    /// Engine is disabled.
+    Disabled = 0xFF,
+    /// Controller Area Network is down.
+    NetworkDown = 0x00,
+    /// Engine message timeout.
+    MessageTimeout = 0x01,
+    /// Engine is nominal.
+    Nominal = 0x02,
+}
+
+impl TryFrom<u8> for EngineStatus {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0xFF => Ok(EngineStatus::Disabled),
+            0x00 => Ok(EngineStatus::NetworkDown),
+            0x01 => Ok(EngineStatus::MessageTimeout),
+            0x02 => Ok(EngineStatus::Nominal),
+            _ => Err(()),
+        }
+    }
+}
+
 pub struct Engine {
     /// Engine Driver Demand in percent.
     pub driver_demand: u8,
@@ -8,6 +33,19 @@ pub struct Engine {
     pub actual_engine: u8,
     /// Engine RPM.
     pub rpm: u16,
+    /// Engine status.
+    pub status: EngineStatus,
+}
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self {
+            driver_demand: Default::default(),
+            actual_engine: Default::default(),
+            rpm: Default::default(),
+            status: EngineStatus::Disabled,
+        }
+    }
 }
 
 impl std::fmt::Display for Engine {
@@ -30,10 +68,13 @@ impl TryFrom<Vec<u8>> for Engine {
         let actual_engine = buffer[1];
         let rpm = u16::from_be_bytes([buffer[2], buffer[3]]);
 
+        let status = EngineStatus::try_from(buffer[4])?;
+
         Ok(Self {
             driver_demand,
             actual_engine,
             rpm,
+            status,
         })
     }
 }
@@ -48,6 +89,8 @@ impl crate::protocol::Packetize for Engine {
         buf.put_u8(self.driver_demand);
         buf.put_u8(self.actual_engine);
         buf.put_u16(self.rpm);
+
+        buf.put_u8(self.status as u8);
 
         buf.to_vec()
     }

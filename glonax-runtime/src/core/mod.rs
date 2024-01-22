@@ -1,4 +1,4 @@
-pub use self::engine::Engine;
+pub use self::engine::{Engine, EngineStatus};
 pub use self::gnss::{Gnss, GnssStatus};
 pub use self::host::Host;
 pub use self::instance::Instance;

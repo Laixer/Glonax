@@ -2,8 +2,11 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 #[derive(Clone, Copy, Debug)]
 pub enum GnssStatus {
+    /// GNSS is disabled.
     Disabled = 0xFF,
+    /// GNSS device not found.
     DeviceNotFound = 0x00,
+    /// GNSS has a location fix.
     LocationFix = 0x01,
 }
 

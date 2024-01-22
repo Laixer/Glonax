@@ -54,7 +54,7 @@ pub(super) async fn service_net_encoder(
                 }
             }
         }
-        Err(e) => log::error!("Failed to create network: {}", e),
+        Err(e) => log::error!("Failed to open network: {}", e),
     }
 }
 
@@ -91,7 +91,13 @@ pub(super) async fn service_net_ems(
                 }
             }
         }
-        Err(e) => log::error!("Failed to create network: {}", e),
+        Err(e) => {
+            log::error!("Failed to open network: {}", e);
+            log::warn!("Disabling EMS service");
+
+            runtime_state.write().await.state.engine.status =
+                glonax::core::EngineStatus::NetworkDown;
+        }
     }
 }
 
@@ -246,6 +252,6 @@ pub(super) async fn sink_net_actuator(
 
             log::debug!("Motion listener shutdown");
         }
-        Err(e) => log::error!("Failed to create network: {}", e),
+        Err(e) => log::error!("Failed to open network: {}", e),
     }
 }
