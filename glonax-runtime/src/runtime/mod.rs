@@ -203,9 +203,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
             loop {
                 interval.tick().await;
 
-                let mut runtime_state = operand.write().await;
-
-                component.tick(&mut ctx, &mut runtime_state.state);
+                component.tick(&mut ctx, &mut operand.write().await.state);
                 ctx.post_tick();
             }
         });
@@ -231,9 +229,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         loop {
             interval.tick().await;
 
-            let mut runtime_state = self.operand.write().await;
-
-            component.tick(&mut ctx, &mut runtime_state.state);
+            component.tick(&mut ctx, &mut self.operand.write().await.state);
             ctx.post_tick();
         }
     }
