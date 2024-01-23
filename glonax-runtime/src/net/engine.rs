@@ -90,8 +90,25 @@ impl std::fmt::Display for EngineMessage {
 pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
-    pub fn serialize(&self, engine_message: &mut EngineMessage) -> Vec<Frame> {
-        engine_message.to_frame()
+    pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
+                .priority(3)
+                .build(),
+        )
+        .copy_from_slice(&[
+            00,
+            0x47,
+            0x1f,
+            0x00,
+            0x00,
+            0x00,
+            0x20,
+            (rpm as f32 / 10.0) as u8,
+        ])
+        .build();
+
+        vec![frame]
     }
 }
 

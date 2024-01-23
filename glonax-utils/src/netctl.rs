@@ -215,6 +215,12 @@ enum Command {
         #[command(subcommand)]
         command: HCUCommand,
     },
+    /// Engine control unit commands.
+    Engine {
+        /// Target node address.
+        #[arg(long, default_value = "0x11")]
+        address: String,
+    },
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -345,6 +351,15 @@ async fn main() -> anyhow::Result<()> {
                     net.commanded_address(node, node_new).await;
                 }
             }
+        }
+        Command::Engine { address } => {
+            let node = node_address(address)?;
+            let service = EngineManagementSystem;
+            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+
+            info!("{} RPM >> {}", style_node(node), service.set_rpm(810).first().unwrap());
+
+            net.send_vectored(&service.set_rpm(810)).await.unwrap();
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;

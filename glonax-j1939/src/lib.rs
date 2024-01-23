@@ -50,6 +50,7 @@ impl J1939Stream {
         Ok(frame.id(peer_addr.into()).build())
     }
 
+    // TODO: Priority is not implemented yet.
     /// Write frame over the network stream.
     #[inline]
     pub async fn write(&self, frame: &Frame) -> io::Result<usize> {
