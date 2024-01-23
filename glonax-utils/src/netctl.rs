@@ -45,7 +45,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut boom_encoder = KueblerEncoder::new(0x6B);
     let mut arm_encoder = KueblerEncoder::new(0x6C);
     let mut attachment_encoder = KueblerEncoder::new(0x6D);
-    let mut hcu = ActuatorService::new(0x4A);
+    let mut hcu = HydraulicControlUnit::new(0x4A);
     let mut app_inspector = J1939ApplicationInspector;
 
     loop {
@@ -216,11 +216,7 @@ enum Command {
         command: HCUCommand,
     },
     /// Engine control unit commands.
-    Engine {
-        /// Target node address.
-        #[arg(long, default_value = "0x11")]
-        address: String,
-    },
+    Engine,
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -286,7 +282,7 @@ async fn main() -> anyhow::Result<()> {
     match args.command {
         Command::Hcu { address, command } => {
             let node = node_address(address)?;
-            let service = ActuatorService::new(node);
+            let service = HydraulicControlUnit::new(node);
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
             match command {
@@ -352,12 +348,11 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Engine { address } => {
-            let node = node_address(address)?;
+        Command::Engine => {
             let service = EngineManagementSystem;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
-            info!("{} RPM >> {}", style_node(node), service.set_rpm(810).first().unwrap());
+            info!("RPM >> {}", service.set_rpm(810).first().unwrap());
 
             net.send_vectored(&service.set_rpm(810)).await.unwrap();
         }

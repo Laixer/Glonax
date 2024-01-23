@@ -198,7 +198,7 @@ pub(super) async fn sink_net_actuator(
     _runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
-    use glonax::net::{ActuatorService, J1939Network};
+    use glonax::net::{HydraulicControlUnit, J1939Network};
 
     log::debug!("Starting motion listener");
 
@@ -207,7 +207,7 @@ pub(super) async fn sink_net_actuator(
         glonax::consts::DEFAULT_J1939_ADDRESS,
     ) {
         Ok(network) => {
-            let service = ActuatorService::new(0x4A);
+            let service = HydraulicControlUnit::new(0x4A);
 
             while let Some(motion) = motion_rx.recv().await {
                 match motion {

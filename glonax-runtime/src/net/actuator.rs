@@ -7,11 +7,6 @@ use super::Parsable;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;
 
-// TODO: Rename module to HCUService or something similar
-pub struct ActuatorService {
-    pub node: u8,
-}
-
 pub struct ActuatorMessage {
     /// Node ID
     node: u8,
@@ -228,7 +223,12 @@ impl std::fmt::Display for ConfigMessage {
     }
 }
 
-impl ActuatorService {
+pub struct HydraulicControlUnit {
+    /// Source and destination node ID.
+    pub node: u8,
+}
+
+impl HydraulicControlUnit {
     /// Construct a new actuator service.
     pub fn new(node: u8) -> Self {
         Self { node }
@@ -278,7 +278,7 @@ impl ActuatorService {
         msg.to_frame()
     }
 
-    // TODO: MOve this to HCU
+    // FUTURE: MOve this to HCU
     /// Drive both tracks
     pub fn drive_straight(&self, value: i16) -> Vec<Frame> {
         self.actuator_command([(2, value), (3, value)].into_iter().collect())
@@ -303,7 +303,7 @@ impl ActuatorService {
     }
 }
 
-impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for ActuatorService {
+impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for HydraulicControlUnit {
     fn parse(
         &mut self,
         frame: &Frame,
