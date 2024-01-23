@@ -16,6 +16,8 @@ pub enum J1939Message {
     Acknowledged(u8),
     /// Time and date.
     TimeDate(chrono::DateTime<chrono::Utc>),
+    /// Proprietary B.
+    ProprietaryB([u8; 8]),
 }
 
 impl J1939Message {
@@ -78,19 +80,16 @@ impl J1939Message {
                     (frame.pdu()[0] as f32 * 0.25) as u32,
                 );
 
-                // println!("Date: {:?}", dt);
-
                 Self::TimeDate(dt.single().unwrap())
+            }
+            PGN::ProprietaryB(_) => {
+                let mut data = [0; 8];
+                data.copy_from_slice(&frame.pdu()[0..8]);
+
+                Self::ProprietaryB(data)
             }
             _ => todo!(),
         }
-
-        // Self {
-        //     software_indent,
-        //     request_pgn,
-        //     address_claim,
-        //     acknowledged,
-        // }
     }
 }
 

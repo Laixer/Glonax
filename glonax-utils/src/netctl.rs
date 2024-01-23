@@ -159,7 +159,14 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         time
                     );
                 }
-                _ => {}
+                J1939Message::ProprietaryB(data) => {
+                    info!(
+                        "{} {} » Proprietary B: {:02X?}",
+                        style_node(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Inspector"),
+                        data
+                    );
+                }
             }
         }
     }
