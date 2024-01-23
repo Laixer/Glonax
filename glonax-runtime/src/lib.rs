@@ -88,28 +88,30 @@ impl Operand {
     /// on the current operand state. It is a convenience
     /// method to avoid having to lock the operand state
     pub fn status(&self) -> core::Status {
-        let mut status = crate::core::Status::Healthy;
+        use crate::core::{EngineStatus, GnssStatus, HostStatus, Status};
+
+        let mut status = Status::Healthy;
 
         match self.state.vms.status {
-            crate::core::HostStatus::MemoryLow => {
-                status = crate::core::Status::Degraded;
+            HostStatus::MemoryLow => {
+                status = Status::Degraded;
             }
-            crate::core::HostStatus::CPUHigh => {
-                status = crate::core::Status::Degraded;
+            HostStatus::CPUHigh => {
+                status = Status::Degraded;
             }
             _ => {}
         }
 
-        if let crate::core::GnssStatus::DeviceNotFound = self.state.gnss.status {
-            status = crate::core::Status::Faulty;
+        if let GnssStatus::DeviceNotFound = self.state.gnss.status {
+            status = Status::Faulty;
         }
 
         match self.state.engine.status {
-            crate::core::EngineStatus::NetworkDown => {
-                status = crate::core::Status::Faulty;
+            EngineStatus::NetworkDown => {
+                status = Status::Faulty;
             }
-            crate::core::EngineStatus::MessageTimeout => {
-                status = crate::core::Status::Degraded;
+            EngineStatus::MessageTimeout => {
+                status = Status::Degraded;
             }
             _ => {}
         }

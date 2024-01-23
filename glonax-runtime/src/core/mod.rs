@@ -1,3 +1,4 @@
+pub use self::control::Control;
 pub use self::engine::{Engine, EngineStatus};
 pub use self::gnss::{Gnss, GnssStatus};
 pub use self::host::{Host, HostStatus};
@@ -7,6 +8,7 @@ pub use self::motion::Motion;
 pub use self::status::Status;
 pub use self::target::Target;
 
+mod control;
 mod engine;
 mod gnss;
 mod host;

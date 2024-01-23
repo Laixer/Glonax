@@ -118,6 +118,28 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
                 runtime_state.write().await.state.program.push_back(target);
             }
+            glonax::core::Control::MESSAGE_TYPE => {
+                let control = client
+                    .recv_packet::<glonax::core::Control>(frame.payload_length)
+                    .await
+                    .unwrap();
+
+                match control {
+                    glonax::core::Control::EngineStart => {
+                        log::info!("Engine start");
+                        // runtime_state.write().await.state.engine.start();
+                    }
+                    glonax::core::Control::EngineStop => {
+                        log::info!("Engine stop");
+                        // runtime_state.write().await.state.engine.stop();
+                    }
+                    glonax::core::Control::RobotShutdown => {
+                        log::info!("Robot shutdown");
+                        // runtime_state.write().await.state.engine.stop();
+                        // runtime_state.write().await.state.engine.shutdown();
+                    }
+                }
+            }
             _ => {}
         }
     }

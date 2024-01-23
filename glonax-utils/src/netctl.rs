@@ -58,45 +58,35 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 Yellow.bold().paint("Engine"),
                 message
             );
-        }
-
-        if let Some(message) = router.try_accept(&mut arm_encoder) {
+        } else if let Some(message) = router.try_accept(&mut arm_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Arm"),
                 message
             );
-        }
-
-        if let Some(message) = router.try_accept(&mut boom_encoder) {
+        } else if let Some(message) = router.try_accept(&mut boom_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Boom"),
                 message
             );
-        }
-
-        if let Some(message) = router.try_accept(&mut frame_encoder) {
+        } else if let Some(message) = router.try_accept(&mut frame_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Frame"),
                 message
             );
-        }
-
-        if let Some(message) = router.try_accept(&mut attachment_encoder) {
+        } else if let Some(message) = router.try_accept(&mut attachment_encoder) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
                 message
             );
-        }
-
-        if let Some(message) = router.try_accept(&mut hcu) {
+        } else if let Some(message) = router.try_accept(&mut hcu) {
             if let Some(actuator_message) = message.0 {
                 info!(
                     "{} {} » {}",
@@ -112,9 +102,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     motion_message
                 );
             }
-        }
-
-        if let Some(message) = router.try_accept(&mut app_inspector) {
+        } else if let Some(message) = router.try_accept(&mut app_inspector) {
             match message {
                 J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(
