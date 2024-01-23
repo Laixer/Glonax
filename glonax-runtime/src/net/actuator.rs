@@ -229,6 +229,7 @@ impl std::fmt::Display for ConfigMessage {
 }
 
 impl ActuatorService {
+    /// Construct a new actuator service.
     pub fn new(node: u8) -> Self {
         Self { node }
     }

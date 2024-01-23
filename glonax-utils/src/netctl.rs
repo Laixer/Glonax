@@ -115,40 +115,51 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         }
 
         if let Some(message) = router.try_accept(&mut app_inspector) {
-            if let Some((major, minor, patch)) = message.software_indent {
-                info!(
-                    "{} {} » Software identification: {}.{}.{}",
-                    style_node(router.frame_source().unwrap()),
-                    Yellow.bold().paint("Inspector"),
-                    major,
-                    minor,
-                    patch
-                );
-            }
-            if let Some(pgn) = message.request_pgn {
-                info!(
-                    "{} {} » Request for PGN: {}",
-                    style_node(router.frame_source().unwrap()),
-                    Yellow.bold().paint("Inspector"),
-                    pgn
-                );
-            }
-            if let Some((function, arbitrary_address)) = message.address_claim {
-                info!(
-                    "{} {} » Adress claimed; Function: {}; Arbitrary address: {}",
-                    style_node(router.frame_source().unwrap()),
-                    Yellow.bold().paint("Inspector"),
-                    function,
-                    arbitrary_address
-                );
-            }
-            if let Some(acknowledged) = message.acknowledged {
-                info!(
-                    "{} {} » Acknowledged: {}",
-                    style_node(router.frame_source().unwrap()),
-                    Yellow.bold().paint("Inspector"),
-                    acknowledged
-                );
+            match message {
+                J1939Message::SoftwareIndent((major, minor, patch)) => {
+                    info!(
+                        "{} {} » Software identification: {}.{}.{}",
+                        style_node(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Inspector"),
+                        major,
+                        minor,
+                        patch
+                    );
+                }
+                J1939Message::RequestPGN(pgn) => {
+                    info!(
+                        "{} {} » Request for PGN: {}",
+                        style_node(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Inspector"),
+                        pgn
+                    );
+                }
+                J1939Message::AddressClaim((function, arbitrary_address)) => {
+                    info!(
+                        "{} {} » Adress claimed; Function: {}; Arbitrary address: {}",
+                        style_node(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Inspector"),
+                        function,
+                        arbitrary_address
+                    );
+                }
+                J1939Message::Acknowledged(acknowledged) => {
+                    info!(
+                        "{} {} » Acknowledged: {}",
+                        style_node(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Inspector"),
+                        acknowledged
+                    );
+                }
+                J1939Message::TimeDate(time) => {
+                    info!(
+                        "{} {} » Time and date: {}",
+                        style_node(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Inspector"),
+                        time
+                    );
+                }
+                _ => {}
             }
         }
     }

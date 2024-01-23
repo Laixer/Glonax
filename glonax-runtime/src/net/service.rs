@@ -5,24 +5,21 @@ use super::Parsable;
 #[derive(Default)]
 pub struct J1939ApplicationInspector;
 
-pub struct J1939Message {
+pub enum J1939Message {
     /// Software identification.
-    pub software_indent: Option<(u8, u8, u8)>,
+    SoftwareIndent((u8, u8, u8)),
     /// Requested PGN.
-    pub request_pgn: Option<u32>,
+    RequestPGN(u32),
     /// Address claim.
-    pub address_claim: Option<(u8, u8)>,
+    AddressClaim((u8, u8)),
     /// Acknowledged.
-    pub acknowledged: Option<u8>,
+    Acknowledged(u8),
+    /// Time and date.
+    TimeDate(chrono::DateTime<chrono::Utc>),
 }
 
 impl J1939Message {
     pub fn from_frame(_: u8, frame: &Frame) -> Self {
-        let mut software_indent = None;
-        let mut request_pgn = None;
-        let mut address_claim = None;
-        let mut acknowledged = None;
-
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
                 let mut major = 0;
@@ -39,37 +36,61 @@ impl J1939Message {
                     patch = frame.pdu()[5];
                 }
 
-                software_indent = Some((major, minor, patch));
+                Self::SoftwareIndent((major, minor, patch))
             }
-            PGN::Request => {
-                request_pgn = Some(u32::from_be_bytes([
-                    0x0,
-                    frame.pdu()[2],
-                    frame.pdu()[1],
-                    frame.pdu()[0],
-                ]));
-            }
+            PGN::Request => Self::RequestPGN(u32::from_be_bytes([
+                0x0,
+                frame.pdu()[2],
+                frame.pdu()[1],
+                frame.pdu()[0],
+            ])),
             PGN::AddressClaimed => {
                 let function = frame.pdu()[5];
                 let arbitrary_address = frame.pdu()[7] >> 7;
 
-                address_claim = Some((function, arbitrary_address));
+                Self::AddressClaim((function, arbitrary_address))
             }
-            PGN::AcknowledgmentMessage => {
-                acknowledged = Some(frame.pdu()[0]);
-            }
+            PGN::AcknowledgmentMessage => Self::Acknowledged(frame.pdu()[0]),
             PGN::TimeDate => {
-                // TODO
+                use chrono::{TimeZone, Utc};
+
+                // println!("Seconds: {}", frame.pdu()[0] as f32 * 0.25); // SPN 959
+                // println!("Minutes: {}", frame.pdu()[1]); // SPN 960
+                // println!("Hours: {}", frame.pdu()[2]); // SPN 961
+                // println!("Month: {}", frame.pdu()[3]); // SPN 963
+                // println!("Day: {}", frame.pdu()[4] as f32 * 0.25); // SPN 962
+                // println!("Year: {}", frame.pdu()[5] as u16 + 1985); // SPN 964
+
+                // if frame.pdu()[6] != 0xff {
+                //     println!("Local minute offset: {}", frame.pdu()[6] - 125); // SPN 1601
+                // }
+                // if frame.pdu()[7] != 0xff {
+                //     println!("Local hour offset: {}", frame.pdu()[7] as i8 - 125);
+                //     // SPN 1602
+                // }
+
+                let dt = Utc.with_ymd_and_hms(
+                    frame.pdu()[5] as i32 + 1985,
+                    frame.pdu()[3] as u32,
+                    (frame.pdu()[4] as f32 * 0.25) as u32,
+                    frame.pdu()[2] as u32,
+                    frame.pdu()[1] as u32,
+                    (frame.pdu()[0] as f32 * 0.25) as u32,
+                );
+
+                // println!("Date: {:?}", dt);
+
+                Self::TimeDate(dt.single().unwrap())
             }
-            _ => {}
+            _ => todo!(),
         }
 
-        Self {
-            software_indent,
-            request_pgn,
-            address_claim,
-            acknowledged,
-        }
+        // Self {
+        //     software_indent,
+        //     request_pgn,
+        //     address_claim,
+        //     acknowledged,
+        // }
     }
 }
 
