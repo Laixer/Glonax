@@ -31,6 +31,7 @@ impl EngineMessage {
         }
     }
 
+    #[allow(dead_code)]
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicEngineController2)
@@ -97,7 +98,7 @@ impl EngineManagementSystem {
                 .build(),
         )
         .copy_from_slice(&[
-            00,
+            0x00,
             0x47,
             0x1f,
             0x00,

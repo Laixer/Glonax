@@ -2,12 +2,12 @@ use std::io;
 
 use glonax_j1939::*;
 
-pub use actuator::*;
 pub use engine::*;
+pub use hydraulic::*;
 pub use service::*;
 
-mod actuator;
 mod engine;
+mod hydraulic;
 mod service;
 
 // TODO: Implement connection management.
@@ -106,11 +106,13 @@ impl J1939Network {
         frames
     }
 
+    /// Send a single frame over the network.
     #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
         self.0.write(frame).await
     }
 
+    /// Send a vector of frames over the network.
     #[inline]
     pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
         let mut v = vec![];

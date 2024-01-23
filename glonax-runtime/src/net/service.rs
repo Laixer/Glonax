@@ -22,6 +22,7 @@ pub enum J1939Message {
 
 impl J1939Message {
     pub fn from_frame(_: u8, frame: &Frame) -> Self {
+        // TODO: Move most of the logic to j1939 crate
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
                 let mut major = 0;
