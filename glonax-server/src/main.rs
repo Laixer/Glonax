@@ -24,7 +24,7 @@ struct Args {
     #[arg(required_unless_present = "simulation")]
     interface: Vec<String>,
     /// Refresh host service interval in milliseconds.
-    #[arg(long, default_value_t = 500, value_name = "INTERVAL")]
+    #[arg(long, default_value_t = 200, value_name = "INTERVAL")]
     host_interval: u64,
     /// Configuration file.
     #[arg(
@@ -140,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_io_service(device::service_gnss);
     }
 
-    runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(200));
+    runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host_interval));
 
     if config.simulation {
         log::info!("Running in simulation mode");
