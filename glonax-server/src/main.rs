@@ -21,9 +21,7 @@ struct Args {
     address: String,
     /// CAN network interface.
     #[arg(required_unless_present = "simulation")]
-    interface: Option<String>,
-    /// CAN network interface.
-    interface2: Option<String>,
+    interface: Vec<String>,
     /// Refresh host service interval in milliseconds.
     #[arg(long, default_value_t = 500, value_name = "INTERVAL")]
     host_interval: u64,
@@ -65,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
     let mut config = config::ProxyConfig {
         address: args.address,
         interface: args.interface,
-        interface2: args.interface2,
         host_interval: args.host_interval,
         nmea_device: args.nmea_device,
         nmea_baud_rate: args.nmea_baud_rate,
@@ -121,6 +118,8 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
+    ////////////////////
+
     log::debug!("Starting proxy services");
     log::info!("{}", instance);
 
@@ -152,7 +151,7 @@ async fn main() -> anyhow::Result<()> {
     } else {
         runtime.schedule_io_service(device::service_net_encoder);
 
-        if config.interface2.is_some() {
+        if config.interface.len() > 1 {
             runtime.schedule_io_service(device::service_net_ems);
         }
 

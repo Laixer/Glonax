@@ -18,10 +18,7 @@ pub(super) async fn service_net_encoder(
 
     log::debug!("Starting encoder service");
 
-    match J1939Network::new(
-        &config.interface.unwrap(),
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
+    match J1939Network::new(&config.interface[0], glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let mut router = Router::new(network);
 
@@ -68,10 +65,7 @@ pub(super) async fn service_net_ems(
 
     log::debug!("Starting EMS service");
 
-    match J1939Network::new(
-        &config.interface2.unwrap(),
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
+    match J1939Network::new(&config.interface[1], glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let mut router = Router::new(network);
 
@@ -202,10 +196,7 @@ pub(super) async fn sink_net_actuator(
 
     log::debug!("Starting motion listener");
 
-    match J1939Network::new(
-        &config.interface.unwrap(),
-        glonax::consts::DEFAULT_J1939_ADDRESS,
-    ) {
+    match J1939Network::new(&config.interface[0], glonax::consts::DEFAULT_J1939_ADDRESS) {
         Ok(network) => {
             let service = HydraulicControlUnit::new(0x4A);
 

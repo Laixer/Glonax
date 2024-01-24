@@ -5,9 +5,7 @@ pub struct ProxyConfig {
     /// Server network address.
     pub address: String,
     /// CAN network interface.
-    pub interface: Option<String>,
-    /// CAN network interface2.
-    pub interface2: Option<String>,
+    pub interface: Vec<String>,
     /// Refresh host service interval in milliseconds.
     pub host_interval: u64,
     /// Serial device for NMEA data.
