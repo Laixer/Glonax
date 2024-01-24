@@ -22,6 +22,7 @@ pub struct EncoderConverter {
 }
 
 impl EncoderConverter {
+    /// Create a new encoder converter.
     pub fn new(factor: f32, offset: f32, invert: bool, axis: UnitVector3<f32>) -> Self {
         Self {
             factor,
@@ -31,9 +32,10 @@ impl EncoderConverter {
         }
     }
 
-    pub fn to_rotation(&self, position: u32) -> Rotation3<f32> {
+    /// Convert encoder position to rotation.
+    pub fn to_rotation(&self, position: f32) -> Rotation3<f32> {
         let position =
-            ((position as f32 / self.factor) - self.offset) * if self.invert { -1.0 } else { 1.0 };
+            ((position / self.factor) - self.offset) * if self.invert { -1.0 } else { 1.0 };
 
         Rotation3::from_axis_angle(&self.axis, position)
     }

@@ -13,6 +13,7 @@ const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
 pub struct SensorFusion {
     frame_encoder_converter: EncoderConverter,
+    boom_encoder_converter: EncoderConverter,
     arm_encoder_converter: EncoderConverter,
     attachment_encoder_converter: EncoderConverter,
 }
@@ -25,6 +26,13 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         let frame_encoder_converter =
             EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::z_axis());
 
+        let boom_encoder_converter = EncoderConverter::new(
+            1000.0,
+            60_f32.to_radians(),
+            true,
+            nalgebra::Vector3::y_axis(),
+        );
+
         let arm_encoder_converter =
             EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis());
 
@@ -33,6 +41,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
         Self {
             frame_encoder_converter,
+            boom_encoder_converter,
             arm_encoder_converter,
             attachment_encoder_converter,
         }
@@ -44,7 +53,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         if let Some(value) = state.encoders.get(&FRAME_ENCODER) {
             log::trace!("Frame encoder: {}", value);
 
-            let rotator = self.frame_encoder_converter.to_rotation(*value as u32);
+            let rotator = self.frame_encoder_converter.to_rotation(*value);
 
             log::debug!(
                 "Frame: Roll={:.2} Pitch={:.2} Yaw={:.2}",
@@ -59,25 +68,22 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         if let Some(value) = state.encoders.get(&BOOM_ENCODER) {
             log::trace!("Boom encoder: {}", value);
 
-            // let offset = 60_f32.to_radians();
-            // let position = position as f32 / 1000.0;
-            // let position = (position - offset) * -1.0;
-            // let rotator = Rotation3::from_euler_angles(0.0, position, 0.0);
+            let rotator = self.boom_encoder_converter.to_rotation(*value);
 
-            // log::debug!(
-            //     "Boom: Roll={:.2} Pitch={:.2} Yaw={:.2}",
-            //     rotator.euler_angles().0.to_degrees(),
-            //     rotator.euler_angles().1.to_degrees(),
-            //     rotator.euler_angles().2.to_degrees()
-            // );
+            log::debug!(
+                "Boom: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                rotator.euler_angles().0.to_degrees(),
+                rotator.euler_angles().1.to_degrees(),
+                rotator.euler_angles().2.to_degrees()
+            );
 
-            // actor.set_relative_rotation("boom", rotator);
+            actor.set_relative_rotation("boom", rotator);
         }
 
         if let Some(value) = state.encoders.get(&ARM_ENCODER) {
             log::trace!("Arm encoder: {}", value);
 
-            let rotator = self.arm_encoder_converter.to_rotation(*value as u32);
+            let rotator = self.arm_encoder_converter.to_rotation(*value);
 
             log::debug!(
                 "Arm: Roll={:.2} Pitch={:.2} Yaw={:.2}",
@@ -92,7 +98,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         if let Some(value) = state.encoders.get(&ATTACHMENT_ENCODER) {
             log::trace!("Attachment encoder: {}", value);
 
-            let rotator = self.attachment_encoder_converter.to_rotation(*value as u32);
+            let rotator = self.attachment_encoder_converter.to_rotation(*value);
 
             log::debug!(
                 "Attachment: Roll={:.2} Pitch={:.2} Yaw={:.2}",
