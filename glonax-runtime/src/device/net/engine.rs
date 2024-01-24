@@ -128,6 +128,22 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
     }
 }
 
+impl super::J1939Unit for EngineManagementSystem {
+    fn try_accept(
+        &mut self,
+        router: &mut crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) {
+        if let Some(message) = router.try_accept(self) {
+            if let Ok(mut runtime_state) = runtime_state.try_write() {
+                runtime_state.state.engine.driver_demand = message.driver_demand.unwrap_or(0);
+                runtime_state.state.engine.actual_engine = message.actual_engine.unwrap_or(0);
+                runtime_state.state.engine.rpm = message.rpm.unwrap_or(0);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

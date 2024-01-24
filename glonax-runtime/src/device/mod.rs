@@ -11,7 +11,7 @@ pub use r#virtual::hcu::VirtualHCU;
 
 mod error;
 mod hardware;
-mod net;
+pub mod net;
 mod r#virtual;
 
 pub struct EncoderConverter {

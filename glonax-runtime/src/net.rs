@@ -123,6 +123,10 @@ pub trait Parsable<T>: Send + Sync {
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 
+/// The router is used to route incoming frames to the correct service.
+///
+/// Frames are routed based on the PGN and the node address. The router
+/// supports filtering based on PGN and node address.
 pub struct Router {
     /// The network.
     net: Vec<J1939Network>,

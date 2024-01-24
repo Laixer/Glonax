@@ -175,6 +175,28 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
     }
 }
 
+impl super::J1939Unit for KueblerEncoder {
+    fn try_accept(
+        &mut self,
+        router: &mut crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) {
+        if let Some(message) = router.try_accept(self) {
+            if let Ok(mut runtime_state) = runtime_state.try_write() {
+                runtime_state
+                    .state
+                    .encoders
+                    .insert(message.node, message.position as f32);
+
+                // TODO: Set the encoder state in the runtime state
+                // if let Some(state) = message.state {
+                //     log::debug!("0x{:X?} Encoder state: {:?}", message.node, state);
+                // }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
