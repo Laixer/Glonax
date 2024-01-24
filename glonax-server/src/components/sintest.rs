@@ -27,5 +27,11 @@ impl<Cnf: Configurable> Component<Cnf> for SinusTest {
                 nalgebra::Rotation3::from_yaw(delta.as_secs_f32() * 2.5_f32.to_radians()),
             );
         }
+
+        actor.set_relative_rotation("boom", nalgebra::Rotation3::from_pitch(25_f32.to_radians()));
+        actor.set_relative_rotation(
+            "arm",
+            nalgebra::Rotation3::from_pitch(-100_f32.to_radians()),
+        );
     }
 }
