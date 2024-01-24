@@ -55,7 +55,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
             let rotator = self.frame_encoder_converter.to_rotation(*value);
 
-            log::debug!(
+            log::trace!(
                 "Frame: Roll={:.2} Pitch={:.2} Yaw={:.2}",
                 rotator.euler_angles().0.to_degrees(),
                 rotator.euler_angles().1.to_degrees(),
@@ -70,7 +70,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
             let rotator = self.boom_encoder_converter.to_rotation(*value);
 
-            log::debug!(
+            log::trace!(
                 "Boom: Roll={:.2} Pitch={:.2} Yaw={:.2}",
                 rotator.euler_angles().0.to_degrees(),
                 rotator.euler_angles().1.to_degrees(),
@@ -85,7 +85,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
             let rotator = self.arm_encoder_converter.to_rotation(*value);
 
-            log::debug!(
+            log::trace!(
                 "Arm: Roll={:.2} Pitch={:.2} Yaw={:.2}",
                 rotator.euler_angles().0.to_degrees(),
                 rotator.euler_angles().1.to_degrees(),
@@ -100,7 +100,7 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
             let rotator = self.attachment_encoder_converter.to_rotation(*value);
 
-            log::debug!(
+            log::trace!(
                 "Attachment: Roll={:.2} Pitch={:.2} Yaw={:.2}",
                 rotator.euler_angles().0.to_degrees(),
                 rotator.euler_angles().1.to_degrees(),
@@ -109,38 +109,5 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
             actor.set_relative_rotation("attachment", rotator);
         }
-
-        // Print segment world locations
-        let body_world_location = actor.world_location("frame");
-        log::trace!(
-            "Frame: X={:.2} Y={:.2} Z={:.2}",
-            body_world_location.x,
-            body_world_location.y,
-            body_world_location.z
-        );
-
-        let boom_world_location = actor.world_location("boom");
-        log::trace!(
-            "Boom: X={:.2} Y={:.2} Z={:.2}",
-            boom_world_location.x,
-            boom_world_location.y,
-            boom_world_location.z
-        );
-
-        let arm_world_location = actor.world_location("arm");
-        log::trace!(
-            "Arm: X={:.2} Y={:.2} Z={:.2}",
-            arm_world_location.x,
-            arm_world_location.y,
-            arm_world_location.z
-        );
-
-        let bucket_world_location = actor.world_location("attachment");
-        log::trace!(
-            "Attachment: X={:.2} Y={:.2} Z={:.2}",
-            bucket_world_location.x,
-            bucket_world_location.y,
-            bucket_world_location.z
-        );
     }
 }
