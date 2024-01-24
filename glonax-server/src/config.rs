@@ -10,10 +10,10 @@ pub struct ProxyConfig {
     pub interface2: Option<String>,
     /// Refresh host service interval in milliseconds.
     pub host_interval: u64,
-    /// Serial device.
-    pub gnss_device: Option<std::path::PathBuf>,
-    /// Serial baud rate.
-    pub gnss_baud_rate: usize,
+    /// Serial device for NMEA data.
+    pub nmea_device: Option<std::path::PathBuf>,
+    /// Serial baud rate for NMEA data.
+    pub nmea_baud_rate: usize,
     /// Enable simulation mode.
     pub simulation: bool,
     /// Enable simulation jitter.

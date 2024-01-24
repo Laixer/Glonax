@@ -112,8 +112,8 @@ pub(super) async fn service_gnss(
     log::debug!("Starting GNSS service");
 
     match glonax_serial::Uart::open(
-        std::path::Path::new(config.gnss_device.as_ref().unwrap()),
-        glonax_serial::BaudRate::from_speed(config.gnss_baud_rate),
+        std::path::Path::new(config.nmea_device.as_ref().unwrap()),
+        glonax_serial::BaudRate::from_speed(config.nmea_baud_rate),
     ) {
         Ok(serial) => {
             let reader = BufReader::new(serial);

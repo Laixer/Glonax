@@ -36,12 +36,12 @@ struct Args {
         value_name = "FILE"
     )]
     config: std::path::PathBuf,
-    /// Path to GNSS device.
+    /// Path to NMEA device.
     #[arg(long, value_name = "DEVICE")]
-    gnss_device: Option<std::path::PathBuf>,
+    nmea_device: Option<std::path::PathBuf>,
     /// Serial baud rate.
     #[arg(long, default_value_t = 9_600, value_name = "RATE")]
-    gnss_baud_rate: usize,
+    nmea_baud_rate: usize,
     /// Enable simulation mode.
     #[arg(long, default_value_t = false)]
     simulation: bool,
@@ -67,8 +67,8 @@ async fn main() -> anyhow::Result<()> {
         interface: args.interface,
         interface2: args.interface2,
         host_interval: args.host_interval,
-        gnss_device: args.gnss_device,
-        gnss_baud_rate: args.gnss_baud_rate,
+        nmea_device: args.nmea_device,
+        nmea_baud_rate: args.nmea_baud_rate,
         simulation: args.simulation,
         simulation_jitter: false,
         ..Default::default()
@@ -136,7 +136,7 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    if config.gnss_device.is_some() {
+    if config.nmea_device.is_some() {
         runtime.schedule_io_service(device::service_gnss);
     }
 
