@@ -10,7 +10,7 @@ ConditionPathExists=/dev/input/js0
 WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
-ExecStart=/usr/local/bin/glonax-input --connect 127.0.0.1 --daemon /dev/input/js0
+ExecStart=/usr/local/bin/glonax-input --daemon /dev/input/js0
 PrivateTmp=true
 
 [Install]

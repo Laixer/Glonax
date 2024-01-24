@@ -259,7 +259,7 @@ pub(super) async fn net_announce(
 ) {
     use tokio::net::UdpSocket;
 
-    let socket = UdpSocket::bind("[::]:0").await.unwrap();
+    let socket = UdpSocket::bind("[::1]:0").await.unwrap();
 
     loop {
         let instance = instance.clone();
