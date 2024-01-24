@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use glonax_j1939::*;
 
-use super::Parsable;
+use crate::net::Parsable;
 
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;

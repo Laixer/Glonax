@@ -3,6 +3,8 @@ use glonax_j1939::{
     *,
 };
 
+use crate::net::Parsable;
+
 #[derive(Default)]
 pub struct EngineMessage {
     /// Engine Torque Mode.
@@ -113,7 +115,7 @@ impl EngineManagementSystem {
     }
 }
 
-impl super::Parsable<EngineMessage> for EngineManagementSystem {
+impl Parsable<EngineMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
         if frame.len() != 8 {
             return None;

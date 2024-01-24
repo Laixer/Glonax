@@ -98,7 +98,8 @@ pub(super) async fn sink_net_actuator(
     _runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
 ) {
-    use glonax::net::{HydraulicControlUnit, J1939Network};
+    use glonax::device::HydraulicControlUnit;
+    use glonax::net::J1939Network;
 
     log::debug!("Starting motion listener");
 

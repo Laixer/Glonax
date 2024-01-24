@@ -36,7 +36,7 @@ impl J1939Unit for J1939UnitEncoder {
 
 #[derive(Default)]
 struct J1939UnitEms {
-    ems: glonax::net::EngineManagementSystem,
+    ems: glonax::device::EngineManagementSystem,
 }
 
 impl J1939Unit for J1939UnitEms {
@@ -51,14 +51,17 @@ impl J1939Unit for J1939UnitEms {
     }
 }
 
+use glonax::consts;
+use glonax::net::{J1939Network, Router};
+
 pub(super) async fn network_0(
     interface: String,
     runtime_state: SharedOperandState,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
-    let net = glonax::net::J1939Network::new(&interface, glonax::consts::DEFAULT_J1939_ADDRESS)?;
-    let mut router = glonax::net::Router::new(net);
+    let net = J1939Network::new(&interface, consts::DEFAULT_J1939_ADDRESS)?;
+    let mut router = Router::new(net);
 
     let mut enc_0 = J1939UnitEncoder::new(0x6A);
     let mut enc_1 = J1939UnitEncoder::new(0x6B);
@@ -83,8 +86,8 @@ pub(super) async fn network_1(
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
-    let net = glonax::net::J1939Network::new(&interface, glonax::consts::DEFAULT_J1939_ADDRESS)?;
-    let mut router = glonax::net::Router::new(net);
+    let net = J1939Network::new(&interface, consts::DEFAULT_J1939_ADDRESS)?;
+    let mut router = Router::new(net);
 
     let mut ems = J1939UnitEms::default();
 

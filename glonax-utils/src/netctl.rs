@@ -6,7 +6,7 @@
 
 use ansi_term::Colour::{Blue, Green, Purple, Red, Yellow};
 use clap::Parser;
-use glonax::{device::KueblerEncoder, net::*};
+use glonax::net::*;
 
 use log::{debug, info};
 
@@ -38,6 +38,10 @@ fn string_to_bool(str: &str) -> Result<bool, ()> {
 
 /// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
+    use glonax::device::{
+        EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, KueblerEncoder,
+    };
+
     debug!("Print incoming frames to screen");
 
     let mut engine_management_service = EngineManagementSystem;
@@ -104,7 +108,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             }
         } else if let Some(message) = router.try_accept(&mut app_inspector) {
             match message {
-                J1939Message::SoftwareIndent((major, minor, patch)) => {
+                glonax::device::J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(
                         "{} {} » Software identification: {}.{}.{}",
                         style_node(router.frame_source().unwrap()),
@@ -114,7 +118,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         patch
                     );
                 }
-                J1939Message::RequestPGN(pgn) => {
+                glonax::device::J1939Message::RequestPGN(pgn) => {
                     info!(
                         "{} {} » Request for PGN: {}",
                         style_node(router.frame_source().unwrap()),
@@ -122,7 +126,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         pgn
                     );
                 }
-                J1939Message::AddressClaim((function, arbitrary_address)) => {
+                glonax::device::J1939Message::AddressClaim((function, arbitrary_address)) => {
                     info!(
                         "{} {} » Adress claimed; Function: {}; Arbitrary address: {}",
                         style_node(router.frame_source().unwrap()),
@@ -131,7 +135,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         arbitrary_address
                     );
                 }
-                J1939Message::Acknowledged(acknowledged) => {
+                glonax::device::J1939Message::Acknowledged(acknowledged) => {
                     info!(
                         "{} {} » Acknowledged: {}",
                         style_node(router.frame_source().unwrap()),
@@ -139,7 +143,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         acknowledged
                     );
                 }
-                J1939Message::TimeDate(time) => {
+                glonax::device::J1939Message::TimeDate(time) => {
                     info!(
                         "{} {} » Time and date: {}",
                         style_node(router.frame_source().unwrap()),
@@ -147,7 +151,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         time
                     );
                 }
-                J1939Message::ProprietaryB(data) => {
+                glonax::device::J1939Message::ProprietaryB(data) => {
                     info!(
                         "{} {} » Proprietary B: {:02X?}",
                         style_node(router.frame_source().unwrap()),
@@ -270,7 +274,7 @@ async fn main() -> anyhow::Result<()> {
     match args.command {
         Command::Hcu { address, command } => {
             let node = node_address(address)?;
-            let service = HydraulicControlUnit::new(node);
+            let service = glonax::device::HydraulicControlUnit::new(node);
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
             match command {
@@ -337,7 +341,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Engine => {
-            let service = EngineManagementSystem;
+            let service = glonax::device::EngineManagementSystem;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
             info!("RPM >> {}", service.set_rpm(810).first().unwrap());

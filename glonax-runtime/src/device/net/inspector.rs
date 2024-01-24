@@ -1,6 +1,6 @@
 use glonax_j1939::*;
 
-use super::Parsable;
+use crate::net::Parsable;
 
 #[derive(Default)]
 pub struct J1939ApplicationInspector;

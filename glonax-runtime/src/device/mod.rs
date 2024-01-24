@@ -1,13 +1,17 @@
 use nalgebra::{Rotation3, UnitVector3};
 
 pub use error::{DeviceError, ErrorKind, Result};
-pub use hardware::encoder::KueblerEncoder;
 pub use hardware::nmea::Nmea;
+pub use net::encoder::KueblerEncoder;
+pub use net::engine::EngineManagementSystem;
+pub use net::hydraulic::HydraulicControlUnit;
+pub use net::inspector::{J1939ApplicationInspector, J1939Message};
 pub use r#virtual::encoder::VirtualEncoder;
 pub use r#virtual::hcu::VirtualHCU;
 
 mod error;
 mod hardware;
+mod net;
 mod r#virtual;
 
 pub struct EncoderConverter {
