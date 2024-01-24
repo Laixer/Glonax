@@ -9,6 +9,7 @@ use clap::Parser;
 mod components;
 mod config;
 mod device;
+mod j1939;
 mod server;
 
 #[derive(Parser)]
@@ -149,11 +150,8 @@ async fn main() -> anyhow::Result<()> {
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
-        runtime.schedule_io_service(device::service_net_encoder);
-
-        if config.interface.len() > 1 {
-            runtime.schedule_io_service(device::service_net_ems);
-        }
+        runtime.schedule_io_service(j1939::network_0);
+        runtime.schedule_io_service(j1939::network_1);
 
         runtime.schedule_motion_sink(device::sink_net_actuator);
     }

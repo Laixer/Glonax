@@ -155,7 +155,7 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         &self,
         service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut,
     ) where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
+        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
     {
         tokio::spawn(service(
             self.config.clone(),

@@ -160,7 +160,7 @@ pub(super) async fn tcp_listen(
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
-) {
+) -> std::io::Result<()> {
     use tokio::net::TcpListener;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
@@ -168,10 +168,10 @@ pub(super) async fn tcp_listen(
     ));
 
     log::debug!("Listening on: {}", config.address);
-    let listener = TcpListener::bind(config.address.clone()).await.unwrap();
+    let listener = TcpListener::bind(config.address.clone()).await?;
 
     loop {
-        let (stream, addr) = listener.accept().await.unwrap();
+        let (stream, addr) = listener.accept().await?;
 
         log::debug!("Accepted connection from: {}", addr);
 
@@ -207,7 +207,7 @@ pub(super) async fn unix_listen(
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
-) {
+) -> std::io::Result<()> {
     use tokio::net::UnixListener;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
@@ -215,14 +215,14 @@ pub(super) async fn unix_listen(
     ));
 
     if std::path::Path::new(glonax::consts::DEFAULT_SOCKET_PATH).exists() {
-        std::fs::remove_file(glonax::consts::DEFAULT_SOCKET_PATH).unwrap();
+        std::fs::remove_file(glonax::consts::DEFAULT_SOCKET_PATH)?;
     }
 
     log::debug!("Listening on: {}", glonax::consts::DEFAULT_SOCKET_PATH);
-    let listener = UnixListener::bind(glonax::consts::DEFAULT_SOCKET_PATH).unwrap();
+    let listener = UnixListener::bind(glonax::consts::DEFAULT_SOCKET_PATH)?;
 
     loop {
-        let (stream, _addr) = listener.accept().await.unwrap();
+        let (stream, _addr) = listener.accept().await?;
 
         let permit = match semaphore.clone().try_acquire_owned() {
             Ok(permit) => permit,
@@ -256,10 +256,10 @@ pub(super) async fn net_announce(
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     _motion_sender: MotionSender,
-) {
+) -> std::io::Result<()> {
     use tokio::net::UdpSocket;
 
-    let socket = UdpSocket::bind("[::1]:0").await.unwrap();
+    let socket = UdpSocket::bind("[::1]:0").await?;
 
     loop {
         let instance = instance.clone();
@@ -269,7 +269,7 @@ pub(super) async fn net_announce(
 
         let payload = [instance.to_bytes(), status.to_bytes()].concat();
 
-        socket.send_to(&payload, "[ff02::1]:30050").await.unwrap();
+        socket.send_to(&payload, "[ff02::1]:30050").await?;
 
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
