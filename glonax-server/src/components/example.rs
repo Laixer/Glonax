@@ -6,9 +6,9 @@ use glonax::{
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
-pub struct SinusTest;
+pub struct Example;
 
-impl<Cnf: Configurable> Component<Cnf> for SinusTest {
+impl<Cnf: Configurable> Component<Cnf> for Example {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
