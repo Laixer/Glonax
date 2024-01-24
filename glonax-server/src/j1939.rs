@@ -1,6 +1,4 @@
-use glonax::runtime::{MotionSender, SharedOperandState};
-
-use crate::config::ProxyConfig;
+use glonax::runtime::SharedOperandState;
 
 trait J1939Unit {
     fn try_accept(&mut self, router: &mut glonax::net::Router, runtime_state: SharedOperandState);
@@ -54,65 +52,47 @@ impl J1939Unit for J1939UnitEms {
 }
 
 pub(super) async fn network_0(
-    config: ProxyConfig,
-    _instance: glonax::core::Instance,
+    interface: String,
     runtime_state: SharedOperandState,
-    _motion_sender: MotionSender,
 ) -> std::io::Result<()> {
-    if !config.interface.is_empty() {
-        log::debug!("Starting J1939 service on {}", config.interface[0]);
+    log::debug!("Starting J1939 service on {}", interface);
 
-        let net = glonax::net::J1939Network::new(
-            &config.interface[0],
-            glonax::consts::DEFAULT_J1939_ADDRESS,
-        )?;
-        let mut router = glonax::net::Router::new(net);
+    let net = glonax::net::J1939Network::new(&interface, glonax::consts::DEFAULT_J1939_ADDRESS)?;
+    let mut router = glonax::net::Router::new(net);
 
-        let mut enc_0 = J1939UnitEncoder::new(0x6A);
-        let mut enc_1 = J1939UnitEncoder::new(0x6B);
-        let mut enc_2 = J1939UnitEncoder::new(0x6C);
-        let mut enc_3 = J1939UnitEncoder::new(0x6D);
+    let mut enc_0 = J1939UnitEncoder::new(0x6A);
+    let mut enc_1 = J1939UnitEncoder::new(0x6B);
+    let mut enc_2 = J1939UnitEncoder::new(0x6C);
+    let mut enc_3 = J1939UnitEncoder::new(0x6D);
 
-        loop {
-            if let Err(e) = router.listen().await {
-                log::error!("Failed to receive from router: {}", e);
-            }
-
-            enc_0.try_accept(&mut router, runtime_state.clone());
-            enc_1.try_accept(&mut router, runtime_state.clone());
-            enc_2.try_accept(&mut router, runtime_state.clone());
-            enc_3.try_accept(&mut router, runtime_state.clone());
+    loop {
+        if let Err(e) = router.listen().await {
+            log::error!("Failed to receive from router: {}", e);
         }
-    }
 
-    Ok(())
+        enc_0.try_accept(&mut router, runtime_state.clone());
+        enc_1.try_accept(&mut router, runtime_state.clone());
+        enc_2.try_accept(&mut router, runtime_state.clone());
+        enc_3.try_accept(&mut router, runtime_state.clone());
+    }
 }
 
 pub(super) async fn network_1(
-    config: ProxyConfig,
-    _instance: glonax::core::Instance,
+    interface: String,
     runtime_state: SharedOperandState,
-    _motion_sender: MotionSender,
 ) -> std::io::Result<()> {
-    if config.interface.len() > 1 {
-        log::debug!("Starting J1939 service on {}", config.interface[1]);
+    log::debug!("Starting J1939 service on {}", interface);
 
-        let net = glonax::net::J1939Network::new(
-            &config.interface[1],
-            glonax::consts::DEFAULT_J1939_ADDRESS,
-        )?;
-        let mut router = glonax::net::Router::new(net);
+    let net = glonax::net::J1939Network::new(&interface, glonax::consts::DEFAULT_J1939_ADDRESS)?;
+    let mut router = glonax::net::Router::new(net);
 
-        let mut ems = J1939UnitEms::default();
+    let mut ems = J1939UnitEms::default();
 
-        loop {
-            if let Err(e) = router.listen().await {
-                log::error!("Failed to receive from router: {}", e);
-            }
-
-            ems.try_accept(&mut router, runtime_state.clone());
+    loop {
+        if let Err(e) = router.listen().await {
+            log::error!("Failed to receive from router: {}", e);
         }
-    }
 
-    Ok(())
+        ems.try_accept(&mut router, runtime_state.clone());
+    }
 }

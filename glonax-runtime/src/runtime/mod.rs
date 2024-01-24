@@ -165,6 +165,16 @@ impl<Cnf: Configurable> Runtime<Cnf> {
         ));
     }
 
+    pub fn schedule_net_service<Fut>(
+        &self,
+        service: impl FnOnce(String, SharedOperandState) -> Fut,
+        interface: &str,
+    ) where
+        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
+    {
+        tokio::spawn(service(interface.to_owned(), self.operand.clone()));
+    }
+
     /// Spawn a motion sink in the background.
     pub fn schedule_motion_sink<Fut>(
         &mut self,
