@@ -208,7 +208,11 @@ enum Command {
         command: HCUCommand,
     },
     /// Engine control unit commands.
-    Engine,
+    Engine {
+        /// Engine commands.
+        #[command(subcommand)]
+        command: EngineCommand,
+    },
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -227,6 +231,16 @@ enum Command {
         #[arg(long)]
         node: Vec<String>,
     },
+}
+
+#[derive(clap::Subcommand)]
+enum EngineCommand {
+    /// Request engine RPM.
+    Rpm { rpm: u16 },
+    /// Request engine start.
+    Start,
+    /// Request engine stop.
+    Stop,
 }
 
 #[derive(clap::Subcommand)]
@@ -340,13 +354,27 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Engine => {
+        Command::Engine { command } => {
             let service = glonax::device::EngineManagementSystem;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
-            info!("RPM >> {}", service.set_rpm(810).first().unwrap());
+            match command {
+                EngineCommand::Rpm { rpm } => {
+                    info!("{} Set RPM to {}", style_node(0x0), rpm);
 
-            net.send_vectored(&service.set_rpm(810)).await.unwrap();
+                    net.send_vectored(&service.set_rpm(rpm)).await.unwrap();
+                }
+                EngineCommand::Start => {
+                    info!("{} Start engine", style_node(0x0));
+
+                    // net.send_vectored(&service.start()).await.unwrap();
+                }
+                EngineCommand::Stop => {
+                    info!("{} Stop engine", style_node(0x0));
+
+                    // net.send_vectored(&service.stop()).await.unwrap();
+                }
+            }
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;

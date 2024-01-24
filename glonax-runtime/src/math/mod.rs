@@ -2,6 +2,8 @@ use std::f32::consts::PI;
 
 pub use geometry::*;
 pub use lin::*;
+
+#[allow(unused_imports)]
 pub use pid::*;
 
 mod geometry;
