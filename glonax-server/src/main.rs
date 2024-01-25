@@ -140,7 +140,8 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_io_service(device::service_gnss);
     }
 
-    runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host_interval));
+    runtime
+        .schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host_interval));
 
     if config.simulation {
         log::info!("Running in simulation mode");

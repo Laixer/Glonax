@@ -152,7 +152,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     );
                 }
                 glonax::device::J1939Message::ProprietaryB(data) => {
-                    info!(
+                    debug!(
                         "{} {} » Proprietary B: {:02X?}",
                         style_node(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),

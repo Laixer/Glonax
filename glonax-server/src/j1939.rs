@@ -4,6 +4,7 @@ use glonax::consts;
 use glonax::device::net::J1939Unit;
 use glonax::net::{J1939Network, Router};
 
+// TODO: Move into runtime
 pub(super) async fn network_0(
     interface: String,
     runtime_state: SharedOperandState,
