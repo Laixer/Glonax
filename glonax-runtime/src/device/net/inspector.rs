@@ -58,12 +58,12 @@ impl J1939Message {
                 use chrono::{TimeZone, Utc};
 
                 let dt = Utc.with_ymd_and_hms(
-                    frame.pdu()[5] as i32 + 1985,
-                    frame.pdu()[3] as u32,
-                    (frame.pdu()[4] as f32 * 0.25) as u32,
-                    frame.pdu()[2] as u32,
-                    frame.pdu()[1] as u32,
-                    (frame.pdu()[0] as f32 * 0.25) as u32,
+                    decode::spn964(frame.pdu()[5]).unwrap_or(0) as i32,
+                    decode::spn963(frame.pdu()[3]).unwrap_or(0) as u32,
+                    decode::spn962(frame.pdu()[4]).unwrap_or(0) as u32,
+                    decode::spn961(frame.pdu()[2]).unwrap_or(0) as u32,
+                    decode::spn960(frame.pdu()[1]).unwrap_or(0) as u32,
+                    decode::spn959(frame.pdu()[0]).unwrap_or(0) as u32,
                 );
 
                 Some(Self::TimeDate(dt.single().unwrap()))

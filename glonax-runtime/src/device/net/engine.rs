@@ -36,7 +36,7 @@ impl EngineMessage {
     #[allow(dead_code)]
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ElectronicEngineController2)
+            IdBuilder::from_pgn(PGN::ElectronicEngineController1)
                 .da(0xff)
                 .build(),
         );
@@ -132,7 +132,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
         if frame.len() != 8 {
             return None;
         }
-        if frame.id().pgn() != PGN::ElectronicEngineController2 {
+        if frame.id().pgn() != PGN::ElectronicEngineController1 {
             return None;
         }
 
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn turn_on() {
         let frame =
-            FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
+            FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController1).build())
                 .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
                 .build();
 
@@ -185,7 +185,7 @@ mod tests {
     #[test]
     fn turn_off() {
         let frame =
-            FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController2).build())
+            FrameBuilder::new(IdBuilder::from_pgn(PGN::ElectronicEngineController1).build())
                 .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
                 .build();
 
