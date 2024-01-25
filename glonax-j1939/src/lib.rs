@@ -1,6 +1,6 @@
 use std::io;
 
-pub use j1939::{decode, protocol, Frame, FrameBuilder, IdBuilder, PGN};
+pub use j1939::{decode, protocol, Frame, FrameBuilder, Id, IdBuilder, PGN};
 pub use socket::J1939Socket;
 
 mod socket;
@@ -28,33 +28,27 @@ impl From<socket::SockAddrJ1939> for j1939::Id {
     }
 }
 
+// TODO: Maybe stream can be removed?
 pub struct J1939Stream(J1939Socket);
 
 impl J1939Stream {
     /// Binds this stream to the specified address and interface.
     pub fn bind(ifname: &str, addr: u8) -> io::Result<Self> {
-        let address = socket::SockAddrJ1939::bind(addr, ifname);
+        // let address = socket::SockAddrJ1939::new(addr, ifname);
+        let address = socket::SockAddrCAN::new(ifname);
         J1939Socket::bind(&address).map(J1939Stream)
     }
 
     /// Read frame from network stream.
+    #[inline]
     pub async fn read(&self) -> io::Result<Frame> {
-        let mut frame = FrameBuilder::default();
-
-        // TODO: This was not done yet.
-        // let (frame_size, peer_addr) = self.0.recv_from(frame.as_mut()).await?;
-        let (frame_size, _flags, peer_addr) = self.0.recv_msg(frame.as_mut()).await.unwrap();
-
-        frame = frame.set_len(frame_size);
-
-        Ok(frame.id(peer_addr.into()).build())
+        self.0.recv2().await
     }
 
-    // TODO: Priority is not implemented yet.
     /// Write frame over the network stream.
     #[inline]
     pub async fn write(&self, frame: &Frame) -> io::Result<usize> {
-        self.0.send_to(frame.pdu(), &frame.id().into()).await
+        self.0.send2(frame).await
     }
 
     /// Shuts down the read, write, or both halves of this connection.

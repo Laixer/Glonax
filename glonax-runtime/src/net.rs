@@ -20,6 +20,7 @@ impl J1939Network {
         self.0.set_promisc_mode(on)
     }
 
+    // TODO: Rename to recv
     /// Accept a frame.
     #[inline]
     pub async fn accept(&self) -> io::Result<Frame> {

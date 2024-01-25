@@ -11,7 +11,7 @@ pub struct SockAddrJ1939 {
 }
 
 impl SockAddrJ1939 {
-    pub fn bind(addr: u8, ifname: &str) -> Self {
+    pub fn new(addr: u8, ifname: &str) -> Self {
         Self {
             name: libc::J1939_NO_NAME,
             pgn: libc::J1939_NO_PGN,
@@ -70,15 +70,62 @@ impl From<SockAddr> for SockAddrJ1939 {
     }
 }
 
+pub struct SockAddrCAN {
+    pub ifindex: i32,
+}
+
+impl SockAddrCAN {
+    pub fn new(ifname: &str) -> Self {
+        Self {
+            ifindex: crate::sys::if_nametoindex(ifname),
+        }
+    }
+}
+
+impl From<&SockAddrCAN> for SockAddr {
+    fn from(value: &SockAddrCAN) -> SockAddr {
+        let mut sockaddr_can =
+            unsafe { std::mem::MaybeUninit::<libc::sockaddr_can>::zeroed().assume_init() };
+        sockaddr_can.can_family = libc::AF_CAN as u16;
+        sockaddr_can.can_ifindex = value.ifindex;
+
+        let mut storage = std::mem::MaybeUninit::<libc::sockaddr_storage>::zeroed();
+        unsafe { (storage.as_mut_ptr() as *mut libc::sockaddr_can).write(sockaddr_can) };
+
+        unsafe {
+            SockAddr::new(
+                storage.assume_init(),
+                std::mem::size_of::<libc::sockaddr_storage>() as libc::socklen_t,
+            )
+        }
+    }
+}
+
+impl From<SockAddr> for SockAddrCAN {
+    fn from(value: socket2::SockAddr) -> Self {
+        let sockaddr_can = unsafe { *(value.as_ptr() as *const libc::sockaddr_can) };
+
+        Self {
+            ifindex: sockaddr_can.can_ifindex,
+        }
+    }
+}
+
+// TODO: Rename to CANSocket?
 pub struct J1939Socket(AsyncFd<socket2::Socket>);
 
 impl J1939Socket {
     /// Binds this socket to the specified address and interface.
-    pub fn bind(address: &SockAddrJ1939) -> io::Result<Self> {
+    pub fn bind(address: impl Into<SockAddr>) -> io::Result<Self> {
+        // let socket = socket2::Socket::new_raw(
+        //     libc::AF_CAN.into(),
+        //     socket2::Type::DGRAM,
+        //     Some(libc::CAN_J1939.into()),
+        // )?;
         let socket = socket2::Socket::new_raw(
             libc::AF_CAN.into(),
-            socket2::Type::DGRAM,
-            Some(libc::CAN_J1939.into()),
+            socket2::Type::RAW,
+            Some(libc::CAN_RAW.into()),
         )?;
 
         socket.bind(&address.into())?;
@@ -105,11 +152,25 @@ impl J1939Socket {
     /// number of bytes written.
     ///
     /// This is typically used on UDP or datagram-oriented sockets.
-    pub async fn send_to(&self, buf: &[u8], addr: &SockAddrJ1939) -> io::Result<usize> {
+    pub async fn send2(&self, frame: &j1939::Frame) -> io::Result<usize> {
         loop {
             let mut guard = self.0.writable().await?;
 
-            match guard.try_io(|inner| inner.get_ref().send_to(buf, &addr.into())) {
+            let mut can_frame =
+                unsafe { std::mem::MaybeUninit::<libc::can_frame>::zeroed().assume_init() };
+
+            can_frame.can_id = frame.id().as_raw() | 0x80000000;
+            can_frame.can_dlc = frame.len() as u8;
+            can_frame.data[..frame.len()].copy_from_slice(frame.pdu());
+
+            let buf2 = unsafe {
+                std::slice::from_raw_parts(
+                    &can_frame as *const libc::can_frame as *const u8,
+                    std::mem::size_of::<libc::can_frame>(),
+                )
+            };
+
+            match guard.try_io(|inner| inner.get_ref().send(buf2)) {
                 Ok(result) => return result,
                 Err(_would_block) => continue,
             }
@@ -131,6 +192,36 @@ impl J1939Socket {
 
             match guard.try_io(|inner| inner.get_ref().recv(buf_uninit)) {
                 Ok(result) => return result,
+                Err(_would_block) => continue,
+            }
+        }
+    }
+
+    /// Receives data on the socket from the remote address to which it is
+    /// connected.
+    pub async fn recv2(&self) -> io::Result<j1939::Frame> {
+        loop {
+            let mut guard = self.0.readable().await?;
+
+            let mut storage = std::mem::MaybeUninit::<libc::can_frame>::zeroed();
+
+            let buf_uninit = unsafe {
+                std::slice::from_raw_parts_mut(
+                    storage.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
+                    std::mem::size_of::<libc::can_frame>(),
+                )
+            };
+
+            match guard.try_io(|inner| inner.get_ref().recv(buf_uninit)) {
+                Ok(result) => {
+                    let can_frame = unsafe { storage.assume_init() };
+
+                    return result.map(|_size| {
+                        j1939::FrameBuilder::new(j1939::Id::new(can_frame.can_id & 0x1fffffff))
+                            .copy_from_slice(&can_frame.data[..can_frame.can_dlc as usize])
+                            .build()
+                    });
+                }
                 Err(_would_block) => continue,
             }
         }
