@@ -94,6 +94,18 @@ pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
     pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
+        #[allow(dead_code)]
+        enum EngineMode {
+            /// Engine shutdown.
+            Shutdown = 0x07,
+            /// Engine starter locked.
+            Locked = 0x47,
+            /// Engine running at requested speed.
+            Nominal = 0x43,
+            /// Engine starter engaged.
+            Starting = 0xC3,
+        }
+
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
                 .priority(3)
@@ -101,7 +113,7 @@ impl EngineManagementSystem {
         )
         .copy_from_slice(&[
             0x00,
-            0x47,
+            EngineMode::Nominal as u8,
             0x1f,
             0x00,
             0x00,

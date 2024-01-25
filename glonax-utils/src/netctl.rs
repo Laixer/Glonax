@@ -362,7 +362,12 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Rpm { rpm } => {
                     info!("{} Set RPM to {}", style_node(0x0), rpm);
 
-                    net.send_vectored(&service.set_rpm(rpm)).await.unwrap();
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+
+                    loop {
+                        tick.tick().await;
+                        net.send_vectored(&service.set_rpm(rpm)).await.unwrap();
+                    }
                 }
                 EngineCommand::Start => {
                     info!("{} Start engine", style_node(0x0));
