@@ -89,6 +89,8 @@ impl std::fmt::Display for EngineMessage {
     }
 }
 
+const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;
+
 #[derive(Default)]
 pub struct EngineManagementSystem;
 
@@ -109,7 +111,7 @@ impl EngineManagementSystem {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
                 .priority(3)
-                .sa(0x11)
+                .sa(VOLVO_VECU_J1939_ADDRESS)
                 .build(),
         )
         .copy_from_slice(&[

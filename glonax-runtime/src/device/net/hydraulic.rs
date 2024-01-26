@@ -70,7 +70,13 @@ impl ActuatorMessage {
                 .try_into()
                 .unwrap();
 
-            let frame = Frame::new(IdBuilder::from_pgn(bank).da(self.node).build(), pdu);
+            let frame = Frame::new(
+                IdBuilder::from_pgn(bank)
+                    .da(self.node)
+                    .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                    .build(),
+                pdu,
+            );
 
             frames.push(frame);
         }
@@ -132,6 +138,7 @@ impl MotionConfigMessage {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
                 .da(self.node)
+                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         )
         .copy_from_slice(&[b'Z', b'C', 0xff, if self.locked { 0x0 } else { 0x1 }])
@@ -188,6 +195,7 @@ impl ConfigMessage {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
                 .da(self.node)
+                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         )
         .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
