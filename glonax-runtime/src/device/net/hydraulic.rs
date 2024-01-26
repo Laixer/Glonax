@@ -4,6 +4,7 @@ use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 
+const STATUS_PGN: u32 = 65_288;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;
 
@@ -18,7 +19,7 @@ impl ActuatorMessage {
     pub fn from_frame(node: u8, frame: &Frame) -> Self {
         let mut actuators: [Option<i16>; 8] = [None; 8];
 
-        if frame.id().pgn() == PGN::Other(40_960) {
+        if frame.id().pgn() == BANK_PGN_LIST[0] {
             if frame.pdu()[0..2] != [0xff, 0xff] {
                 actuators[0] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
             }
@@ -31,7 +32,7 @@ impl ActuatorMessage {
             if frame.pdu()[6..8] != [0xff, 0xff] {
                 actuators[3] = Some(i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()));
             }
-        } else if frame.id().pgn() == PGN::Other(41_216) {
+        } else if frame.id().pgn() == BANK_PGN_LIST[1] {
             if frame.pdu()[0..2] != [0xff, 0xff] {
                 actuators[4] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
             }
@@ -110,7 +111,7 @@ impl std::fmt::Display for ActuatorMessage {
 pub struct MotionConfigMessage {
     /// Node ID
     node: u8,
-    /// Lock or unlock
+    /// Motion lock
     pub locked: bool,
 }
 
@@ -143,7 +144,7 @@ impl MotionConfigMessage {
                 .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         )
-        .copy_from_slice(&[b'Z', b'C', 0xff, if self.locked { 0x0 } else { 0x1 }])
+        .copy_from_slice(&[b'Z', b'C', 0xff, if self.locked { 0x0 } else { 0x1 }, 0xff])
         .build();
 
         vec![frame]
@@ -163,14 +164,13 @@ impl std::fmt::Display for MotionConfigMessage {
 struct ConfigMessage {
     /// Node ID
     node: u8,
-    /// LED on or off
+    /// Identification LED
     pub led_on: Option<bool>,
-    /// Reset or not
+    /// Reset hardware
     pub reset: Option<bool>,
 }
 
 impl ConfigMessage {
-    #[allow(dead_code)]
     fn from_frame(node: u8, frame: &Frame) -> Self {
         let mut led_on = None;
         let mut reset = None;
@@ -233,6 +233,40 @@ impl std::fmt::Display for ConfigMessage {
     }
 }
 
+struct StatusMessage {
+    /// Node ID
+    node: u8,
+    /// ECU status
+    pub state: u8,
+    /// Motion lock
+    pub locked: bool,
+    /// Uptime
+    pub uptime: u32,
+}
+
+impl StatusMessage {
+    fn from_frame(node: u8, frame: &Frame) -> Self {
+        Self {
+            node,
+            state: frame.pdu()[0],
+            locked: frame.pdu()[2] == 0x1,
+            uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
+        }
+    }
+}
+
+impl std::fmt::Display for StatusMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:#x} {} {}",
+            self.state,
+            if self.locked { "locked" } else { "unlocked" },
+            self.uptime
+        )
+    }
+}
+
 pub struct HydraulicControlUnit {
     /// Source and destination node ID.
     pub node: u8,
@@ -288,7 +322,7 @@ impl HydraulicControlUnit {
         msg.to_frame()
     }
 
-    // FUTURE: MOve this to HCU
+    // FUTURE: Move this to HCU
     /// Drive both tracks
     pub fn drive_straight(&self, value: i16) -> Vec<Frame> {
         self.actuator_command([(2, value), (3, value)].into_iter().collect())
@@ -336,7 +370,19 @@ impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for Hydrau
             ));
         }
 
-        if frame.id().pgn() == PGN::Other(40_960) || frame.id().pgn() == PGN::Other(41_216) {
+        if frame.id().pgn() == PGN::ProprietarilyConfigurableMessage1 {
+            if frame.pdu()[0..2] != [b'Z', b'C'] {
+                return None;
+            }
+
+            let _config_message = ConfigMessage::from_frame(self.node, frame);
+        }
+
+        if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
+            let _status_message = StatusMessage::from_frame(self.node, frame);
+        }
+
+        if frame.id().pgn() == BANK_PGN_LIST[0] || frame.id().pgn() == BANK_PGN_LIST[1] {
             if frame.len() < 8 {
                 return None;
             }
