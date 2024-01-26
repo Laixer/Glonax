@@ -13,6 +13,8 @@ pub mod protocol;
 pub mod robot;
 pub mod world;
 
+mod can;
+
 #[macro_use]
 extern crate log;
 

@@ -1,18 +1,16 @@
 [package]
 name = "glonax"
-version = "3.3.0"
+version = "3.3.2"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
 repository = "https://github.com/Laixer/Glonax"
 description = """
 Heavy equipment controller library
 """
-categories = ["hardware", "machine", "controller"]
-keywords = ["hardware", "machine", "controller"]
+categories = ["hardware", "machine", "controller", "heavy", "equipment"]
+keywords = ["hardware", "machine", "controller", "glonax"]
 
 [dependencies]
-glonax-j1939 = { version = "1.0", path = "../glonax-j1939" }
-
 rand = "0.8"
 chrono = "0.4"
 bytes = "1.5"
@@ -22,6 +20,8 @@ serde = "1.0"
 serde_derive = "1.0"
 log = "0.4"
 tokio = { version = "1.35", features = ["full"] }
+libc = "0.2"
+j1939 = { git = "https://github.com/Laixer/J1939" }
 static_assertions = "1.1"
 sysinfo = "0.30"
 socket2 = "0.5"

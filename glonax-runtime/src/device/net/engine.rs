@@ -1,6 +1,6 @@
-use glonax_j1939::{
-    decode::{EngineStarterMode, EngineTorqueMode},
-    *,
+use j1939::{
+    decode::{self, EngineStarterMode, EngineTorqueMode},
+    Frame, FrameBuilder, IdBuilder, PGN,
 };
 
 use crate::net::Parsable;

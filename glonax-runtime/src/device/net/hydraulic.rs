@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use glonax_j1939::*;
+use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 

@@ -1,4 +1,4 @@
-use glonax_j1939::*;
+use j1939::{decode, Frame, PGN};
 
 use crate::net::Parsable;
 
