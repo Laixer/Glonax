@@ -33,7 +33,7 @@ pub struct J1939Stream(J1939Socket);
 
 impl J1939Stream {
     /// Binds this stream to the specified address and interface.
-    pub fn bind(ifname: &str, addr: u8) -> io::Result<Self> {
+    pub fn bind(ifname: &str, _addr: u8) -> io::Result<Self> {
         // let address = socket::SockAddrJ1939::new(addr, ifname);
         let address = socket::SockAddrCAN::new(ifname);
         J1939Socket::bind(&address).map(J1939Stream)
