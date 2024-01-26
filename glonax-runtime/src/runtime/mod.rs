@@ -116,22 +116,11 @@ pub struct Runtime<Conf> {
     ),
 }
 
-impl<Cnf: Configurable> Runtime<Cnf> {
+impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     /// Listen for shutdown signal.
     #[inline]
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
         self.shutdown.0.subscribe()
-    }
-
-    /// Spawn a service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn spawn_service<Fut>(&self, service: impl FnOnce(Cnf, SharedOperandState) -> Fut)
-    where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
-    {
-        tokio::spawn(service(self.config.clone(), self.operand.clone()));
     }
 
     // TODO: Add instance to new
@@ -153,41 +142,56 @@ impl<Cnf: Configurable> Runtime<Cnf> {
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
     pub fn schedule_io_service<Fut>(
         &self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
     ) where
         Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
     {
-        tokio::spawn(service(
-            self.config.clone(),
-            self.instance.clone(),
-            self.operand.clone(),
-            self.motion_tx.clone(),
-        ));
+        let config = self.config.clone();
+        let instance = self.instance.clone();
+        let operand = self.operand.clone();
+        let motion_tx = self.motion_tx.clone();
+
+        tokio::spawn(async move {
+            if let Err(e) = service(config, instance, operand, motion_tx).await {
+                log::error!("Failed to start IO service: {}", e);
+            }
+        });
     }
 
     pub fn schedule_net_service<Fut>(
         &self,
-        service: impl FnOnce(String, SharedOperandState) -> Fut,
+        service: impl FnOnce(String, SharedOperandState) -> Fut + Send + 'static,
         interface: &str,
     ) where
         Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
     {
-        tokio::spawn(service(interface.to_owned(), self.operand.clone()));
+        let operand = self.operand.clone();
+        let interface = interface.to_owned();
+
+        tokio::spawn(async move {
+            if let Err(e) = service(interface, operand).await {
+                log::error!("Failed to start network service: {}", e);
+            }
+        });
     }
 
     /// Spawn a motion sink in the background.
     pub fn schedule_motion_sink<Fut>(
         &mut self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionReceiver) -> Fut,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionReceiver) -> Fut + Send + 'static,
     ) where
-        Fut: std::future::Future<Output = ()> + Send + 'static,
+        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
     {
-        tokio::spawn(service(
-            self.config.clone(),
-            self.instance.clone(),
-            self.operand.clone(),
-            self.motion_rx.take().unwrap(),
-        ));
+        let config = self.config.clone();
+        let instance = self.instance.clone();
+        let operand = self.operand.clone();
+        let motion_rx = self.motion_rx.take().unwrap();
+
+        tokio::spawn(async move {
+            if let Err(e) = service(config, instance, operand, motion_rx).await {
+                log::error!("Failed to start motion service: {}", e);
+            }
+        });
     }
 
     /// Schedule a component to run in the background.

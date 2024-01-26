@@ -60,7 +60,7 @@ pub(super) async fn sink_net_actuator_sim(
     _instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
-) {
+) -> std::io::Result<()> {
     log::debug!("Starting motion listener");
 
     while let Some(motion) = motion_rx.recv().await {
@@ -90,6 +90,8 @@ pub(super) async fn sink_net_actuator_sim(
             }
         }
     }
+
+    Ok(())
 }
 
 pub(super) async fn sink_net_actuator(
@@ -97,59 +99,58 @@ pub(super) async fn sink_net_actuator(
     _instance: glonax::core::Instance,
     _runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
-) {
+) -> std::io::Result<()> {
     use glonax::device::HydraulicControlUnit;
     use glonax::net::J1939Network;
 
     log::debug!("Starting motion listener");
 
-    match J1939Network::new(&config.interface[0], glonax::consts::DEFAULT_J1939_ADDRESS) {
-        Ok(network) => {
-            let service = HydraulicControlUnit::new(0x4A);
+    let net = J1939Network::new(&config.interface[0], glonax::consts::DEFAULT_J1939_ADDRESS)?;
 
-            while let Some(motion) = motion_rx.recv().await {
-                match motion {
-                    Motion::StopAll => {
-                        if let Err(e) = network.send_vectored(&service.lock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::ResumeAll => {
-                        if let Err(e) = network.send_vectored(&service.unlock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::ResetAll => {
-                        if let Err(e) = network.send_vectored(&service.lock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                        if let Err(e) = network.send_vectored(&service.unlock()).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::StraightDrive(value) => {
-                        let frames = &service.drive_straight(value);
-                        if let Err(e) = network.send_vectored(frames).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
-                    Motion::Change(changes) => {
-                        let frames = &service.actuator_command(
-                            changes
-                                .iter()
-                                .map(|changeset| (changeset.actuator as u8, changeset.value))
-                                .collect(),
-                        );
+    let service = HydraulicControlUnit::new(0x4A);
 
-                        if let Err(e) = network.send_vectored(frames).await {
-                            log::error!("Failed to send motion: {}", e);
-                        }
-                    }
+    while let Some(motion) = motion_rx.recv().await {
+        match motion {
+            Motion::StopAll => {
+                if let Err(e) = net.send_vectored(&service.lock()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
             }
+            Motion::ResumeAll => {
+                if let Err(e) = net.send_vectored(&service.unlock()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            Motion::ResetAll => {
+                if let Err(e) = net.send_vectored(&service.lock()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+                if let Err(e) = net.send_vectored(&service.unlock()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            Motion::StraightDrive(value) => {
+                let frames = &service.drive_straight(value);
+                if let Err(e) = net.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            Motion::Change(changes) => {
+                let frames = &service.actuator_command(
+                    changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value))
+                        .collect(),
+                );
 
-            log::debug!("Motion listener shutdown");
+                if let Err(e) = net.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
         }
-        Err(e) => log::error!("Failed to open network: {}", e),
     }
+
+    log::debug!("Motion listener shutdown");
+
+    Ok(())
 }
