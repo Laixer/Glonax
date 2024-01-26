@@ -72,6 +72,7 @@ impl ActuatorMessage {
 
             let frame = Frame::new(
                 IdBuilder::from_pgn(bank)
+                    .priority(3)
                     .da(self.node)
                     .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                     .build(),
@@ -137,6 +138,7 @@ impl MotionConfigMessage {
     fn to_frame(&self) -> Vec<Frame> {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
+                .priority(3)
                 .da(self.node)
                 .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),

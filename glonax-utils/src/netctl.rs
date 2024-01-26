@@ -252,7 +252,7 @@ enum HCUCommand {
     /// Reset the node.
     Reset,
     /// Enable or disable motion lock.
-    Motion { toggle: String },
+    Lock { toggle: String },
     /// Actuator motion.
     Actuator { actuator: u8, value: i16 },
 }
@@ -312,9 +312,9 @@ async fn main() -> anyhow::Result<()> {
 
                     net.send_vectored(&service.reset()).await.unwrap();
                 }
-                HCUCommand::Motion { toggle } => {
+                HCUCommand::Lock { toggle } => {
                     info!(
-                        "{} Turn motion {}",
+                        "{} Turn lock {}",
                         style_node(node),
                         if string_to_bool(&toggle).unwrap() {
                             Green.paint("on")
@@ -383,7 +383,6 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
-
             let mut router = Router::new(net);
 
             for pgn in pgn {
@@ -401,7 +400,6 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Analyze { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
-
             let mut router = Router::new(net);
 
             for pgn in pgn {
