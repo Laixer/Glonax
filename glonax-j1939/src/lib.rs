@@ -1,7 +1,7 @@
 use std::io;
 
 pub use j1939::{decode, protocol, Frame, FrameBuilder, Id, IdBuilder, PGN};
-pub use socket::J1939Socket;
+pub use socket::{CANSocket, SockAddrCAN, SockAddrJ1939};
 
 mod socket;
 
@@ -29,26 +29,26 @@ impl From<socket::SockAddrJ1939> for j1939::Id {
 }
 
 // TODO: Maybe stream can be removed?
-pub struct J1939Stream(J1939Socket);
+pub struct J1939Stream(CANSocket);
 
 impl J1939Stream {
     /// Binds this stream to the specified address and interface.
     pub fn bind(ifname: &str, _addr: u8) -> io::Result<Self> {
         // let address = socket::SockAddrJ1939::new(addr, ifname);
         let address = socket::SockAddrCAN::new(ifname);
-        J1939Socket::bind(&address).map(J1939Stream)
+        CANSocket::bind(&address).map(J1939Stream)
     }
 
     /// Read frame from network stream.
     #[inline]
     pub async fn read(&self) -> io::Result<Frame> {
-        self.0.recv2().await
+        self.0.recv().await
     }
 
     /// Write frame over the network stream.
     #[inline]
     pub async fn write(&self, frame: &Frame) -> io::Result<usize> {
-        self.0.send2(frame).await
+        self.0.send(frame).await
     }
 
     /// Shuts down the read, write, or both halves of this connection.
@@ -96,8 +96,8 @@ impl J1939Stream {
     }
 }
 
-impl From<J1939Socket> for J1939Stream {
-    fn from(value: J1939Socket) -> Self {
+impl From<CANSocket> for J1939Stream {
+    fn from(value: CANSocket) -> Self {
         J1939Stream(value)
     }
 }

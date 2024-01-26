@@ -112,9 +112,9 @@ impl From<SockAddr> for SockAddrCAN {
 }
 
 // TODO: Rename to CANSocket?
-pub struct J1939Socket(AsyncFd<socket2::Socket>);
+pub struct CANSocket(AsyncFd<socket2::Socket>);
 
-impl J1939Socket {
+impl CANSocket {
     /// Binds this socket to the specified address and interface.
     pub fn bind(address: impl Into<SockAddr>) -> io::Result<Self> {
         // let socket = socket2::Socket::new_raw(
@@ -137,7 +137,7 @@ impl J1939Socket {
     /// Sends data on the socket to a connected peer.
     ///
     /// On success returns the number of bytes that were sent.
-    pub async fn send(&self, buf: &[u8]) -> io::Result<usize> {
+    pub async fn send_raw(&self, buf: &[u8]) -> io::Result<usize> {
         loop {
             let mut guard = self.0.writable().await?;
 
@@ -148,11 +148,9 @@ impl J1939Socket {
         }
     }
 
-    /// Sends data on the socket to the given address. On success, returns the
-    /// number of bytes written.
-    ///
-    /// This is typically used on UDP or datagram-oriented sockets.
-    pub async fn send2(&self, frame: &j1939::Frame) -> io::Result<usize> {
+    /// Sends a single J1939 frame on the socket to the CAN bus. On success,
+    /// returns the number of bytes written.
+    pub async fn send(&self, frame: &j1939::Frame) -> io::Result<usize> {
         loop {
             let mut guard = self.0.writable().await?;
 
@@ -179,7 +177,7 @@ impl J1939Socket {
 
     /// Receives data on the socket from the remote address to which it is
     /// connected.
-    pub async fn recv(&self, buf: &mut [u8]) -> io::Result<usize> {
+    pub async fn recv_raw(&self, buf: &mut [u8]) -> io::Result<usize> {
         loop {
             let mut guard = self.0.readable().await?;
 
@@ -197,9 +195,9 @@ impl J1939Socket {
         }
     }
 
-    /// Receives data on the socket from the remote address to which it is
-    /// connected.
-    pub async fn recv2(&self) -> io::Result<j1939::Frame> {
+    /// Receives a single J1939 frame on the socket from the remote address
+    /// to which it is connected. On success, returns the J1939 frame.
+    pub async fn recv(&self) -> io::Result<j1939::Frame> {
         loop {
             let mut guard = self.0.readable().await?;
 
@@ -221,53 +219,6 @@ impl J1939Socket {
                             .copy_from_slice(&can_frame.data[..can_frame.can_dlc as usize])
                             .build()
                     });
-                }
-                Err(_would_block) => continue,
-            }
-        }
-    }
-
-    /// Receives a single J1939 frame on the socket from the remote address
-    /// to which it is connected. On success, returns the J1939 frame.
-    pub async fn recv_from(&self, buf: &mut [u8]) -> io::Result<(usize, SockAddrJ1939)> {
-        loop {
-            let mut guard = self.0.readable().await?;
-
-            let buf_uninit = unsafe {
-                std::slice::from_raw_parts_mut(
-                    buf.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
-                    std::mem::size_of_val(buf),
-                )
-            };
-
-            match guard.try_io(|inner| inner.get_ref().recv_from(buf_uninit)) {
-                Ok(result) => return result.map(|(size, sockaddr)| (size, sockaddr.into())),
-                Err(_would_block) => continue,
-            }
-        }
-    }
-
-    pub async fn recv_msg(
-        &self,
-        buf: &mut [u8],
-    ) -> io::Result<(usize, socket2::RecvFlags, SockAddrJ1939)> {
-        loop {
-            let mut guard = self.0.readable().await?;
-
-            let buf_uninit = unsafe {
-                std::slice::from_raw_parts_mut(
-                    buf.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
-                    std::mem::size_of_val(buf),
-                )
-            };
-
-            let t = &mut [socket2::MaybeUninitSlice::new(buf_uninit)];
-
-            match guard.try_io(|inner| inner.get_ref().recv_from_vectored(t)) {
-                Ok(result) => {
-                    return Ok(result
-                        .map(|(size, recv_flags, sockaddr)| (size, recv_flags, sockaddr.into()))
-                        .unwrap())
                 }
                 Err(_would_block) => continue,
             }
@@ -333,7 +284,7 @@ impl J1939Socket {
     }
 }
 
-impl AsRawFd for J1939Socket {
+impl AsRawFd for CANSocket {
     fn as_raw_fd(&self) -> RawFd {
         self.0.as_raw_fd()
     }

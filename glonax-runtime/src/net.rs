@@ -3,15 +3,20 @@ use std::io;
 use glonax_j1939::*;
 
 // TODO: Implement connection management.
-pub struct J1939Network(J1939Stream);
+pub struct J1939Network(CANSocket);
 
 // TODO: Maybe rename to J1939Application?
 impl J1939Network {
-    pub fn new(ifname: &str, addr: u8) -> io::Result<Self> {
-        let stream = J1939Stream::bind(ifname, addr)?;
-        stream.set_broadcast(true)?;
+    pub fn new(ifname: &str, _addr: u8) -> io::Result<Self> {
+        // let address = socket::SockAddrJ1939::new(addr, ifname);
+        let address = SockAddrCAN::new(ifname);
+        let socket = CANSocket::bind(&address)?;
+        socket.set_broadcast(true)?;
 
-        Ok(Self(stream))
+        // let stream = J1939Stream::bind(ifname, addr)?;
+        // stream.set_broadcast(true)?;
+
+        Ok(Self(socket))
     }
 
     /// Set the promiscuous mode.
@@ -24,13 +29,19 @@ impl J1939Network {
     /// Accept a frame.
     #[inline]
     pub async fn accept(&self) -> io::Result<Frame> {
-        self.0.read().await
+        self.0.recv().await
+    }
+
+    /// Send a single frame over the network.
+    #[inline]
+    pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
+        self.0.send(frame).await
     }
 
     /// Request a PGN message.
     #[inline]
     pub async fn request(&self, node: u8, pgn: PGN) {
-        self.0.write(&protocol::request(node, pgn)).await.unwrap();
+        self.send(&protocol::request(node, pgn)).await.unwrap();
     }
 
     /// Assign address to node.
@@ -99,18 +110,12 @@ impl J1939Network {
         frames
     }
 
-    /// Send a single frame over the network.
-    #[inline]
-    pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
-        self.0.write(frame).await
-    }
-
     /// Send a vector of frames over the network.
     #[inline]
     pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
         let mut v = vec![];
         for frame in frames {
-            v.push(self.0.write(frame).await?);
+            v.push(self.send(frame).await?);
         }
         Ok(v)
     }
