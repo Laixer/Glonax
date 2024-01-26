@@ -109,6 +109,7 @@ impl EngineManagementSystem {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
                 .priority(3)
+                .sa(0x11)
                 .build(),
         )
         .copy_from_slice(&[

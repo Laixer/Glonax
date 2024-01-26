@@ -383,7 +383,6 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
-            // net.set_promisc_mode(true)?;
 
             let mut router = Router::new(net);
 
@@ -402,7 +401,6 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Analyze { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
-            // net.set_promisc_mode(true)?;
 
             let mut router = Router::new(net);
 
