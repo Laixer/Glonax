@@ -7,7 +7,6 @@ strip = true        # Strip symbols from binary*
 [workspace]
 resolver = "2"
 members = [
-  "glonax-j1939",
   "glonax-gamepad",
   "glonax-input",
   "glonax-runtime",
