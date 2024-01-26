@@ -183,7 +183,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
 #[command(about = "Glonax network diagnosis and system analyzer", long_about = None)]
 struct Args {
     /// CAN network interface.
-    #[arg(short, long, default_value = "can0")]
+    #[arg(short = 'i', long, default_value = "can0")]
     interface: String,
     /// Local network address.
     #[arg(long, default_value_t = 0x9e)]

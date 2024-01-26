@@ -21,7 +21,7 @@ struct Args {
     #[arg(short = 'b', long = "bind", default_value = "0.0.0.0:30051")]
     address: String,
     /// CAN network interface.
-    #[arg(required_unless_present = "simulation")]
+    #[arg(required_unless_present = "simulation", short = 'i', long)]
     interface: Vec<String>,
     /// Refresh host service interval in milliseconds.
     #[arg(long, default_value_t = 200, value_name = "INTERVAL")]
