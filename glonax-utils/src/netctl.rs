@@ -105,6 +105,13 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     Yellow.bold().paint("HCU"),
                     motion_message
                 );
+            } else if let Some(status_message) = message.2 {
+                info!(
+                    "{} {} » {}",
+                    style_node(router.frame_source().unwrap()),
+                    Yellow.bold().paint("HCU"),
+                    status_message
+                );
             }
         } else if let Some(message) = router.try_accept(&mut app_inspector) {
             match message {

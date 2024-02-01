@@ -233,7 +233,7 @@ impl std::fmt::Display for ConfigMessage {
     }
 }
 
-struct StatusMessage {
+pub struct StatusMessage {
     /// Node ID
     node: u8,
     /// ECU status
@@ -311,15 +311,17 @@ impl HydraulicControlUnit {
 
     /// Resets the motion controller
     pub fn reset(&self) -> Vec<Frame> {
-        let msg = ConfigMessage {
-            node: self.node,
-            led_on: None,
-            reset: Some(true),
-        };
+        // let msg = ConfigMessage {
+        //     node: self.node,
+        //     led_on: None,
+        //     reset: Some(true),
+        // };
 
-        trace!("HCU: {}", msg);
+        // trace!("HCU: {}", msg);
 
-        msg.to_frame()
+        // msg.to_frame()
+
+        vec![j1939::protocol::request(0x4A, PGN::SoftwareIdentification)]
     }
 
     // FUTURE: Move this to HCU
@@ -347,11 +349,21 @@ impl HydraulicControlUnit {
     }
 }
 
-impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for HydraulicControlUnit {
+impl
+    Parsable<(
+        Option<ActuatorMessage>,
+        Option<MotionConfigMessage>,
+        Option<StatusMessage>,
+    )> for HydraulicControlUnit
+{
     fn parse(
         &mut self,
         frame: &Frame,
-    ) -> Option<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> {
+    ) -> Option<(
+        Option<ActuatorMessage>,
+        Option<MotionConfigMessage>,
+        Option<StatusMessage>,
+    )> {
         if frame.len() < 4 {
             return None;
         }
@@ -367,6 +379,7 @@ impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for Hydrau
             return Some((
                 None,
                 Some(MotionConfigMessage::from_frame(self.node, frame)),
+                None,
             ));
         }
 
@@ -379,7 +392,9 @@ impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for Hydrau
         }
 
         if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
-            let _status_message = StatusMessage::from_frame(self.node, frame);
+            let status_message = StatusMessage::from_frame(self.node, frame);
+
+            return Some((None, None, Some(status_message)));
         }
 
         if frame.id().pgn() == BANK_PGN_LIST[0] || frame.id().pgn() == BANK_PGN_LIST[1] {
@@ -387,7 +402,11 @@ impl Parsable<(Option<ActuatorMessage>, Option<MotionConfigMessage>)> for Hydrau
                 return None;
             }
 
-            return Some((Some(ActuatorMessage::from_frame(self.node, frame)), None));
+            return Some((
+                Some(ActuatorMessage::from_frame(self.node, frame)),
+                None,
+                None,
+            ));
         }
 
         None
