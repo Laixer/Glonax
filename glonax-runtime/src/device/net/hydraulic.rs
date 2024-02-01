@@ -112,8 +112,9 @@ pub struct MotionConfigMessage {
     /// Node ID
     node: u8,
     /// Motion lock
-    pub locked: bool,
-    pub reset: bool,
+    pub locked: Option<bool>,
+    /// Motion reset
+    pub reset: Option<bool>,
 }
 
 impl MotionConfigMessage {
@@ -121,8 +122,8 @@ impl MotionConfigMessage {
     pub fn locked(node: u8) -> Self {
         Self {
             node,
-            locked: true,
-            reset: false,
+            locked: Some(true),
+            reset: None,
         }
     }
 
@@ -130,24 +131,25 @@ impl MotionConfigMessage {
     pub fn unlocked(node: u8) -> Self {
         Self {
             node,
-            locked: false,
-            reset: false,
+            locked: Some(false),
+            reset: None,
         }
     }
 
     pub fn reset(node: u8) -> Self {
         Self {
             node,
-            locked: false,
-            reset: true,
+            locked: None,
+            reset: Some(true),
         }
     }
 
+    // TODO: Check if bytes are 0xff
     fn from_frame(node: u8, frame: &Frame) -> Self {
         Self {
             node,
-            locked: frame.pdu()[3] == 0x0,
-            reset: frame.pdu()[4] == 0x1,
+            locked: Some(frame.pdu()[3] == 0x0),
+            reset: Some(frame.pdu()[4] == 0x1),
         }
     }
 
@@ -163,8 +165,24 @@ impl MotionConfigMessage {
             b'Z',
             b'C',
             0xff,
-            if self.locked { 0x0 } else { 0x1 },
-            if self.reset { 0x1 } else { 0x0 },
+            if let Some(locked) = self.locked {
+                if locked {
+                    0x0
+                } else {
+                    0x1
+                }
+            } else {
+                0xff
+            },
+            if let Some(reset) = self.reset {
+                if reset {
+                    0x1
+                } else {
+                    0x0
+                }
+            } else {
+                0xff
+            },
         ])
         .build();
 
@@ -174,11 +192,20 @@ impl MotionConfigMessage {
 
 impl std::fmt::Display for MotionConfigMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Motion config {}",
-            if self.locked { "locked" } else { "unlocked" }
-        )
+        let mut s = String::new();
+
+        if let Some(locked) = self.locked {
+            s.push_str(&format!(
+                "Motion: {};",
+                if locked { "Locked" } else { "Unlocked" }
+            ));
+        }
+
+        if let Some(reset) = self.reset {
+            s.push_str(&format!("Reset: {};", if reset { "Yes" } else { "No" }));
+        }
+
+        write!(f, "{}", s)
     }
 }
 
