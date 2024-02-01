@@ -258,6 +258,8 @@ enum HCUCommand {
     Assign { address_new: String },
     /// Reset the node.
     Reset,
+    /// Motion reset.
+    MotionReset,
     /// Enable or disable motion lock.
     Lock { toggle: String },
     /// Actuator motion.
@@ -318,6 +320,11 @@ async fn main() -> anyhow::Result<()> {
                     info!("{} Reset", style_node(node));
 
                     net.send_vectored(&service.reset()).await.unwrap();
+                }
+                HCUCommand::MotionReset => {
+                    info!("{} Motion reset", style_node(node));
+
+                    net.send_vectored(&service.motion_reset()).await.unwrap();
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(

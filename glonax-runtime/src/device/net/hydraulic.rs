@@ -113,12 +113,17 @@ pub struct MotionConfigMessage {
     node: u8,
     /// Motion lock
     pub locked: bool,
+    pub reset: bool,
 }
 
 impl MotionConfigMessage {
     /// Construct a locked new motion config message.
     pub fn locked(node: u8) -> Self {
-        Self { node, locked: true }
+        Self {
+            node,
+            locked: true,
+            reset: false,
+        }
     }
 
     /// Construct a unlocked new motion config message.
@@ -126,6 +131,15 @@ impl MotionConfigMessage {
         Self {
             node,
             locked: false,
+            reset: false,
+        }
+    }
+
+    pub fn reset(node: u8) -> Self {
+        Self {
+            node,
+            locked: false,
+            reset: true,
         }
     }
 
@@ -133,6 +147,7 @@ impl MotionConfigMessage {
         Self {
             node,
             locked: frame.pdu()[3] == 0x0,
+            reset: frame.pdu()[4] == 0x1,
         }
     }
 
@@ -144,7 +159,13 @@ impl MotionConfigMessage {
                 .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         )
-        .copy_from_slice(&[b'Z', b'C', 0xff, if self.locked { 0x0 } else { 0x1 }, 0xff])
+        .copy_from_slice(&[
+            b'Z',
+            b'C',
+            0xff,
+            if self.locked { 0x0 } else { 0x1 },
+            if self.reset { 0x1 } else { 0x0 },
+        ])
         .build();
 
         vec![frame]
@@ -259,9 +280,9 @@ impl std::fmt::Display for StatusMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:#x} {} {}",
+            "Status: {:#x} Motion: {} Uptime: {}",
             self.state,
-            if self.locked { "locked" } else { "unlocked" },
+            if self.locked { "Locked" } else { "Unlocked" },
             self.uptime
         )
     }
@@ -296,6 +317,15 @@ impl HydraulicControlUnit {
         msg.to_frame()
     }
 
+    /// Motion reset
+    pub fn motion_reset(&self) -> Vec<Frame> {
+        let msg = MotionConfigMessage::reset(self.node);
+
+        trace!("HCU: {}", msg);
+
+        msg.to_frame()
+    }
+
     /// Sets the LED on the motion controller
     pub fn set_led(&self, on: bool) -> Vec<Frame> {
         let msg = ConfigMessage {
@@ -309,19 +339,17 @@ impl HydraulicControlUnit {
         msg.to_frame()
     }
 
-    /// Resets the motion controller
+    /// System reset
     pub fn reset(&self) -> Vec<Frame> {
-        // let msg = ConfigMessage {
-        //     node: self.node,
-        //     led_on: None,
-        //     reset: Some(true),
-        // };
+        let msg = ConfigMessage {
+            node: self.node,
+            led_on: None,
+            reset: Some(true),
+        };
 
-        // trace!("HCU: {}", msg);
+        trace!("HCU: {}", msg);
 
-        // msg.to_frame()
-
-        vec![j1939::protocol::request(0x4A, PGN::SoftwareIdentification)]
+        msg.to_frame()
     }
 
     // FUTURE: Move this to HCU

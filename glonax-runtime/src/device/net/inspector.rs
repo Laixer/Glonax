@@ -25,21 +25,31 @@ impl J1939Message {
         // TODO: Move most of the logic to j1939 crate
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
-                let mut major = 0;
-                let mut minor = 0;
-                let mut patch = 0;
+                let fields = frame.pdu()[0];
 
-                if frame.pdu()[3] != 0xff {
-                    major = frame.pdu()[3];
-                }
-                if frame.pdu()[4] != 0xff {
-                    minor = frame.pdu()[4];
-                }
-                if frame.pdu()[5] != 0xff {
-                    patch = frame.pdu()[5];
-                }
+                if fields >= 1 {
+                    if frame.pdu()[4] == b'*' {
+                        let mut major = 0;
+                        let mut minor = 0;
+                        let mut patch = 0;
 
-                Some(Self::SoftwareIndent((major, minor, patch)))
+                        if frame.pdu()[1] != 0xff {
+                            major = frame.pdu()[1];
+                        }
+                        if frame.pdu()[2] != 0xff {
+                            minor = frame.pdu()[2];
+                        }
+                        if frame.pdu()[3] != 0xff {
+                            patch = frame.pdu()[3];
+                        }
+
+                        Some(Self::SoftwareIndent((major, minor, patch)))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
             }
             PGN::Request => Some(Self::RequestPGN(u32::from_be_bytes([
                 0x0,
