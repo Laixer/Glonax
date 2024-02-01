@@ -27,6 +27,24 @@ pub struct J1939Name {
     pub arbitrary_address: u8,
 }
 
+impl std::fmt::Display for J1939Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Identity number: 0x{:X}; Manufacturer code: 0x{:X}; Function instance: 0x{:X}; ECU instance: 0x{:X}; Function: 0x{:X}; Vehicle system: 0x{:X}; Vehicle system instance: 0x{:X}; Industry group: {:X}; Arbitrary address: {}",
+            self.identity_number,
+            self.manufacturer_code,
+            self.function_instance,
+            self.ecu_instance,
+            self.function,
+            self.vehicle_system,
+            self.vehicle_system_instance,
+            self.industry_group,
+            self.arbitrary_address == 1
+        )
+    }
+}
+
 pub enum J1939Message {
     /// Software identification.
     SoftwareIndent((u8, u8, u8)),
@@ -81,12 +99,7 @@ impl J1939Message {
             ]))),
             PGN::AddressClaimed => {
                 // [18EEFF4A] Prio: 6 PGN: 60928 DA: 0xFF    [09, 03, 4B, 24, 11, 05, 06, 05]
-                //
                 // [18EEFF6B] Prio: 6 PGN: 60928 DA: 0xFF    [19, A4, 49, 24, 11, 05, 06, 85]
-                // 2303304729 ->  1001 1010 0100 0001 1001
-                //     631833 -> 01001 1010010000011001
-
-                // 00100100010
 
                 // 0b_0001_1001, // 0x19 Identity number
                 // 0b_1010_0100, // 0xA4 Identity number
@@ -97,7 +110,7 @@ impl J1939Message {
                 // 0b_0001_0001, // 0x11 Function Instance | ECU Instance
                 // 0x05,         // 0x05 Function
                 // 0b_0000_0110, // 0x06 Vehicle System
-                // 0b_0000_0101, // 0x84 Arbitrary Address Capable | Industry Group | Vehicle System Instance
+                // 0b_1000_0101, // 0x85 Arbitrary Address Capable | Industry Group | Vehicle System Instance
 
                 let identity_number = frame.pdu()[0] as u32
                     | ((frame.pdu()[1] as u32) << 8)
@@ -117,7 +130,6 @@ impl J1939Message {
                 let industry_group = frame.pdu()[7] & 0b0111_0000;
                 let arbitrary_address = frame.pdu()[7] >> 7;
 
-
                 Some(Self::AddressClaim(J1939Name {
                     identity_number,
                     manufacturer_code,
@@ -129,8 +141,6 @@ impl J1939Message {
                     industry_group,
                     arbitrary_address,
                 }))
-
-                // Some(Self::AddressClaim((function, arbitrary_address)))
             }
             PGN::AcknowledgmentMessage => Some(Self::Acknowledged(frame.pdu()[0])),
             PGN::TimeDate => {

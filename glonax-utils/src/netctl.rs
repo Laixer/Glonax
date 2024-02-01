@@ -134,15 +134,8 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     );
                 }
                 glonax::device::J1939Message::AddressClaim(name) => {
-                    // info!(
-                    //     "{} {} » Adress claimed; Function: {}; Arbitrary address: {}",
-                    //     style_node(router.frame_source().unwrap()),
-                    //     Yellow.bold().paint("Inspector"),
-                    //     function,
-                    //     arbitrary_address
-                    // );
                     info!(
-                        "{} {} » Adress claimed: {:?}",
+                        "{} {} » Adress claimed: {}",
                         style_node(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         name
