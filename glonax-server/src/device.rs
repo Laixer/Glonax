@@ -122,10 +122,7 @@ pub(super) async fn sink_net_actuator(
                 }
             }
             Motion::ResetAll => {
-                if let Err(e) = net.send_vectored(&service.lock()).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-                if let Err(e) = net.send_vectored(&service.unlock()).await {
+                if let Err(e) = net.send_vectored(&service.motion_reset()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }

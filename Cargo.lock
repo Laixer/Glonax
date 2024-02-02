@@ -504,7 +504,7 @@ checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 [[package]]
 name = "j1939"
 version = "0.1.13"
-source = "git+https://github.com/Laixer/J1939#c12652dcd75288d111b1d6bf96bbc7d35e8d1605"
+source = "git+https://github.com/Laixer/J1939#62616ae1abe5686cbc75ebcd10ee271b49187fd8"
 
 [[package]]
 name = "js-sys"

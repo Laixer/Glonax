@@ -44,53 +44,53 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 
     debug!("Print incoming frames to screen");
 
-    let mut engine_management_service = EngineManagementSystem;
-    let mut frame_encoder = KueblerEncoder::new(0x6A);
-    let mut boom_encoder = KueblerEncoder::new(0x6B);
-    let mut arm_encoder = KueblerEncoder::new(0x6C);
-    let mut attachment_encoder = KueblerEncoder::new(0x6D);
-    let mut hcu = HydraulicControlUnit::new(0x4A);
+    let mut ems0 = EngineManagementSystem;
+    let mut enc0 = KueblerEncoder::new(0x6A);
+    let mut enc1 = KueblerEncoder::new(0x6B);
+    let mut enc2 = KueblerEncoder::new(0x6C);
+    let mut enc3 = KueblerEncoder::new(0x6D);
+    let mut hcu0 = HydraulicControlUnit::new(0x4A);
     let mut app_inspector = J1939ApplicationInspector;
 
     loop {
         router.listen().await?;
 
-        if let Some(message) = router.try_accept(&mut engine_management_service) {
+        if let Some(message) = router.try_accept(&mut ems0) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Engine"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut arm_encoder) {
+        } else if let Some(message) = router.try_accept(&mut enc2) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Arm"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut boom_encoder) {
+        } else if let Some(message) = router.try_accept(&mut enc1) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Boom"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut frame_encoder) {
+        } else if let Some(message) = router.try_accept(&mut enc0) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Frame"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut attachment_encoder) {
+        } else if let Some(message) = router.try_accept(&mut enc3) {
             info!(
                 "{} {} » {}",
                 style_node(router.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut hcu) {
+        } else if let Some(message) = router.try_accept(&mut hcu0) {
             if let Some(actuator_message) = message.0 {
                 info!(
                     "{} {} » {}",
