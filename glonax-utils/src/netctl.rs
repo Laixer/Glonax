@@ -223,9 +223,20 @@ enum Command {
     },
     /// Engine control unit commands.
     Engine {
+        /// Target node address.
+        #[arg(long, default_value = "0x0")]
+        address: String,
         /// Engine commands.
         #[command(subcommand)]
         command: EngineCommand,
+    },
+    Request {
+        /// Target node address.
+        #[arg(long)]
+        address: String,
+        /// Request commands.
+        #[command(subcommand)]
+        command: RequestCommand,
     },
     /// Show raw frames on screen.
     Dump {
@@ -247,6 +258,16 @@ enum Command {
     },
 }
 
+#[derive(clap::Subcommand, PartialEq, Eq)]
+enum RequestCommand {
+    /// Request node name.
+    Name,
+    /// Request node software version.
+    Software,
+    /// Request node time and date.
+    Time,
+}
+
 #[derive(clap::Subcommand)]
 enum EngineCommand {
     /// Request engine RPM.
@@ -263,8 +284,8 @@ enum HCUCommand {
     Led { toggle: String },
     /// Assign the node a new address.
     Assign { address_new: String },
-    /// Reset the node.
-    Reset,
+    /// Reboot the node.
+    Reboot,
     /// Motion reset.
     MotionReset,
     /// Enable or disable motion lock.
@@ -323,10 +344,10 @@ async fn main() -> anyhow::Result<()> {
                         .await
                         .unwrap();
                 }
-                HCUCommand::Reset => {
-                    info!("{} Reset", style_node(node));
+                HCUCommand::Reboot => {
+                    info!("{} Reboot", style_node(node));
 
-                    net.send_vectored(&service.reset()).await.unwrap();
+                    net.send_vectored(&service.reboot()).await.unwrap();
                 }
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_node(node));
@@ -375,13 +396,14 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Engine { command } => {
+        Command::Engine { address, command } => {
+            let node = node_address(address)?;
             let service = glonax::device::EngineManagementSystem;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
             match command {
                 EngineCommand::Rpm { rpm } => {
-                    info!("{} Set RPM to {}", style_node(0x0), rpm);
+                    info!("{} Set RPM to {}", style_node(node), rpm);
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -391,15 +413,25 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 EngineCommand::Start => {
-                    info!("{} Start engine", style_node(0x0));
+                    info!("{} Start engine", style_node(node));
 
                     // net.send_vectored(&service.start()).await.unwrap();
                 }
                 EngineCommand::Stop => {
-                    info!("{} Stop engine", style_node(0x0));
+                    info!("{} Stop engine", style_node(node));
 
                     // net.send_vectored(&service.stop()).await.unwrap();
                 }
+            }
+        }
+        Command::Request { address, command } => {
+            let node = node_address(address)?;
+            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+
+            if command == RequestCommand::Name {
+                info!("{} Request name", style_node(node));
+
+                net.request_address_claimed(node).await;
             }
         }
         Command::Dump { pgn, node } => {

@@ -283,6 +283,7 @@ impl std::fmt::Display for ConfigMessage {
 
 pub struct StatusMessage {
     /// Node ID
+    #[allow(dead_code)]
     node: u8,
     /// ECU status
     pub state: u8,
@@ -330,8 +331,6 @@ impl HydraulicControlUnit {
     pub fn lock(&self) -> Vec<Frame> {
         let msg = MotionConfigMessage::locked(self.node);
 
-        trace!("HCU: {}", msg);
-
         msg.to_frame()
     }
 
@@ -339,16 +338,12 @@ impl HydraulicControlUnit {
     pub fn unlock(&self) -> Vec<Frame> {
         let msg = MotionConfigMessage::unlocked(self.node);
 
-        trace!("HCU: {}", msg);
-
         msg.to_frame()
     }
 
     /// Motion reset
     pub fn motion_reset(&self) -> Vec<Frame> {
         let msg = MotionConfigMessage::reset(self.node);
-
-        trace!("HCU: {}", msg);
 
         msg.to_frame()
     }
@@ -361,20 +356,16 @@ impl HydraulicControlUnit {
             reset: None,
         };
 
-        trace!("HCU: {}", msg);
-
         msg.to_frame()
     }
 
-    /// System reset
-    pub fn reset(&self) -> Vec<Frame> {
+    /// System reboot / reset
+    pub fn reboot(&self) -> Vec<Frame> {
         let msg = ConfigMessage {
             node: self.node,
             led_on: None,
             reset: Some(true),
         };
-
-        trace!("HCU: {}", msg);
 
         msg.to_frame()
     }

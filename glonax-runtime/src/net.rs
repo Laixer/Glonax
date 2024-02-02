@@ -78,10 +78,19 @@ impl J1939Network {
         self.0.take_error()
     }
 
+    // TODO: Remove in future?
     /// Request a PGN message.
     #[inline]
     pub async fn request(&self, node: u8, pgn: PGN) {
         self.send(&protocol::request(node, pgn)).await.unwrap();
+    }
+
+    // TODO: Remove in future?
+    #[inline]
+    pub async fn request_address_claimed(&self, node: u8) {
+        self.send(&protocol::request(node, PGN::AddressClaimed))
+            .await
+            .unwrap();
     }
 
     /// Assign address to node.
