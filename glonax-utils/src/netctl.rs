@@ -428,10 +428,16 @@ async fn main() -> anyhow::Result<()> {
             let node = node_address(address)?;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
+            let pgn = match command {
+                RequestCommand::Name => 60_928,
+                RequestCommand::Software => 65_242,
+                RequestCommand::Time => 65_254,
+            };
+
             if command == RequestCommand::Name {
                 info!("{} Request name", style_node(node));
 
-                net.request_address_claimed(node).await;
+                net.request_address_claimed(node, pgn).await;
             }
         }
         Command::Dump { pgn, node } => {

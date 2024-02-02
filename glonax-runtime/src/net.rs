@@ -87,8 +87,8 @@ impl J1939Network {
 
     // TODO: Remove in future?
     #[inline]
-    pub async fn request_address_claimed(&self, node: u8) {
-        self.send(&protocol::request(node, PGN::AddressClaimed))
+    pub async fn request_address_claimed(&self, node: u8, pgn: u32) {
+        self.send(&protocol::request(node, PGN::from(pgn)))
             .await
             .unwrap();
     }
