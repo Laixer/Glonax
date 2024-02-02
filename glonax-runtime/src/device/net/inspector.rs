@@ -2,9 +2,6 @@ use j1939::{decode, Frame, Name, PGN};
 
 use crate::net::Parsable;
 
-#[derive(Default)]
-pub struct J1939ApplicationInspector;
-
 pub enum J1939Message {
     /// Software identification.
     SoftwareIndent((u8, u8, u8)),
@@ -22,7 +19,6 @@ pub enum J1939Message {
 
 impl J1939Message {
     pub fn from_frame(_: u8, frame: &Frame) -> Option<Self> {
-        // TODO: Move most of the logic to j1939 crate
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
                 let fields = frame.pdu()[0];
@@ -85,6 +81,9 @@ impl J1939Message {
         }
     }
 }
+
+#[derive(Default)]
+pub struct J1939ApplicationInspector;
 
 impl Parsable<J1939Message> for J1939ApplicationInspector {
     fn parse(&mut self, frame: &Frame) -> Option<J1939Message> {

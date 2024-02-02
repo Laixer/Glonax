@@ -459,6 +459,40 @@ impl
     }
 }
 
+impl super::J1939Unit for HydraulicControlUnit {
+    fn try_accept(
+        &mut self,
+        router: &mut crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) {
+        if let Some((actuator, config, status)) = router.try_accept(self) {
+            if let Some(_actuator) = actuator {
+                if let Ok(_runtime_state) = runtime_state.try_write() {
+                    // runtime_state
+                    //     .state
+                    //     .actuators
+                    //     .insert(actuator.node, actuator.actuators);
+                }
+            }
+
+            if let Some(_config) = config {
+                if let Ok(_runtime_state) = runtime_state.try_write() {
+                    // runtime_state
+                    //     .state
+                    //     .motion_config
+                    //     .insert(config.node, config.locked.unwrap());
+                }
+            }
+
+            if let Some(_status) = status {
+                if let Ok(_runtime_state) = runtime_state.try_write() {
+                    // runtime_state.state.hcu_status.insert(status.node, status);
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

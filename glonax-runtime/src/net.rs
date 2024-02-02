@@ -7,7 +7,6 @@ use crate::can::{CANSocket, SockAddrCAN};
 // TODO: Implement connection management.
 pub struct J1939Network(CANSocket);
 
-// TODO: Maybe rename to J1939Application?
 impl J1939Network {
     pub fn new(ifname: &str, _addr: u8) -> io::Result<Self> {
         // let address = socket::SockAddrJ1939::new(addr, ifname);
@@ -93,6 +92,7 @@ impl J1939Network {
             .unwrap();
     }
 
+    // TODO: Move to J1939 crate
     /// Assign address to node.
     pub async fn commanded_address(&self, node: u8, address: u8) {
         let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
@@ -106,6 +106,7 @@ impl J1939Network {
         .unwrap();
     }
 
+    // TODO: Move to J1939 crate
     /// Broadcast Announce Message.
     fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
         let data_length = (data.len() as u16).to_le_bytes();

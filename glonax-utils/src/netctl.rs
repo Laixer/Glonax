@@ -428,6 +428,7 @@ async fn main() -> anyhow::Result<()> {
             let node = node_address(address)?;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
+            // TODO: Use PGN from J1939 crate
             let pgn = match command {
                 RequestCommand::Name => 60_928,
                 RequestCommand::Software => 65_242,
