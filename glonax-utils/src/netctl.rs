@@ -135,10 +135,18 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 }
                 glonax::device::J1939Message::AddressClaim(name) => {
                     info!(
-                        "{} {} » Adress claimed: {}",
+                        "{} {} » Identity number: 0x{:X}; Manufacturer code: 0x{:X}; Function instance: 0x{:X}; ECU instance: 0x{:X}; Function: 0x{:X}; Vehicle system: 0x{:X}; Vehicle system instance: 0x{:X}; Industry group: {:X}; Arbitrary address: {}",
                         style_node(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
-                        name
+                        name.identity_number,
+                        name.manufacturer_code,
+                        name.function_instance,
+                        name.ecu_instance,
+                        name.function,
+                        name.vehicle_system,
+                        name.vehicle_system_instance,
+                        name.industry_group,
+                        name.arbitrary_address 
                     );
                 }
                 glonax::device::J1939Message::Acknowledged(acknowledged) => {
