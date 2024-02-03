@@ -328,7 +328,7 @@ async fn main() -> anyhow::Result<()> {
             let service = glonax::device::HydraulicControlUnit::new(node);
             // let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
-            let socket = CANSocket::new(args.interface.as_str(), args.address)?;
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
             match command {
                 HCUCommand::Led { toggle } => {

@@ -2,9 +2,7 @@ use std::io;
 
 use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
-use crate::can::SockAddrCAN;
-
-pub use crate::can::CANSocket;
+pub use crate::can::{CANSocket, SockAddrCAN};
 
 pub struct J1939Network(CANSocket);
 

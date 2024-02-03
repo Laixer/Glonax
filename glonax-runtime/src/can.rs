@@ -115,11 +115,6 @@ pub struct CANSocket(AsyncFd<socket2::Socket>);
 impl CANSocket {
     /// Binds this socket to the specified address and interface.
     pub fn bind(address: impl Into<SockAddr>) -> io::Result<Self> {
-        // let socket = socket2::Socket::new_raw(
-        //     libc::AF_CAN.into(),
-        //     socket2::Type::DGRAM,
-        //     Some(libc::CAN_J1939.into()),
-        // )?;
         let socket = socket2::Socket::new_raw(
             libc::AF_CAN.into(),
             socket2::Type::RAW,
@@ -133,16 +128,19 @@ impl CANSocket {
         Ok(Self(AsyncFd::new(socket)?))
     }
 
-    pub fn new(ifname: &str, _addr: u8) -> io::Result<Self> {
-        // let address = socket::SockAddrJ1939::new(addr, ifname);
-        // let stream = J1939Stream::bind(ifname, addr)?;
-        // stream.set_broadcast(true)?;
+    /// Binds this socket to the specified address and interface.
+    pub fn bind_j1939(address: impl Into<SockAddr>) -> io::Result<Self> {
+        let socket = socket2::Socket::new_raw(
+            libc::AF_CAN.into(),
+            socket2::Type::DGRAM,
+            Some(libc::CAN_J1939.into()),
+        )?;
 
-        let address = SockAddrCAN::new(ifname);
-        let socket = CANSocket::bind(&address)?;
+        socket.bind(&address.into())?;
+        socket.set_nonblocking(true)?;
         socket.set_broadcast(true)?;
 
-        Ok(socket)
+        Ok(Self(AsyncFd::new(socket)?))
     }
 
     /// Sends data on the socket to a connected peer.
