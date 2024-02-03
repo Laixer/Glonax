@@ -326,7 +326,9 @@ async fn main() -> anyhow::Result<()> {
         Command::Hcu { address, command } => {
             let node = node_address(address)?;
             let service = glonax::device::HydraulicControlUnit::new(node);
-            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+            // let net = J1939Network::new(args.interface.as_str(), args.address)?;
+
+            let socket = CANSocket::new(args.interface.as_str(), args.address)?;
 
             match command {
                 HCUCommand::Led { toggle } => {
@@ -340,19 +342,19 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    net.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
+                    socket.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
                         .await
                         .unwrap();
                 }
                 HCUCommand::Reboot => {
                     info!("{} Reboot", style_node(node));
 
-                    net.send_vectored(&service.reboot()).await.unwrap();
+                    socket.send_vectored(&service.reboot()).await.unwrap();
                 }
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_node(node));
 
-                    net.send_vectored(&service.motion_reset()).await.unwrap();
+                    socket.send_vectored(&service.motion_reset()).await.unwrap();
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(
@@ -366,9 +368,9 @@ async fn main() -> anyhow::Result<()> {
                     );
 
                     if string_to_bool(&toggle).unwrap() {
-                        net.send_vectored(&service.lock()).await.unwrap();
+                        socket.send_vectored(&service.lock()).await.unwrap();
                     } else {
-                        net.send_vectored(&service.unlock()).await.unwrap();
+                        socket.send_vectored(&service.unlock()).await.unwrap();
                     }
                 }
                 HCUCommand::Actuator { actuator, value } => {
@@ -383,7 +385,7 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    net.send_vectored(&service.actuator_command([(actuator, value)].into()))
+                    socket.send_vectored(&service.actuator_command([(actuator, value)].into()))
                         .await
                         .unwrap();
                 }
@@ -392,7 +394,9 @@ async fn main() -> anyhow::Result<()> {
 
                     info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
-                    net.commanded_address(node, node_new).await;
+                    socket.send_vectored(&commanded_address(node, node_new))
+                        .await
+                        .unwrap();
                 }
             }
         }

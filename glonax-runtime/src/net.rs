@@ -1,8 +1,10 @@
 use std::io;
 
-use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PGN};
+use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
-use crate::can::{CANSocket, SockAddrCAN};
+use crate::can::SockAddrCAN;
+
+pub use crate::can::CANSocket;
 
 pub struct J1939Network(CANSocket);
 
@@ -19,10 +21,9 @@ impl J1939Network {
         Ok(Self(socket))
     }
 
-    // TODO: Rename to recv
     /// Accept a frame.
     #[inline]
-    pub async fn accept(&self) -> io::Result<Frame> {
+    pub async fn recv(&self) -> io::Result<Frame> {
         self.0.recv().await
     }
 
@@ -76,98 +77,73 @@ impl J1939Network {
         self.0.take_error()
     }
 
-    // TODO: Remove in future?
-    /// Request a PGN message.
-    #[inline]
-    pub async fn request(&self, node: u8, pgn: PGN) {
-        self.send(&protocol::request(node, pgn)).await.unwrap();
-    }
-
-    // TODO: Remove in future?
-    #[inline]
-    pub async fn request_address_claimed(&self, node: u8, pgn: u32) {
-        self.send(&protocol::request(node, PGN::from(pgn)))
-            .await
-            .unwrap();
-    }
-
-    // TODO: Move to J1939 crate
-    /// Assign address to node.
-    pub async fn commanded_address(&self, node: u8, address: u8) {
-        let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
-
-        self.send_vectored(&Self::broadcast_announce(
-            node,
-            PGN::CommandedAddress,
-            &data,
-        ))
-        .await
-        .unwrap();
-    }
-
-    // TODO: Move to J1939 crate
-    /// Broadcast Announce Message.
-    fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
-        let data_length = (data.len() as u16).to_le_bytes();
-        let packets = (data.len() as f32 / 8.0).ceil() as u8;
-        let byte_array = pgn.to_le_bytes();
-
-        let mut frames = vec![];
-
-        let connection_frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
-                .priority(7)
-                .da(node)
-                .build(),
-        )
-        .copy_from_slice(&[
-            0x20,
-            data_length[0],
-            data_length[1],
-            packets,
-            0xff,
-            byte_array[0],
-            byte_array[1],
-            byte_array[2],
-        ])
-        .build();
-
-        frames.push(connection_frame);
-
-        for (packet, data_chunk) in data.chunks(7).enumerate() {
-            let packet = packet as u8 + 1;
-
-            let mut frame_builder = FrameBuilder::new(
-                IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
-                    .priority(7)
-                    .da(node)
-                    .build(),
-            );
-
-            let payload = frame_builder.as_mut();
-            payload[0] = packet;
-
-            if data_chunk.len() == 7 {
-                payload[1..8].copy_from_slice(data_chunk);
-            } else {
-                payload[1..(data_chunk.len() + 1)].copy_from_slice(data_chunk);
-            }
-
-            frames.push(frame_builder.set_len(8).build());
-        }
-
-        frames
-    }
-
     /// Send a vector of frames over the network.
     #[inline]
     pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
-        let mut v = vec![];
-        for frame in frames {
-            v.push(self.send(frame).await?);
-        }
-        Ok(v)
+        self.0.send_vectored(frames).await
     }
+}
+
+// TODO: Move to J1939 crate
+/// Assign address to node.
+pub fn commanded_address(node: u8, address: u8) -> Vec<Frame> {
+    let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
+
+    broadcast_announce(node, PGN::CommandedAddress, &data)
+}
+
+// TODO: Move to J1939 crate
+/// Broadcast Announce Message.
+fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
+    let data_length = (data.len() as u16).to_le_bytes();
+    let packets = (data.len() as f32 / 8.0).ceil() as u8;
+    let byte_array = pgn.to_le_bytes();
+
+    let mut frames = vec![];
+
+    let connection_frame = FrameBuilder::new(
+        IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+            .priority(7)
+            .da(node)
+            .build(),
+    )
+    .copy_from_slice(&[
+        0x20,
+        data_length[0],
+        data_length[1],
+        packets,
+        0xff,
+        byte_array[0],
+        byte_array[1],
+        byte_array[2],
+    ])
+    .build();
+
+    frames.push(connection_frame);
+
+    for (packet, data_chunk) in data.chunks(7).enumerate() {
+        let packet = packet as u8 + 1;
+
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                .priority(7)
+                .da(node)
+                .build(),
+        );
+
+        let payload = frame_builder.as_mut();
+        payload[0] = packet;
+
+        if data_chunk.len() == 7 {
+            payload[1..8].copy_from_slice(data_chunk);
+        } else {
+            payload[1..(data_chunk.len() + 1)].copy_from_slice(data_chunk);
+        }
+
+        frames.push(frame_builder.set_len(8).build());
+    }
+
+    frames
 }
 
 pub trait Parsable<T>: Send + Sync {
@@ -231,7 +207,7 @@ impl Router {
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
-            let frame = self.net.first().unwrap().accept().await?;
+            let frame = self.net.first().unwrap().recv().await?;
 
             let node_address = frame.id().sa();
 

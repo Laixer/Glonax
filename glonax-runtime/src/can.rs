@@ -128,8 +128,21 @@ impl CANSocket {
 
         socket.bind(&address.into())?;
         socket.set_nonblocking(true)?;
+        socket.set_broadcast(true)?;
 
         Ok(Self(AsyncFd::new(socket)?))
+    }
+
+    pub fn new(ifname: &str, _addr: u8) -> io::Result<Self> {
+        // let address = socket::SockAddrJ1939::new(addr, ifname);
+        // let stream = J1939Stream::bind(ifname, addr)?;
+        // stream.set_broadcast(true)?;
+
+        let address = SockAddrCAN::new(ifname);
+        let socket = CANSocket::bind(&address)?;
+        socket.set_broadcast(true)?;
+
+        Ok(socket)
     }
 
     /// Sends data on the socket to a connected peer.
@@ -172,6 +185,15 @@ impl CANSocket {
                 Err(_would_block) => continue,
             }
         }
+    }
+
+    /// Send a vector of frames over the network.
+    pub async fn send_vectored(&self, frames: &Vec<j1939::Frame>) -> io::Result<Vec<usize>> {
+        let mut v = vec![];
+        for frame in frames {
+            v.push(self.send(frame).await?);
+        }
+        Ok(v)
     }
 
     /// Receives data on the socket from the remote address to which it is
@@ -277,7 +299,11 @@ impl CANSocket {
         }
     }
 
-    /// Returns the value of the `SO_ERROR` option.
+    /// Get the value of the `SO_ERROR` option on this socket.
+    ///
+    /// This will retrieve the stored error in the underlying socket, clearing
+    /// the field in the process. This can be useful for checking errors between
+    /// calls.
     #[inline]
     pub fn take_error(&self) -> io::Result<Option<io::Error>> {
         self.0.get_ref().take_error()
