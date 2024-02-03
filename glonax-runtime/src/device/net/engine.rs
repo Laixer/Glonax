@@ -96,6 +96,29 @@ const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;
 pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
+    pub fn speed_request(&self, rpm: u16) -> Vec<Frame> {
+        let rpm_bytes = (rpm * 8).to_le_bytes();
+
+        let frame = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
+                .priority(3)
+                .build(),
+        )
+        .copy_from_slice(&[
+            0x01,
+            rpm_bytes[0],
+            rpm_bytes[1],
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+            0xff,
+        ])
+        .build();
+
+        vec![frame]
+    }
+
     // TODO: This is only used for Volvo EMS. Move to X-ECU
     pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
         #[allow(dead_code)]

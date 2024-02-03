@@ -113,7 +113,7 @@ impl From<SockAddr> for SockAddrCAN {
 pub struct CANSocket(AsyncFd<socket2::Socket>);
 
 impl CANSocket {
-    /// Binds this socket to the specified address and interface.
+    /// Bind to a CAN bus network interface.
     pub fn bind(address: impl Into<SockAddr>) -> io::Result<Self> {
         let socket = socket2::Socket::new_raw(
             libc::AF_CAN.into(),
@@ -128,8 +128,8 @@ impl CANSocket {
         Ok(Self(AsyncFd::new(socket)?))
     }
 
-    /// Binds this socket to the specified address and interface.
-    pub fn bind_j1939(address: impl Into<SockAddr>) -> io::Result<Self> {
+    /// Bind to a J1939 address and network interface.
+    pub fn bind_j1939(address: &SockAddrJ1939) -> io::Result<Self> {
         let socket = socket2::Socket::new_raw(
             libc::AF_CAN.into(),
             socket2::Type::DGRAM,
