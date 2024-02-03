@@ -22,20 +22,6 @@ fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
-fn string_to_bool(str: &str) -> Result<bool, ()> {
-    match str.to_lowercase().trim() {
-        "yes" => Ok(true),
-        "true" => Ok(true),
-        "on" => Ok(true),
-        "1" => Ok(true),
-        "no" => Ok(false),
-        "false" => Ok(false),
-        "off" => Ok(false),
-        "0" => Ok(false),
-        _ => Err(()),
-    }
-}
-
 /// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     use glonax::device::{
@@ -335,42 +321,40 @@ async fn main() -> anyhow::Result<()> {
                     info!(
                         "{} Turn identification LED {}",
                         style_node(node),
-                        if string_to_bool(&toggle).unwrap() {
+                        if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
                             Red.paint("off")
                         },
                     );
 
-                    socket.send_vectored(&service.set_led(string_to_bool(&toggle).unwrap()))
-                        .await
-                        .unwrap();
+                    socket.send_vectored(&service.set_led(toggle.parse::<bool>()?)).await?;
                 }
                 HCUCommand::Reboot => {
                     info!("{} Reboot", style_node(node));
 
-                    socket.send_vectored(&service.reboot()).await.unwrap();
+                    socket.send_vectored(&service.reboot()).await?;
                 }
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_node(node));
 
-                    socket.send_vectored(&service.motion_reset()).await.unwrap();
+                    socket.send_vectored(&service.motion_reset()).await?;
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(
                         "{} Turn lock {}",
                         style_node(node),
-                        if string_to_bool(&toggle).unwrap() {
+                        if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
                             Red.paint("off")
                         },
                     );
 
-                    if string_to_bool(&toggle).unwrap() {
-                        socket.send_vectored(&service.lock()).await.unwrap();
+                    if toggle.parse::<bool>()? {
+                        socket.send_vectored(&service.lock()).await?;
                     } else {
-                        socket.send_vectored(&service.unlock()).await.unwrap();
+                        socket.send_vectored(&service.unlock()).await?;
                     }
                 }
                 HCUCommand::Actuator { actuator, value } => {
@@ -385,18 +369,14 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    socket.send_vectored(&service.actuator_command([(actuator, value)].into()))
-                        .await
-                        .unwrap();
+                    socket.send_vectored(&service.actuator_command([(actuator, value)].into())).await?;
                 }
                 HCUCommand::Assign { address_new } => {
                     let node_new = node_address(address_new)?;
 
                     info!("{} Assign 0x{:X?}", style_node(node), node_new);
 
-                    socket.send_vectored(&commanded_address(node, node_new))
-                        .await
-                        .unwrap();
+                    socket.send_vectored(&commanded_address(node, node_new)).await?;
                 }
             }
         }
@@ -413,18 +393,18 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        net.send_vectored(&service.set_rpm(rpm)).await.unwrap();
+                        net.send_vectored(&service.set_rpm(rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
                     info!("{} Start engine", style_node(node));
 
-                    // net.send_vectored(&service.start()).await.unwrap();
+                    // net.send_vectored(&service.start()).await?;
                 }
                 EngineCommand::Stop => {
                     info!("{} Stop engine", style_node(node));
 
-                    // net.send_vectored(&service.stop()).await.unwrap();
+                    // net.send_vectored(&service.stop()).await?;
                 }
             }
         }
@@ -442,7 +422,7 @@ async fn main() -> anyhow::Result<()> {
 
             info!("{} Request {:?}", style_node(node), pgn);
 
-            net.send(&protocol::request(node, pgn)).await.unwrap();
+            net.send(&protocol::request(node, pgn)).await?;
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
@@ -456,7 +436,7 @@ async fn main() -> anyhow::Result<()> {
                 .map(|s| node_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_node_filter(node.unwrap());
+                router.add_node_filter(node?);
             }
 
             print_frames(router).await?;
@@ -473,7 +453,7 @@ async fn main() -> anyhow::Result<()> {
                 .map(|s| node_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_node_filter(node.unwrap());
+                router.add_node_filter(node?);
             }
 
             analyze_frames(router).await?;
