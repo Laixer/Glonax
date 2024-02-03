@@ -81,8 +81,6 @@ mod tests {
     fn test_shortest_rotation() {
         assert!(shortest_rotation(45.0_f32.to_radians()) < 46.0_f32.to_radians());
         assert!(shortest_rotation(179.0_f32.to_radians()) < 180.0_f32.to_radians());
-
-        // TODO: More tests
     }
 
     #[test]

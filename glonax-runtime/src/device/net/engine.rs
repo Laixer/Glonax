@@ -33,6 +33,7 @@ impl EngineMessage {
         }
     }
 
+    // TODO: Move to j1939 crate
     #[allow(dead_code)]
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
@@ -95,6 +96,7 @@ const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;
 pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
+    // TODO: This is only used for Volvo EMS. Move to X-ECU
     pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
         #[allow(dead_code)]
         enum EngineMode {

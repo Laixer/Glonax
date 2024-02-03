@@ -3,14 +3,38 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 // TODO: Should not be public
 pub mod frame;
 
+/// The protocol header.
+///
+/// This is used to identify the protocol. The header is always the same and is
+/// always present at the start of a frame. The bytes shown here are the ASCII
+/// representation of the header. This simplifies the process of identifying the
+/// protocol and makes it easier to debug.
 const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
+
+/// The protocol version.
+///
+/// This is used to identify the protocol version. If the version is not the
+/// same as the expected version, the frame is considered invalid. The version
+/// is only  changed when the protocol is changed in a way that is not backwards
+/// compatible. This is done to ensure that the protocol can be changed without
+/// breaking existing implementations.
 const PROTO_VERSION: u8 = 0x02;
 
+/// The minimum buffer size required to read a frame.
 const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
     + std::mem::size_of::<u8>()
     + std::mem::size_of::<u8>()
     + std::mem::size_of::<u16>()
     + 3;
+
+/// The maximum payload size.
+///
+/// This is the maximum size of the payload of a frame. The maximum size of a
+/// frame is `MIN_BUFFER_SIZE + MAX_PAYLOAD_SIZE`. The maximum payload size
+/// ensures that the maximum frame size is within the maximum MTU of a network.
+///
+/// The maximum payload size is also used to limit the maximum size of a packet
+/// and to reject packets that are too large.
 const MAX_PAYLOAD_SIZE: usize = 1_024;
 
 const_assert_eq!(MIN_BUFFER_SIZE, 10);
@@ -117,10 +141,12 @@ impl<T> Stream<T> {
         Self { inner }
     }
 
+    #[inline]
     pub fn inner(&self) -> &T {
         &self.inner
     }
 
+    #[inline]
     pub fn inner_mut(&mut self) -> &mut T {
         &mut self.inner
     }
