@@ -25,6 +25,7 @@ mod config;
 
 pub use self::config::*;
 
+pub use j1939;
 pub use rand;
 
 pub mod runtime;

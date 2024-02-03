@@ -4,7 +4,6 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::can::{CANSocket, SockAddrCAN};
 
-// TODO: Implement connection management.
 pub struct J1939Network(CANSocket);
 
 impl J1939Network {

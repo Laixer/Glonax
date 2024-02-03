@@ -425,21 +425,20 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Request { address, command } => {
+            use glonax::j1939::{PGN, protocol};
+
             let node = node_address(address)?;
             let net = J1939Network::new(args.interface.as_str(), args.address)?;
 
-            // TODO: Use PGN from J1939 crate
             let pgn = match command {
-                RequestCommand::Name => 60_928,
-                RequestCommand::Software => 65_242,
-                RequestCommand::Time => 65_254,
+                RequestCommand::Name => PGN::AddressClaimed,
+                RequestCommand::Software => PGN::SoftwareIdentification,
+                RequestCommand::Time => PGN::TimeDate,
             };
 
-            if command == RequestCommand::Name {
-                info!("{} Request name", style_node(node));
+            info!("{} Request {:?}", style_node(node), pgn);
 
-                net.request_address_claimed(node, pgn).await;
-            }
+            net.send(&protocol::request(node, pgn)).await.unwrap();
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;

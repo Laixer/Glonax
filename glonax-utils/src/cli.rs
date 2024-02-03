@@ -83,7 +83,6 @@ async fn main() -> anyhow::Result<()> {
         println!("Classes:");
         println!("  s | status");
         println!("  i | instance");
-        println!("  p | pose");
         println!("  e | engine");
         println!("  h | host");
         println!("  g | gps");
@@ -164,7 +163,6 @@ async fn main() -> anyhow::Result<()> {
         match s {
             "s" | "status" => Some(glonax::core::Status::MESSAGE_TYPE),
             "i" | "instance" => Some(glonax::core::Instance::MESSAGE_TYPE),
-            // "p" | "pose" => Some(glonax::core::Pose::MESSAGE_TYPE),
             "e" | "engine" => Some(glonax::core::Engine::MESSAGE_TYPE),
             "h" | "host" | "vms" => Some(glonax::core::Host::MESSAGE_TYPE),
             "g" | "gps" | "gnss" => Some(glonax::core::Gnss::MESSAGE_TYPE),
