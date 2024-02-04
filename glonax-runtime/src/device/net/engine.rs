@@ -1,6 +1,6 @@
 use j1939::{
     decode::{self, EngineStarterMode, EngineTorqueMode},
-    spn, Frame, FrameBuilder, IdBuilder, PGN,
+    spn, Frame, FrameBuilder, IdBuilder, PDU_MAX_LENGTH, PGN,
 };
 
 use crate::net::Parsable;
@@ -55,7 +55,7 @@ impl EngineMessage {
             frame_builder.as_mut()[5] = source_addr;
         }
 
-        vec![frame_builder.set_len(8).build()]
+        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
     }
 }
 
@@ -94,26 +94,16 @@ pub struct EngineManagementSystem;
 
 impl EngineManagementSystem {
     pub fn speed_request(&self, rpm: u16) -> Vec<Frame> {
-        let rpm_bytes = (rpm * 8).to_le_bytes();
-
-        let frame = FrameBuilder::new(
+        let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
                 .build(),
-        )
-        .copy_from_slice(&[
-            0x01,
-            rpm_bytes[0],
-            rpm_bytes[1],
-            0xff,
-            0xff,
-            0xff,
-            0xff,
-            0xff,
-        ])
-        .build();
+        );
 
-        vec![frame]
+        frame_builder.as_mut()[0] = 0x01;
+        frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(rpm));
+
+        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
     }
 
     // TODO: This is only used for Volvo EMS. Move to X-ECU
