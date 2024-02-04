@@ -1,6 +1,6 @@
 use j1939::{
     decode::{self, EngineStarterMode, EngineTorqueMode},
-    Frame, FrameBuilder, IdBuilder, PGN,
+    spn, Frame, FrameBuilder, IdBuilder, PGN,
 };
 
 use crate::net::Parsable;
@@ -25,9 +25,9 @@ impl EngineMessage {
     pub fn from_frame(frame: &Frame) -> Self {
         Self {
             engine_torque_mode: decode::spn899(frame.pdu()[0]),
-            driver_demand: decode::spn512(frame.pdu()[1]),
-            actual_engine: decode::spn513(frame.pdu()[2]),
-            rpm: decode::spn190(&frame.pdu()[3..5].try_into().unwrap()),
+            driver_demand: spn::byte::dec(frame.pdu()[1]),
+            actual_engine: spn::byte::dec(frame.pdu()[2]),
+            rpm: spn::rpm::dec(&frame.pdu()[3..5]),
             source_addr: decode::spn1483(frame.pdu()[5]),
             starter_mode: decode::spn1675(frame.pdu()[6]),
         }
@@ -43,17 +43,14 @@ impl EngineMessage {
         );
 
         if let Some(driver_demand) = self.driver_demand {
-            frame_builder.as_mut()[1] = driver_demand + 125;
+            frame_builder.as_mut()[1] = spn::byte::enc(driver_demand);
         }
         if let Some(actual_engine) = self.actual_engine {
-            frame_builder.as_mut()[2] = actual_engine + 125;
+            frame_builder.as_mut()[2] = spn::byte::enc(actual_engine);
         }
-
         if let Some(rpm) = self.rpm {
-            let rpm_bytes = (rpm * 8).to_le_bytes();
-            frame_builder.as_mut()[3..5].copy_from_slice(&rpm_bytes);
+            frame_builder.as_mut()[3..5].copy_from_slice(&spn::rpm::enc(rpm));
         }
-
         if let Some(source_addr) = self.source_addr {
             frame_builder.as_mut()[5] = source_addr;
         }
