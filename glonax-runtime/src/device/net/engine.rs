@@ -87,8 +87,6 @@ impl std::fmt::Display for EngineMessage {
     }
 }
 
-const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;
-
 #[derive(Default)]
 pub struct EngineManagementSystem;
 
@@ -108,6 +106,8 @@ impl EngineManagementSystem {
 
     // TODO: This is only used for Volvo EMS. Move to X-ECU
     pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
+        const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;
+
         #[allow(dead_code)]
         enum EngineMode {
             /// Engine shutdown.

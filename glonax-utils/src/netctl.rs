@@ -250,6 +250,10 @@ enum RequestCommand {
     Name,
     /// Request node software version.
     Software,
+    /// Request node component identification.
+    Component,
+    /// Request node vehicle identification.
+    Vehicle,
     /// Request node time and date.
     Time,
 }
@@ -415,6 +419,8 @@ async fn main() -> anyhow::Result<()> {
             let pgn = match command {
                 RequestCommand::Name => PGN::AddressClaimed,
                 RequestCommand::Software => PGN::SoftwareIdentification,
+                RequestCommand::Component => PGN::ComponentIdentification,
+                RequestCommand::Vehicle => PGN::VehicleIdentification,
                 RequestCommand::Time => PGN::TimeDate,
             };
 
