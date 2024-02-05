@@ -4,85 +4,6 @@ use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
 pub use crate::can::{CANSocket, SockAddrCAN};
 
-// TODO: Maybe remove this?
-pub struct J1939Network(CANSocket);
-
-impl J1939Network {
-    pub fn new(ifname: &str, _addr: u8) -> io::Result<Self> {
-        // let address = socket::SockAddrJ1939::new(addr, ifname);
-        let address = SockAddrCAN::new(ifname);
-        let socket = CANSocket::bind(&address)?;
-        socket.set_broadcast(true)?;
-
-        // let stream = J1939Stream::bind(ifname, addr)?;
-        // stream.set_broadcast(true)?;
-
-        Ok(Self(socket))
-    }
-
-    /// Accept a frame.
-    #[inline]
-    pub async fn recv(&self) -> io::Result<Frame> {
-        self.0.recv().await
-    }
-
-    /// Send a single frame over the network.
-    #[inline]
-    pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
-        self.0.send(frame).await
-    }
-
-    /// Shuts down the read, write, or both halves of this connection.
-    ///
-    /// This function will cause all pending and future I/O on the specified
-    /// portions to return immediately with an appropriate value.
-    #[inline]
-    pub fn shutdown(&self, how: std::net::Shutdown) -> io::Result<()> {
-        self.0.shutdown(how)
-    }
-
-    /// Gets the value of the `SO_BROADCAST` option for this socket.
-    ///
-    /// For more information about this option, see [`set_broadcast`].
-    ///
-    /// [`set_broadcast`]: method@Self::set_broadcast
-    #[inline]
-    pub fn broadcast(&self) -> io::Result<bool> {
-        self.0.broadcast()
-    }
-
-    /// Sets the value of the `SO_BROADCAST` option for this socket.
-    ///
-    /// When enabled, this socket is allowed to send packets to a broadcast
-    /// address.
-    #[inline]
-    pub fn set_broadcast(&self, on: bool) -> io::Result<()> {
-        self.0.set_broadcast(on)
-    }
-
-    /// Sets the value of the `SO_J1939_PROMISC` option for this socket.
-    ///
-    /// When enabled, this socket clears all filters set by the bind and connect
-    /// methods. In promiscuous mode the socket receives all packets including
-    /// the packets sent from this socket.
-    #[inline]
-    pub fn set_promisc_mode(&self, on: bool) -> io::Result<()> {
-        self.0.set_promisc_mode(on)
-    }
-
-    /// Returns the value of the `SO_ERROR` option.
-    #[inline]
-    pub fn take_error(&self) -> io::Result<Option<io::Error>> {
-        self.0.take_error()
-    }
-
-    /// Send a vector of frames over the network.
-    #[inline]
-    pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
-        self.0.send_vectored(frames).await
-    }
-}
-
 // TODO: Move to J1939 crate
 /// Assign address to node.
 pub fn commanded_address(node: u8, address: u8) -> Vec<Frame> {
@@ -159,7 +80,7 @@ pub trait Parsable<T>: Send + Sync {
 /// supports filtering based on PGN and node address.
 pub struct Router {
     /// The network.
-    net: Vec<J1939Network>,
+    net: Vec<CANSocket>,
     /// The current frame.
     frame: Option<Frame>,
     /// The PGN filter.
@@ -170,7 +91,7 @@ pub struct Router {
 
 impl Router {
     /// Construct a new router.
-    pub fn new(net: J1939Network) -> Self {
+    pub fn new(net: CANSocket) -> Self {
         Self {
             net: vec![net],
             frame: None,

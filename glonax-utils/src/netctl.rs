@@ -439,8 +439,8 @@ async fn main() -> anyhow::Result<()> {
             socket.send(&protocol::request(node, pgn)).await?;
         }
         Command::Dump { pgn, node } => {
-            let net = J1939Network::new(args.interface.as_str(), args.address)?;
-            let mut router = Router::new(net);
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+            let mut router = Router::new(socket);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);
@@ -456,8 +456,8 @@ async fn main() -> anyhow::Result<()> {
             print_frames(router).await?;
         }
         Command::Analyze { pgn, node } => {
-            let net = J1939Network::new(args.interface.as_str(), args.address)?;
-            let mut router = Router::new(net);
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+            let mut router = Router::new(socket);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);

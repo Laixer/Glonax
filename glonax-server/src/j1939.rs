@@ -1,8 +1,7 @@
 use glonax::runtime::SharedOperandState;
 
-use glonax::consts;
 use glonax::device::net::J1939Unit;
-use glonax::net::{J1939Network, Router};
+use glonax::net::{CANSocket, Router, SockAddrCAN};
 
 // TODO: Move into runtime
 pub(super) async fn network_0(
@@ -11,8 +10,8 @@ pub(super) async fn network_0(
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
-    let net = J1939Network::new(&interface, consts::DEFAULT_J1939_ADDRESS)?;
-    let mut router = Router::new(net);
+    let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
+    let mut router = Router::new(socket);
 
     let mut enc0 = glonax::device::KueblerEncoder::new(0x6A);
     let mut enc1 = glonax::device::KueblerEncoder::new(0x6B);
@@ -39,8 +38,8 @@ pub(super) async fn network_1(
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
-    let net = J1939Network::new(&interface, consts::DEFAULT_J1939_ADDRESS)?;
-    let mut router = Router::new(net);
+    let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
+    let mut router = Router::new(socket);
 
     let mut ems0 = glonax::device::EngineManagementSystem;
 
