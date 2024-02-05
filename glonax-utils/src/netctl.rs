@@ -270,8 +270,8 @@ enum EngineCommand {
 
 #[derive(clap::Subcommand)]
 enum HCUCommand {
-    /// Enable or disable identification LED.
-    Led { toggle: String },
+    /// Enable or disable identification mode.
+    Ident { toggle: String },
     /// Assign the node a new address.
     Assign { address_new: String },
     /// Reboot the node.
@@ -319,9 +319,9 @@ async fn main() -> anyhow::Result<()> {
             let hcu0 = glonax::device::HydraulicControlUnit::new(node);
 
             match command {
-                HCUCommand::Led { toggle } => {
+                HCUCommand::Ident { toggle } => {
                     info!(
-                        "{} Turn identification LED {}",
+                        "{} Turn identification mode {}",
                         style_node(node),
                         if toggle.parse::<bool>()? {
                             Green.paint("on")
@@ -330,7 +330,7 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    socket.send_vectored(&hcu0.set_led(toggle.parse::<bool>()?)).await?;
+                    socket.send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?)).await?;
                 }
                 HCUCommand::Reboot => {
                     info!("{} Reboot", style_node(node));

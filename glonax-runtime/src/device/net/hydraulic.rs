@@ -212,21 +212,21 @@ impl std::fmt::Display for MotionConfigMessage {
 struct ConfigMessage {
     /// Node ID
     node: u8,
-    /// Identification LED
-    pub led_on: Option<bool>,
+    /// Identification mode
+    pub ident_on: Option<bool>,
     /// Reset hardware
     pub reset: Option<bool>,
 }
 
 impl ConfigMessage {
     fn from_frame(node: u8, frame: &Frame) -> Self {
-        let mut led_on = None;
+        let mut ident_on = None;
         let mut reset = None;
 
         if frame.pdu()[2] == 0x0 {
-            led_on = Some(false);
+            ident_on = Some(false);
         } else if frame.pdu()[2] == 0x1 {
-            led_on = Some(true);
+            ident_on = Some(true);
         }
         if frame.pdu()[3] == 0x0 {
             reset = Some(false);
@@ -236,7 +236,7 @@ impl ConfigMessage {
 
         Self {
             node,
-            led_on,
+            ident_on,
             reset,
         }
     }
@@ -250,7 +250,7 @@ impl ConfigMessage {
         )
         .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
 
-        if let Some(led_on) = self.led_on {
+        if let Some(led_on) = self.ident_on {
             frame_builder.as_mut()[2] = u8::from(led_on);
         }
 
@@ -267,10 +267,10 @@ impl std::fmt::Display for ConfigMessage {
         write!(
             f,
             "Config {} {}",
-            if self.led_on.unwrap_or(false) {
-                "LED on"
+            if self.ident_on.unwrap_or(false) {
+                "Ident on"
             } else {
-                "LED off"
+                "Ident off"
             },
             if self.reset.unwrap_or(false) {
                 "reset"
@@ -348,11 +348,11 @@ impl HydraulicControlUnit {
         msg.to_frame()
     }
 
-    /// Sets the LED on the motion controller
-    pub fn set_led(&self, on: bool) -> Vec<Frame> {
+    /// Set or unset identification mode.
+    pub fn set_ident(&self, on: bool) -> Vec<Frame> {
         let msg = ConfigMessage {
             node: self.node,
-            led_on: Some(on),
+            ident_on: Some(on),
             reset: None,
         };
 
@@ -363,7 +363,7 @@ impl HydraulicControlUnit {
     pub fn reboot(&self) -> Vec<Frame> {
         let msg = ConfigMessage {
             node: self.node,
-            led_on: None,
+            ident_on: None,
             reset: Some(true),
         };
 
@@ -637,7 +637,7 @@ mod tests {
     fn config_message_1() {
         let config_a = ConfigMessage {
             node: 0x2B,
-            led_on: Some(true),
+            ident_on: Some(true),
             reset: None,
         };
 
@@ -645,7 +645,7 @@ mod tests {
         let config_b = ConfigMessage::from_frame(0x2B, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(config_b.led_on, Some(true));
+        assert_eq!(config_b.ident_on, Some(true));
         assert_eq!(config_b.reset, None);
     }
 
@@ -653,7 +653,7 @@ mod tests {
     fn config_message_2() {
         let config_a = ConfigMessage {
             node: 0x3C,
-            led_on: Some(false),
+            ident_on: Some(false),
             reset: None,
         };
 
@@ -661,7 +661,7 @@ mod tests {
         let config_b = ConfigMessage::from_frame(0x3C, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(config_b.led_on, Some(false));
+        assert_eq!(config_b.ident_on, Some(false));
         assert_eq!(config_b.reset, None);
     }
 
@@ -669,7 +669,7 @@ mod tests {
     fn config_message_3() {
         let config_a = ConfigMessage {
             node: 0x4D,
-            led_on: None,
+            ident_on: None,
             reset: Some(true),
         };
 
@@ -677,7 +677,7 @@ mod tests {
         let config_b = ConfigMessage::from_frame(0x4D, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert_eq!(config_b.led_on, None);
+        assert_eq!(config_b.ident_on, None);
         assert_eq!(config_b.reset, Some(true));
     }
 }
