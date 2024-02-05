@@ -83,6 +83,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .recv_packet::<Echo>(frame.payload_length)
                     .await
                     .unwrap();
+
                 client.send_packet(&echo).await.unwrap();
             }
             glonax::protocol::frame::Shutdown::MESSAGE_TYPE => {

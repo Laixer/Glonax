@@ -101,46 +101,46 @@ pub(super) async fn sink_net_actuator(
     mut motion_rx: MotionReceiver,
 ) -> std::io::Result<()> {
     use glonax::device::HydraulicControlUnit;
-    use glonax::net::J1939Network;
+    use glonax::net::{CANSocket, SockAddrCAN};
 
     log::debug!("Starting motion listener");
 
-    let net = J1939Network::new(&config.interface[0], glonax::consts::DEFAULT_J1939_ADDRESS)?;
+    let socket = CANSocket::bind(&SockAddrCAN::new(&config.interface[0]))?;
 
-    let service = HydraulicControlUnit::new(0x4A);
+    let hcu0 = HydraulicControlUnit::new(0x4A);
 
     while let Some(motion) = motion_rx.recv().await {
         match motion {
             Motion::StopAll => {
-                if let Err(e) = net.send_vectored(&service.lock()).await {
+                if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
             Motion::ResumeAll => {
-                if let Err(e) = net.send_vectored(&service.unlock()).await {
+                if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
             Motion::ResetAll => {
-                if let Err(e) = net.send_vectored(&service.motion_reset()).await {
+                if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
             Motion::StraightDrive(value) => {
-                let frames = &service.drive_straight(value);
-                if let Err(e) = net.send_vectored(frames).await {
+                let frames = &hcu0.drive_straight(value);
+                if let Err(e) = socket.send_vectored(frames).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
             Motion::Change(changes) => {
-                let frames = &service.actuator_command(
+                let frames = &hcu0.actuator_command(
                     changes
                         .iter()
                         .map(|changeset| (changeset.actuator as u8, changeset.value))
                         .collect(),
                 );
 
-                if let Err(e) = net.send_vectored(frames).await {
+                if let Err(e) = socket.send_vectored(frames).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
