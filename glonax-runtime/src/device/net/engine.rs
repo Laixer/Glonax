@@ -95,6 +95,7 @@ impl EngineManagementSystem {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
+                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         );
 
@@ -108,10 +109,11 @@ impl EngineManagementSystem {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
+                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         );
 
-        frame_builder.as_mut()[0] = 0x3;
+        frame_builder.as_mut()[0] = 0x3; // TODO: This is not correct. 0x3 is not used for starting the engine.
         frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(700));
 
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
@@ -119,8 +121,9 @@ impl EngineManagementSystem {
 
     pub fn shutdown(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
+            IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
                 .priority(3)
+                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
                 .build(),
         );
 
