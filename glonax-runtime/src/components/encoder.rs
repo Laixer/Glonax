@@ -45,9 +45,6 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());
 
-        // state.encoders.insert(frame.0, position as f32);
-        // state.pose.set_node_position(frame.0, position);
-
         // state.encoders.insert(0x6A, 0.0);
         // state.encoders.insert(0x6B, 0.0);
         // state.encoders.insert(0x6C, 0.0);

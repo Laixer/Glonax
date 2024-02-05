@@ -99,7 +99,7 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        frame_builder.as_mut()[0] = 0x01;
+        frame_builder.as_mut()[0] = 0b01;
         frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(rpm));
 
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
@@ -113,7 +113,7 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        frame_builder.as_mut()[0] = 0x3; // TODO: This is not correct. 0x3 is not used for starting the engine.
+        frame_builder.as_mut()[0] = 0b11; // TODO: This is not correct. 0x3 is not used for starting the engine.
         frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(700));
 
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
@@ -130,43 +130,6 @@ impl EngineManagementSystem {
         frame_builder.as_mut()[3] = 0b00010000;
 
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
-    }
-
-    // TODO: This is only used for Volvo EMS. Move to X-ECU
-    pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
-        const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;
-
-        #[allow(dead_code)]
-        enum EngineMode {
-            /// Engine shutdown.
-            Shutdown = 0x07,
-            /// Engine starter locked.
-            Locked = 0x47,
-            /// Engine running at requested speed.
-            Nominal = 0x43,
-            /// Engine starter engaged.
-            Starting = 0xC3,
-        }
-
-        let frame = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
-                .priority(3)
-                .sa(VOLVO_VECU_J1939_ADDRESS)
-                .build(),
-        )
-        .copy_from_slice(&[
-            0x00,
-            EngineMode::Nominal as u8,
-            0x1f,
-            0x00,
-            0x00,
-            0x00,
-            0x20,
-            (rpm as f32 / 10.0) as u8,
-        ])
-        .build();
-
-        vec![frame]
     }
 }
 
