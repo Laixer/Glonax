@@ -119,7 +119,7 @@ impl EngineManagementSystem {
 
     pub fn shutdown(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
                 .priority(3)
                 .build(),
         );
