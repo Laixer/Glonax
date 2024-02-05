@@ -30,12 +30,12 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 = EngineManagementSystem;
+    let mut ems0 = EngineManagementSystem::new(glonax::consts::DEFAULT_J1939_ADDRESS);
     let mut enc0 = KueblerEncoder::new(0x6A);
     let mut enc1 = KueblerEncoder::new(0x6B);
     let mut enc2 = KueblerEncoder::new(0x6C);
     let mut enc3 = KueblerEncoder::new(0x6D);
-    let mut hcu0 = HydraulicControlUnit::new(0x4A);
+    let mut hcu0 = HydraulicControlUnit::new(0x4A, glonax::consts::DEFAULT_J1939_ADDRESS);
     let mut app_inspector = J1939ApplicationInspector;
 
     loop {
@@ -316,7 +316,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Hcu { address, command } => {
             let node = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let hcu0 = glonax::device::HydraulicControlUnit::new(node);
+            let hcu0 = glonax::device::HydraulicControlUnit::new(node, glonax::consts::DEFAULT_J1939_ADDRESS);
 
             match command {
                 HCUCommand::Ident { toggle } => {
@@ -385,7 +385,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Engine { address, command } => {
             let node = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::device::EngineManagementSystem;
+            let ems0 = glonax::device::EngineManagementSystem::new(glonax::consts::DEFAULT_J1939_ADDRESS);
 
             match command {
                 EngineCommand::Rpm { rpm } => {

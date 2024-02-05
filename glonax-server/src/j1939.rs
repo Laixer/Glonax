@@ -17,7 +17,8 @@ pub(super) async fn network_0(
     let mut enc1 = glonax::device::KueblerEncoder::new(0x6B);
     let mut enc2 = glonax::device::KueblerEncoder::new(0x6C);
     let mut enc3 = glonax::device::KueblerEncoder::new(0x6D);
-    let mut hcu0 = glonax::device::HydraulicControlUnit::new(0x4A);
+    let mut hcu0 =
+        glonax::device::HydraulicControlUnit::new(0x4A, glonax::consts::DEFAULT_J1939_ADDRESS);
 
     loop {
         if let Err(e) = router.listen().await {
@@ -41,7 +42,8 @@ pub(super) async fn network_1(
     let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
     let mut router = Router::new(socket);
 
-    let mut ems0 = glonax::device::EngineManagementSystem;
+    let mut ems0 =
+        glonax::device::EngineManagementSystem::new(glonax::consts::DEFAULT_J1939_ADDRESS);
 
     loop {
         if let Err(e) = router.listen().await {

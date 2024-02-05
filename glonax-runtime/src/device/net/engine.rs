@@ -90,14 +90,21 @@ impl std::fmt::Display for EngineMessage {
 }
 
 #[derive(Default)]
-pub struct EngineManagementSystem;
+pub struct EngineManagementSystem {
+    /// Source address.
+    pub source_address: u8,
+}
 
 impl EngineManagementSystem {
+    pub fn new(sa: u8) -> Self {
+        Self { source_address: sa }
+    }
+
     pub fn speed_request(&self, rpm: u16) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
-                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                .sa(self.source_address)
                 .build(),
         );
 
@@ -111,7 +118,7 @@ impl EngineManagementSystem {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
-                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                .sa(self.source_address)
                 .build(),
         );
 
@@ -125,7 +132,7 @@ impl EngineManagementSystem {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
                 .priority(3)
-                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                .sa(self.source_address)
                 .build(),
         );
 

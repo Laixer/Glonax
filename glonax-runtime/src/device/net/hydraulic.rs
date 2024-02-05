@@ -9,14 +9,16 @@ const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;
 
 pub struct ActuatorMessage {
-    /// Node ID
-    node: u8,
+    /// Destination address
+    destination_address: u8,
+    /// Source address
+    source_address: u8,
     /// Actuator values
     pub actuators: [Option<i16>; 8],
 }
 
 impl ActuatorMessage {
-    pub fn from_frame(node: u8, frame: &Frame) -> Self {
+    pub fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         let mut actuators: [Option<i16>; 8] = [None; 8];
 
         if frame.id().pgn() == BANK_PGN_LIST[0] {
@@ -47,7 +49,11 @@ impl ActuatorMessage {
             }
         }
 
-        Self { node, actuators }
+        Self {
+            destination_address,
+            source_address,
+            actuators,
+        }
     }
 
     fn to_frame(&self) -> Vec<Frame> {
@@ -74,8 +80,8 @@ impl ActuatorMessage {
             let frame = Frame::new(
                 IdBuilder::from_pgn(bank)
                     .priority(3)
-                    .da(self.node)
-                    .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                    .da(self.destination_address)
+                    .sa(self.source_address)
                     .build(),
                 pdu,
             );
@@ -109,8 +115,10 @@ impl std::fmt::Display for ActuatorMessage {
 }
 
 pub struct MotionConfigMessage {
-    /// Node ID
-    node: u8,
+    /// Destination address
+    destination_address: u8,
+    /// Source address
+    source_address: u8,
     /// Motion lock
     pub locked: Option<bool>,
     /// Motion reset
@@ -119,35 +127,39 @@ pub struct MotionConfigMessage {
 
 impl MotionConfigMessage {
     /// Construct a locked new motion config message.
-    pub fn locked(node: u8) -> Self {
+    pub fn locked(destination_address: u8, source_address: u8) -> Self {
         Self {
-            node,
+            destination_address,
+            source_address,
             locked: Some(true),
             reset: None,
         }
     }
 
     /// Construct a unlocked new motion config message.
-    pub fn unlocked(node: u8) -> Self {
+    pub fn unlocked(destination_address: u8, source_address: u8) -> Self {
         Self {
-            node,
+            destination_address,
+            source_address,
             locked: Some(false),
             reset: None,
         }
     }
 
-    pub fn reset(node: u8) -> Self {
+    pub fn reset(destination_address: u8, source_address: u8) -> Self {
         Self {
-            node,
+            destination_address,
+            source_address,
             locked: None,
             reset: Some(true),
         }
     }
 
     // TODO: Check if bytes are 0xff
-    fn from_frame(node: u8, frame: &Frame) -> Self {
+    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         Self {
-            node,
+            destination_address,
+            source_address,
             locked: Some(frame.pdu()[3] == 0x0),
             reset: Some(frame.pdu()[4] == 0x1),
         }
@@ -157,8 +169,8 @@ impl MotionConfigMessage {
         let frame = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
                 .priority(3)
-                .da(self.node)
-                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                .da(self.destination_address)
+                .sa(self.source_address)
                 .build(),
         )
         .copy_from_slice(&[
@@ -210,8 +222,10 @@ impl std::fmt::Display for MotionConfigMessage {
 }
 
 struct ConfigMessage {
-    /// Node ID
-    node: u8,
+    /// Destination address
+    destination_address: u8,
+    /// Source address
+    source_address: u8,
     /// Identification mode
     pub ident_on: Option<bool>,
     /// Reset hardware
@@ -219,7 +233,7 @@ struct ConfigMessage {
 }
 
 impl ConfigMessage {
-    fn from_frame(node: u8, frame: &Frame) -> Self {
+    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         let mut ident_on = None;
         let mut reset = None;
 
@@ -235,7 +249,8 @@ impl ConfigMessage {
         }
 
         Self {
-            node,
+            destination_address,
+            source_address,
             ident_on,
             reset,
         }
@@ -244,8 +259,8 @@ impl ConfigMessage {
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
-                .da(self.node)
-                .sa(crate::consts::DEFAULT_J1939_ADDRESS)
+                .da(self.destination_address)
+                .sa(self.source_address)
                 .build(),
         )
         .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
@@ -282,9 +297,12 @@ impl std::fmt::Display for ConfigMessage {
 }
 
 pub struct StatusMessage {
-    /// Node ID
+    /// Destination address.
     #[allow(dead_code)]
-    node: u8,
+    destination_address: u8,
+    /// Source address.
+    #[allow(dead_code)]
+    source_address: u8,
     /// ECU status
     pub state: u8,
     /// Motion lock
@@ -294,9 +312,10 @@ pub struct StatusMessage {
 }
 
 impl StatusMessage {
-    fn from_frame(node: u8, frame: &Frame) -> Self {
+    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         Self {
-            node,
+            destination_address,
+            source_address,
             state: frame.pdu()[0],
             locked: frame.pdu()[2] == 0x1,
             uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
@@ -317,33 +336,38 @@ impl std::fmt::Display for StatusMessage {
 }
 
 pub struct HydraulicControlUnit {
-    /// Source and destination node ID.
-    pub node: u8,
+    /// Destination address.
+    pub destination_address: u8,
+    /// Source address.
+    pub source_address: u8,
 }
 
 impl HydraulicControlUnit {
     /// Construct a new actuator service.
-    pub fn new(node: u8) -> Self {
-        Self { node }
+    pub fn new(da: u8, sa: u8) -> Self {
+        Self {
+            destination_address: da,
+            source_address: sa,
+        }
     }
 
     /// Locks the motion controller
     pub fn lock(&self) -> Vec<Frame> {
-        let msg = MotionConfigMessage::locked(self.node);
+        let msg = MotionConfigMessage::locked(self.destination_address, self.source_address);
 
         msg.to_frame()
     }
 
     /// Unlocks the motion controller
     pub fn unlock(&self) -> Vec<Frame> {
-        let msg = MotionConfigMessage::unlocked(self.node);
+        let msg = MotionConfigMessage::unlocked(self.destination_address, self.source_address);
 
         msg.to_frame()
     }
 
     /// Motion reset
     pub fn motion_reset(&self) -> Vec<Frame> {
-        let msg = MotionConfigMessage::reset(self.node);
+        let msg = MotionConfigMessage::reset(self.destination_address, self.source_address);
 
         msg.to_frame()
     }
@@ -351,7 +375,8 @@ impl HydraulicControlUnit {
     /// Set or unset identification mode.
     pub fn set_ident(&self, on: bool) -> Vec<Frame> {
         let msg = ConfigMessage {
-            node: self.node,
+            destination_address: self.destination_address,
+            source_address: self.source_address,
             ident_on: Some(on),
             reset: None,
         };
@@ -362,7 +387,8 @@ impl HydraulicControlUnit {
     /// System reboot / reset
     pub fn reboot(&self) -> Vec<Frame> {
         let msg = ConfigMessage {
-            node: self.node,
+            destination_address: self.destination_address,
+            source_address: self.source_address,
             ident_on: None,
             reset: Some(true),
         };
@@ -385,7 +411,8 @@ impl HydraulicControlUnit {
         }
 
         let msg = ActuatorMessage {
-            node: self.node,
+            destination_address: self.destination_address,
+            source_address: self.source_address,
             actuators,
         };
 
@@ -424,7 +451,11 @@ impl
 
             return Some((
                 None,
-                Some(MotionConfigMessage::from_frame(self.node, frame)),
+                Some(MotionConfigMessage::from_frame(
+                    self.destination_address,
+                    self.source_address,
+                    frame,
+                )),
                 None,
             ));
         }
@@ -434,11 +465,13 @@ impl
                 return None;
             }
 
-            let _config_message = ConfigMessage::from_frame(self.node, frame);
+            let _config_message =
+                ConfigMessage::from_frame(self.destination_address, self.source_address, frame);
         }
 
         if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
-            let status_message = StatusMessage::from_frame(self.node, frame);
+            let status_message =
+                StatusMessage::from_frame(self.destination_address, self.source_address, frame);
 
             return Some((None, None, Some(status_message)));
         }
@@ -449,7 +482,11 @@ impl
             }
 
             return Some((
-                Some(ActuatorMessage::from_frame(self.node, frame)),
+                Some(ActuatorMessage::from_frame(
+                    self.destination_address,
+                    self.source_address,
+                    frame,
+                )),
                 None,
                 None,
             ));
@@ -500,7 +537,8 @@ mod tests {
     #[test]
     fn actuator_message_1() {
         let message_a = ActuatorMessage {
-            node: 0x3D,
+            destination_address: 0x3D,
+            source_address: 0x8B,
             actuators: [None; 8],
         };
 
@@ -512,12 +550,13 @@ mod tests {
     #[test]
     fn actuator_message_2() {
         let message_a = ActuatorMessage {
-            node: 0x3D,
+            destination_address: 0x3D,
+            source_address: 0x8B,
             actuators: [Some(-24_000), None, None, Some(500), None, None, None, None],
         };
 
         let frames = message_a.to_frame();
-        let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
+        let message_b = ActuatorMessage::from_frame(0x3D, 0x8B, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(
@@ -529,7 +568,8 @@ mod tests {
     #[test]
     fn actuator_message_3() {
         let message_a = ActuatorMessage {
-            node: 0x3D,
+            destination_address: 0x3D,
+            source_address: 0x8B,
             actuators: [
                 None,
                 None,
@@ -543,7 +583,7 @@ mod tests {
         };
 
         let frames = message_a.to_frame();
-        let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
+        let message_b = ActuatorMessage::from_frame(0x3D, 0x8B, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(
@@ -564,7 +604,8 @@ mod tests {
     #[test]
     fn actuator_message_4() {
         let message_a = ActuatorMessage {
-            node: 0x3D,
+            destination_address: 0x3D,
+            source_address: 0x8B,
             actuators: [
                 Some(-100),
                 Some(200),
@@ -578,8 +619,8 @@ mod tests {
         };
 
         let frames = message_a.to_frame();
-        let message_b = ActuatorMessage::from_frame(0x3D, &frames[0]);
-        let message_c = ActuatorMessage::from_frame(0x3D, &frames[1]);
+        let message_b = ActuatorMessage::from_frame(0x3D, 0x8B, &frames[0]);
+        let message_c = ActuatorMessage::from_frame(0x3D, 0x8B, &frames[1]);
 
         assert_eq!(frames.len(), 2);
 
@@ -613,10 +654,10 @@ mod tests {
 
     #[test]
     fn motion_config_message_1() {
-        let config_a = MotionConfigMessage::locked(0x5E);
+        let config_a = MotionConfigMessage::locked(0x5E, 0xEE);
 
         let frames = config_a.to_frame();
-        let config_b = MotionConfigMessage::from_frame(0x5E, &frames[0]);
+        let config_b = MotionConfigMessage::from_frame(0x5E, 0xEE, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert!(config_b.locked.unwrap());
@@ -624,10 +665,10 @@ mod tests {
 
     #[test]
     fn motion_config_message_2() {
-        let config_a = MotionConfigMessage::unlocked(0xA9);
+        let config_a = MotionConfigMessage::unlocked(0xA9, 0x11);
 
         let frames = config_a.to_frame();
-        let config_b = MotionConfigMessage::from_frame(0xA9, &frames[0]);
+        let config_b = MotionConfigMessage::from_frame(0xA9, 0x11, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert!(!config_b.locked.unwrap());
@@ -636,13 +677,14 @@ mod tests {
     #[test]
     fn config_message_1() {
         let config_a = ConfigMessage {
-            node: 0x2B,
+            destination_address: 0x2B,
+            source_address: 0x4D,
             ident_on: Some(true),
             reset: None,
         };
 
         let frames = config_a.to_frame();
-        let config_b = ConfigMessage::from_frame(0x2B, &frames[0]);
+        let config_b = ConfigMessage::from_frame(0x2B, 0x4D, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, Some(true));
@@ -652,13 +694,14 @@ mod tests {
     #[test]
     fn config_message_2() {
         let config_a = ConfigMessage {
-            node: 0x3C,
+            destination_address: 0x3C,
+            source_address: 0x4F,
             ident_on: Some(false),
             reset: None,
         };
 
         let frames = config_a.to_frame();
-        let config_b = ConfigMessage::from_frame(0x3C, &frames[0]);
+        let config_b = ConfigMessage::from_frame(0x3C, 0x4F, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, Some(false));
@@ -668,13 +711,14 @@ mod tests {
     #[test]
     fn config_message_3() {
         let config_a = ConfigMessage {
-            node: 0x4D,
+            destination_address: 0x4D,
+            source_address: 0xCD,
             ident_on: None,
             reset: Some(true),
         };
 
         let frames = config_a.to_frame();
-        let config_b = ConfigMessage::from_frame(0x4D, &frames[0]);
+        let config_b = ConfigMessage::from_frame(0x4D, 0xCD, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, None);
