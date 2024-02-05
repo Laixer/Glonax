@@ -25,7 +25,7 @@ fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
 /// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     use glonax::device::{
-        EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, KueblerEncoder,
+        EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, KueblerEncoder, J1939Message
     };
 
     debug!("Print incoming frames to screen");
@@ -101,7 +101,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             }
         } else if let Some(message) = router.try_accept(&mut app_inspector) {
             match message {
-                glonax::device::J1939Message::SoftwareIndent((major, minor, patch)) => {
+                J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(
                         "{} {} » Software identification: {}.{}.{}",
                         style_node(router.frame_source().unwrap()),
@@ -111,7 +111,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         patch
                     );
                 }
-                glonax::device::J1939Message::RequestPGN(pgn) => {
+                J1939Message::RequestPGN(pgn) => {
                     info!(
                         "{} {} » Request for PGN: {}",
                         style_node(router.frame_source().unwrap()),
@@ -119,7 +119,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         pgn
                     );
                 }
-                glonax::device::J1939Message::AddressClaim(name) => {
+                J1939Message::AddressClaim(name) => {
                     info!(
                         "{} {} » Identity number: 0x{:X}; Manufacturer code: 0x{:X}; Function instance: 0x{:X}; ECU instance: 0x{:X}; Function: 0x{:X}; Vehicle system: 0x{:X}; Vehicle system instance: 0x{:X}; Industry group: {:X}; Arbitrary address: {}",
                         style_node(router.frame_source().unwrap()),
@@ -135,7 +135,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         name.arbitrary_address 
                     );
                 }
-                glonax::device::J1939Message::Acknowledged(acknowledged) => {
+                J1939Message::Acknowledged(acknowledged) => {
                     info!(
                         "{} {} » Acknowledged: {}",
                         style_node(router.frame_source().unwrap()),
@@ -143,7 +143,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         acknowledged
                     );
                 }
-                glonax::device::J1939Message::TimeDate(time) => {
+                J1939Message::TimeDate(time) => {
                     info!(
                         "{} {} » Time and date: {}",
                         style_node(router.frame_source().unwrap()),
@@ -151,7 +151,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         time
                     );
                 }
-                glonax::device::J1939Message::ProprietaryB(data) => {
+                J1939Message::ProprietaryB(data) => {
                     debug!(
                         "{} {} » Proprietary B: {:02X?}",
                         style_node(router.frame_source().unwrap()),
@@ -384,8 +384,8 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Engine { address, command } => {
             let node = node_address(address)?;
-            let service = glonax::device::EngineManagementSystem;
-            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+            let ems0 = glonax::device::EngineManagementSystem;
 
             match command {
                 EngineCommand::Rpm { rpm } => {
@@ -395,7 +395,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        net.send_vectored(&service.speed_request(rpm)).await?;
+                        socket.send_vectored(&ems0.speed_request(rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
@@ -405,7 +405,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        net.send_vectored(&service.start()).await?;
+                        socket.send_vectored(&ems0.start()).await?;
                     }
                 }
                 EngineCommand::Stop => {
@@ -415,7 +415,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        net.send_vectored(&service.shutdown()).await?;
+                        socket.send_vectored(&ems0.shutdown()).await?;
                     }
                 }
             }
@@ -424,7 +424,7 @@ async fn main() -> anyhow::Result<()> {
             use glonax::j1939::{PGN, protocol};
 
             let node = node_address(address)?;
-            let net = J1939Network::new(args.interface.as_str(), args.address)?;
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
             let pgn = match command {
                 RequestCommand::Name => PGN::AddressClaimed,
@@ -436,7 +436,7 @@ async fn main() -> anyhow::Result<()> {
 
             info!("{} Request {:?}", style_node(node), pgn);
 
-            net.send(&protocol::request(node, pgn)).await?;
+            socket.send(&protocol::request(node, pgn)).await?;
         }
         Command::Dump { pgn, node } => {
             let net = J1939Network::new(args.interface.as_str(), args.address)?;

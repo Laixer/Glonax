@@ -5,6 +5,7 @@ use j1939::{
 
 use crate::net::Parsable;
 
+// TODO: Move to j1939 crate
 #[derive(Default)]
 pub struct EngineMessage {
     /// Engine Torque Mode.
@@ -22,6 +23,7 @@ pub struct EngineMessage {
 }
 
 impl EngineMessage {
+    // TODO: Move to j1939 crate
     pub fn from_frame(frame: &Frame) -> Self {
         Self {
             engine_torque_mode: decode::spn899(frame.pdu()[0]),
@@ -135,7 +137,7 @@ impl EngineManagementSystem {
 
 impl Parsable<EngineMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
-        if frame.len() != 8 {
+        if frame.len() != PDU_MAX_LENGTH {
             return None;
         }
         if frame.id().pgn() != PGN::ElectronicEngineController1 {

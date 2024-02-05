@@ -158,6 +158,10 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    /// Listen for network service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the operand and the interface name.
     pub fn schedule_net_service<Fut>(
         &self,
         service: impl FnOnce(String, SharedOperandState) -> Fut + Send + 'static,
