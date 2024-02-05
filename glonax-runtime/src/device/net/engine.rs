@@ -104,6 +104,18 @@ impl EngineManagementSystem {
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
     }
 
+    pub fn shutdown(&self) -> Vec<Frame> {
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
+                .priority(3)
+                .build(),
+        );
+
+        frame_builder.as_mut()[3] = 0b00010000;
+
+        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
+    }
+
     // TODO: This is only used for Volvo EMS. Move to X-ECU
     pub fn set_rpm(&self, rpm: u16) -> Vec<Frame> {
         const VOLVO_VECU_J1939_ADDRESS: u8 = 0x11;

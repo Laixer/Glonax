@@ -395,13 +395,18 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        net.send_vectored(&service.set_rpm(rpm)).await?;
+                        net.send_vectored(&service.speed_request(rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
                     info!("{} Start engine", style_node(node));
 
-                    // net.send_vectored(&service.start()).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+
+                    loop {
+                        tick.tick().await;
+                        net.send_vectored(&service.shutdown()).await?;
+                    }
                 }
                 EngineCommand::Stop => {
                     info!("{} Stop engine", style_node(node));
