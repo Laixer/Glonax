@@ -405,7 +405,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        net.send_vectored(&service.shutdown()).await?;
+                        net.send_vectored(&service.start()).await?;
                     }
                 }
                 EngineCommand::Stop => {
