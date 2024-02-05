@@ -104,6 +104,19 @@ impl EngineManagementSystem {
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
     }
 
+    pub fn start(&self) -> Vec<Frame> {
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
+                .priority(3)
+                .build(),
+        );
+
+        frame_builder.as_mut()[0] = 0x3;
+        frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(700));
+
+        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
+    }
+
     pub fn shutdown(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicBrakeController1)

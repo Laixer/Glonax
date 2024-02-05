@@ -411,7 +411,12 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Stop => {
                     info!("{} Stop engine", style_node(node));
 
-                    // net.send_vectored(&service.stop()).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+
+                    loop {
+                        tick.tick().await;
+                        net.send_vectored(&service.shutdown()).await?;
+                    }
                 }
             }
         }
