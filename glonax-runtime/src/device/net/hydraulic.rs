@@ -126,42 +126,20 @@ pub struct MotionConfigMessage {
 }
 
 impl MotionConfigMessage {
-    /// Construct a locked new motion config message.
-    pub fn locked(destination_address: u8, source_address: u8) -> Self {
-        Self {
-            destination_address,
-            source_address,
-            locked: Some(true),
-            reset: None,
-        }
-    }
-
-    /// Construct a unlocked new motion config message.
-    pub fn unlocked(destination_address: u8, source_address: u8) -> Self {
-        Self {
-            destination_address,
-            source_address,
-            locked: Some(false),
-            reset: None,
-        }
-    }
-
-    pub fn reset(destination_address: u8, source_address: u8) -> Self {
-        Self {
-            destination_address,
-            source_address,
-            locked: None,
-            reset: Some(true),
-        }
-    }
-
-    // TODO: Check if bytes are 0xff
     fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         Self {
             destination_address,
             source_address,
-            locked: Some(frame.pdu()[3] == 0x0),
-            reset: Some(frame.pdu()[4] == 0x1),
+            locked: if frame.pdu()[3] != 0xff {
+                Some(frame.pdu()[3] == 0x0)
+            } else {
+                None
+            },
+            reset: if frame.pdu()[4] != 0xff {
+                Some(frame.pdu()[4] == 0x1)
+            } else {
+                None
+            },
         }
     }
 
@@ -353,23 +331,35 @@ impl HydraulicControlUnit {
 
     /// Locks the motion controller
     pub fn lock(&self) -> Vec<Frame> {
-        let msg = MotionConfigMessage::locked(self.destination_address, self.source_address);
-
-        msg.to_frame()
+        MotionConfigMessage {
+            destination_address: self.destination_address,
+            source_address: self.source_address,
+            locked: Some(true),
+            reset: None,
+        }
+        .to_frame()
     }
 
     /// Unlocks the motion controller
     pub fn unlock(&self) -> Vec<Frame> {
-        let msg = MotionConfigMessage::unlocked(self.destination_address, self.source_address);
-
-        msg.to_frame()
+        MotionConfigMessage {
+            destination_address: self.destination_address,
+            source_address: self.source_address,
+            locked: Some(false),
+            reset: None,
+        }
+        .to_frame()
     }
 
     /// Motion reset
     pub fn motion_reset(&self) -> Vec<Frame> {
-        let msg = MotionConfigMessage::reset(self.destination_address, self.source_address);
-
-        msg.to_frame()
+        MotionConfigMessage {
+            destination_address: self.destination_address,
+            source_address: self.source_address,
+            locked: None,
+            reset: Some(true),
+        }
+        .to_frame()
     }
 
     /// Set or unset identification mode.
@@ -654,24 +644,70 @@ mod tests {
 
     #[test]
     fn motion_config_message_1() {
-        let config_a = MotionConfigMessage::locked(0x5E, 0xEE);
+        let frames = MotionConfigMessage {
+            destination_address: 0x5E,
+            source_address: 0xEE,
+            locked: Some(true),
+            reset: None,
+        }
+        .to_frame();
 
-        let frames = config_a.to_frame();
         let config_b = MotionConfigMessage::from_frame(0x5E, 0xEE, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert!(config_b.locked.unwrap());
+        assert_eq!(config_b.reset, None)
     }
 
     #[test]
     fn motion_config_message_2() {
-        let config_a = MotionConfigMessage::unlocked(0xA9, 0x11);
+        let frames = MotionConfigMessage {
+            destination_address: 0xA9,
+            source_address: 0x11,
+            locked: Some(false),
+            reset: None,
+        }
+        .to_frame();
 
-        let frames = config_a.to_frame();
         let config_b = MotionConfigMessage::from_frame(0xA9, 0x11, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert!(!config_b.locked.unwrap());
+        assert_eq!(config_b.reset, None)
+    }
+
+    #[test]
+    fn motion_config_message_3() {
+        let frames = MotionConfigMessage {
+            destination_address: 0x66,
+            source_address: 0x22,
+            locked: None,
+            reset: Some(true),
+        }
+        .to_frame();
+
+        let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frames[0]);
+
+        assert_eq!(frames.len(), 1);
+        assert_eq!(config_b.locked, None);
+        assert!(config_b.reset.unwrap());
+    }
+
+    #[test]
+    fn motion_config_message_4() {
+        let frames = MotionConfigMessage {
+            destination_address: 0x66,
+            source_address: 0x22,
+            locked: None,
+            reset: Some(false),
+        }
+        .to_frame();
+
+        let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frames[0]);
+
+        assert_eq!(frames.len(), 1);
+        assert_eq!(config_b.locked, None);
+        assert!(!config_b.reset.unwrap());
     }
 
     #[test]
