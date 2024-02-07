@@ -63,6 +63,8 @@ pub struct MachineState {
     pub gnss: core::Gnss,
     /// Engine data.
     pub engine: core::Engine,
+    /// Engine requested RPM.
+    pub engine_request: u16, // TODO: Move into engine request struct
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here
     /// Robot as an actor.

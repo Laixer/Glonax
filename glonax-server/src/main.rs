@@ -168,10 +168,12 @@ async fn main() -> anyhow::Result<()> {
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
-        runtime.schedule_net_service(j1939::network_0, &config.interface[0]);
-        runtime.schedule_net_service(j1939::network_1, &config.interface[1]);
+        runtime.schedule_net_service(j1939::rx_network_0, &config.interface[0]);
+        runtime.schedule_net_service(j1939::rx_network_1, &config.interface[1]);
 
         runtime.schedule_motion_sink(device::sink_net_actuator);
+        runtime.schedule_net_service(j1939::tx_network_0, &config.interface[0]);
+        runtime.schedule_net_service(j1939::tx_network_1, &config.interface[1]);
     }
 
     runtime.schedule_io_service(server::tcp_listen);
