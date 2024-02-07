@@ -18,7 +18,7 @@ pub enum J1939Message {
 }
 
 impl J1939Message {
-    pub fn from_frame(_: u8, frame: &Frame) -> Option<Self> {
+    pub fn from_frame(frame: &Frame) -> Option<Self> {
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
                 let fields = frame.pdu()[0];
@@ -84,6 +84,6 @@ pub struct J1939ApplicationInspector;
 
 impl Parsable<J1939Message> for J1939ApplicationInspector {
     fn parse(&mut self, frame: &Frame) -> Option<J1939Message> {
-        J1939Message::from_frame(0x0, frame)
+        J1939Message::from_frame(frame)
     }
 }

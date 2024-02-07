@@ -192,13 +192,17 @@ impl std::fmt::Display for MotionConfigMessage {
         }
 
         if let Some(reset) = self.reset {
-            s.push_str(&format!("Reset: {};", if reset { "Yes" } else { "No" }));
+            s.push_str(&format!(
+                "Motion reset: {};",
+                if reset { "Yes" } else { "No" }
+            ));
         }
 
         write!(f, "{}", s)
     }
 }
 
+// TODO: Rename to VecraftConfigMessage
 struct ConfigMessage {
     /// Destination address
     destination_address: u8,
@@ -427,10 +431,6 @@ impl
         Option<MotionConfigMessage>,
         Option<StatusMessage>,
     )> {
-        if frame.len() < 4 {
-            return None;
-        }
-
         if frame.id().pgn() == PGN::ProprietarilyConfigurableMessage3 {
             if frame.pdu()[0..2] != [b'Z', b'C'] {
                 return None;

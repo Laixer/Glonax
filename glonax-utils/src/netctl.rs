@@ -224,6 +224,14 @@ enum Command {
         #[command(subcommand)]
         command: HCUCommand,
     },
+    Vcu {
+        /// Target node address.
+        #[arg(long, default_value = "0x11")]
+        address: String,
+        /// Node commands.
+        #[command(subcommand)]
+        command: VCUCommand,
+    },
     /// Engine control unit commands.
     Engine {
         /// Target node address.
@@ -263,15 +271,15 @@ enum Command {
 
 #[derive(clap::Subcommand, PartialEq, Eq)]
 enum RequestCommand {
-    /// Request node name.
+    /// Request unit name.
     Name,
-    /// Request node software version.
+    /// Request unit software version.
     Software,
-    /// Request node component identification.
+    /// Request unit component identification.
     Component,
-    /// Request node vehicle identification.
+    /// Request unit vehicle identification.
     Vehicle,
-    /// Request node time and date.
+    /// Request unit time and date.
     Time,
 }
 
@@ -289,9 +297,9 @@ enum EngineCommand {
 enum HCUCommand {
     /// Enable or disable identification mode.
     Ident { toggle: String },
-    /// Assign the node a new address.
+    /// Assign the unit a new address.
     Assign { address_new: String },
-    /// Reboot the node.
+    /// Reboot the unit.
     Reboot,
     /// Motion reset.
     MotionReset,
@@ -299,6 +307,16 @@ enum HCUCommand {
     Lock { toggle: String },
     /// Actuator motion.
     Actuator { actuator: u8, value: i16 },
+}
+
+#[derive(clap::Subcommand)]
+enum VCUCommand {
+    /// Enable or disable identification mode.
+    Ident { toggle: String },
+    /// Assign the unit a new address.
+    Assign { address_new: String },
+    /// Reboot the unit.
+    Reboot,
 }
 
 #[tokio::main]
@@ -331,15 +349,15 @@ async fn main() -> anyhow::Result<()> {
 
     match args.command {
         Command::Hcu { address, command } => {
-            let node = node_address(address)?;
+            let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let hcu0 = glonax::driver::HydraulicControlUnit::new(node, consts::J1939_ADDRESS_VMS);
+            let hcu0 = glonax::driver::HydraulicControlUnit::new(destination_address, consts::J1939_ADDRESS_VMS);
 
             match command {
                 HCUCommand::Ident { toggle } => {
                     info!(
                         "{} Turn identification mode {}",
-                        style_node(node),
+                        style_node(destination_address),
                         if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
@@ -350,19 +368,19 @@ async fn main() -> anyhow::Result<()> {
                     socket.send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?)).await?;
                 }
                 HCUCommand::Reboot => {
-                    info!("{} Reboot", style_node(node));
+                    info!("{} Reboot", style_node(destination_address));
 
                     socket.send_vectored(&hcu0.reboot()).await?;
                 }
                 HCUCommand::MotionReset => {
-                    info!("{} Motion reset", style_node(node));
+                    info!("{} Motion reset", style_node(destination_address));
 
                     socket.send_vectored(&hcu0.motion_reset()).await?;
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(
                         "{} Turn lock {}",
-                        style_node(node),
+                        style_node(destination_address),
                         if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
@@ -379,7 +397,7 @@ async fn main() -> anyhow::Result<()> {
                 HCUCommand::Actuator { actuator, value } => {
                     info!(
                         "{} Set actuator {} to {}",
-                        style_node(node),
+                        style_node(destination_address),
                         actuator,
                         if value.is_positive() {
                             Blue.paint(value.to_string())
@@ -391,22 +409,55 @@ async fn main() -> anyhow::Result<()> {
                     socket.send_vectored(&hcu0.actuator_command([(actuator, value)].into())).await?;
                 }
                 HCUCommand::Assign { address_new } => {
-                    let node_new = node_address(address_new)?;
+                    let destination_address_new = node_address(address_new)?;
 
-                    info!("{} Assign 0x{:X?}", style_node(node), node_new);
+                    info!("{} Assign 0x{:X?}", style_node(destination_address), destination_address_new);
 
-                    socket.send_vectored(&commanded_address(node, node_new)).await?;
+                    socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                }
+            }
+        }
+        Command::Vcu { address, command } => {
+            let destination_address = node_address(address)?;
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_VMS);
+
+            match command {
+                VCUCommand::Ident { toggle } => {
+                    info!(
+                        "{} Turn identification mode {}",
+                        style_node(destination_address),
+                        if toggle.parse::<bool>()? {
+                            Green.paint("on")
+                        } else {
+                            Red.paint("off")
+                        },
+                    );
+
+                    socket.send_vectored(&ems0.set_ident(toggle.parse::<bool>()?)).await?;
+                }
+                VCUCommand::Reboot => {
+                    info!("{} Reboot", style_node(destination_address));
+
+                    socket.send_vectored(&ems0.reboot()).await?;
+                }
+                VCUCommand::Assign { address_new } => {
+                    let destination_address_new = node_address(address_new)?;
+
+                    info!("{} Assign 0x{:X?}", style_node(destination_address), destination_address_new);
+
+                    socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
                 }
             }
         }
         Command::Engine { address, command } => {
-            let node = node_address(address)?;
+            let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::EngineManagementSystem::new(node, consts::J1939_ADDRESS_VMS);
+            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_VMS);
 
             match command {
                 EngineCommand::Rpm { rpm } => {
-                    info!("{} Set RPM to {}", style_node(node), rpm);
+                    info!("{} Set RPM to {}", style_node(destination_address), rpm);
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -416,7 +467,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 EngineCommand::Start => {
-                    info!("{} Start engine", style_node(node));
+                    info!("{} Start engine", style_node(destination_address));
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -426,7 +477,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 EngineCommand::Stop => {
-                    info!("{} Stop engine", style_node(node));
+                    info!("{} Stop engine", style_node(destination_address));
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -440,7 +491,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Request { address, command } => {
             use glonax::j1939::{PGN, protocol};
 
-            let node = node_address(address)?;
+            let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
             let pgn = match command {
@@ -451,9 +502,9 @@ async fn main() -> anyhow::Result<()> {
                 RequestCommand::Time => PGN::TimeDate,
             };
 
-            info!("{} Request {:?}", style_node(node), pgn);
+            info!("{} Request {:?}", style_node(destination_address), pgn);
 
-            socket.send(&protocol::request(node, pgn)).await?;
+            socket.send(&protocol::request(destination_address, pgn)).await?;
         }
         Command::Dump { pgn, node } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
