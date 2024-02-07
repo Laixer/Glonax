@@ -7,6 +7,17 @@ use glonax::device::{
 };
 use glonax::net::{CANSocket, Router, SockAddrCAN};
 
+/// J1939 name manufacturer code.
+const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
+/// J1939 name function instance.
+const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
+/// J1939 name ECU instance.
+const J1939_NAME_ECU_INSTANCE: u8 = 0;
+/// J1939 name function.
+const J1939_NAME_FUNCTION: u8 = 0x1C;
+/// J1939 name vehicle system.
+const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
+
 // TODO: Move into runtime
 pub(super) async fn rx_network_0(
     interface: String,
@@ -152,17 +163,6 @@ pub(super) async fn rx_network_1(
     }
 }
 
-/// J1939 name manufacturer code.
-const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
-/// J1939 name function instance.
-const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
-/// J1939 name ECU instance.
-const J1939_NAME_ECU_INSTANCE: u8 = 0;
-/// J1939 name function.
-const J1939_NAME_FUNCTION: u8 = 0x1C;
-/// J1939 name vehicle system.
-const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
-
 // TODO: Move into runtime
 pub(super) async fn atx_network_0(
     interface: String,
@@ -274,40 +274,38 @@ pub(super) async fn tx_network_0(
             }
         }
 
-        {
-            match &runtime_state.read().await.state.motion {
-                glonax::core::Motion::StopAll => {
-                    if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+        match &runtime_state.read().await.state.motion {
+            glonax::core::Motion::StopAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::ResumeAll => {
-                    if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+            }
+            glonax::core::Motion::ResumeAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::ResetAll => {
-                    if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+            }
+            glonax::core::Motion::ResetAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::StraightDrive(value) => {
-                    let frames = &hcu0.drive_straight(*value);
-                    if let Err(e) = socket.send_vectored(frames).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+            }
+            glonax::core::Motion::StraightDrive(value) => {
+                let frames = &hcu0.drive_straight(*value);
+                if let Err(e) = socket.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::Change(changes) => {
-                    let frames = &hcu0.actuator_command(
-                        changes
-                            .iter()
-                            .map(|changeset| (changeset.actuator as u8, changeset.value))
-                            .collect(),
-                    );
+            }
+            glonax::core::Motion::Change(changes) => {
+                let frames = &hcu0.actuator_command(
+                    changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value))
+                        .collect(),
+                );
 
-                    if let Err(e) = socket.send_vectored(frames).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+                if let Err(e) = socket.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
             }
         }
@@ -368,40 +366,38 @@ pub(super) async fn tx_network_1(
             }
         }
 
-        {
-            match &runtime_state.read().await.state.motion {
-                glonax::core::Motion::StopAll => {
-                    if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+        match &runtime_state.read().await.state.motion {
+            glonax::core::Motion::StopAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::ResumeAll => {
-                    if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+            }
+            glonax::core::Motion::ResumeAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::ResetAll => {
-                    if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+            }
+            glonax::core::Motion::ResetAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::StraightDrive(value) => {
-                    let frames = &hcu0.drive_straight(*value);
-                    if let Err(e) = socket.send_vectored(frames).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+            }
+            glonax::core::Motion::StraightDrive(value) => {
+                let frames = &hcu0.drive_straight(*value);
+                if let Err(e) = socket.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
-                glonax::core::Motion::Change(changes) => {
-                    let frames = &hcu0.actuator_command(
-                        changes
-                            .iter()
-                            .map(|changeset| (changeset.actuator as u8, changeset.value))
-                            .collect(),
-                    );
+            }
+            glonax::core::Motion::Change(changes) => {
+                let frames = &hcu0.actuator_command(
+                    changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value))
+                        .collect(),
+                );
 
-                    if let Err(e) = socket.send_vectored(frames).await {
-                        log::error!("Failed to send motion: {}", e);
-                    }
+                if let Err(e) = socket.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
             }
         }
