@@ -14,7 +14,7 @@ mod server;
 
 pub(crate) mod consts {
     /// Vehicle Management System J1939 address.
-    pub const J1939_ADDRESS_VMS: u8 = 0x9E;
+    pub const J1939_ADDRESS_VMS: u8 = 0x27;
     /// Engine J1939 address.
     pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
     /// Hydraulic Control Unit J1939 address.
