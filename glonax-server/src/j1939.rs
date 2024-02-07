@@ -59,12 +59,21 @@ pub(super) async fn rx_network_0(
                         .await?;
                 }
                 PGN::TimeDate => {
+                    let timedate = glonax::j1939::spn::TimeDate {
+                        year: 2024,
+                        month: 4,
+                        day: 20,
+                        hour: 10,
+                        minute: 1,
+                        second: 58,
+                    };
+
                     let id = IdBuilder::from_pgn(PGN::TimeDate)
                         .sa(crate::consts::J1939_ADDRESS_VMS)
                         .build();
 
                     let frame = FrameBuilder::new(id)
-                        .copy_from_slice(&[0x34, 0x04, 0x0A, 0x01, 0x58, 0x27, 0xff, 0xff])
+                        .copy_from_slice(&timedate.to_pdu())
                         .build();
 
                     router.inner().send(&frame).await?;
@@ -118,12 +127,21 @@ pub(super) async fn rx_network_1(
                         .await?;
                 }
                 PGN::TimeDate => {
+                    let timedate = glonax::j1939::spn::TimeDate {
+                        year: 2024,
+                        month: 4,
+                        day: 20,
+                        hour: 10,
+                        minute: 1,
+                        second: 58,
+                    };
+
                     let id = IdBuilder::from_pgn(PGN::TimeDate)
                         .sa(crate::consts::J1939_ADDRESS_VMS)
                         .build();
 
                     let frame = FrameBuilder::new(id)
-                        .copy_from_slice(&[0x34, 0x04, 0x0A, 0x01, 0x58, 0x27, 0xff, 0xff])
+                        .copy_from_slice(&timedate.to_pdu())
                         .build();
 
                     router.inner().send(&frame).await?;

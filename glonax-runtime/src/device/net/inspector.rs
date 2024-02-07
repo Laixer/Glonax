@@ -1,4 +1,4 @@
-use j1939::{decode, protocol, Frame, Name, PGN};
+use j1939::{protocol, Frame, Name, PGN};
 
 use crate::net::Parsable;
 
@@ -55,13 +55,15 @@ impl J1939Message {
             PGN::TimeDate => {
                 use chrono::{TimeZone, Utc};
 
+                let timedate = j1939::spn::TimeDate::from_pdu(frame.pdu());
+
                 let dt = Utc.with_ymd_and_hms(
-                    decode::spn964(frame.pdu()[5]).unwrap_or(0) as i32,
-                    decode::spn963(frame.pdu()[3]).unwrap_or(0) as u32,
-                    decode::spn962(frame.pdu()[4]).unwrap_or(0) as u32,
-                    decode::spn961(frame.pdu()[2]).unwrap_or(0) as u32,
-                    decode::spn960(frame.pdu()[1]).unwrap_or(0) as u32,
-                    decode::spn959(frame.pdu()[0]).unwrap_or(0) as u32,
+                    timedate.year,
+                    timedate.month,
+                    timedate.day,
+                    timedate.hour,
+                    timedate.minute,
+                    timedate.second,
                 );
 
                 Some(Self::TimeDate(dt.single().unwrap()))
