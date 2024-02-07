@@ -30,7 +30,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 = EngineManagementSystem::new(glonax::consts::DEFAULT_J1939_ADDRESS);
+    let mut ems0 = EngineManagementSystem::new(0x0,glonax::consts::DEFAULT_J1939_ADDRESS);
     let mut enc0 = KueblerEncoder::new(0x6A);
     let mut enc1 = KueblerEncoder::new(0x6B);
     let mut enc2 = KueblerEncoder::new(0x6C);
@@ -385,7 +385,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Engine { address, command } => {
             let node = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::device::EngineManagementSystem::new(glonax::consts::DEFAULT_J1939_ADDRESS);
+            let ems0 = glonax::device::EngineManagementSystem::new(node,glonax::consts::DEFAULT_J1939_ADDRESS);
 
             match command {
                 EngineCommand::Rpm { rpm } => {

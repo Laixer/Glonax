@@ -43,7 +43,7 @@ pub(super) async fn network_1(
     let mut router = Router::new(socket);
 
     let mut ems0 =
-        glonax::device::EngineManagementSystem::new(glonax::consts::DEFAULT_J1939_ADDRESS);
+        glonax::device::EngineManagementSystem::new(0x0, glonax::consts::DEFAULT_J1939_ADDRESS);
 
     loop {
         if let Err(e) = router.listen().await {
