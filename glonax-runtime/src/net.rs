@@ -124,6 +124,11 @@ impl Router {
         self.frame.take()
     }
 
+    /// Return the inner network socket.
+    pub fn inner(&self) -> &CANSocket {
+        self.net.first().unwrap()
+    }
+
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {

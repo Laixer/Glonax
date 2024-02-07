@@ -130,7 +130,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 }
                 J1939Message::RequestPGN(pgn) => {
                     info!(
-                        "{} {} » Request for PGN: {}",
+                        "{} {} » Request for PGN: {:?}",
                         style_node(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         pgn

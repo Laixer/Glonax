@@ -1,4 +1,4 @@
-use j1939::{decode, Frame, Name, PGN};
+use j1939::{decode, protocol, Frame, Name, PGN};
 
 use crate::net::Parsable;
 
@@ -6,7 +6,7 @@ pub enum J1939Message {
     /// Software identification.
     SoftwareIndent((u8, u8, u8)),
     /// Requested PGN.
-    RequestPGN(u32),
+    RequestPGN(PGN),
     /// Address claim.
     AddressClaim(Name),
     /// Acknowledged.
@@ -47,12 +47,7 @@ impl J1939Message {
                     None
                 }
             }
-            PGN::Request => Some(Self::RequestPGN(u32::from_be_bytes([
-                0x0,
-                frame.pdu()[2],
-                frame.pdu()[1],
-                frame.pdu()[0],
-            ]))),
+            PGN::Request => Some(Self::RequestPGN(protocol::request_from_pdu(frame.pdu()))),
             PGN::AddressClaimed => Some(Self::AddressClaim(Name::from_bytes(
                 frame.pdu().try_into().unwrap(),
             ))),
