@@ -63,6 +63,12 @@ pub enum Motion {
     Change(Vec<ChangeSet>),
 }
 
+impl Default for Motion {
+    fn default() -> Self {
+        Self::StopAll
+    }
+}
+
 impl Motion {
     /// Maximum power setting.
     pub const POWER_MAX: MotionValueType = MotionValueType::MAX;
