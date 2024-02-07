@@ -1,4 +1,4 @@
-use glonax::j1939::{protocol, NameBuilder, PGN};
+use glonax::j1939::{protocol, FrameBuilder, IdBuilder, NameBuilder, PGN};
 use glonax::runtime::SharedOperandState;
 
 use glonax::device::net::J1939Unit;
@@ -59,7 +59,15 @@ pub(super) async fn rx_network_0(
                         .await?;
                 }
                 PGN::TimeDate => {
-                    //
+                    let id = IdBuilder::from_pgn(PGN::TimeDate)
+                        .sa(crate::consts::J1939_ADDRESS_VMS)
+                        .build();
+
+                    let frame = FrameBuilder::new(id)
+                        .copy_from_slice(&[0x34, 0x04, 0x0A, 0x01, 0x58, 0x27, 0xff, 0xff])
+                        .build();
+
+                    router.inner().send(&frame).await?;
                 }
                 _ => (),
             }
@@ -110,7 +118,15 @@ pub(super) async fn rx_network_1(
                         .await?;
                 }
                 PGN::TimeDate => {
-                    //
+                    let id = IdBuilder::from_pgn(PGN::TimeDate)
+                        .sa(crate::consts::J1939_ADDRESS_VMS)
+                        .build();
+
+                    let frame = FrameBuilder::new(id)
+                        .copy_from_slice(&[0x34, 0x04, 0x0A, 0x01, 0x58, 0x27, 0xff, 0xff])
+                        .build();
+
+                    router.inner().send(&frame).await?;
                 }
                 _ => (),
             }
