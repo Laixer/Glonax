@@ -6,7 +6,7 @@
 
 pub mod components;
 pub mod core;
-pub mod device; // TODO: Rename to 'driver'
+pub mod driver;
 pub mod math;
 pub mod net;
 pub mod protocol;
@@ -74,7 +74,7 @@ pub struct MachineState {
     /// Current program queue.
     pub program: std::collections::VecDeque<core::Target>,
     /// Electronic control unit data.
-    pub ecu_state: device::VirtualHCU,
+    pub ecu_state: driver::VirtualHCU,
 }
 
 /// The operand is the current state of the machine.

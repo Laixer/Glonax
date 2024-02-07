@@ -1,6 +1,6 @@
 use std::{error, fmt, io};
 
-use crate::device::DeviceError;
+use crate::driver::DeviceError;
 
 #[derive(Debug)]
 pub enum Error {

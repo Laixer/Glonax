@@ -162,7 +162,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the operand and the interface name.
-    pub fn schedule_net_service<Fut>(
+    pub fn schedule_j1939_service<Fut>(
         &self,
         service: impl FnOnce(String, SharedOperandState) -> Fut + Send + 'static,
         interface: &str,
@@ -179,7 +179,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
-    pub fn schedule_j1939_tx_service<Fut>(
+    pub fn schedule_j1939_motion_service<Fut>(
         &mut self,
         service: impl FnOnce(String, SharedOperandState, MotionReceiver) -> Fut + Send + 'static,
         interface: &str,

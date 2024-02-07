@@ -26,7 +26,7 @@ pub(super) async fn service_gnss(
     let reader = BufReader::new(serial);
     let mut lines = reader.lines();
 
-    let driver = glonax::device::Nmea;
+    let driver = glonax::driver::Nmea;
 
     while let Ok(Some(line)) = lines.next_line().await {
         if let Some(message) = driver.decode(line) {

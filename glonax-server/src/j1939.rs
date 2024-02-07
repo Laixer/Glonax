@@ -1,8 +1,8 @@
 use glonax::j1939::{protocol, FrameBuilder, IdBuilder, NameBuilder, PGN};
 use glonax::runtime::SharedOperandState;
 
-use glonax::device::net::J1939Unit;
-use glonax::device::{
+use glonax::driver::net::J1939Unit;
+use glonax::driver::{
     EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, RequestResponder,
 };
 use glonax::net::{CANSocket, Router, SockAddrCAN};

@@ -1,5 +1,5 @@
 use glonax::{
-    device::EncoderConverter,
+    driver::EncoderConverter,
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };

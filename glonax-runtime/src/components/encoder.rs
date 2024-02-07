@@ -1,5 +1,5 @@
 use crate::{
-    device::VirtualEncoder,
+    driver::VirtualEncoder,
     runtime::{Component, ComponentContext},
     Configurable, MachineState,
 };

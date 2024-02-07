@@ -41,7 +41,7 @@ fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
 
 /// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
-    use glonax::device::{
+    use glonax::driver::{
         EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, KueblerEncoder, J1939Message
     };
 
@@ -333,7 +333,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Hcu { address, command } => {
             let node = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let hcu0 = glonax::device::HydraulicControlUnit::new(node, consts::J1939_ADDRESS_VMS);
+            let hcu0 = glonax::driver::HydraulicControlUnit::new(node, consts::J1939_ADDRESS_VMS);
 
             match command {
                 HCUCommand::Ident { toggle } => {
@@ -402,7 +402,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Engine { address, command } => {
             let node = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::device::EngineManagementSystem::new(node, consts::J1939_ADDRESS_VMS);
+            let ems0 = glonax::driver::EngineManagementSystem::new(node, consts::J1939_ADDRESS_VMS);
 
             match command {
                 EngineCommand::Rpm { rpm } => {

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use glonax::device;
+use glonax::driver;
 use glonax_gamepad::{Axis, Button, Event, EventType};
 use log::error;
 
@@ -27,7 +27,7 @@ impl Gamepad {
 }
 
 impl Gamepad {
-    pub(super) async fn next(&mut self) -> device::Result<Scancode> {
+    pub(super) async fn next(&mut self) -> driver::Result<Scancode> {
         loop {
             match self.driver.next_event().await {
                 Ok(event) => match event {
@@ -104,7 +104,7 @@ impl Gamepad {
                 },
                 Err(e) => {
                     error!("{}", e);
-                    break Err(device::DeviceError::no_such_device(
+                    break Err(driver::DeviceError::no_such_device(
                         DEVICE_NAME.to_string(),
                         &self.node_path,
                     ));
