@@ -2,6 +2,7 @@ pub mod encoder;
 pub mod engine;
 pub mod hydraulic;
 pub mod inspector;
+pub mod reqres;
 
 // FUTURE: Maybe move?
 pub trait J1939Unit {

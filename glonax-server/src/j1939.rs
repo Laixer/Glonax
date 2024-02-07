@@ -1,8 +1,10 @@
-use glonax::j1939::{protocol, NameBuilder};
+use glonax::j1939::{protocol, NameBuilder, PGN};
 use glonax::runtime::SharedOperandState;
 
 use glonax::device::net::J1939Unit;
-use glonax::device::{EngineManagementSystem, HydraulicControlUnit, KueblerEncoder};
+use glonax::device::{
+    EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, RequestResponder,
+};
 use glonax::net::{CANSocket, Router, SockAddrCAN};
 
 // TODO: Move into runtime
@@ -23,7 +25,7 @@ pub(super) async fn rx_network_0(
         crate::consts::J1939_ADDRESS_HCU0,
         crate::consts::J1939_ADDRESS_VMS,
     );
-    // TODO: Have a request responder, maybe call it RequestResponder?
+    let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     loop {
         if let Err(e) = router.listen().await {
@@ -35,6 +37,33 @@ pub(super) async fn rx_network_0(
         enc2.try_accept(&mut router, runtime_state.clone());
         enc3.try_accept(&mut router, runtime_state.clone());
         hcu0.try_accept(&mut router, runtime_state.clone());
+
+        if let Some(pgn) = router.try_accept(&mut rrp0) {
+            match pgn {
+                PGN::AddressClaimed => {
+                    let name = NameBuilder::default()
+                        .identity_number(0x1)
+                        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
+                        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
+                        .ecu_instance(J1939_NAME_ECU_INSTANCE)
+                        .function(J1939_NAME_FUNCTION)
+                        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
+                        .build();
+
+                    router
+                        .inner()
+                        .send(&protocol::address_claimed(
+                            crate::consts::J1939_ADDRESS_VMS,
+                            name,
+                        ))
+                        .await?;
+                }
+                PGN::TimeDate => {
+                    //
+                }
+                _ => (),
+            }
+        }
     }
 }
 
@@ -51,7 +80,7 @@ pub(super) async fn rx_network_1(
         crate::consts::J1939_ADDRESS_ENGINE0,
         crate::consts::J1939_ADDRESS_VMS,
     );
-    // TODO: Have a request responder, maybe call it RequestResponder?
+    let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     loop {
         if let Err(e) = router.listen().await {
@@ -59,6 +88,33 @@ pub(super) async fn rx_network_1(
         }
 
         ems0.try_accept(&mut router, runtime_state.clone());
+
+        if let Some(pgn) = router.try_accept(&mut rrp0) {
+            match pgn {
+                PGN::AddressClaimed => {
+                    let name = NameBuilder::default()
+                        .identity_number(0x1)
+                        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
+                        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
+                        .ecu_instance(J1939_NAME_ECU_INSTANCE)
+                        .function(J1939_NAME_FUNCTION)
+                        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
+                        .build();
+
+                    router
+                        .inner()
+                        .send(&protocol::address_claimed(
+                            crate::consts::J1939_ADDRESS_VMS,
+                            name,
+                        ))
+                        .await?;
+                }
+                PGN::TimeDate => {
+                    //
+                }
+                _ => (),
+            }
+        }
     }
 }
 
