@@ -179,6 +179,24 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    pub fn schedule_j1939_tx_service<Fut>(
+        &mut self,
+        service: impl FnOnce(String, SharedOperandState, MotionReceiver) -> Fut + Send + 'static,
+        interface: &str,
+    ) where
+        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
+    {
+        let operand = self.operand.clone();
+        let interface = interface.to_owned();
+        let motion_rx = self.motion_rx.take().unwrap();
+
+        tokio::spawn(async move {
+            if let Err(e) = service(interface, operand, motion_rx).await {
+                log::error!("Failed to start network service: {}", e);
+            }
+        });
+    }
+
     /// Spawn a motion sink in the background.
     pub fn schedule_motion_sink<Fut>(
         &mut self,

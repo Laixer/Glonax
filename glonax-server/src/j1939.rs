@@ -1,3 +1,4 @@
+use glonax::j1939::{protocol, NameBuilder};
 use glonax::runtime::SharedOperandState;
 
 use glonax::device::net::J1939Unit;
@@ -22,6 +23,7 @@ pub(super) async fn rx_network_0(
         crate::consts::J1939_ADDRESS_HCU0,
         crate::consts::J1939_ADDRESS_VMS,
     );
+    // TODO: Have a request responder, maybe call it RequestResponder?
 
     loop {
         if let Err(e) = router.listen().await {
@@ -49,6 +51,7 @@ pub(super) async fn rx_network_1(
         crate::consts::J1939_ADDRESS_ENGINE0,
         crate::consts::J1939_ADDRESS_VMS,
     );
+    // TODO: Have a request responder, maybe call it RequestResponder?
 
     loop {
         if let Err(e) = router.listen().await {
@@ -73,13 +76,14 @@ const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 // TODO: Move into runtime
 pub(super) async fn tx_network_0(
     interface: String,
-    runtime_state: SharedOperandState,
+    _runtime_state: SharedOperandState,
+    mut motion_rx: crate::device::MotionReceiver,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
     let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
 
-    let name = glonax::j1939::NameBuilder::default()
+    let name = NameBuilder::default()
         .identity_number(0x1)
         .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
         .function_instance(J1939_NAME_FUNCTION_INSTANCE)
@@ -88,33 +92,57 @@ pub(super) async fn tx_network_0(
         .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
         .build();
 
-    let _enc0 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER0);
-    let _enc1 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER1);
-    let _enc2 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER2);
-    let _enc3 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER3);
-    let _hcu0 = HydraulicControlUnit::new(
+    let hcu0 = HydraulicControlUnit::new(
         crate::consts::J1939_ADDRESS_HCU0,
         crate::consts::J1939_ADDRESS_VMS,
     );
 
-    let mut interval = tokio::time::interval(std::time::Duration::from_millis(10));
-
     socket
-        .send(&glonax::j1939::protocol::address_claimed(
+        .send(&protocol::address_claimed(
             crate::consts::J1939_ADDRESS_VMS,
             name,
         ))
         .await?;
 
-    loop {
-        interval.tick().await;
+    while let Some(motion) = motion_rx.recv().await {
+        match motion {
+            glonax::core::Motion::StopAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            glonax::core::Motion::ResumeAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            glonax::core::Motion::ResetAll => {
+                if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            glonax::core::Motion::StraightDrive(value) => {
+                let frames = &hcu0.drive_straight(value);
+                if let Err(e) = socket.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+            glonax::core::Motion::Change(changes) => {
+                let frames = &hcu0.actuator_command(
+                    changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value))
+                        .collect(),
+                );
 
-        // if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
-        //     log::error!("Failed to send motion: {}", e);
-        // } else {
-        //     log::info!("Sent motion");
-        // }
+                if let Err(e) = socket.send_vectored(frames).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+        }
     }
+
+    Ok(())
 }
 
 // TODO: Move into runtime
@@ -126,7 +154,7 @@ pub(super) async fn tx_network_1(
 
     let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
 
-    let name = glonax::j1939::NameBuilder::default()
+    let name = NameBuilder::default()
         .identity_number(0x1)
         .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
         .function_instance(J1939_NAME_FUNCTION_INSTANCE)
@@ -143,7 +171,7 @@ pub(super) async fn tx_network_1(
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(10));
 
     socket
-        .send(&glonax::j1939::protocol::address_claimed(
+        .send(&protocol::address_claimed(
             crate::consts::J1939_ADDRESS_VMS,
             name,
         ))
@@ -153,7 +181,14 @@ pub(super) async fn tx_network_1(
         interval.tick().await;
 
         {
-            let rpm = runtime_state.read().await.state.engine_request;
+            let rpm = {
+                let rpm = runtime_state.read().await.state.engine_request;
+                if !(700..=2100).contains(&rpm) {
+                    800
+                } else {
+                    rpm
+                }
+            };
 
             if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm)).await {
                 log::error!("Failed to send motion: {}", e);
