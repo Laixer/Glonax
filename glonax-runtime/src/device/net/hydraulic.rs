@@ -295,7 +295,7 @@ impl StatusMessage {
             destination_address,
             source_address,
             state: frame.pdu()[0],
-            locked: frame.pdu()[2] == 0x1,
+            locked: frame.pdu()[2] != 0xff && frame.pdu()[2] == 0x1,
             uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
         }
     }
@@ -655,7 +655,7 @@ mod tests {
         let config_b = MotionConfigMessage::from_frame(0x5E, 0xEE, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert!(config_b.locked.unwrap());
+        assert_eq!(config_b.locked, Some(true));
         assert_eq!(config_b.reset, None)
     }
 
@@ -672,7 +672,7 @@ mod tests {
         let config_b = MotionConfigMessage::from_frame(0xA9, 0x11, &frames[0]);
 
         assert_eq!(frames.len(), 1);
-        assert!(!config_b.locked.unwrap());
+        assert_eq!(config_b.locked, Some(false));
         assert_eq!(config_b.reset, None)
     }
 
@@ -690,7 +690,7 @@ mod tests {
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.locked, None);
-        assert!(config_b.reset.unwrap());
+        assert_eq!(config_b.reset, Some(true));
     }
 
     #[test]
@@ -707,7 +707,7 @@ mod tests {
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.locked, None);
-        assert!(!config_b.reset.unwrap());
+        assert_eq!(config_b.reset, Some(false));
     }
 
     #[test]

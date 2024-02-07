@@ -107,7 +107,10 @@ pub(super) async fn sink_net_actuator(
 
     let socket = CANSocket::bind(&SockAddrCAN::new(&config.interface[0]))?;
 
-    let hcu0 = HydraulicControlUnit::new(0x4A, glonax::consts::DEFAULT_J1939_ADDRESS);
+    let hcu0 = HydraulicControlUnit::new(
+        crate::consts::J1939_ADDRESS_HCU0,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
 
     while let Some(motion) = motion_rx.recv().await {
         match motion {

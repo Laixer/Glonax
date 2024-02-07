@@ -12,6 +12,23 @@ mod device;
 mod j1939;
 mod server;
 
+pub(crate) mod consts {
+    /// Vehicle Management System J1939 address.
+    pub const J1939_ADDRESS_VMS: u8 = 0x9E;
+    /// Engine J1939 address.
+    pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
+    /// Hydraulic Control Unit J1939 address.
+    pub const J1939_ADDRESS_HCU0: u8 = 0x4A;
+    /// Kuebler Encoder 0 J1939 address.
+    pub const J1939_ADDRESS_ENCODER0: u8 = 0x6A;
+    /// Kuebler Encoder 1 J1939 address.
+    pub const J1939_ADDRESS_ENCODER1: u8 = 0x6B;
+    /// Kuebler Encoder 2 J1939 address.
+    pub const J1939_ADDRESS_ENCODER2: u8 = 0x6C;
+    /// Kuebler Encoder 3 J1939 address.
+    pub const J1939_ADDRESS_ENCODER3: u8 = 0x6D;
+}
+
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]

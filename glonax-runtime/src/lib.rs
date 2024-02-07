@@ -41,8 +41,6 @@ pub mod consts {
     pub const VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
     /// Glonax runtime patch version.
     pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
-    /// Glonax default J1939 address.
-    pub const DEFAULT_J1939_ADDRESS: u8 = 0x9E;
     /// Glonax default network port for both TCP.
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
     /// Glonax default unix socket path.
