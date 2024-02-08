@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
+use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 
 use crate::net::Parsable;
 
@@ -22,29 +22,29 @@ impl ActuatorMessage {
         let mut actuators: [Option<i16>; 8] = [None; 8];
 
         if frame.id().pgn() == BANK_PGN_LIST[0] {
-            if frame.pdu()[0..2] != [0xff, 0xff] {
+            if frame.pdu()[0..2] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[0] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
             }
-            if frame.pdu()[2..4] != [0xff, 0xff] {
+            if frame.pdu()[2..4] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[1] = Some(i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap()));
             }
-            if frame.pdu()[4..6] != [0xff, 0xff] {
+            if frame.pdu()[4..6] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[2] = Some(i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap()));
             }
-            if frame.pdu()[6..8] != [0xff, 0xff] {
+            if frame.pdu()[6..8] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[3] = Some(i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()));
             }
         } else if frame.id().pgn() == BANK_PGN_LIST[1] {
-            if frame.pdu()[0..2] != [0xff, 0xff] {
+            if frame.pdu()[0..2] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[4] = Some(i16::from_le_bytes(frame.pdu()[0..2].try_into().unwrap()));
             }
-            if frame.pdu()[2..4] != [0xff, 0xff] {
+            if frame.pdu()[2..4] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[5] = Some(i16::from_le_bytes(frame.pdu()[2..4].try_into().unwrap()));
             }
-            if frame.pdu()[4..6] != [0xff, 0xff] {
+            if frame.pdu()[4..6] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[6] = Some(i16::from_le_bytes(frame.pdu()[4..6].try_into().unwrap()));
             }
-            if frame.pdu()[6..8] != [0xff, 0xff] {
+            if frame.pdu()[6..8] != [PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE] {
                 actuators[7] = Some(i16::from_le_bytes(frame.pdu()[6..8].try_into().unwrap()));
             }
         }
@@ -130,12 +130,12 @@ impl MotionConfigMessage {
         Self {
             destination_address,
             source_address,
-            locked: if frame.pdu()[3] != 0xff {
+            locked: if frame.pdu()[3] != PDU_NOT_AVAILABLE {
                 Some(frame.pdu()[3] == 0x0)
             } else {
                 None
             },
-            reset: if frame.pdu()[4] != 0xff {
+            reset: if frame.pdu()[4] != PDU_NOT_AVAILABLE {
                 Some(frame.pdu()[4] == 0x1)
             } else {
                 None
@@ -299,7 +299,7 @@ impl StatusMessage {
             destination_address,
             source_address,
             state: frame.pdu()[0],
-            locked: frame.pdu()[2] != 0xff && frame.pdu()[2] == 0x1,
+            locked: frame.pdu()[2] != PDU_NOT_AVAILABLE && frame.pdu()[2] == 0x1,
             uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
         }
     }

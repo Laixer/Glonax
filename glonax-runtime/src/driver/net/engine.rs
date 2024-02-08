@@ -233,31 +233,29 @@ impl EngineManagementSystem {
 
     /// Set or unset identification mode.
     pub fn set_ident(&self, on: bool) -> Vec<Frame> {
-        let msg = ConfigMessage {
+        ConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: Some(on),
             reset: None,
-        };
-
-        msg.to_frame()
+        }
+        .to_frame()
     }
 
     /// System reboot / reset
     pub fn reboot(&self) -> Vec<Frame> {
-        let msg = ConfigMessage {
+        ConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: None,
             reset: Some(true),
-        };
-
-        msg.to_frame()
+        }
+        .to_frame()
     }
 
     /// Request speed control
     pub fn speed_request(&self, rpm: u16) -> Vec<Frame> {
-        let msg = TorqueSpeedControlMessage {
+        TorqueSpeedControlMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             override_control_mode: Some(decode::OverrideControlMode::SpeedControl),
@@ -265,14 +263,13 @@ impl EngineManagementSystem {
             control_mode_priority: None,
             speed: Some(rpm),
             torque: None,
-        };
-
-        msg.to_frame()
+        }
+        .to_frame()
     }
 
     pub fn start(&self) -> Vec<Frame> {
         // TODO: This is not correct. 0x3 is not used for starting the engine.
-        let msg = TorqueSpeedControlMessage {
+        TorqueSpeedControlMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
@@ -280,9 +277,8 @@ impl EngineManagementSystem {
             control_mode_priority: None,
             speed: Some(700),
             torque: None,
-        };
-
-        msg.to_frame()
+        }
+        .to_frame()
     }
 
     pub fn shutdown(&self) -> Vec<Frame> {
