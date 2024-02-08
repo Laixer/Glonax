@@ -332,12 +332,24 @@ pub(super) async fn tx_network_1(
     loop {
         interval.tick().await;
 
+        let engine = runtime_state.read().await.state.engine;
+
         let rpm = runtime_state.read().await.state.engine_request;
         if rpm == 0 {
-            if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, true)).await {
+            if engine.rpm > 500 {
+                if let Err(e) = socket.send_vectored(&ems0.shutdown()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            } else if engine.rpm == 0 {
+                if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, true)).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
+        } else if engine.rpm > 500 {
+            if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, false)).await {
                 log::error!("Failed to send motion: {}", e);
             }
-        } else if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, false)).await {
+        } else if let Err(e) = socket.send_vectored(&ems0.start(rpm)).await {
             log::error!("Failed to send motion: {}", e);
         }
 

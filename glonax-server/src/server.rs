@@ -128,15 +128,15 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                 match control {
                     glonax::core::Control::EngineStart => {
                         log::info!("Engine start");
-                        // runtime_state.write().await.state.engine.start();
+                        runtime_state.write().await.state.engine_request = 700;
                     }
                     glonax::core::Control::EngineStop => {
                         log::info!("Engine stop");
-                        // runtime_state.write().await.state.engine.stop();
+                        runtime_state.write().await.state.engine_request = 0;
                     }
                     glonax::core::Control::RobotShutdown => {
                         log::info!("Robot shutdown");
-                        // runtime_state.write().await.state.engine.stop();
+                        runtime_state.write().await.state.engine_request = 0;
                         // runtime_state.write().await.state.engine.shutdown();
                     }
                 }
