@@ -219,15 +219,20 @@ impl ConfigMessage {
         let mut ident_on = None;
         let mut reset = None;
 
-        if frame.pdu()[2] == 0x0 {
-            ident_on = Some(false);
-        } else if frame.pdu()[2] == 0x1 {
-            ident_on = Some(true);
+        if frame.pdu()[2] != 0xff {
+            if frame.pdu()[2] == 0x0 {
+                ident_on = Some(false);
+            } else if frame.pdu()[2] == 0x1 {
+                ident_on = Some(true);
+            }
         }
-        if frame.pdu()[3] == 0x0 {
-            reset = Some(false);
-        } else if frame.pdu()[3] == 0x69 {
-            reset = Some(true);
+
+        if frame.pdu()[3] != 0xff {
+            if frame.pdu()[3] == 0x0 {
+                reset = Some(false);
+            } else if frame.pdu()[3] == 0x69 {
+                reset = Some(true);
+            }
         }
 
         Self {
@@ -251,8 +256,8 @@ impl ConfigMessage {
             frame_builder.as_mut()[2] = u8::from(led_on);
         }
 
-        if let Some(reset) = self.reset {
-            frame_builder.as_mut()[3] = if reset { 0x69 } else { 0x0 };
+        if self.reset.is_some() {
+            frame_builder.as_mut()[3] = 0x69;
         }
 
         vec![frame_builder.build()]

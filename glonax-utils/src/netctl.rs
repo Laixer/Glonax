@@ -11,8 +11,8 @@ use glonax::net::*;
 use log::{debug, info};
 
 pub(crate) mod consts {
-    /// Vehicle Management System J1939 address.
-    pub const J1939_ADDRESS_VMS: u8 = 0xFB;
+    /// On-Board Data Logger J1939 address.
+    pub const J1939_ADDRESS_OBDL: u8 = 0xFB;
     /// Engine J1939 address.
     pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
     /// Hydraulic Control Unit J1939 address.
@@ -47,12 +47,12 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 = EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0,consts::J1939_ADDRESS_VMS);
+    let mut ems0 = EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0,consts::J1939_ADDRESS_OBDL);
     let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0);
     let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1);
     let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2);
     let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3);
-    let mut hcu0 = HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_VMS);
+    let mut hcu0 = HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
     let mut app_inspector = J1939ApplicationInspector;
 
     loop {
@@ -356,7 +356,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Hcu { address, command } => {
             let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let hcu0 = glonax::driver::HydraulicControlUnit::new(destination_address, consts::J1939_ADDRESS_VMS);
+            let hcu0 = glonax::driver::HydraulicControlUnit::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
             match command {
                 HCUCommand::Ident { toggle } => {
@@ -425,7 +425,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Vcu { address, command } => {
             let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_VMS);
+            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
             match command {
                 VCUCommand::Ident { toggle } => {
@@ -458,7 +458,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Engine { address, command } => {
             let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_VMS);
+            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
             match command {
                 EngineCommand::Rpm { rpm } => {
@@ -526,7 +526,7 @@ async fn main() -> anyhow::Result<()> {
                     glonax::j1939::IdBuilder::from_pgn(glonax::j1939::PGN::TorqueSpeedControl1)
                         .priority(3)
                         .da(destination_address)
-                        .sa(consts::J1939_ADDRESS_VMS)
+                        .sa(consts::J1939_ADDRESS_OBDL)
                         .build(),
                 );
 
