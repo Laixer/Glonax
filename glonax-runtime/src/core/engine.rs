@@ -27,6 +27,18 @@ impl TryFrom<u8> for EngineStatus {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EngineMode {
+    /// Engine is shutdown.
+    Shutdown,
+    /// Engine is starting up.
+    Startup,
+    /// Engine is running.
+    Running,
+    /// Engine is idling.
+    Idle,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Engine {
     /// Engine Driver Demand in percent.
     pub driver_demand: u8,
@@ -36,6 +48,18 @@ pub struct Engine {
     pub rpm: u16,
     /// Engine status.
     pub status: EngineStatus,
+}
+
+impl Engine {
+    pub fn mode(&self) -> EngineMode {
+        if self.rpm == 0 {
+            EngineMode::Shutdown
+        } else if self.rpm < 500 {
+            EngineMode::Startup
+        } else {
+            EngineMode::Running
+        }
+    }
 }
 
 impl Default for Engine {

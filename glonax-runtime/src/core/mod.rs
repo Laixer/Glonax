@@ -1,5 +1,5 @@
 pub use self::control::Control;
-pub use self::engine::{Engine, EngineStatus};
+pub use self::engine::{Engine, EngineMode, EngineStatus};
 pub use self::gnss::{Gnss, GnssStatus};
 pub use self::host::{Host, HostStatus};
 pub use self::instance::Instance;

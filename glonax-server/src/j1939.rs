@@ -333,24 +333,45 @@ pub(super) async fn tx_network_1(
         interval.tick().await;
 
         let engine = runtime_state.read().await.state.engine;
+        let engine_request = runtime_state.read().await.state.engine_request;
 
-        let rpm = runtime_state.read().await.state.engine_request;
-        if rpm == 0 {
-            if engine.rpm > 500 {
-                if let Err(e) = socket.send_vectored(&ems0.shutdown()).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-            } else if engine.rpm == 0 {
-                if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, true)).await {
+        match engine.mode() {
+            glonax::core::EngineMode::Shutdown => {
+                if engine_request == 0 {
+                    if let Err(e) = socket
+                        .send_vectored(&ems0.speed_request(engine_request, true))
+                        .await
+                    {
+                        log::error!("Failed to send motion: {}", e);
+                    }
+                } else if let Err(e) = socket.send_vectored(&ems0.start(engine_request)).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
-        } else if engine.rpm > 500 {
-            if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, false)).await {
-                log::error!("Failed to send motion: {}", e);
+            glonax::core::EngineMode::Startup => {
+                if engine_request == 0 {
+                    if let Err(e) = socket
+                        .send_vectored(&ems0.speed_request(engine_request, true))
+                        .await
+                    {
+                        log::error!("Failed to send motion: {}", e);
+                    }
+                } else if let Err(e) = socket.send_vectored(&ems0.start(engine_request)).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
             }
-        } else if let Err(e) = socket.send_vectored(&ems0.start(rpm)).await {
-            log::error!("Failed to send motion: {}", e);
+            glonax::core::EngineMode::Idle | glonax::core::EngineMode::Running => {
+                if engine_request == 0 {
+                    if let Err(e) = socket.send_vectored(&ems0.shutdown()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
+                } else if let Err(e) = socket
+                    .send_vectored(&ems0.speed_request(engine_request, false))
+                    .await
+                {
+                    log::error!("Failed to send motion: {}", e);
+                }
+            }
         }
 
         match &runtime_state.read().await.state.motion {
