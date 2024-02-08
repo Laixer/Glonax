@@ -27,7 +27,7 @@ pub(crate) mod consts {
     pub const J1939_ADDRESS_ENCODER3: u8 = 0x6D;
 }
 
-fn style_node(address: u8) -> String {
+fn style_address(address: u8) -> String {
     Purple.paint(format!("[node 0x{:X?}]", address)).to_string()
 }
 
@@ -61,35 +61,35 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if let Some(message) = router.try_accept(&mut ems0) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_address(router.frame_source().unwrap()),
                 Yellow.bold().paint("Engine"),
                 message
             );
         } else if let Some(message) = router.try_accept(&mut enc2) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_address(router.frame_source().unwrap()),
                 Yellow.bold().paint("Arm"),
                 message
             );
         } else if let Some(message) = router.try_accept(&mut enc1) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_address(router.frame_source().unwrap()),
                 Yellow.bold().paint("Boom"),
                 message
             );
         } else if let Some(message) = router.try_accept(&mut enc0) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_address(router.frame_source().unwrap()),
                 Yellow.bold().paint("Frame"),
                 message
             );
         } else if let Some(message) = router.try_accept(&mut enc3) {
             info!(
                 "{} {} » {}",
-                style_node(router.frame_source().unwrap()),
+                style_address(router.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
                 message
             );
@@ -97,21 +97,21 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
             if let Some(actuator_message) = message.0 {
                 info!(
                     "{} {} » {}",
-                    style_node(router.frame_source().unwrap()),
+                    style_address(router.frame_source().unwrap()),
                     Yellow.bold().paint("HCU"),
                     actuator_message
                 );
             } else if let Some(motion_message) = message.1 {
                 info!(
                     "{} {} » {}",
-                    style_node(router.frame_source().unwrap()),
+                    style_address(router.frame_source().unwrap()),
                     Yellow.bold().paint("HCU"),
                     motion_message
                 );
             } else if let Some(status_message) = message.2 {
                 info!(
                     "{} {} » {}",
-                    style_node(router.frame_source().unwrap()),
+                    style_address(router.frame_source().unwrap()),
                     Yellow.bold().paint("HCU"),
                     status_message
                 );
@@ -121,7 +121,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(
                         "{} {} » Software identification: {}.{}.{}",
-                        style_node(router.frame_source().unwrap()),
+                        style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         major,
                         minor,
@@ -131,7 +131,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 J1939Message::RequestPGN(pgn) => {
                     info!(
                         "{} {} » Request for PGN: {:?}",
-                        style_node(router.frame_source().unwrap()),
+                        style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         pgn
                     );
@@ -139,7 +139,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 J1939Message::AddressClaim(name) => {
                     info!(
                         "{} {} » Identity number: 0x{:X}; Manufacturer code: 0x{:X}; Function instance: 0x{:X}; ECU instance: 0x{:X}; Function: 0x{:X}; Vehicle system: 0x{:X}; Vehicle system instance: 0x{:X}; Industry group: {:X}; Arbitrary address: {}",
-                        style_node(router.frame_source().unwrap()),
+                        style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         name.identity_number,
                         name.manufacturer_code,
@@ -155,7 +155,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 J1939Message::Acknowledged(acknowledged) => {
                     info!(
                         "{} {} » Acknowledged: {}",
-                        style_node(router.frame_source().unwrap()),
+                        style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         acknowledged
                     );
@@ -163,7 +163,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 J1939Message::TimeDate(time) => {
                     info!(
                         "{} {} » Time and date: {}",
-                        style_node(router.frame_source().unwrap()),
+                        style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         time
                     );
@@ -171,7 +171,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 J1939Message::ProprietaryB(data) => {
                     debug!(
                         "{} {} » Proprietary B: {:02X?}",
-                        style_node(router.frame_source().unwrap()),
+                        style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
                         data
                     );
@@ -248,6 +248,11 @@ enum Command {
         /// Request commands.
         #[command(subcommand)]
         command: RequestCommand,
+    },
+    Fuzzer {
+        /// Target node address.
+        #[arg(long)]
+        address: String,
     },
     /// Show raw frames on screen.
     Dump {
@@ -357,7 +362,7 @@ async fn main() -> anyhow::Result<()> {
                 HCUCommand::Ident { toggle } => {
                     info!(
                         "{} Turn identification mode {}",
-                        style_node(destination_address),
+                        style_address(destination_address),
                         if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
@@ -368,19 +373,19 @@ async fn main() -> anyhow::Result<()> {
                     socket.send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?)).await?;
                 }
                 HCUCommand::Reboot => {
-                    info!("{} Reboot", style_node(destination_address));
+                    info!("{} Reboot", style_address(destination_address));
 
                     socket.send_vectored(&hcu0.reboot()).await?;
                 }
                 HCUCommand::MotionReset => {
-                    info!("{} Motion reset", style_node(destination_address));
+                    info!("{} Motion reset", style_address(destination_address));
 
                     socket.send_vectored(&hcu0.motion_reset()).await?;
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(
                         "{} Turn lock {}",
-                        style_node(destination_address),
+                        style_address(destination_address),
                         if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
@@ -397,7 +402,7 @@ async fn main() -> anyhow::Result<()> {
                 HCUCommand::Actuator { actuator, value } => {
                     info!(
                         "{} Set actuator {} to {}",
-                        style_node(destination_address),
+                        style_address(destination_address),
                         actuator,
                         if value.is_positive() {
                             Blue.paint(value.to_string())
@@ -411,7 +416,7 @@ async fn main() -> anyhow::Result<()> {
                 HCUCommand::Assign { address_new } => {
                     let destination_address_new = node_address(address_new)?;
 
-                    info!("{} Assign 0x{:X?}", style_node(destination_address), destination_address_new);
+                    info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
 
                     socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
                 }
@@ -426,7 +431,7 @@ async fn main() -> anyhow::Result<()> {
                 VCUCommand::Ident { toggle } => {
                     info!(
                         "{} Turn identification mode {}",
-                        style_node(destination_address),
+                        style_address(destination_address),
                         if toggle.parse::<bool>()? {
                             Green.paint("on")
                         } else {
@@ -437,14 +442,14 @@ async fn main() -> anyhow::Result<()> {
                     socket.send_vectored(&ems0.set_ident(toggle.parse::<bool>()?)).await?;
                 }
                 VCUCommand::Reboot => {
-                    info!("{} Reboot", style_node(destination_address));
+                    info!("{} Reboot", style_address(destination_address));
 
                     socket.send_vectored(&ems0.reboot()).await?;
                 }
                 VCUCommand::Assign { address_new } => {
                     let destination_address_new = node_address(address_new)?;
 
-                    info!("{} Assign 0x{:X?}", style_node(destination_address), destination_address_new);
+                    info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
 
                     socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
                 }
@@ -457,7 +462,7 @@ async fn main() -> anyhow::Result<()> {
 
             match command {
                 EngineCommand::Rpm { rpm } => {
-                    info!("{} Set RPM to {}", style_node(destination_address), rpm);
+                    info!("{} Set RPM to {}", style_address(destination_address), rpm);
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -467,7 +472,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 EngineCommand::Start => {
-                    info!("{} Start engine", style_node(destination_address));
+                    info!("{} Start engine", style_address(destination_address));
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -477,7 +482,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 EngineCommand::Stop => {
-                    info!("{} Stop engine", style_node(destination_address));
+                    info!("{} Stop engine", style_address(destination_address));
 
                     let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -502,9 +507,36 @@ async fn main() -> anyhow::Result<()> {
                 RequestCommand::Time => PGN::TimeDate,
             };
 
-            info!("{} Request {:?}", style_node(destination_address), pgn);
+            info!("{} Request {:?}", style_address(destination_address), pgn);
 
             socket.send(&protocol::request(destination_address, pgn)).await?;
+        }
+        Command::Fuzzer { address } => {
+            use glonax::rand::Rng;
+
+            let destination_address = node_address(address)?;
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+
+            let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+
+            loop {
+                tick.tick().await;
+
+                let frame_builder = glonax::j1939::FrameBuilder::new(
+                    glonax::j1939::IdBuilder::from_pgn(glonax::j1939::PGN::TorqueSpeedControl1)
+                        .priority(3)
+                        .da(destination_address)
+                        .sa(consts::J1939_ADDRESS_VMS)
+                        .build(),
+                );
+
+                let random_number = glonax::rand::thread_rng().gen_range(0..=8);
+                let random_byes = (0..random_number).map(|_| glonax::rand::random::<u8>()).collect::<Vec<u8>>();
+
+                let frame_builder = frame_builder.copy_from_slice(&random_byes);
+
+                socket.send(&frame_builder.build()).await?;
+            }
         }
         Command::Dump { pgn, node } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
