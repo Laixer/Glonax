@@ -210,14 +210,14 @@ struct ConfigMessage {
     source_address: u8,
     /// Identification mode
     pub ident_on: Option<bool>,
-    /// Reset hardware
-    pub reset: Option<bool>,
+    /// Hardware reboot
+    pub reboot: bool,
 }
 
 impl ConfigMessage {
     fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         let mut ident_on = None;
-        let mut reset = None;
+        let mut reboot = false;
 
         if frame.pdu()[2] != 0xff {
             if frame.pdu()[2] == 0x0 {
@@ -227,19 +227,15 @@ impl ConfigMessage {
             }
         }
 
-        if frame.pdu()[3] != 0xff {
-            if frame.pdu()[3] == 0x0 {
-                reset = Some(false);
-            } else if frame.pdu()[3] == 0x69 {
-                reset = Some(true);
-            }
+        if frame.pdu()[3] != 0xff && frame.pdu()[3] == 0x69 {
+            reboot = true
         }
 
         Self {
             destination_address,
             source_address,
             ident_on,
-            reset,
+            reboot,
         }
     }
 
@@ -256,7 +252,7 @@ impl ConfigMessage {
             frame_builder.as_mut()[2] = u8::from(led_on);
         }
 
-        if self.reset.is_some() {
+        if self.reboot {
             frame_builder.as_mut()[3] = 0x69;
         }
 
@@ -274,11 +270,7 @@ impl std::fmt::Display for ConfigMessage {
             } else {
                 "Ident off"
             },
-            if self.reset.unwrap_or(false) {
-                "reset"
-            } else {
-                "no reset"
-            }
+            if self.reboot { "Reboot" } else { "" }
         )
     }
 }
@@ -374,26 +366,24 @@ impl HydraulicControlUnit {
 
     /// Set or unset identification mode.
     pub fn set_ident(&self, on: bool) -> Vec<Frame> {
-        let msg = ConfigMessage {
+        ConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: Some(on),
-            reset: None,
-        };
-
-        msg.to_frame()
+            reboot: false,
+        }
+        .to_frame()
     }
 
     /// System reboot / reset
     pub fn reboot(&self) -> Vec<Frame> {
-        let msg = ConfigMessage {
+        ConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: None,
-            reset: Some(true),
-        };
-
-        msg.to_frame()
+            reboot: true,
+        }
+        .to_frame()
     }
 
     // FUTURE: Move this to HCU
@@ -723,7 +713,7 @@ mod tests {
             destination_address: 0x2B,
             source_address: 0x4D,
             ident_on: Some(true),
-            reset: None,
+            reboot: false,
         };
 
         let frames = config_a.to_frame();
@@ -731,7 +721,7 @@ mod tests {
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, Some(true));
-        assert_eq!(config_b.reset, None);
+        assert!(!config_b.reboot);
     }
 
     #[test]
@@ -740,7 +730,7 @@ mod tests {
             destination_address: 0x3C,
             source_address: 0x4F,
             ident_on: Some(false),
-            reset: None,
+            reboot: false,
         };
 
         let frames = config_a.to_frame();
@@ -748,7 +738,7 @@ mod tests {
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, Some(false));
-        assert_eq!(config_b.reset, None);
+        assert!(!config_b.reboot);
     }
 
     #[test]
@@ -757,7 +747,7 @@ mod tests {
             destination_address: 0x4D,
             source_address: 0xCD,
             ident_on: None,
-            reset: Some(true),
+            reboot: true,
         };
 
         let frames = config_a.to_frame();
@@ -765,6 +755,6 @@ mod tests {
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, None);
-        assert_eq!(config_b.reset, Some(true));
+        assert!(config_b.reboot);
     }
 }
