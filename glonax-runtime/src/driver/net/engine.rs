@@ -282,20 +282,26 @@ impl EngineManagementSystem {
     }
 
     /// Request speed control
-    pub fn speed_request(&self, rpm: u16) -> Vec<Frame> {
-        TorqueSpeedControlMessage {
+    pub fn speed_request(&self, rpm: u16, idle: bool) -> Vec<Frame> {
+        let mut msg = TorqueSpeedControlMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
-            override_control_mode: Some(decode::OverrideControlMode::SpeedControl),
+            override_control_mode: Some(decode::OverrideControlMode::OverrideDisabled),
             speed_control_condition: None,
             control_mode_priority: None,
-            speed: Some(rpm),
+            speed: None,
             torque: None,
+        };
+
+        if !idle {
+            msg.override_control_mode = Some(decode::OverrideControlMode::SpeedControl);
+            msg.speed = Some(rpm);
         }
-        .to_frame()
+
+        msg.to_frame()
     }
 
-    pub fn start(&self) -> Vec<Frame> {
+    pub fn start(&self, rpm: u16) -> Vec<Frame> {
         // TODO: This is not correct. 0x3 is not used for starting the engine.
         TorqueSpeedControlMessage {
             destination_address: self.destination_address,
@@ -303,7 +309,7 @@ impl EngineManagementSystem {
             override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
             speed_control_condition: None,
             control_mode_priority: None,
-            speed: Some(700),
+            speed: Some(rpm),
             torque: None,
         }
         .to_frame()

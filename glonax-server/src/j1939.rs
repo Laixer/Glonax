@@ -238,10 +238,6 @@ pub(super) async fn tx_network_0(
         .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
         .build();
 
-    let ems0 = EngineManagementSystem::new(
-        crate::consts::J1939_ADDRESS_ENGINE0,
-        crate::consts::J1939_ADDRESS_VMS,
-    );
     let hcu0 = HydraulicControlUnit::new(
         crate::consts::J1939_ADDRESS_HCU0,
         crate::consts::J1939_ADDRESS_VMS,
@@ -258,21 +254,6 @@ pub(super) async fn tx_network_0(
 
     loop {
         interval.tick().await;
-
-        {
-            let rpm = {
-                let rpm = runtime_state.read().await.state.engine_request;
-                if !(700..=2100).contains(&rpm) {
-                    800
-                } else {
-                    rpm
-                }
-            };
-
-            if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm)).await {
-                log::error!("Failed to send motion: {}", e);
-            }
-        }
 
         match &runtime_state.read().await.state.motion {
             glonax::core::Motion::StopAll => {
@@ -351,19 +332,13 @@ pub(super) async fn tx_network_1(
     loop {
         interval.tick().await;
 
-        {
-            let rpm = {
-                let rpm = runtime_state.read().await.state.engine_request;
-                if !(700..=2100).contains(&rpm) {
-                    800
-                } else {
-                    rpm
-                }
-            };
-
-            if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm)).await {
+        let rpm = runtime_state.read().await.state.engine_request;
+        if rpm == 0 {
+            if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, true)).await {
                 log::error!("Failed to send motion: {}", e);
             }
+        } else if let Err(e) = socket.send_vectored(&ems0.speed_request(rpm, false)).await {
+            log::error!("Failed to send motion: {}", e);
         }
 
         match &runtime_state.read().await.state.motion {

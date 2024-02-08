@@ -468,7 +468,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&ems0.speed_request(rpm)).await?;
+                        socket.send_vectored(&ems0.speed_request(rpm, false)).await?;
                     }
                 }
                 EngineCommand::Start => {
@@ -478,7 +478,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&ems0.start()).await?;
+                        socket.send_vectored(&ems0.start(700)).await?;
                     }
                 }
                 EngineCommand::Stop => {
