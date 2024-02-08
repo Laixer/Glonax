@@ -5,10 +5,9 @@ use j1939::{
 
 use crate::net::Parsable;
 
-// TODO: Rename to EngineControllerMessage
 // TODO: Move to j1939 crate
 #[derive(Default)]
-pub struct EngineMessage {
+pub struct EngineControllerMessage {
     /// Engine Torque Mode.
     pub engine_torque_mode: Option<EngineTorqueMode>,
     /// Driver's Demand Engine - Percent Torque.
@@ -23,7 +22,7 @@ pub struct EngineMessage {
     pub starter_mode: Option<EngineStarterMode>,
 }
 
-impl EngineMessage {
+impl EngineControllerMessage {
     // TODO: Move to j1939 crate
     pub fn from_frame(frame: &Frame) -> Self {
         Self {
@@ -62,7 +61,7 @@ impl EngineMessage {
     }
 }
 
-impl std::fmt::Display for EngineMessage {
+impl std::fmt::Display for EngineControllerMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
@@ -90,6 +89,56 @@ impl std::fmt::Display for EngineMessage {
     }
 }
 
+// TODO: Move to j1939 crate
+#[allow(dead_code)]
+struct TorqueSpeedControlMessage {
+    /// Destination address
+    destination_address: u8,
+    /// Source address
+    source_address: u8,
+    /// Override control mode - SPN 695
+    override_control_mode: Option<decode::OverrideControlMode>,
+    /// Requested speed control conditions - SPN 696
+    speed_control_condition: Option<decode::RequestedSpeedControlCondition>,
+    /// Override control mode priority - SPN 897
+    control_mode_priority: Option<decode::OverrideControlModePriority>,
+    /// Requested speed or speed limit - SPN 898
+    speed: Option<u16>,
+    /// Requested torque or torque limit - SPN 518
+    torque: Option<u8>,
+}
+
+impl TorqueSpeedControlMessage {
+    // TODO: Move to j1939 crate
+    fn to_frame(&self) -> Vec<Frame> {
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
+                .priority(3)
+                .da(self.destination_address)
+                .sa(self.source_address)
+                .build(),
+        );
+
+        frame_builder.as_mut()[0] = match self.override_control_mode {
+            Some(decode::OverrideControlMode::OverrideDisabled) => 0b00,
+            Some(decode::OverrideControlMode::SpeedControl) => 0b01,
+            Some(decode::OverrideControlMode::TorqueControl) => 0b10,
+            Some(decode::OverrideControlMode::SpeedTorqueLimitControl) => 0b11,
+            None => 0b00,
+        };
+
+        if let Some(speed) = self.speed {
+            frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(speed));
+        }
+
+        if let Some(torque) = self.torque {
+            frame_builder.as_mut()[3] = torque;
+        }
+
+        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
+    }
+}
+
 struct ConfigMessage {
     /// Destination address
     destination_address: u8,
@@ -102,6 +151,7 @@ struct ConfigMessage {
 }
 
 impl ConfigMessage {
+    #[allow(dead_code)]
     fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
         let mut ident_on = None;
         let mut reset = None;
@@ -205,34 +255,34 @@ impl EngineManagementSystem {
         msg.to_frame()
     }
 
+    /// Request speed control
     pub fn speed_request(&self, rpm: u16) -> Vec<Frame> {
-        let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
-                .priority(3)
-                .da(self.destination_address)
-                .sa(self.source_address)
-                .build(),
-        );
+        let msg = TorqueSpeedControlMessage {
+            destination_address: self.destination_address,
+            source_address: self.source_address,
+            override_control_mode: Some(decode::OverrideControlMode::SpeedControl),
+            speed_control_condition: None,
+            control_mode_priority: None,
+            speed: Some(rpm),
+            torque: None,
+        };
 
-        frame_builder.as_mut()[0] = 0b01;
-        frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(rpm));
-
-        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
+        msg.to_frame()
     }
 
     pub fn start(&self) -> Vec<Frame> {
-        let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
-                .priority(3)
-                .da(self.destination_address)
-                .sa(self.source_address)
-                .build(),
-        );
+        // TODO: This is not correct. 0x3 is not used for starting the engine.
+        let msg = TorqueSpeedControlMessage {
+            destination_address: self.destination_address,
+            source_address: self.source_address,
+            override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
+            speed_control_condition: None,
+            control_mode_priority: None,
+            speed: Some(700),
+            torque: None,
+        };
 
-        frame_builder.as_mut()[0] = 0b11; // TODO: This is not correct. 0x3 is not used for starting the engine.
-        frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(700));
-
-        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
+        msg.to_frame()
     }
 
     pub fn shutdown(&self) -> Vec<Frame> {
@@ -250,8 +300,8 @@ impl EngineManagementSystem {
     }
 }
 
-impl Parsable<EngineMessage> for EngineManagementSystem {
-    fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
+impl Parsable<EngineControllerMessage> for EngineManagementSystem {
+    fn parse(&mut self, frame: &Frame) -> Option<EngineControllerMessage> {
         if frame.len() != PDU_MAX_LENGTH {
             return None;
         }
@@ -259,7 +309,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
             return None;
         }
 
-        Some(EngineMessage::from_frame(frame))
+        Some(EngineControllerMessage::from_frame(frame))
     }
 }
 
@@ -290,7 +340,7 @@ mod tests {
                 .copy_from_slice(&[0xF0, 0xEA, 0x7D, 0x00, 0x00, 0x00, 0xF0, 0xFF])
                 .build();
 
-        let engine_message = EngineMessage::from_frame(&frame);
+        let engine_message = EngineControllerMessage::from_frame(&frame);
         assert_eq!(
             engine_message.engine_torque_mode.unwrap(),
             EngineTorqueMode::NoRequest
@@ -312,7 +362,7 @@ mod tests {
                 .copy_from_slice(&[0xF3, 0x91, 0x91, 0xAA, 0x18, 0x00, 0xF3, 0xFF])
                 .build();
 
-        let engine_message = EngineMessage::from_frame(&frame);
+        let engine_message = EngineControllerMessage::from_frame(&frame);
         assert_eq!(
             engine_message.engine_torque_mode.unwrap(),
             EngineTorqueMode::PTOGovernor

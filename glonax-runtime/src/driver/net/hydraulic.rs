@@ -317,6 +317,7 @@ impl std::fmt::Display for StatusMessage {
     }
 }
 
+// TODO: Maybe enum?
 pub struct HydraulicControlUnit {
     /// Destination address.
     pub destination_address: u8,
@@ -455,6 +456,7 @@ impl
                 return None;
             }
 
+            // TODO: Return this.
             let _config_message =
                 ConfigMessage::from_frame(self.destination_address, self.source_address, frame);
         }
