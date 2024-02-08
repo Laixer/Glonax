@@ -109,6 +109,34 @@ struct TorqueSpeedControlMessage {
 }
 
 impl TorqueSpeedControlMessage {
+    #[allow(dead_code)]
+    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
+        let speed_control_condition = None;
+        let control_mode_priority = None;
+        let mut speed = None;
+        let mut torque = None;
+
+        let override_control_mode = decode::spn695(frame.pdu()[0]);
+
+        if frame.pdu()[1..3] != [0xff, 0xff] {
+            speed = spn::rpm::dec(&frame.pdu()[1..3]);
+        }
+
+        if frame.pdu()[3] != 0 {
+            torque = Some(frame.pdu()[3]);
+        }
+
+        Self {
+            destination_address,
+            source_address,
+            override_control_mode,
+            speed_control_condition,
+            control_mode_priority,
+            speed,
+            torque,
+        }
+    }
+
     // TODO: Move to j1939 crate
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
@@ -282,6 +310,7 @@ impl EngineManagementSystem {
     }
 
     pub fn shutdown(&self) -> Vec<Frame> {
+        // TODO: Make this a J1939 message
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
                 .priority(3)
