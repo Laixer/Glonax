@@ -158,9 +158,8 @@ async fn main() -> anyhow::Result<()> {
 
     use std::time::Duration;
 
-    // TODO: Enable service termination
     let mut runtime = glonax::runtime::builder(&config, instance)?
-        // .with_shutdown()
+        .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
@@ -207,7 +206,10 @@ async fn main() -> anyhow::Result<()> {
         )
         .await;
 
-    // runtime.wait_for_shutdown().await;
+    runtime
+        .motion_tx
+        .send(glonax::core::Motion::StopAll)
+        .await?;
 
     log::debug!("{} was shutdown gracefully", config.global.bin_name);
 

@@ -267,7 +267,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         component.once(&mut ctx, &mut self.operand.write().await.state);
         ctx.post_tick();
 
-        loop {
+        while self.shutdown.1.is_empty() {
             interval.tick().await;
 
             component.tick(&mut ctx, &mut self.operand.write().await.state);
@@ -278,7 +278,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     /// Wait for the runtime to shutdown.
     ///
     /// This method will block until the runtime is shutdown.
-    pub async fn wait_for_shutdown(&self) {
-        self.shutdown_signal().recv().await.ok();
+    pub async fn wait_for_shutdown(&mut self) {
+        self.shutdown.1.recv().await.ok();
     }
 }
