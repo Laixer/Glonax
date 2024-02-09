@@ -254,6 +254,12 @@ enum Command {
         #[arg(long)]
         address: String,
     },
+    Send {
+        /// Frame ID.
+        id: String,
+        /// Raw data to send.
+        data: String,
+    },
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -537,6 +543,16 @@ async fn main() -> anyhow::Result<()> {
 
                 socket.send(&frame_builder.build()).await?;
             }
+        }
+        Command::Send { id, data } => {
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+
+            let frame_builder = glonax::j1939::FrameBuilder::new(
+                glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?)
+            )
+            .copy_from_slice(&hex::decode(data)?);
+
+            socket.send(&frame_builder.build()).await?;
         }
         Command::Dump { pgn, node } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
