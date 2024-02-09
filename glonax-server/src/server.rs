@@ -130,6 +130,18 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         log::info!("Engine start");
                         runtime_state.write().await.state.engine_request = 700;
                     }
+                    glonax::core::Control::EngineIdle => {
+                        log::info!("Engine idle");
+                        runtime_state.write().await.state.engine_request = 700;
+                    }
+                    glonax::core::Control::EngineMedium => {
+                        log::info!("Engine medium");
+                        runtime_state.write().await.state.engine_request = 1500;
+                    }
+                    glonax::core::Control::EngineHigh => {
+                        log::info!("Engine high");
+                        runtime_state.write().await.state.engine_request = 2100;
+                    }
                     glonax::core::Control::EngineStop => {
                         log::info!("Engine stop");
                         runtime_state.write().await.state.engine_request = 0;

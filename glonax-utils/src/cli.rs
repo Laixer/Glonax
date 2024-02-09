@@ -77,7 +77,8 @@ async fn main() -> anyhow::Result<()> {
     fn print_help() {
         println!("Commands:");
         println!("  r | request <class>");
-        println!("  w | watch");
+        println!("  w | watch <class>");
+        println!("  e | engine");
         println!("  x");
         println!();
         println!("Classes:");
@@ -221,6 +222,24 @@ async fn main() -> anyhow::Result<()> {
                 let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
 
                 client.send_packet(&target).await?;
+            }
+            s if s.starts_with("engine ") || s.starts_with("e ") => {
+                let mut parts = s.split_whitespace();
+                parts.next();
+
+                let control = match parts.next() {
+                    Some("start") => glonax::core::Control::EngineStart,
+                    Some("idle") => glonax::core::Control::EngineIdle,
+                    Some("medium") => glonax::core::Control::EngineMedium,
+                    Some("high") => glonax::core::Control::EngineHigh,
+                    Some("stop") => glonax::core::Control::EngineStop,
+                    _ => {
+                        eprintln!("Invalid engine command");
+                        continue;
+                    }
+                };
+
+                client.send_packet(&control).await?;
             }
             "q" | "quit" => {
                 return Ok(());
