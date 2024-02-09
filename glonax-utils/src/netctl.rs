@@ -53,7 +53,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2);
     let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3);
     let mut hcu0 = HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
-    let mut app_inspector = J1939ApplicationInspector;
+    let mut rrp0 = J1939ApplicationInspector;
 
     loop {
         router.listen().await?;
@@ -116,7 +116,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     status_message
                 );
             }
-        } else if let Some(message) = router.try_accept(&mut app_inspector) {
+        } else if let Some(message) = router.try_accept(&mut rrp0) {
             match message {
                 J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(

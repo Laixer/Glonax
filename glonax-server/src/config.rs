@@ -16,6 +16,8 @@ pub struct ProxyConfig {
     pub simulation: bool,
     /// Enable simulation jitter.
     pub simulation_jitter: bool,
+    /// Enable pilot mode only.
+    pub pilot_only: bool,
     /// Global configuration.
     pub global: GlobalConfig,
 }

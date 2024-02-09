@@ -61,6 +61,9 @@ struct Args {
     /// Enable simulation mode.
     #[arg(long, default_value_t = false)]
     simulation: bool,
+    /// Enable pilot mode only.
+    #[arg(long, default_value_t = false)]
+    pilot_only: bool,
     /// Quiet output (no logging).
     #[arg(long)]
     quiet: bool,
@@ -86,6 +89,7 @@ async fn main() -> anyhow::Result<()> {
         nmea_baud_rate: args.nmea_baud_rate,
         simulation: args.simulation,
         simulation_jitter: false,
+        pilot_only: args.pilot_only,
         ..Default::default()
     };
 
@@ -145,6 +149,13 @@ async fn main() -> anyhow::Result<()> {
         log::warn!("Instance ID is not set or invalid");
     }
 
+    if config.simulation {
+        log::info!("Running in simulation mode");
+    }
+    if config.pilot_only {
+        log::info!("Running in pilot only mode");
+    }
+
     use std::time::Duration;
 
     // TODO: Enable service termination
@@ -161,8 +172,6 @@ async fn main() -> anyhow::Result<()> {
         .schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host_interval));
 
     if config.simulation {
-        log::info!("Running in simulation mode");
-
         runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_interval::<glonax::components::EngineSimulator>(Duration::from_millis(10));
 
@@ -180,14 +189,22 @@ async fn main() -> anyhow::Result<()> {
     runtime.schedule_io_service(server::unix_listen);
     runtime.schedule_io_service(server::net_announce);
 
-    let pipe = glonax::components::Pipeline::new(vec![
+    let mut components = vec![
         runtime.make_dynamic::<components::WorldBuilder>(0),
         runtime.make_dynamic::<components::SensorFusion>(2),
         runtime.make_dynamic::<components::Kinematic>(5),
-        runtime.make_dynamic::<components::Controller>(10),
-    ]);
+    ];
 
-    runtime.run_interval(pipe, Duration::from_millis(15)).await;
+    if !config.pilot_only {
+        components.push(runtime.make_dynamic::<components::Controller>(10));
+    }
+
+    runtime
+        .run_interval(
+            glonax::components::Pipeline::new(components),
+            Duration::from_millis(15),
+        )
+        .await;
 
     // runtime.wait_for_shutdown().await;
 
