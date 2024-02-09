@@ -192,10 +192,11 @@ async fn main() -> anyhow::Result<()> {
     let mut components = vec![
         runtime.make_dynamic::<components::WorldBuilder>(0),
         runtime.make_dynamic::<components::SensorFusion>(2),
-        runtime.make_dynamic::<components::Kinematic>(5),
+        runtime.make_dynamic::<components::LocalActor>(3),
     ];
 
     if !config.pilot_only {
+        components.push(runtime.make_dynamic::<components::Kinematic>(5));
         components.push(runtime.make_dynamic::<components::Controller>(10));
     }
 
