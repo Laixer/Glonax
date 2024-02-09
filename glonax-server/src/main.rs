@@ -203,7 +203,7 @@ async fn main() -> anyhow::Result<()> {
     runtime
         .run_interval(
             glonax::components::Pipeline::new(components),
-            Duration::from_millis(15),
+            Duration::from_millis(10),
         )
         .await;
 
