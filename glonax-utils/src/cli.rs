@@ -25,17 +25,6 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    let mut address = args.address.clone();
-
-    if !address.contains(':') {
-        address.push(':');
-        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
-    }
-
-    let address = std::net::ToSocketAddrs::to_socket_addrs(&address)?
-        .next()
-        .unwrap();
-
     let mut log_config = simplelog::ConfigBuilder::new();
     log_config.set_time_level(log::LevelFilter::Off);
     log_config.set_thread_level(log::LevelFilter::Off);
@@ -57,20 +46,36 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
-    log::debug!("Waiting for connection to {}", address);
+    // Connect over TCP
+
+    // let mut address = args.address.clone();
+
+    // log::debug!("Connecting to {}", address);
+
+    // if !address.contains(':') {
+    //     address.push(':');
+    //     address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
+    // }
+
+    // log::debug!("Waiting for connection to {}", address);
 
     // let (mut client, instance) = glonax::protocol::client::tcp::connect(
     //     address.to_owned(),
     //     format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
     // )
     // .await?;
+
+    // println!("Connected to {}", address);
+
+    // Connect over Unix socket
+
     let (mut client, instance) = glonax::protocol::client::unix::connect(
         glonax::consts::DEFAULT_SOCKET_PATH,
         format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
     )
     .await?;
 
-    println!("Connected to {}", address);
+    println!("Connected to {}", glonax::consts::DEFAULT_SOCKET_PATH);
 
     println!("{}", instance);
 
@@ -87,6 +92,7 @@ async fn main() -> anyhow::Result<()> {
         println!("  e | engine");
         println!("  h | host");
         println!("  g | gps");
+        println!("  a | actor");
         println!();
         println!("Commands:");
         println!("  ? | help");
@@ -141,14 +147,10 @@ async fn main() -> anyhow::Result<()> {
                     .await?;
 
                 let bucket_world_location = actor.world_location("bucket");
-                log::debug!(
+                println!(
                     "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
-                    bucket_world_location.x,
-                    bucket_world_location.y,
-                    bucket_world_location.z
+                    bucket_world_location.x, bucket_world_location.y, bucket_world_location.z
                 );
-
-                // println!("{}", actor);
             }
             _ => {
                 eprintln!("Invalid response from server");
@@ -218,17 +220,11 @@ async fn main() -> anyhow::Result<()> {
                     continue;
                 }
             }
-            s if s.starts_with('x') => {
-                let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
-
-                client.send_packet(&target).await?;
-            }
             s if s.starts_with("engine ") || s.starts_with("e ") => {
                 let mut parts = s.split_whitespace();
                 parts.next();
 
                 let control = match parts.next() {
-                    Some("start") => glonax::core::Control::EngineStart,
                     Some("idle") => glonax::core::Control::EngineIdle,
                     Some("medium") => glonax::core::Control::EngineMedium,
                     Some("high") => glonax::core::Control::EngineHigh,
@@ -240,6 +236,11 @@ async fn main() -> anyhow::Result<()> {
                 };
 
                 client.send_packet(&control).await?;
+            }
+            s if s.starts_with("test ") || s.starts_with("x ") => {
+                let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
+
+                client.send_packet(&target).await?;
             }
             "q" | "quit" => {
                 return Ok(());
