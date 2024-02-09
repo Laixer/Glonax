@@ -142,6 +142,8 @@ async fn main() -> anyhow::Result<()> {
 
     ////////////////////
 
+    use std::time::Duration;
+
     log::debug!("Starting proxy services");
     log::info!("{}", instance);
 
@@ -155,8 +157,6 @@ async fn main() -> anyhow::Result<()> {
     if config.pilot_only {
         log::info!("Running in pilot only mode");
     }
-
-    use std::time::Duration;
 
     let mut runtime = glonax::runtime::builder(&config, instance)?
         .with_shutdown()

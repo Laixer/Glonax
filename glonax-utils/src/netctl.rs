@@ -203,7 +203,7 @@ struct Args {
     #[arg(short = 'i', long, default_value = "can0")]
     interface: String,
     /// Local network address.
-    #[arg(long, default_value_t = 0x9e)]
+    #[arg(long, default_value_t = consts::J1939_ADDRESS_OBDL)]
     address: u8,
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -218,7 +218,7 @@ enum Command {
     /// Hydraulics control unit commands.
     Hcu {
         /// Target node address.
-        #[arg(long, default_value = "0x4A")]
+        #[arg(short, long, default_value = "0x4A")]
         address: String,
         /// Node commands.
         #[command(subcommand)]
@@ -226,7 +226,7 @@ enum Command {
     },
     Vcu {
         /// Target node address.
-        #[arg(long, default_value = "0x11")]
+        #[arg(short, long, default_value = "0x11")]
         address: String,
         /// Node commands.
         #[command(subcommand)]
@@ -235,7 +235,7 @@ enum Command {
     /// Engine control unit commands.
     Engine {
         /// Target node address.
-        #[arg(long, default_value = "0x0")]
+        #[arg(short, long, default_value = "0x0")]
         address: String,
         /// Engine commands.
         #[command(subcommand)]
@@ -243,7 +243,7 @@ enum Command {
     },
     Request {
         /// Target node address.
-        #[arg(long)]
+        #[arg(short, long)]
         address: String,
         /// Request commands.
         #[command(subcommand)]
@@ -251,7 +251,7 @@ enum Command {
     },
     Fuzzer {
         /// Target node address.
-        #[arg(long)]
+        #[arg(short, long)]
         address: String,
     },
     Send {
