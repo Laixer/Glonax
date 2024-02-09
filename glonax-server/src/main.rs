@@ -206,10 +206,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .await;
 
-    runtime
-        .motion_tx
-        .send(glonax::core::Motion::StopAll)
-        .await?;
+    runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
 
     log::debug!("{} was shutdown gracefully", config.global.bin_name);
 

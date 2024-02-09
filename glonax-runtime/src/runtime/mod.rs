@@ -275,6 +275,12 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         }
     }
 
+    /// Enqueue a motion command.
+    #[inline]
+    pub async fn enqueue_motion(&self, motion: crate::core::Motion) {
+        self.motion_tx.send(motion).await.ok();
+    }
+
     /// Wait for the runtime to shutdown.
     ///
     /// This method will block until the runtime is shutdown.
