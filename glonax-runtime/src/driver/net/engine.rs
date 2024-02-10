@@ -91,84 +91,6 @@ impl std::fmt::Display for EngineControllerMessage {
     }
 }
 
-// TODO: Move to j1939 crate
-#[allow(dead_code)]
-struct TorqueSpeedControlMessage {
-    /// Destination address
-    destination_address: u8,
-    /// Source address
-    source_address: u8,
-    /// Override control mode - SPN 695
-    override_control_mode: Option<decode::OverrideControlMode>,
-    /// Requested speed control conditions - SPN 696
-    speed_control_condition: Option<decode::RequestedSpeedControlCondition>,
-    /// Override control mode priority - SPN 897
-    control_mode_priority: Option<decode::OverrideControlModePriority>,
-    /// Requested speed or speed limit - SPN 898
-    speed: Option<u16>,
-    /// Requested torque or torque limit - SPN 518
-    torque: Option<u8>,
-}
-
-impl TorqueSpeedControlMessage {
-    #[allow(dead_code)]
-    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
-        let speed_control_condition = None;
-        let control_mode_priority = None;
-        let mut speed = None;
-        let mut torque = None;
-
-        let override_control_mode = decode::spn695(frame.pdu()[0]);
-
-        if frame.pdu()[1..3] != [0xff, 0xff] {
-            speed = spn::rpm::dec(&frame.pdu()[1..3]);
-        }
-
-        if frame.pdu()[3] != 0 {
-            torque = Some(frame.pdu()[3]);
-        }
-
-        Self {
-            destination_address,
-            source_address,
-            override_control_mode,
-            speed_control_condition,
-            control_mode_priority,
-            speed,
-            torque,
-        }
-    }
-
-    // TODO: Move to j1939 crate
-    fn to_frame(&self) -> Vec<Frame> {
-        let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
-                .priority(3)
-                .da(self.destination_address)
-                .sa(self.source_address)
-                .build(),
-        );
-
-        frame_builder.as_mut()[0] = match self.override_control_mode {
-            Some(decode::OverrideControlMode::OverrideDisabled) => 0b00,
-            Some(decode::OverrideControlMode::SpeedControl) => 0b01,
-            Some(decode::OverrideControlMode::TorqueControl) => 0b10,
-            Some(decode::OverrideControlMode::SpeedTorqueLimitControl) => 0b11,
-            None => 0b00,
-        };
-
-        if let Some(speed) = self.speed {
-            frame_builder.as_mut()[1..3].copy_from_slice(&spn::rpm::enc(speed));
-        }
-
-        if let Some(torque) = self.torque {
-            frame_builder.as_mut()[3] = torque;
-        }
-
-        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
-    }
-}
-
 #[derive(Default)]
 pub struct EngineManagementSystem {
     /// Destination address.
@@ -209,9 +131,15 @@ impl EngineManagementSystem {
 
     /// Request speed control
     pub fn speed_request(&self, rpm: u16, idle: bool) -> Vec<Frame> {
-        let mut msg = TorqueSpeedControlMessage {
-            destination_address: self.destination_address,
-            source_address: self.source_address,
+        let frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
+                .priority(3)
+                .da(self.destination_address)
+                .sa(self.source_address)
+                .build(),
+        );
+
+        let mut msg = j1939::spn::TorqueSpeedControlMessage {
             override_control_mode: Some(decode::OverrideControlMode::OverrideDisabled),
             speed_control_condition: None,
             control_mode_priority: None,
@@ -224,21 +152,30 @@ impl EngineManagementSystem {
             msg.speed = Some(rpm);
         }
 
-        msg.to_frame()
+        let frame = frame_builder.copy_from_slice(&msg.to_pdu()).build();
+        vec![frame]
     }
 
     pub fn start(&self, rpm: u16) -> Vec<Frame> {
+        let frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
+                .priority(3)
+                .da(self.destination_address)
+                .sa(self.source_address)
+                .build(),
+        );
+
         // TODO: This is not correct. 0x3 is not used for starting the engine.
-        TorqueSpeedControlMessage {
-            destination_address: self.destination_address,
-            source_address: self.source_address,
+        let msg = j1939::spn::TorqueSpeedControlMessage {
             override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
             speed_control_condition: None,
             control_mode_priority: None,
             speed: Some(rpm),
             torque: None,
-        }
-        .to_frame()
+        };
+
+        let frame = frame_builder.copy_from_slice(&msg.to_pdu()).build();
+        vec![frame]
     }
 
     pub fn shutdown(&self) -> Vec<Frame> {
