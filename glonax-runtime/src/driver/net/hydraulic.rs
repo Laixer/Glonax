@@ -4,7 +4,7 @@ use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 
 use crate::net::Parsable;
 
-use super::vecraft::VecraftConfigMessage;
+use super::vecraft::{VecraftConfigMessage, VecraftStatusMessage};
 
 const STATUS_PGN: u32 = 65_288;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
@@ -13,8 +13,8 @@ const BANK_SLOTS: usize = 4;
 pub enum HydraulicMessage {
     Actuator(ActuatorMessage),
     MotionConfig(MotionConfigMessage),
-    // VecraftConfig(VecraftConfigMessage),
-    Status(StatusMessage),
+    VecraftConfig(VecraftConfigMessage),
+    Status(VecraftStatusMessage),
 }
 
 pub struct ActuatorMessage {
@@ -211,45 +211,6 @@ impl std::fmt::Display for MotionConfigMessage {
     }
 }
 
-pub struct StatusMessage {
-    /// Destination address.
-    #[allow(dead_code)]
-    destination_address: u8,
-    /// Source address.
-    #[allow(dead_code)]
-    source_address: u8,
-    /// ECU status
-    pub state: u8,
-    /// Motion lock
-    pub locked: bool,
-    /// Uptime
-    pub uptime: u32,
-}
-
-impl StatusMessage {
-    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
-        Self {
-            destination_address,
-            source_address,
-            state: frame.pdu()[0],
-            locked: frame.pdu()[2] != PDU_NOT_AVAILABLE && frame.pdu()[2] == 0x1,
-            uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
-        }
-    }
-}
-
-impl std::fmt::Display for StatusMessage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Status: {:#x} Motion: {} Uptime: {}",
-            self.state,
-            if self.locked { "Locked" } else { "Unlocked" },
-            self.uptime
-        )
-    }
-}
-
 pub struct HydraulicControlUnit {
     /// Destination address.
     pub destination_address: u8,
@@ -371,17 +332,21 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 return None;
             }
 
-            // TODO: Return this.
-            let _config_message = VecraftConfigMessage::from_frame(
+            return Some(HydraulicMessage::VecraftConfig(
+                VecraftConfigMessage::from_frame(
+                    self.destination_address,
+                    self.source_address,
+                    frame,
+                ),
+            ));
+        }
+
+        if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
+            let status_message = VecraftStatusMessage::from_frame(
                 self.destination_address,
                 self.source_address,
                 frame,
             );
-        }
-
-        if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
-            let status_message =
-                StatusMessage::from_frame(self.destination_address, self.source_address, frame);
 
             return Some(HydraulicMessage::Status(status_message));
         }
@@ -421,6 +386,12 @@ impl super::J1939Unit for HydraulicControlUnit {
                         // runtime_state
                         //     .state
                         //     .motion_config
+                        //     .insert((self.destination_address, self.source_address), config);
+                    }
+                    HydraulicMessage::VecraftConfig(_config) => {
+                        // runtime_state
+                        //     .state
+                        //     .vecraft_config
                         //     .insert((self.destination_address, self.source_address), config);
                     }
                     HydraulicMessage::Status(_status) => {

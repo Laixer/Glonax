@@ -1,6 +1,6 @@
-use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
+use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 
-pub(crate) struct VecraftConfigMessage {
+pub struct VecraftConfigMessage {
     /// Destination address
     pub(crate) destination_address: u8,
     /// Source address
@@ -68,6 +68,45 @@ impl std::fmt::Display for VecraftConfigMessage {
                 "Ident off"
             },
             if self.reboot { "Reboot" } else { "" }
+        )
+    }
+}
+
+pub struct VecraftStatusMessage {
+    /// Destination address.
+    #[allow(dead_code)]
+    pub(crate) destination_address: u8,
+    /// Source address.
+    #[allow(dead_code)]
+    pub(crate) source_address: u8,
+    /// ECU status
+    pub state: u8,
+    /// Motion lock
+    pub locked: bool,
+    /// Uptime
+    pub uptime: u32,
+}
+
+impl VecraftStatusMessage {
+    pub(crate) fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
+        Self {
+            destination_address,
+            source_address,
+            state: frame.pdu()[0],
+            locked: frame.pdu()[2] != PDU_NOT_AVAILABLE && frame.pdu()[2] == 0x1,
+            uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
+        }
+    }
+}
+
+impl std::fmt::Display for VecraftStatusMessage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Status: {:#x} Motion: {} Uptime: {}",
+            self.state,
+            if self.locked { "Locked" } else { "Unlocked" },
+            self.uptime
         )
     }
 }

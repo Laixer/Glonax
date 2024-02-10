@@ -111,6 +111,14 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         motion
                     );
                 }
+                glonax::driver::net::hydraulic::HydraulicMessage::VecraftConfig(config) => {
+                    info!(
+                        "{} {} » {}",
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("HCU"),
+                        config
+                    );
+                }
                 glonax::driver::net::hydraulic::HydraulicMessage::Status(status) => {
                     info!(
                         "{} {} » Status: {}",
