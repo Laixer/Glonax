@@ -47,6 +47,7 @@ impl J1939Message {
                     None
                 }
             }
+            // TODO: Maybe use the request responder
             PGN::Request => Some(Self::RequestPGN(protocol::request_from_pdu(frame.pdu()))),
             PGN::AddressClaimed => Some(Self::AddressClaim(Name::from_bytes(
                 frame.pdu().try_into().unwrap(),

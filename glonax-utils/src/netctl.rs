@@ -94,27 +94,31 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 message
             );
         } else if let Some(message) = router.try_accept(&mut hcu0) {
-            if let Some(actuator_message) = message.0 {
-                info!(
-                    "{} {} » {}",
-                    style_address(router.frame_source().unwrap()),
-                    Yellow.bold().paint("HCU"),
-                    actuator_message
-                );
-            } else if let Some(motion_message) = message.1 {
-                info!(
-                    "{} {} » {}",
-                    style_address(router.frame_source().unwrap()),
-                    Yellow.bold().paint("HCU"),
-                    motion_message
-                );
-            } else if let Some(status_message) = message.2 {
-                info!(
-                    "{} {} » {}",
-                    style_address(router.frame_source().unwrap()),
-                    Yellow.bold().paint("HCU"),
-                    status_message
-                );
+            match message {
+                glonax::driver::net::hydraulic::HydraulicMessage::Actuator(actuator) => {
+                    info!(
+                        "{} {} » Actuator: {}",
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("HCU"),
+                        actuator
+                    );
+                }
+                glonax::driver::net::hydraulic::HydraulicMessage::MotionConfig(motion) => {
+                    info!(
+                        "{} {} » Motion: {}",
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("HCU"),
+                        motion
+                    );
+                }
+                glonax::driver::net::hydraulic::HydraulicMessage::Status(status) => {
+                    info!(
+                        "{} {} » Status: {}",
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("HCU"),
+                        status
+                    );
+                }
             }
         } else if let Some(message) = router.try_accept(&mut rrp0) {
             match message {

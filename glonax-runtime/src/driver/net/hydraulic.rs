@@ -10,6 +10,13 @@ const STATUS_PGN: u32 = 65_288;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;
 
+pub enum HydraulicMessage {
+    Actuator(ActuatorMessage),
+    MotionConfig(MotionConfigMessage),
+    // VecraftConfig(VecraftConfigMessage),
+    Status(StatusMessage),
+}
+
 pub struct ActuatorMessage {
     /// Destination address
     destination_address: u8,
@@ -243,7 +250,6 @@ impl std::fmt::Display for StatusMessage {
     }
 }
 
-// TODO: Maybe enum?
 pub struct HydraulicControlUnit {
     /// Destination address.
     pub destination_address: u8,
@@ -341,21 +347,8 @@ impl HydraulicControlUnit {
     }
 }
 
-impl
-    Parsable<(
-        Option<ActuatorMessage>,
-        Option<MotionConfigMessage>,
-        Option<StatusMessage>,
-    )> for HydraulicControlUnit
-{
-    fn parse(
-        &mut self,
-        frame: &Frame,
-    ) -> Option<(
-        Option<ActuatorMessage>,
-        Option<MotionConfigMessage>,
-        Option<StatusMessage>,
-    )> {
+impl Parsable<HydraulicMessage> for HydraulicControlUnit {
+    fn parse(&mut self, frame: &Frame) -> Option<HydraulicMessage> {
         if frame.id().pgn() == PGN::ProprietarilyConfigurableMessage3 {
             if frame.pdu()[0..2] != [b'Z', b'C'] {
                 return None;
@@ -364,14 +357,12 @@ impl
                 return None;
             }
 
-            return Some((
-                None,
-                Some(MotionConfigMessage::from_frame(
+            return Some(HydraulicMessage::MotionConfig(
+                MotionConfigMessage::from_frame(
                     self.destination_address,
                     self.source_address,
                     frame,
-                )),
-                None,
+                ),
             ));
         }
 
@@ -392,7 +383,7 @@ impl
             let status_message =
                 StatusMessage::from_frame(self.destination_address, self.source_address, frame);
 
-            return Some((None, None, Some(status_message)));
+            return Some(HydraulicMessage::Status(status_message));
         }
 
         if frame.id().pgn() == BANK_PGN_LIST[0] || frame.id().pgn() == BANK_PGN_LIST[1] {
@@ -400,15 +391,11 @@ impl
                 return None;
             }
 
-            return Some((
-                Some(ActuatorMessage::from_frame(
-                    self.destination_address,
-                    self.source_address,
-                    frame,
-                )),
-                None,
-                None,
-            ));
+            return Some(HydraulicMessage::Actuator(ActuatorMessage::from_frame(
+                self.destination_address,
+                self.source_address,
+                frame,
+            )));
         }
 
         None
@@ -421,28 +408,27 @@ impl super::J1939Unit for HydraulicControlUnit {
         router: &mut crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        if let Some((actuator, config, status)) = router.try_accept(self) {
-            if let Some(_actuator) = actuator {
-                if let Ok(_runtime_state) = runtime_state.try_write() {
-                    // runtime_state
-                    //     .state
-                    //     .actuators
-                    //     .insert(actuator.node, actuator.actuators);
-                }
-            }
-
-            if let Some(_config) = config {
-                if let Ok(_runtime_state) = runtime_state.try_write() {
-                    // runtime_state
-                    //     .state
-                    //     .motion_config
-                    //     .insert(config.node, config.locked.unwrap());
-                }
-            }
-
-            if let Some(_status) = status {
-                if let Ok(_runtime_state) = runtime_state.try_write() {
-                    // runtime_state.state.hcu_status.insert(status.node, status);
+        if let Some(message) = router.try_accept(self) {
+            if let Ok(_runtime_state) = runtime_state.try_write() {
+                match message {
+                    HydraulicMessage::Actuator(_actuator) => {
+                        // runtime_state.state.actuators.insert(
+                        //     (self.destination_address, self.source_address),
+                        //     actuator.actuators,
+                        // );
+                    }
+                    HydraulicMessage::MotionConfig(_config) => {
+                        // runtime_state
+                        //     .state
+                        //     .motion_config
+                        //     .insert((self.destination_address, self.source_address), config);
+                    }
+                    HydraulicMessage::Status(_status) => {
+                        // runtime_state
+                        //     .state
+                        //     .hcu_status
+                        //     .insert((self.destination_address, self.source_address), status);
+                    }
                 }
             }
         }
