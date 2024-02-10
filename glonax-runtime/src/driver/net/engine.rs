@@ -5,6 +5,8 @@ use j1939::{
 
 use crate::net::Parsable;
 
+use super::vecraft::VecraftConfigMessage;
+
 // TODO: Move to j1939 crate
 #[derive(Default)]
 pub struct EngineControllerMessage {
@@ -167,82 +169,6 @@ impl TorqueSpeedControlMessage {
     }
 }
 
-struct ConfigMessage {
-    /// Destination address
-    destination_address: u8,
-    /// Source address
-    source_address: u8,
-    /// Identification mode
-    pub ident_on: Option<bool>,
-    /// Reset hardware
-    pub reset: Option<bool>,
-}
-
-impl ConfigMessage {
-    #[allow(dead_code)]
-    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
-        let mut ident_on = None;
-        let mut reset = None;
-
-        if frame.pdu()[2] == 0x0 {
-            ident_on = Some(false);
-        } else if frame.pdu()[2] == 0x1 {
-            ident_on = Some(true);
-        }
-        if frame.pdu()[3] == 0x0 {
-            reset = Some(false);
-        } else if frame.pdu()[3] == 0x69 {
-            reset = Some(true);
-        }
-
-        Self {
-            destination_address,
-            source_address,
-            ident_on,
-            reset,
-        }
-    }
-
-    fn to_frame(&self) -> Vec<Frame> {
-        let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
-                .da(self.destination_address)
-                .sa(self.source_address)
-                .build(),
-        )
-        .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
-
-        if let Some(led_on) = self.ident_on {
-            frame_builder.as_mut()[2] = u8::from(led_on);
-        }
-
-        if let Some(reset) = self.reset {
-            frame_builder.as_mut()[3] = if reset { 0x69 } else { 0x0 };
-        }
-
-        vec![frame_builder.build()]
-    }
-}
-
-impl std::fmt::Display for ConfigMessage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Config {} {}",
-            if self.ident_on.unwrap_or(false) {
-                "Ident on"
-            } else {
-                "Ident off"
-            },
-            if self.reset.unwrap_or(false) {
-                "reset"
-            } else {
-                "no reset"
-            }
-        )
-    }
-}
-
 #[derive(Default)]
 pub struct EngineManagementSystem {
     /// Destination address.
@@ -261,22 +187,22 @@ impl EngineManagementSystem {
 
     /// Set or unset identification mode.
     pub fn set_ident(&self, on: bool) -> Vec<Frame> {
-        ConfigMessage {
+        VecraftConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: Some(on),
-            reset: None,
+            reboot: false,
         }
         .to_frame()
     }
 
     /// System reboot / reset
     pub fn reboot(&self) -> Vec<Frame> {
-        ConfigMessage {
+        VecraftConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: None,
-            reset: Some(true),
+            reboot: true,
         }
         .to_frame()
     }

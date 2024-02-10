@@ -3,6 +3,7 @@ pub mod engine;
 pub mod hydraulic;
 pub mod inspector;
 pub mod reqres;
+pub(super) mod vecraft;
 
 // FUTURE: Maybe move?
 pub trait J1939Unit {

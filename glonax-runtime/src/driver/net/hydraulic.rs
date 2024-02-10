@@ -4,6 +4,8 @@ use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 
 use crate::net::Parsable;
 
+use super::vecraft::VecraftConfigMessage;
+
 const STATUS_PGN: u32 = 65_288;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
 const BANK_SLOTS: usize = 4;
@@ -202,79 +204,6 @@ impl std::fmt::Display for MotionConfigMessage {
     }
 }
 
-// TODO: Rename to VecraftConfigMessage
-struct ConfigMessage {
-    /// Destination address
-    destination_address: u8,
-    /// Source address
-    source_address: u8,
-    /// Identification mode
-    pub ident_on: Option<bool>,
-    /// Hardware reboot
-    pub reboot: bool,
-}
-
-impl ConfigMessage {
-    fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
-        let mut ident_on = None;
-        let mut reboot = false;
-
-        if frame.pdu()[2] != 0xff {
-            if frame.pdu()[2] == 0x0 {
-                ident_on = Some(false);
-            } else if frame.pdu()[2] == 0x1 {
-                ident_on = Some(true);
-            }
-        }
-
-        if frame.pdu()[3] != 0xff && frame.pdu()[3] == 0x69 {
-            reboot = true
-        }
-
-        Self {
-            destination_address,
-            source_address,
-            ident_on,
-            reboot,
-        }
-    }
-
-    fn to_frame(&self) -> Vec<Frame> {
-        let mut frame_builder = FrameBuilder::new(
-            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
-                .da(self.destination_address)
-                .sa(self.source_address)
-                .build(),
-        )
-        .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
-
-        if let Some(led_on) = self.ident_on {
-            frame_builder.as_mut()[2] = u8::from(led_on);
-        }
-
-        if self.reboot {
-            frame_builder.as_mut()[3] = 0x69;
-        }
-
-        vec![frame_builder.build()]
-    }
-}
-
-impl std::fmt::Display for ConfigMessage {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Config {} {}",
-            if self.ident_on.unwrap_or(false) {
-                "Ident on"
-            } else {
-                "Ident off"
-            },
-            if self.reboot { "Reboot" } else { "" }
-        )
-    }
-}
-
 pub struct StatusMessage {
     /// Destination address.
     #[allow(dead_code)]
@@ -366,7 +295,7 @@ impl HydraulicControlUnit {
 
     /// Set or unset identification mode.
     pub fn set_ident(&self, on: bool) -> Vec<Frame> {
-        ConfigMessage {
+        VecraftConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: Some(on),
@@ -377,7 +306,7 @@ impl HydraulicControlUnit {
 
     /// System reboot / reset
     pub fn reboot(&self) -> Vec<Frame> {
-        ConfigMessage {
+        VecraftConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             ident_on: None,
@@ -452,8 +381,11 @@ impl
             }
 
             // TODO: Return this.
-            let _config_message =
-                ConfigMessage::from_frame(self.destination_address, self.source_address, frame);
+            let _config_message = VecraftConfigMessage::from_frame(
+                self.destination_address,
+                self.source_address,
+                frame,
+            );
         }
 
         if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
@@ -709,7 +641,7 @@ mod tests {
 
     #[test]
     fn config_message_1() {
-        let config_a = ConfigMessage {
+        let config_a = VecraftConfigMessage {
             destination_address: 0x2B,
             source_address: 0x4D,
             ident_on: Some(true),
@@ -717,7 +649,7 @@ mod tests {
         };
 
         let frames = config_a.to_frame();
-        let config_b = ConfigMessage::from_frame(0x2B, 0x4D, &frames[0]);
+        let config_b = VecraftConfigMessage::from_frame(0x2B, 0x4D, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, Some(true));
@@ -726,7 +658,7 @@ mod tests {
 
     #[test]
     fn config_message_2() {
-        let config_a = ConfigMessage {
+        let config_a = VecraftConfigMessage {
             destination_address: 0x3C,
             source_address: 0x4F,
             ident_on: Some(false),
@@ -734,7 +666,7 @@ mod tests {
         };
 
         let frames = config_a.to_frame();
-        let config_b = ConfigMessage::from_frame(0x3C, 0x4F, &frames[0]);
+        let config_b = VecraftConfigMessage::from_frame(0x3C, 0x4F, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, Some(false));
@@ -743,7 +675,7 @@ mod tests {
 
     #[test]
     fn config_message_3() {
-        let config_a = ConfigMessage {
+        let config_a = VecraftConfigMessage {
             destination_address: 0x4D,
             source_address: 0xCD,
             ident_on: None,
@@ -751,7 +683,7 @@ mod tests {
         };
 
         let frames = config_a.to_frame();
-        let config_b = ConfigMessage::from_frame(0x4D, 0xCD, &frames[0]);
+        let config_b = VecraftConfigMessage::from_frame(0x4D, 0xCD, &frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(config_b.ident_on, None);
