@@ -72,6 +72,32 @@ impl std::fmt::Display for VecraftConfigMessage {
     }
 }
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum State {
+    Nominal,
+    Ident,
+    FaultyGenericError,
+    FaultyBusError,
+}
+
+impl From<u8> for State {
+    fn from(byte: u8) -> Self {
+        match byte {
+            0x14 => State::Nominal,
+            0x16 => State::Ident,
+            0xfa => State::FaultyGenericError,
+            0xfb => State::FaultyBusError,
+            _ => panic!("Invalid state byte: {:#x}", byte),
+        }
+    }
+}
+
+impl std::fmt::Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&self, f)
+    }
+}
+
 pub struct VecraftStatusMessage {
     /// Destination address.
     #[allow(dead_code)]
@@ -80,7 +106,7 @@ pub struct VecraftStatusMessage {
     #[allow(dead_code)]
     pub(crate) source_address: u8,
     /// ECU status
-    pub state: u8,
+    pub state: State,
     /// Motion lock
     pub locked: bool,
     /// Uptime
@@ -92,7 +118,7 @@ impl VecraftStatusMessage {
         Self {
             destination_address,
             source_address,
-            state: frame.pdu()[0],
+            state: State::from(frame.pdu()[0]),
             locked: frame.pdu()[2] != PDU_NOT_AVAILABLE && frame.pdu()[2] == 0x1,
             uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
         }
@@ -103,7 +129,7 @@ impl std::fmt::Display for VecraftStatusMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Status: {:#x} Motion: {} Uptime: {}",
+            "Status: {} Motion: {} Uptime: {}",
             self.state,
             if self.locked { "Locked" } else { "Unlocked" },
             self.uptime

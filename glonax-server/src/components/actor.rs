@@ -16,7 +16,6 @@ impl<Cnf: Configurable> Component<Cnf> for LocalActor {
         Self
     }
 
-    // TODO: Move the IK into a helper function
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 

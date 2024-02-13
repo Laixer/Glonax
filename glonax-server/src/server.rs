@@ -64,7 +64,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                             client.send_packet(actor).await.unwrap();
                         }
                     }
-                    // TODO: In v3 respond with error
+                    // TODO: Respond with error
                     _ => {}
                 }
             }

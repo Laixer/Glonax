@@ -61,6 +61,9 @@ struct Args {
     /// Enable simulation mode.
     #[arg(long, default_value_t = false)]
     simulation: bool,
+    /// Enable simulation jitter.
+    #[arg(long, default_value_t = false)]
+    simulation_jitter: bool,
     /// Enable pilot mode only.
     #[arg(long, default_value_t = false)]
     pilot_only: bool,
@@ -88,7 +91,7 @@ async fn main() -> anyhow::Result<()> {
         nmea_device: args.nmea_device,
         nmea_baud_rate: args.nmea_baud_rate,
         simulation: args.simulation,
-        simulation_jitter: false,
+        simulation_jitter: args.simulation_jitter,
         pilot_only: args.pilot_only,
         ..Default::default()
     };
