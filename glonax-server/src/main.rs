@@ -211,6 +211,8 @@ async fn main() -> anyhow::Result<()> {
 
     runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
 
+    std::thread::sleep(Duration::from_millis(50));
+
     log::debug!("{} was shutdown gracefully", config.global.bin_name);
 
     Ok(())

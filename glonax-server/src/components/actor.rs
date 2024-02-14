@@ -19,7 +19,6 @@ impl<Cnf: Configurable> Component<Cnf> for LocalActor {
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
-        // Print segment world locations
         let body_world_location = actor.world_location("frame");
         log::debug!(
             "Frame: X={:.2} Y={:.2} Z={:.2}",

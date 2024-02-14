@@ -310,60 +310,58 @@ impl HydraulicControlUnit {
 
 impl Parsable<HydraulicMessage> for HydraulicControlUnit {
     fn parse(&mut self, frame: &Frame) -> Option<HydraulicMessage> {
-        if frame.id().pgn() == PGN::ProprietarilyConfigurableMessage3 {
-            if frame.pdu()[0..2] != [b'Z', b'C'] {
-                return None;
-            }
-            if frame.pdu()[2] != 0xff {
-                return None;
-            }
+        match frame.id().pgn() {
+            PGN::ProprietarilyConfigurableMessage3 => {
+                if frame.pdu()[0..2] != [b'Z', b'C'] {
+                    return None;
+                }
+                if frame.pdu()[2] != 0xff {
+                    return None;
+                }
 
-            return Some(HydraulicMessage::MotionConfig(
-                MotionConfigMessage::from_frame(
+                Some(HydraulicMessage::MotionConfig(
+                    MotionConfigMessage::from_frame(
+                        self.destination_address,
+                        self.source_address,
+                        frame,
+                    ),
+                ))
+            }
+            PGN::ProprietarilyConfigurableMessage1 => {
+                if frame.pdu()[0..2] != [b'Z', b'C'] {
+                    return None;
+                }
+
+                Some(HydraulicMessage::VecraftConfig(
+                    VecraftConfigMessage::from_frame(
+                        self.destination_address,
+                        self.source_address,
+                        frame,
+                    ),
+                ))
+            }
+            PGN::ProprietaryB(STATUS_PGN) => {
+                let status_message = VecraftStatusMessage::from_frame(
                     self.destination_address,
                     self.source_address,
                     frame,
-                ),
-            ));
-        }
+                );
 
-        if frame.id().pgn() == PGN::ProprietarilyConfigurableMessage1 {
-            if frame.pdu()[0..2] != [b'Z', b'C'] {
-                return None;
+                Some(HydraulicMessage::Status(status_message))
             }
+            PGN::Other(40_960) | PGN::Other(41_216) => {
+                if frame.len() < 8 {
+                    return None;
+                }
 
-            return Some(HydraulicMessage::VecraftConfig(
-                VecraftConfigMessage::from_frame(
+                Some(HydraulicMessage::Actuator(ActuatorMessage::from_frame(
                     self.destination_address,
                     self.source_address,
                     frame,
-                ),
-            ));
-        }
-
-        if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
-            let status_message = VecraftStatusMessage::from_frame(
-                self.destination_address,
-                self.source_address,
-                frame,
-            );
-
-            return Some(HydraulicMessage::Status(status_message));
-        }
-
-        if frame.id().pgn() == BANK_PGN_LIST[0] || frame.id().pgn() == BANK_PGN_LIST[1] {
-            if frame.len() < 8 {
-                return None;
+                )))
             }
-
-            return Some(HydraulicMessage::Actuator(ActuatorMessage::from_frame(
-                self.destination_address,
-                self.source_address,
-                frame,
-            )));
+            _ => None,
         }
-
-        None
     }
 }
 

@@ -436,7 +436,6 @@ async fn daemonize(config: &config::DumpConfig) -> anyhow::Result<()> {
                 }
             }
 
-            // TODO: Send all commands at once
             for joint_diff in perception_chain.rotation_error(&objective_chain) {
                 let joint = joint_diff.joint;
 

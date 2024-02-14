@@ -53,6 +53,8 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         if let Some(value) = state.encoders.get(&FRAME_ENCODER) {
             log::trace!("Frame encoder: {}", value);
 
+            // FUTURE: Detect outlying values, apply a filter
+
             let rotator = self.frame_encoder_converter.to_rotation(*value);
 
             log::trace!(
@@ -67,6 +69,8 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
         if let Some(value) = state.encoders.get(&BOOM_ENCODER) {
             log::trace!("Boom encoder: {}", value);
+
+            // FUTURE: Detect outlying values, apply a filter
 
             let rotator = self.boom_encoder_converter.to_rotation(*value);
 
@@ -83,6 +87,8 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
         if let Some(value) = state.encoders.get(&ARM_ENCODER) {
             log::trace!("Arm encoder: {}", value);
 
+            // FUTURE: Detect outlying values, apply a filter
+
             let rotator = self.arm_encoder_converter.to_rotation(*value);
 
             log::trace!(
@@ -97,6 +103,8 @@ impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
 
         if let Some(value) = state.encoders.get(&ATTACHMENT_ENCODER) {
             log::trace!("Attachment encoder: {}", value);
+
+            // FUTURE: Detect outlying values, apply a filter
 
             let rotator = self.attachment_encoder_converter.to_rotation(*value);
 
