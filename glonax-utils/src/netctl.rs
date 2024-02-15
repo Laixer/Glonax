@@ -28,7 +28,7 @@ pub(crate) mod consts {
 }
 
 fn style_address(address: u8) -> String {
-    Purple.paint(format!("[node 0x{:X?}]", address)).to_string()
+    Purple.paint(format!("[0x{:X?}]", address)).to_string()
 }
 
 fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
@@ -229,24 +229,24 @@ struct Args {
 enum Command {
     /// Hydraulics control unit commands.
     Hcu {
-        /// Target node address.
+        /// Target address.
         #[arg(short, long, default_value = "0x4A")]
         address: String,
-        /// Node commands.
+        /// HCU commands.
         #[command(subcommand)]
         command: HCUCommand,
     },
     Vcu {
-        /// Target node address.
+        /// Target address.
         #[arg(short, long, default_value = "0x11")]
         address: String,
-        /// Node commands.
+        /// VCU commands.
         #[command(subcommand)]
         command: VCUCommand,
     },
     /// Engine control unit commands.
     Engine {
-        /// Target node address.
+        /// Target address.
         #[arg(short, long, default_value = "0x0")]
         address: String,
         /// Engine commands.
@@ -254,7 +254,7 @@ enum Command {
         command: EngineCommand,
     },
     Request {
-        /// Target node address.
+        /// Target address.
         #[arg(short, long)]
         address: String,
         /// Request commands.
@@ -262,7 +262,7 @@ enum Command {
         command: RequestCommand,
     },
     Fuzzer {
-        /// Target node address.
+        /// Target address.
         #[arg(short, long)]
         address: String,
     },
@@ -277,18 +277,18 @@ enum Command {
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
-        /// Filter on node.
+        /// Filter on address.
         #[arg(long)]
-        node: Vec<String>,
+        address: Vec<String>,
     },
     /// Analyze network frames.
     Analyze {
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
-        /// Filter on node.
+        /// Filter on address.
         #[arg(long)]
-        node: Vec<String>,
+        address: Vec<String>,
     },
 }
 
@@ -566,36 +566,36 @@ async fn main() -> anyhow::Result<()> {
 
             socket.send(&frame_builder.build()).await?;
         }
-        Command::Dump { pgn, node } => {
+        Command::Dump { pgn, address } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let mut router = Router::new(socket);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);
             }
-            for node in node
+            for addr in address
                 .iter()
                 .map(|s| node_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_node_filter(node?);
+                router.add_node_filter(addr?);
             }
 
             print_frames(router).await?;
         }
-        Command::Analyze { pgn, node } => {
+        Command::Analyze { pgn, address } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let mut router = Router::new(socket);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);
             }
-            for node in node
+            for addr in address
                 .iter()
                 .map(|s| node_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_node_filter(node?);
+                router.add_node_filter(addr?);
             }
 
             analyze_frames(router).await?;
