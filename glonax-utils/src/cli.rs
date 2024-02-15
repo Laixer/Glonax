@@ -48,34 +48,34 @@ async fn main() -> anyhow::Result<()> {
 
     // Connect over TCP
 
-    // let mut address = args.address.clone();
+    let mut address = args.address.clone();
 
-    // log::debug!("Connecting to {}", address);
+    log::debug!("Connecting to {}", address);
 
-    // if !address.contains(':') {
-    //     address.push(':');
-    //     address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
-    // }
+    if !address.contains(':') {
+        address.push(':');
+        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
+    }
 
-    // log::debug!("Waiting for connection to {}", address);
+    log::debug!("Waiting for connection to {}", address);
 
-    // let (mut client, instance) = glonax::protocol::client::tcp::connect(
-    //     address.to_owned(),
-    //     format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
-    // )
-    // .await?;
-
-    // println!("Connected to {}", address);
-
-    // Connect over Unix socket
-
-    let (mut client, instance) = glonax::protocol::client::unix::connect(
-        glonax::consts::DEFAULT_SOCKET_PATH,
+    let (mut client, instance) = glonax::protocol::client::tcp::connect(
+        address.to_owned(),
         format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
     )
     .await?;
 
-    println!("Connected to {}", glonax::consts::DEFAULT_SOCKET_PATH);
+    println!("Connected to {}", address);
+
+    // Connect over Unix socket
+
+    // let (mut client, instance) = glonax::protocol::client::unix::connect(
+    //     glonax::consts::DEFAULT_SOCKET_PATH,
+    //     format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
+    // )
+    // .await?;
+
+    // println!("Connected to {}", glonax::consts::DEFAULT_SOCKET_PATH);
 
     println!("{}", instance);
 
