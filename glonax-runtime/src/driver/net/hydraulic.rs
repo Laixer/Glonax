@@ -310,6 +310,10 @@ impl HydraulicControlUnit {
 
 impl Parsable<HydraulicMessage> for HydraulicControlUnit {
     fn parse(&mut self, frame: &Frame) -> Option<HydraulicMessage> {
+        if frame.id().sa() != self.destination_address {
+            return None;
+        }
+
         match frame.id().pgn() {
             PGN::ProprietarilyConfigurableMessage3 => {
                 if frame.pdu()[0..2] != [b'Z', b'C'] {
@@ -341,13 +345,11 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 ))
             }
             PGN::ProprietaryB(STATUS_PGN) => {
-                let status_message = VecraftStatusMessage::from_frame(
+                Some(HydraulicMessage::Status(VecraftStatusMessage::from_frame(
                     self.destination_address,
                     self.source_address,
                     frame,
-                );
-
-                Some(HydraulicMessage::Status(status_message))
+                )))
             }
             PGN::Other(40_960) | PGN::Other(41_216) => {
                 if frame.len() < 8 {

@@ -31,10 +31,22 @@ pub(super) async fn rx_network_0(
     let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
     let mut router = Router::new(socket);
 
-    let mut enc0 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER0);
-    let mut enc1 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER1);
-    let mut enc2 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER2);
-    let mut enc3 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER3);
+    let mut enc0 = KueblerEncoder::new(
+        crate::consts::J1939_ADDRESS_ENCODER0,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
+    let mut enc1 = KueblerEncoder::new(
+        crate::consts::J1939_ADDRESS_ENCODER1,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
+    let mut enc2 = KueblerEncoder::new(
+        crate::consts::J1939_ADDRESS_ENCODER2,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
+    let mut enc3 = KueblerEncoder::new(
+        crate::consts::J1939_ADDRESS_ENCODER3,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     loop {

@@ -146,6 +146,9 @@ impl Parsable<spn::EngineControllerMessage> for EngineManagementSystem {
         if frame.id().pgn() != PGN::ElectronicEngineController1 {
             return None;
         }
+        if frame.id().sa() != self.destination_address {
+            return None;
+        }
 
         Some(spn::EngineControllerMessage::from_pdu(frame.pdu()))
     }

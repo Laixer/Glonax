@@ -48,10 +48,10 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut ems0 = EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0,consts::J1939_ADDRESS_OBDL);
-    let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0);
-    let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1);
-    let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2);
-    let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3);
+    let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0, consts::J1939_ADDRESS_OBDL);
+    let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1, consts::J1939_ADDRESS_OBDL);
+    let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2, consts::J1939_ADDRESS_OBDL);
+    let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3, consts::J1939_ADDRESS_OBDL);
     let mut hcu0 = HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
     let mut rrp0 = J1939ApplicationInspector;
 

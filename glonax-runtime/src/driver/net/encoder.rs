@@ -148,14 +148,19 @@ impl std::fmt::Display for EncoderMessage {
 }
 
 pub struct KueblerEncoder {
-    /// Node ID.
-    node: u8,
+    /// Destination address.
+    pub destination_address: u8,
+    /// Source address.
+    pub source_address: u8,
 }
 
 impl KueblerEncoder {
     /// Construct a new encoder service.
-    pub fn new(node: u8) -> Self {
-        Self { node }
+    pub fn new(da: u8, sa: u8) -> Self {
+        Self {
+            destination_address: da,
+            source_address: sa,
+        }
     }
 }
 
@@ -167,11 +172,11 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
         if frame.id().pgn() != PGN::ProprietaryB(65_450) {
             return None;
         }
-        if frame.id().sa() != self.node {
+        if frame.id().sa() != self.destination_address {
             return None;
         }
 
-        Some(EncoderMessage::from_frame(self.node, frame))
+        Some(EncoderMessage::from_frame(self.destination_address, frame))
     }
 }
 
