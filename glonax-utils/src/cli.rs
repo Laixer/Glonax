@@ -83,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
         println!("Commands:");
         println!("  r | request <class>");
         println!("  w | watch <class>");
-        println!("  e | engine");
+        println!("  e | engine <command");
         println!("  x");
         println!();
         println!("Classes:");
@@ -94,6 +94,11 @@ async fn main() -> anyhow::Result<()> {
         println!("  g | gps");
         println!("  a | actor");
         println!();
+        println!("Engine commands:");
+        println!("  idle");
+        println!("  medium");
+        println!("  high");
+        println!("  shutdown");
         println!("Commands:");
         println!("  ? | help");
         println!("  q | quit");
@@ -225,10 +230,12 @@ async fn main() -> anyhow::Result<()> {
                 parts.next();
 
                 let control = match parts.next() {
+                    Some("start") => glonax::core::Control::EngineIdle,
                     Some("idle") => glonax::core::Control::EngineIdle,
                     Some("medium") => glonax::core::Control::EngineMedium,
                     Some("high") => glonax::core::Control::EngineHigh,
                     Some("stop") => glonax::core::Control::EngineStop,
+                    Some("shutdown") => glonax::core::Control::EngineStop,
                     _ => {
                         eprintln!("Invalid engine command");
                         continue;
