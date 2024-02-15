@@ -22,6 +22,7 @@ const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 pub(super) async fn rx_network_0(
     interface: String,
     runtime_state: SharedOperandState,
+    _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -32,10 +33,6 @@ pub(super) async fn rx_network_0(
     let mut enc1 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER1);
     let mut enc2 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER2);
     let mut enc3 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER3);
-    // let mut hcu0 = HydraulicControlUnit::new(
-    //     crate::consts::J1939_ADDRESS_HCU0,
-    //     crate::consts::J1939_ADDRESS_VMS,
-    // );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     loop {
@@ -98,6 +95,7 @@ pub(super) async fn rx_network_0(
 pub(super) async fn rx_network_1(
     interface: String,
     runtime_state: SharedOperandState,
+    _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -229,6 +227,7 @@ pub(super) async fn atx_network_1(
 pub(super) async fn tx_network_0(
     interface: String,
     _runtime_state: SharedOperandState,
+    _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -302,6 +301,7 @@ pub(super) async fn tx_network_0(
 pub(super) async fn tx_network_1(
     interface: String,
     runtime_state: SharedOperandState,
+    _shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 

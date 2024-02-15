@@ -164,16 +164,17 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     /// will be provided with a copy of the operand and the interface name.
     pub fn schedule_j1939_service<Fut>(
         &self,
-        service: impl FnOnce(String, SharedOperandState) -> Fut + Send + 'static,
+        service: impl FnOnce(String, SharedOperandState, tokio::sync::broadcast::Receiver<()>) -> Fut + Send + 'static,
         interface: &str,
     ) where
         Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
     {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
+        let shutdown = self.shutdown.0.subscribe();
 
         tokio::spawn(async move {
-            if let Err(e) = service(interface, operand).await {
+            if let Err(e) = service(interface, operand, shutdown).await {
                 log::error!("Failed to start network service: {}", e);
             }
         });
