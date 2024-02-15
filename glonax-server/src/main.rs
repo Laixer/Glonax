@@ -182,9 +182,9 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_j1939_service(j1939::rx_network_0, &config.interface[0]);
         runtime.schedule_j1939_service(j1939::rx_network_1, &config.interface[1]);
 
-        runtime.schedule_j1939_motion_service(j1939::atx_network_0, &config.interface[0]);
         runtime.schedule_j1939_service(j1939::tx_network_0, &config.interface[0]);
         runtime.schedule_j1939_service(j1939::tx_network_1, &config.interface[1]);
+        runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.interface[1]);
     }
 
     runtime.schedule_io_service(server::tcp_listen);

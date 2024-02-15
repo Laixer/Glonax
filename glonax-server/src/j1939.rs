@@ -32,10 +32,10 @@ pub(super) async fn rx_network_0(
     let mut enc1 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER1);
     let mut enc2 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER2);
     let mut enc3 = KueblerEncoder::new(crate::consts::J1939_ADDRESS_ENCODER3);
-    let mut hcu0 = HydraulicControlUnit::new(
-        crate::consts::J1939_ADDRESS_HCU0,
-        crate::consts::J1939_ADDRESS_VMS,
-    );
+    // let mut hcu0 = HydraulicControlUnit::new(
+    //     crate::consts::J1939_ADDRESS_HCU0,
+    //     crate::consts::J1939_ADDRESS_VMS,
+    // );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     loop {
@@ -47,7 +47,7 @@ pub(super) async fn rx_network_0(
         enc1.try_accept(&mut router, runtime_state.clone());
         enc2.try_accept(&mut router, runtime_state.clone());
         enc3.try_accept(&mut router, runtime_state.clone());
-        hcu0.try_accept(&mut router, runtime_state.clone());
+        // hcu0.try_accept(&mut router, runtime_state.clone());
 
         if let Some(pgn) = router.try_accept(&mut rrp0) {
             match pgn {
@@ -108,6 +108,10 @@ pub(super) async fn rx_network_1(
         crate::consts::J1939_ADDRESS_ENGINE0,
         crate::consts::J1939_ADDRESS_VMS,
     );
+    let mut hcu0 = HydraulicControlUnit::new(
+        crate::consts::J1939_ADDRESS_HCU0,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     loop {
@@ -116,6 +120,7 @@ pub(super) async fn rx_network_1(
         }
 
         ems0.try_accept(&mut router, runtime_state.clone());
+        hcu0.try_accept(&mut router, runtime_state.clone());
 
         if let Some(pgn) = router.try_accept(&mut rrp0) {
             match pgn {
@@ -164,7 +169,7 @@ pub(super) async fn rx_network_1(
 }
 
 // TODO: Move into runtime
-pub(super) async fn atx_network_0(
+pub(super) async fn atx_network_1(
     interface: String,
     runtime_state: SharedOperandState,
     mut motion_rx: crate::device::MotionReceiver,
@@ -223,7 +228,7 @@ pub(super) async fn atx_network_0(
 // TODO: Move into runtime
 pub(super) async fn tx_network_0(
     interface: String,
-    runtime_state: SharedOperandState,
+    _runtime_state: SharedOperandState,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -238,10 +243,10 @@ pub(super) async fn tx_network_0(
         .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
         .build();
 
-    let hcu0 = HydraulicControlUnit::new(
-        crate::consts::J1939_ADDRESS_HCU0,
-        crate::consts::J1939_ADDRESS_VMS,
-    );
+    // let hcu0 = HydraulicControlUnit::new(
+    //     crate::consts::J1939_ADDRESS_HCU0,
+    //     crate::consts::J1939_ADDRESS_VMS,
+    // );
 
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(10));
 
@@ -255,41 +260,41 @@ pub(super) async fn tx_network_0(
     loop {
         interval.tick().await;
 
-        match &runtime_state.read().await.state.motion {
-            glonax::core::Motion::StopAll => {
-                if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-            }
-            glonax::core::Motion::ResumeAll => {
-                if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-            }
-            glonax::core::Motion::ResetAll => {
-                if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-            }
-            glonax::core::Motion::StraightDrive(value) => {
-                let frames = &hcu0.drive_straight(*value);
-                if let Err(e) = socket.send_vectored(frames).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-            }
-            glonax::core::Motion::Change(changes) => {
-                let frames = &hcu0.actuator_command(
-                    changes
-                        .iter()
-                        .map(|changeset| (changeset.actuator as u8, changeset.value))
-                        .collect(),
-                );
+        // match &runtime_state.read().await.state.motion {
+        //     glonax::core::Motion::StopAll => {
+        //         if let Err(e) = socket.send_vectored(&hcu0.lock()).await {
+        //             log::error!("Failed to send motion: {}", e);
+        //         }
+        //     }
+        //     glonax::core::Motion::ResumeAll => {
+        //         if let Err(e) = socket.send_vectored(&hcu0.unlock()).await {
+        //             log::error!("Failed to send motion: {}", e);
+        //         }
+        //     }
+        //     glonax::core::Motion::ResetAll => {
+        //         if let Err(e) = socket.send_vectored(&hcu0.motion_reset()).await {
+        //             log::error!("Failed to send motion: {}", e);
+        //         }
+        //     }
+        //     glonax::core::Motion::StraightDrive(value) => {
+        //         let frames = &hcu0.drive_straight(*value);
+        //         if let Err(e) = socket.send_vectored(frames).await {
+        //             log::error!("Failed to send motion: {}", e);
+        //         }
+        //     }
+        //     glonax::core::Motion::Change(changes) => {
+        //         let frames = &hcu0.actuator_command(
+        //             changes
+        //                 .iter()
+        //                 .map(|changeset| (changeset.actuator as u8, changeset.value))
+        //                 .collect(),
+        //         );
 
-                if let Err(e) = socket.send_vectored(frames).await {
-                    log::error!("Failed to send motion: {}", e);
-                }
-            }
-        }
+        //         if let Err(e) = socket.send_vectored(frames).await {
+        //             log::error!("Failed to send motion: {}", e);
+        //         }
+        //     }
+        // }
     }
 }
 
