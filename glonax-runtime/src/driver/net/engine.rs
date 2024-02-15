@@ -44,6 +44,7 @@ pub struct EngineManagementSystem {
 }
 
 impl EngineManagementSystem {
+    /// Construct a new engine management system.
     pub fn new(da: u8, sa: u8) -> Self {
         Self {
             destination_address: da,
@@ -132,7 +133,7 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        frame_builder.as_mut()[3] = 0b00010000;
+        frame_builder.as_mut()[3] = 0b0001_0000;
 
         vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
     }

@@ -47,7 +47,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 = EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0,consts::J1939_ADDRESS_OBDL);
+    let mut ems0 = EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0, consts::J1939_ADDRESS_OBDL);
     let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0, consts::J1939_ADDRESS_OBDL);
     let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1, consts::J1939_ADDRESS_OBDL);
     let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2, consts::J1939_ADDRESS_OBDL);
@@ -99,7 +99,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} » Actuator: {}",
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("HCU"),
+                        Yellow.bold().paint("Hydraulic"),
                         actuator
                     );
                 }
@@ -107,15 +107,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} » Motion: {}",
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("HCU"),
+                        Yellow.bold().paint("Hydraulic"),
                         motion
                     );
                 }
                 glonax::driver::net::hydraulic::HydraulicMessage::VecraftConfig(config) => {
                     info!(
-                        "{} {} » {}",
+                        "{} {} » Config: {}",
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("HCU"),
+                        Yellow.bold().paint("Hydraulic"),
                         config
                     );
                 }
@@ -123,7 +123,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} » Status: {}",
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("HCU"),
+                        Yellow.bold().paint("Hydraulic"),
                         status
                     );
                 }
