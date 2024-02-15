@@ -342,10 +342,10 @@ pub(super) async fn tx_network_1(
                         .send_vectored(&ems0.speed_request(engine_request, true))
                         .await
                     {
-                        log::error!("Failed to send motion: {}", e);
+                        log::error!("Failed to speed request: {}", e);
                     }
                 } else if let Err(e) = socket.send_vectored(&ems0.start(engine_request)).await {
-                    log::error!("Failed to send motion: {}", e);
+                    log::error!("Failed to speed request: {}", e);
                 }
             }
             glonax::core::EngineMode::Startup => {
@@ -354,22 +354,22 @@ pub(super) async fn tx_network_1(
                         .send_vectored(&ems0.speed_request(engine_request, true))
                         .await
                     {
-                        log::error!("Failed to send motion: {}", e);
+                        log::error!("Failed to speed request: {}", e);
                     }
                 } else if let Err(e) = socket.send_vectored(&ems0.start(engine_request)).await {
-                    log::error!("Failed to send motion: {}", e);
+                    log::error!("Failed to speed request: {}", e);
                 }
             }
             glonax::core::EngineMode::Idle | glonax::core::EngineMode::Running => {
                 if engine_request == 0 {
                     if let Err(e) = socket.send_vectored(&ems0.shutdown()).await {
-                        log::error!("Failed to send motion: {}", e);
+                        log::error!("Failed to speed request: {}", e);
                     }
                 } else if let Err(e) = socket
                     .send_vectored(&ems0.speed_request(engine_request, false))
                     .await
                 {
-                    log::error!("Failed to send motion: {}", e);
+                    log::error!("Failed to speed request: {}", e);
                 }
             }
         }
