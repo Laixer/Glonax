@@ -221,6 +221,31 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     }
 }
 
+async fn run_fuzzer(socket: CANSocket, destination_address: u8, interval: std::time::Duration) -> anyhow::Result<()> {
+    use glonax::rand::Rng;
+
+    let mut tick = tokio::time::interval(interval);
+
+    loop {
+        tick.tick().await;
+
+        let frame_builder = glonax::j1939::FrameBuilder::new(
+            glonax::j1939::IdBuilder::from_pgn(glonax::j1939::PGN::TorqueSpeedControl1)
+                .priority(3)
+                .da(destination_address)
+                .sa(consts::J1939_ADDRESS_OBDL)
+                .build(),
+        );
+
+        let random_number = glonax::rand::thread_rng().gen_range(0..=8);
+        let random_bytes = (0..random_number).map(|_| glonax::rand::random::<u8>()).collect::<Vec<u8>>();
+
+        let frame_builder = frame_builder.copy_from_slice(&random_bytes);
+
+        socket.send(&frame_builder.build()).await?;
+    }
+}
+
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
@@ -277,6 +302,9 @@ enum Command {
         command: RequestCommand,
     },
     Fuzzer {
+        /// Message interval in milliseconds.
+        #[arg(short, long, default_value_t = 10)]
+        interval: u64,
         /// Target address.
         #[arg(short, long)]
         address: String,
@@ -544,42 +572,21 @@ async fn main() -> anyhow::Result<()> {
 
             socket.send(&protocol::request(destination_address, pgn)).await?;
         }
-        Command::Fuzzer { address } => {
-            use glonax::rand::Rng;
-
-            let destination_address = node_address(address)?;
-            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-
-            let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
-
-            loop {
-                tick.tick().await;
-
-                let frame_builder = glonax::j1939::FrameBuilder::new(
-                    glonax::j1939::IdBuilder::from_pgn(glonax::j1939::PGN::TorqueSpeedControl1)
-                        .priority(3)
-                        .da(destination_address)
-                        .sa(consts::J1939_ADDRESS_OBDL)
-                        .build(),
-                );
-
-                let random_number = glonax::rand::thread_rng().gen_range(0..=8);
-                let random_byes = (0..random_number).map(|_| glonax::rand::random::<u8>()).collect::<Vec<u8>>();
-
-                let frame_builder = frame_builder.copy_from_slice(&random_byes);
-
-                socket.send(&frame_builder.build()).await?;
-            }
-        }
         Command::Send { id, data } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-
+            
             let frame_builder = glonax::j1939::FrameBuilder::new(
                 glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?)
             )
             .copy_from_slice(&hex::decode(data)?);
-
+        
             socket.send(&frame_builder.build()).await?;
+        }
+        Command::Fuzzer { interval, address } => {
+            let destination_address = node_address(address)?;
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+
+            run_fuzzer(socket, destination_address, std::time::Duration::from_millis(interval)).await?;
         }
         Command::Dump { pgn, address } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
