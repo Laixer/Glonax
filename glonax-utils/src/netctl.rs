@@ -277,6 +277,9 @@ enum Command {
         command: HCUCommand,
     },
     Vcu {
+        /// Message interval in milliseconds.
+        #[arg(short, long, default_value_t = 10)]
+        interval: u64,
         /// Target address.
         #[arg(short, long, default_value = "0x11")]
         address: String,
@@ -286,6 +289,9 @@ enum Command {
     },
     /// Engine control unit commands.
     Engine {
+        /// Message interval in milliseconds.
+        #[arg(short, long, default_value_t = 10)]
+        interval: u64,
         /// Target address.
         #[arg(short, long, default_value = "0x0")]
         address: String,
@@ -294,6 +300,9 @@ enum Command {
         command: EngineCommand,
     },
     Request {
+        /// Message interval in milliseconds.
+        #[arg(short, long, default_value_t = 10)]
+        interval: u64,
         /// Target address.
         #[arg(short, long)]
         address: String,
@@ -486,7 +495,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Vcu { address, command } => {
+        Command::Vcu { interval, address, command } => {
             let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
@@ -503,23 +512,38 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    socket.send_vectored(&ems0.set_ident(toggle.parse::<bool>()?)).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&ems0.set_ident(toggle.parse::<bool>()?)).await?;
+                    }
                 }
                 VCUCommand::Reboot => {
                     info!("{} Reboot", style_address(destination_address));
 
-                    socket.send_vectored(&ems0.reboot()).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&ems0.reboot()).await?;
+                    }
                 }
                 VCUCommand::Assign { address_new } => {
                     let destination_address_new = node_address(address_new)?;
 
                     info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
 
-                    socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                    }
                 }
             }
         }
-        Command::Engine { address, command } => {
+        Command::Engine { interval, address, command } => {
             let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
@@ -528,7 +552,7 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Rpm { rpm } => {
                     info!("{} Set RPM to {}", style_address(destination_address), rpm);
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -538,7 +562,7 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Start => {
                     info!("{} Start engine", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -548,7 +572,7 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Stop => {
                     info!("{} Stop engine", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(10));
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -557,7 +581,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Request { address, command } => {
+        Command::Request { interval, address, command } => {
             use glonax::j1939::{PGN, protocol};
 
             let destination_address = node_address(address)?;
@@ -573,7 +597,12 @@ async fn main() -> anyhow::Result<()> {
 
             info!("{} Request {:?}", style_address(destination_address), pgn);
 
-            socket.send(&protocol::request(destination_address, pgn)).await?;
+            let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+            loop {
+                tick.tick().await;
+                socket.send(&protocol::request(destination_address, pgn)).await?;
+            }
         }
         Command::Send { interval, id, data } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
@@ -587,7 +616,6 @@ async fn main() -> anyhow::Result<()> {
 
             loop {
                 tick.tick().await;
-
                 socket.send(&frame).await?;
             }
         }
