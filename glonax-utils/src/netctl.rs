@@ -269,6 +269,9 @@ struct Args {
 enum Command {
     /// Hydraulics control unit commands.
     Hcu {
+        /// Message interval in milliseconds.
+        #[arg(short, long, default_value_t = 10)]
+        interval: u64,
         /// Target address.
         #[arg(short, long, default_value = "0x4A")]
         address: String,
@@ -426,7 +429,7 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     match args.command {
-        Command::Hcu { address, command } => {
+        Command::Hcu { interval, address, command } => {
             let destination_address = node_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let hcu0 = glonax::driver::HydraulicControlUnit::new(destination_address, consts::J1939_ADDRESS_OBDL);
@@ -443,17 +446,32 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    socket.send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?)).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?)).await?;
+                    }
                 }
                 HCUCommand::Reboot => {
                     info!("{} Reboot", style_address(destination_address));
 
-                    socket.send_vectored(&hcu0.reboot()).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&hcu0.reboot()).await?;
+                    }
                 }
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_address(destination_address));
 
-                    socket.send_vectored(&hcu0.motion_reset()).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&hcu0.motion_reset()).await?;
+                    }
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(
@@ -466,10 +484,17 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    if toggle.parse::<bool>()? {
-                        socket.send_vectored(&hcu0.lock()).await?;
+                    let frames = if toggle.parse::<bool>()? {
+                        hcu0.lock()
                     } else {
-                        socket.send_vectored(&hcu0.unlock()).await?;
+                        hcu0.unlock()
+                    };
+
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&frames).await?;
                     }
                 }
                 HCUCommand::Actuator { actuator, value } => {
@@ -484,14 +509,24 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    socket.send_vectored(&hcu0.actuator_command([(actuator, value)].into())).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&hcu0.actuator_command([(actuator, value)].into())).await?;
+                    }
                 }
                 HCUCommand::Assign { address_new } => {
                     let destination_address_new = node_address(address_new)?;
 
                     info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
 
-                    socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+                    loop {
+                        tick.tick().await;
+                        socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                    }
                 }
             }
         }
