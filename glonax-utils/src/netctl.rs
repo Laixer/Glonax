@@ -310,6 +310,9 @@ enum Command {
         address: String,
     },
     Send {
+        /// Message interval in milliseconds.
+        #[arg(short, long, default_value_t = 10)]
+        interval: u64,
         /// Frame ID.
         id: String,
         /// Raw data to send.
@@ -572,15 +575,21 @@ async fn main() -> anyhow::Result<()> {
 
             socket.send(&protocol::request(destination_address, pgn)).await?;
         }
-        Command::Send { id, data } => {
+        Command::Send { interval, id, data } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            
-            let frame_builder = glonax::j1939::FrameBuilder::new(
+
+            let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+
+            let frame = glonax::j1939::FrameBuilder::new(
                 glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?)
             )
-            .copy_from_slice(&hex::decode(data)?);
-        
-            socket.send(&frame_builder.build()).await?;
+            .copy_from_slice(&hex::decode(data)?).build();
+
+            loop {
+                tick.tick().await;
+
+                socket.send(&frame).await?;
+            }
         }
         Command::Fuzzer { interval, address } => {
             let destination_address = node_address(address)?;
