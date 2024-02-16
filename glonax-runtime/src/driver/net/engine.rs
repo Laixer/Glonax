@@ -141,9 +141,6 @@ impl EngineManagementSystem {
 
 impl Parsable<spn::EngineControllerMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<spn::EngineControllerMessage> {
-        if frame.len() != PDU_MAX_LENGTH {
-            return None;
-        }
         if frame.id().pgn() != PGN::ElectronicEngineController1 {
             return None;
         }

@@ -653,7 +653,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Dump { pgn, address } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let mut router = Router::new(socket);
+            let mut router = Router::new(socket).set_fix_frame_size(false);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);

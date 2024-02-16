@@ -74,29 +74,37 @@ pub trait Parsable<T>: Send + Sync {
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 
-/// The router is used to route incoming frames to the correct service.
+/// The router is used to route incoming frames to compatible services.
 ///
 /// Frames are routed based on the PGN and the node address. The router
 /// supports filtering based on PGN and node address.
+///
+/// If the frame size is fixed, the router will always return a frame of
+/// equal size. If the frame size is not fixed, it is returned as is.
+/// Fixing the frame size avoids the need to check the frame size in each
+/// service.
 pub struct Router {
     /// The network.
-    net: Vec<CANSocket>,
+    socket_list: Vec<CANSocket>,
     /// The current frame.
     frame: Option<Frame>,
     /// The PGN filter.
     filter_pgn: Vec<u32>,
     /// The node filter.
     filter_node: Vec<u8>,
+    /// The fixed frame size.
+    fix_frame_size: bool,
 }
 
 impl Router {
     /// Construct a new router.
-    pub fn new(net: CANSocket) -> Self {
+    pub fn new(socket: CANSocket) -> Self {
         Self {
-            net: vec![net],
+            socket_list: vec![socket],
             frame: None,
             filter_pgn: vec![],
             filter_node: vec![],
+            fix_frame_size: true,
         }
     }
 
@@ -112,6 +120,13 @@ impl Router {
         self.filter_node.push(node);
     }
 
+    /// Set the fixed frame size.
+    #[inline]
+    pub fn set_fix_frame_size(mut self, fix_frame_size: bool) -> Self {
+        self.fix_frame_size = fix_frame_size;
+        self
+    }
+
     /// Return the current frame source.
     #[inline]
     pub fn frame_source(&self) -> Option<u8> {
@@ -125,30 +140,40 @@ impl Router {
     }
 
     /// Return the inner network socket.
+    #[inline]
     pub fn inner(&self) -> &CANSocket {
-        self.net.first().unwrap()
+        &self.socket_list[0]
+    }
+
+    /// Filter the frame based on PGN and address.
+    ///
+    /// Returns `true` if the frame is accepted. Returns `false` if the frame is not accepted.
+    /// If no filters are set, all frames are accepted.
+    fn filter(&self, frame: &Frame) -> bool {
+        if !self.filter_pgn.is_empty() && !self.filter_pgn.contains(&frame.id().pgn_raw()) {
+            false
+        } else {
+            !(!self.filter_node.is_empty() && !self.filter_node.contains(&frame.id().sa()))
+        }
     }
 
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
-            let frame = self.net.first().unwrap().recv().await?;
-
-            let node_address = frame.id().sa();
-
-            if !self.filter_pgn.is_empty() {
-                let pgn = frame.id().pgn_raw();
-                if !self.filter_pgn.contains(&pgn) {
-                    continue;
+            let frame = self.socket_list[0].recv().await?;
+            if self.filter(&frame) {
+                if self.fix_frame_size {
+                    self.frame = Some(
+                        FrameBuilder::new(*frame.id())
+                            .copy_from_slice(frame.as_ref())
+                            .set_len(8)
+                            .build(),
+                    );
+                } else {
+                    self.frame = Some(frame);
                 }
+                break;
             }
-
-            if !self.filter_node.is_empty() && !self.filter_node.contains(&node_address) {
-                continue;
-            }
-
-            self.frame = Some(frame);
-            break;
         }
 
         Ok(())

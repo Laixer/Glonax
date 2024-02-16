@@ -361,9 +361,6 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 if frame.id().destination_address() != Some(self.destination_address) {
                     return None;
                 }
-                if frame.len() < 8 {
-                    return None;
-                }
 
                 Some(HydraulicMessage::Actuator(ActuatorMessage::from_frame(
                     self.destination_address,

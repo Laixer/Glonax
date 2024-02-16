@@ -166,9 +166,6 @@ impl KueblerEncoder {
 
 impl Parsable<EncoderMessage> for KueblerEncoder {
     fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
-        if frame.len() != 8 {
-            return None;
-        }
         if frame.id().pgn() != PGN::ProprietaryB(65_450) {
             return None;
         }
