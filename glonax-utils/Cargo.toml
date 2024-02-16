@@ -15,6 +15,7 @@ clap = { version = "4.4", features = ["derive"] }
 simplelog = "0.12"
 ansi_term = "0.12"
 hex = "0.4"
+chrono = "0.4"
 
 [[bin]]
 name = "glonax-netctl"
