@@ -621,7 +621,8 @@ async fn main() -> anyhow::Result<()> {
             let frame = glonax::j1939::FrameBuilder::new(
                 glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?)
             )
-            .copy_from_slice(&hex::decode(data)?).build();
+            .copy_from_slice(&hex::decode(data)?)
+            .build();
 
             loop {
                 tick.tick().await;

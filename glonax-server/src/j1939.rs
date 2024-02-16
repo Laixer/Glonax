@@ -80,13 +80,16 @@ pub(super) async fn rx_network_0(
                         .await?;
                 }
                 PGN::TimeDate => {
+                    use chrono::prelude::*;
+
+                    let utc = chrono::Utc::now();
                     let timedate = glonax::j1939::spn::TimeDate {
-                        year: 2024,
-                        month: 4,
-                        day: 20,
-                        hour: 10,
-                        minute: 1,
-                        second: 58,
+                        year: utc.year(),
+                        month: utc.month(),
+                        day: utc.day(),
+                        hour: utc.hour(),
+                        minute: utc.minute(),
+                        second: utc.second(),
                     };
 
                     let id = IdBuilder::from_pgn(PGN::TimeDate)
@@ -154,13 +157,16 @@ pub(super) async fn rx_network_1(
                         .await?;
                 }
                 PGN::TimeDate => {
+                    use chrono::prelude::*;
+
+                    let utc = chrono::Utc::now();
                     let timedate = glonax::j1939::spn::TimeDate {
-                        year: 2024,
-                        month: 4,
-                        day: 20,
-                        hour: 10,
-                        minute: 1,
-                        second: 58,
+                        year: utc.year(),
+                        month: utc.month(),
+                        day: utc.day(),
+                        hour: utc.hour(),
+                        minute: utc.minute(),
+                        second: utc.second(),
                     };
 
                     let id = IdBuilder::from_pgn(PGN::TimeDate)

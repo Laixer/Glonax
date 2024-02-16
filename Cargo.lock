@@ -418,6 +418,7 @@ name = "glonax-server"
 version = "1.0.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "glonax",
  "glonax-serial",
