@@ -84,7 +84,7 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        let mut msg = j1939::spn::TorqueSpeedControlMessage {
+        let mut message = j1939::spn::TorqueSpeedControlMessage {
             override_control_mode: Some(decode::OverrideControlMode::OverrideDisabled),
             speed_control_condition: None,
             control_mode_priority: None,
@@ -93,11 +93,11 @@ impl EngineManagementSystem {
         };
 
         if !idle {
-            msg.override_control_mode = Some(decode::OverrideControlMode::SpeedControl);
-            msg.speed = Some(rpm);
+            message.override_control_mode = Some(decode::OverrideControlMode::SpeedControl);
+            message.speed = Some(rpm);
         }
 
-        let frame = frame_builder.copy_from_slice(&msg.to_pdu()).build();
+        let frame = frame_builder.copy_from_slice(&message.to_pdu()).build();
         vec![frame]
     }
 
@@ -111,7 +111,7 @@ impl EngineManagementSystem {
         );
 
         // TODO: This is not correct. 0x3 is not used for starting the engine.
-        let msg = j1939::spn::TorqueSpeedControlMessage {
+        let message = j1939::spn::TorqueSpeedControlMessage {
             override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
             speed_control_condition: None,
             control_mode_priority: None,
@@ -119,7 +119,7 @@ impl EngineManagementSystem {
             torque: None,
         };
 
-        let frame = frame_builder.copy_from_slice(&msg.to_pdu()).build();
+        let frame = frame_builder.copy_from_slice(&message.to_pdu()).build();
         vec![frame]
     }
 

@@ -1,9 +1,8 @@
 use j1939::{Frame, FrameBuilder, Id};
 use rand::Rng;
 
-// #[derive(Default)]
 pub struct Fuzzer {
-    /// Destination address.
+    /// Destination id.
     destination_id: Id,
 }
 

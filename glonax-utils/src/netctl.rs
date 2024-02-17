@@ -31,7 +31,8 @@ fn style_address(address: u8) -> String {
     Purple.paint(format!("[0x{:X?}]", address)).to_string()
 }
 
-fn node_address(address: String) -> Result<u8, std::num::ParseIntError> {
+// TODO: Move to j1939 crate if possible
+fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
     if address.starts_with("0x") {
         u8::from_str_radix(address.trim_start_matches("0x"), 16)
     } else {
@@ -404,7 +405,7 @@ async fn main() -> anyhow::Result<()> {
 
     match args.command {
         Command::Hcu { interval, address, command } => {
-            let destination_address = node_address(address)?;
+            let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let hcu0 = glonax::driver::HydraulicControlUnit::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
@@ -491,7 +492,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 HCUCommand::Assign { address_new } => {
-                    let destination_address_new = node_address(address_new)?;
+                    let destination_address_new = j1939_address(address_new)?;
 
                     info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
 
@@ -505,7 +506,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Vcu { interval, address, command } => {
-            let destination_address = node_address(address)?;
+            let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
@@ -539,7 +540,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
                 VCUCommand::Assign { address_new } => {
-                    let destination_address_new = node_address(address_new)?;
+                    let destination_address_new = j1939_address(address_new)?;
 
                     info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
 
@@ -553,7 +554,7 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Engine { interval, address, command } => {
-            let destination_address = node_address(address)?;
+            let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
@@ -593,7 +594,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Request { interval, address, command } => {
             use glonax::j1939::{PGN, protocol};
 
-            let destination_address = node_address(address)?;
+            let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
             let pgn = match command {
@@ -649,10 +650,10 @@ async fn main() -> anyhow::Result<()> {
             }
             for addr in address
                 .iter()
-                .map(|s| node_address(s.to_owned()))
+                .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_node_filter(addr?);
+                router.add_address_filter(addr?);
             }
 
             print_frames(router).await?;
@@ -666,10 +667,10 @@ async fn main() -> anyhow::Result<()> {
             }
             for addr in address
                 .iter()
-                .map(|s| node_address(s.to_owned()))
+                .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_node_filter(addr?);
+                router.add_address_filter(addr?);
             }
 
             analyze_frames(router).await?;

@@ -76,8 +76,8 @@ pub trait Parsable<T>: Send + Sync {
 
 /// The router is used to route incoming frames to compatible services.
 ///
-/// Frames are routed based on the PGN and the node address. The router
-/// supports filtering based on PGN and node address.
+/// Frames are routed based on the PGN and the ECU address. The router
+/// supports filtering based on PGN and addresses.
 ///
 /// If the frame size is fixed, the router will always return a frame of
 /// equal size. If the frame size is not fixed, it is returned as is.
@@ -90,8 +90,8 @@ pub struct Router {
     frame: Option<Frame>,
     /// The PGN filter.
     filter_pgn: Vec<u32>,
-    /// The node filter.
-    filter_node: Vec<u8>,
+    /// The address filter.
+    filter_address: Vec<u8>,
     /// The fixed frame size.
     fix_frame_size: bool,
 }
@@ -103,7 +103,7 @@ impl Router {
             socket_list: vec![socket],
             frame: None,
             filter_pgn: vec![],
-            filter_node: vec![],
+            filter_address: vec![],
             fix_frame_size: true,
         }
     }
@@ -114,10 +114,10 @@ impl Router {
         self.filter_pgn.push(pgn);
     }
 
-    /// Add a filter based on node id.
+    /// Add a filter based on ECU address.
     #[inline]
-    pub fn add_node_filter(&mut self, node: u8) {
-        self.filter_node.push(node);
+    pub fn add_address_filter(&mut self, address: u8) {
+        self.filter_address.push(address);
     }
 
     /// Set the fixed frame size.
@@ -153,7 +153,7 @@ impl Router {
         if !self.filter_pgn.is_empty() && !self.filter_pgn.contains(&frame.id().pgn_raw()) {
             false
         } else {
-            !(!self.filter_node.is_empty() && !self.filter_node.contains(&frame.id().sa()))
+            !(!self.filter_address.is_empty() && !self.filter_address.contains(&frame.id().sa()))
         }
     }
 

@@ -190,11 +190,6 @@ impl super::J1939Unit for KueblerEncoder {
                     .state
                     .encoders
                     .insert(message.node, message.position as f32);
-
-                // TODO: Set the encoder state in the runtime state
-                // if let Some(state) = message.state {
-                //     log::debug!("0x{:X?} Encoder state: {:?}", message.node, state);
-                // }
             }
         }
     }
