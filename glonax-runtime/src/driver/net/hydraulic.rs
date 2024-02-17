@@ -191,23 +191,20 @@ impl MotionConfigMessage {
 
 impl std::fmt::Display for MotionConfigMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-
-        if let Some(locked) = self.locked {
-            s.push_str(&format!(
-                "Motion: {};",
-                if locked { "Locked" } else { "Unlocked" }
-            ));
-        }
-
-        if let Some(reset) = self.reset {
-            s.push_str(&format!(
-                "Motion reset: {};",
-                if reset { "Yes" } else { "No" }
-            ));
-        }
-
-        write!(f, "{}", s)
+        write!(
+            f,
+            "Locked: {} Reset: {}",
+            if self.locked == Some(true) {
+                "Yes"
+            } else {
+                "No"
+            },
+            if self.reset == Some(true) {
+                "Yes"
+            } else {
+                "No"
+            }
+        )
     }
 }
 
@@ -296,15 +293,15 @@ impl HydraulicControlUnit {
             actuators[actuator as usize] = Some(value);
         }
 
-        let msg = ActuatorMessage {
+        let message = ActuatorMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
             actuators,
         };
 
-        trace!("HCU: {}", msg);
+        trace!("HCU: {}", message);
 
-        msg.to_frame()
+        message.to_frame()
     }
 }
 

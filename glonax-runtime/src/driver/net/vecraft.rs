@@ -61,22 +61,26 @@ impl std::fmt::Display for VecraftConfigMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Config {} {}",
-            if self.ident_on.unwrap_or(false) {
-                "Ident on"
+            "Ident: {} Reboot: {}",
+            if self.ident_on == Some(true) {
+                "Yes"
             } else {
-                "Ident off"
+                "No"
             },
-            if self.reboot { "Reboot" } else { "" }
+            if self.reboot { "Yes" } else { "No" }
         )
     }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum State {
+    /// ECU is in nominal state.
     Nominal,
+    /// ECU is in identification state.
     Ident,
+    /// ECU is in faulty state.
     FaultyGenericError,
+    /// ECU is in faulty bus state.
     FaultyBusError,
 }
 
