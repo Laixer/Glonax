@@ -4,6 +4,7 @@ pub use error::{DeviceError, ErrorKind, Result};
 pub use hardware::nmea::Nmea;
 pub use net::encoder::KueblerEncoder;
 pub use net::engine::EngineManagementSystem;
+pub use net::fuzzer::Fuzzer;
 pub use net::hydraulic::HydraulicControlUnit;
 pub use net::inspector::{J1939ApplicationInspector, J1939Message};
 pub use net::reqres::RequestResponder;

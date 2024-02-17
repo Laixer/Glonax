@@ -631,24 +631,13 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Fuzzer { interval, id } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-
-            use glonax::rand::Rng;
+            let fuz0 = glonax::driver::Fuzzer::new(glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?));
 
             let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
             
             loop {
                 tick.tick().await;
-        
-                let random_number = glonax::rand::thread_rng().gen_range(0..=8);
-                let random_bytes = (0..random_number).map(|_| glonax::rand::random::<u8>()).collect::<Vec<u8>>();
-        
-                let frame = &glonax::j1939::FrameBuilder::new(
-                    glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?),
-                )
-                .copy_from_slice(&random_bytes)
-                .build();
-        
-                socket.send(frame).await?;
+                socket.send(&fuz0.gen_frame()).await?;
             }
         }
         Command::Dump { pgn, address } => {
