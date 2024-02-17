@@ -35,6 +35,11 @@ use super::vecraft::VecraftConfigMessage;
 //     }
 // }
 
+pub enum EngineMessage {
+    TorqueSpeedControl(spn::TorqueSpeedControlMessage),
+    EngineController(spn::EngineControllerMessage),
+}
+
 #[derive(Default)]
 pub struct EngineManagementSystem {
     /// Destination address.
@@ -84,7 +89,7 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        let mut message = j1939::spn::TorqueSpeedControlMessage {
+        let mut message = spn::TorqueSpeedControlMessage {
             override_control_mode: Some(decode::OverrideControlMode::OverrideDisabled),
             speed_control_condition: None,
             control_mode_priority: None,
@@ -111,7 +116,7 @@ impl EngineManagementSystem {
         );
 
         // TODO: This is not correct. 0x3 is not used for starting the engine.
-        let message = j1939::spn::TorqueSpeedControlMessage {
+        let message = spn::TorqueSpeedControlMessage {
             override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
             speed_control_condition: None,
             control_mode_priority: None,
@@ -139,14 +144,21 @@ impl EngineManagementSystem {
     }
 }
 
-impl Parsable<spn::EngineControllerMessage> for EngineManagementSystem {
-    fn parse(&mut self, frame: &Frame) -> Option<spn::EngineControllerMessage> {
-        if frame.id().pgn() == PGN::ElectronicEngineController1 {
+impl Parsable<EngineMessage> for EngineManagementSystem {
+    fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
+        if frame.id().pgn() == PGN::TorqueSpeedControl1 {
+            Some(EngineMessage::TorqueSpeedControl(
+                spn::TorqueSpeedControlMessage::from_pdu(frame.pdu()),
+            ))
+        } else if frame.id().pgn() == PGN::ElectronicEngineController1 {
+            // TODO: Do we need to check the source address?
             if frame.id().sa() != self.destination_address {
                 return None;
             }
 
-            Some(spn::EngineControllerMessage::from_pdu(frame.pdu()))
+            Some(EngineMessage::EngineController(
+                spn::EngineControllerMessage::from_pdu(frame.pdu()),
+            ))
         } else {
             None
         }
@@ -161,9 +173,18 @@ impl super::J1939Unit for EngineManagementSystem {
     ) {
         if let Some(message) = router.try_accept(self) {
             if let Ok(mut runtime_state) = runtime_state.try_write() {
-                runtime_state.state.engine.driver_demand = message.driver_demand.unwrap_or(0);
-                runtime_state.state.engine.actual_engine = message.actual_engine.unwrap_or(0);
-                runtime_state.state.engine.rpm = message.rpm.unwrap_or(0);
+                match message {
+                    EngineMessage::TorqueSpeedControl(_control) => {
+                        //
+                    }
+                    EngineMessage::EngineController(controller) => {
+                        runtime_state.state.engine.driver_demand =
+                            controller.driver_demand.unwrap_or(0);
+                        runtime_state.state.engine.actual_engine =
+                            controller.actual_engine.unwrap_or(0);
+                        runtime_state.state.engine.rpm = controller.rpm.unwrap_or(0);
+                    }
+                }
             }
         }
     }

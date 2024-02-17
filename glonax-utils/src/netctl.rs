@@ -60,13 +60,26 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         router.listen().await?;
 
         if let Some(message) = router.try_accept(&mut ems0) {
-            info!(
-                "{} {} {} » {}",
-                chrono::Utc::now().format("%T%.3f"),
-                style_address(router.frame_source().unwrap()),
-                Yellow.bold().paint("Engine"),
-                message
-            );
+            match message {
+                glonax::driver::net::engine::EngineMessage::TorqueSpeedControl(control) => {
+                    info!(
+                        "{} {} {} » Torque speed control: Speed: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        control.speed.unwrap_or(0)
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::EngineController(controller) => {
+                    info!(
+                        "{} {} {} » Engine controller: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        controller
+                    );
+                }
+            }
         } else if let Some(message) = router.try_accept(&mut enc2) {
             info!(
                 "{} {} {} » {}",
