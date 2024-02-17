@@ -34,8 +34,8 @@ impl std::fmt::Display for EncoderState {
 // TODO: This may not be necessary
 #[derive(Debug, Clone)]
 pub struct EncoderMessage {
-    /// Node ID.
-    pub node: u8,
+    /// Source address.
+    source_address: u8,
     /// Position.
     pub position: u32,
     /// Speed.
@@ -46,9 +46,9 @@ pub struct EncoderMessage {
 
 impl EncoderMessage {
     /// Construct a new encoder message.
-    pub fn new(node: u8) -> Self {
+    pub fn new(sa: u8) -> Self {
         Self {
-            node,
+            source_address: sa,
             position: 0,
             speed: 0,
             state: None,
@@ -56,9 +56,9 @@ impl EncoderMessage {
     }
 
     /// Construct a new encoder message with position.
-    pub fn from_position(node: u8, position: u32) -> Self {
+    pub fn from_position(sa: u8, position: u32) -> Self {
         Self {
-            node,
+            source_address: sa,
             position,
             speed: 0,
             state: None,
@@ -66,9 +66,9 @@ impl EncoderMessage {
     }
 
     /// Construct a new encoder message from a frame.
-    pub fn from_frame(node: u8, frame: &Frame) -> Self {
+    pub fn from_frame(frame: &Frame) -> Self {
         let mut this = Self {
-            node,
+            source_address: frame.id().sa(),
             position: 0,
             speed: 0,
             state: None,
@@ -105,7 +105,7 @@ impl EncoderMessage {
     fn to_frame(&self) -> Vec<Frame> {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_450))
-                .sa(self.node)
+                .sa(self.source_address)
                 .build(),
         );
 
@@ -171,7 +171,7 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
                 return None;
             }
 
-            Some(EncoderMessage::from_frame(self.destination_address, frame))
+            Some(EncoderMessage::from_frame(frame))
         } else {
             None
         }
@@ -189,7 +189,7 @@ impl super::J1939Unit for KueblerEncoder {
                 runtime_state
                     .state
                     .encoders
-                    .insert(message.node, message.position as f32);
+                    .insert(message.source_address, message.position as f32);
             }
         }
     }
@@ -202,14 +202,14 @@ mod tests {
     #[test]
     fn value_normal() {
         let message_a = EncoderMessage {
-            node: 0x6A,
+            source_address: 0x6A,
             position: 1_620,
             speed: 0,
             state: None,
         };
 
         let frames = message_a.to_frame();
-        let messasge_b = EncoderMessage::from_frame(0x6A, &frames[0]);
+        let messasge_b = EncoderMessage::from_frame(&frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(messasge_b.position, 1_620);
@@ -220,14 +220,14 @@ mod tests {
     #[test]
     fn value_error() {
         let messasge_a = EncoderMessage {
-            node: 0x45,
+            source_address: 0x45,
             position: 173,
             speed: 65_196,
             state: Some(EncoderState::InvalidTMR),
         };
 
         let frames = messasge_a.to_frame();
-        let messasge_b = EncoderMessage::from_frame(0x45, &frames[0]);
+        let messasge_b = EncoderMessage::from_frame(&frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(messasge_b.position, 173);
