@@ -310,11 +310,17 @@ impl HydraulicControlUnit {
 
 impl Parsable<HydraulicMessage> for HydraulicControlUnit {
     fn parse(&mut self, frame: &Frame) -> Option<HydraulicMessage> {
+        if let Some(destination_address) = frame.id().destination_address() {
+            if destination_address != self.destination_address {
+                return None;
+            }
+        }
+
         match frame.id().pgn() {
             PGN::ProprietarilyConfigurableMessage3 => {
-                if frame.id().destination_address() != Some(self.destination_address) {
-                    return None;
-                }
+                // if frame.id().destination_address() != Some(self.destination_address) {
+                //     return None;
+                // }
                 if frame.pdu()[0..2] != [b'Z', b'C'] {
                     return None;
                 }
@@ -331,9 +337,9 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 ))
             }
             PGN::ProprietarilyConfigurableMessage1 => {
-                if frame.id().destination_address() != Some(self.destination_address) {
-                    return None;
-                }
+                // if frame.id().destination_address() != Some(self.destination_address) {
+                //     return None;
+                // }
                 if frame.pdu()[0..2] != [b'Z', b'C'] {
                     return None;
                 }
@@ -358,9 +364,9 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 )))
             }
             PGN::Other(40_960) | PGN::Other(41_216) => {
-                if frame.id().destination_address() != Some(self.destination_address) {
-                    return None;
-                }
+                // if frame.id().destination_address() != Some(self.destination_address) {
+                //     return None;
+                // }
 
                 Some(HydraulicMessage::Actuator(ActuatorMessage::from_frame(
                     self.destination_address,
