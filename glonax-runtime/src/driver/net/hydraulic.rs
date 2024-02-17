@@ -380,7 +380,7 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
 }
 
 impl super::J1939Unit for HydraulicControlUnit {
-    fn try_accept(
+    async fn try_accept(
         &mut self,
         router: &mut crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,

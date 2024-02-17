@@ -154,7 +154,7 @@ impl Parsable<spn::EngineControllerMessage> for EngineManagementSystem {
 }
 
 impl super::J1939Unit for EngineManagementSystem {
-    fn try_accept(
+    async fn try_accept(
         &mut self,
         router: &mut crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,

@@ -179,7 +179,7 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
 }
 
 impl super::J1939Unit for KueblerEncoder {
-    fn try_accept(
+    async fn try_accept(
         &mut self,
         router: &mut crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
@@ -214,7 +214,7 @@ mod tests {
         assert_eq!(frames.len(), 1);
         assert_eq!(messasge_b.position, 1_620);
         assert_eq!(messasge_b.speed, 0);
-        assert_eq!(messasge_b.state.unwrap(), EncoderState::NoError);
+        assert_eq!(messasge_b.state, Some(EncoderState::NoError));
     }
 
     #[test]
@@ -232,6 +232,6 @@ mod tests {
         assert_eq!(frames.len(), 1);
         assert_eq!(messasge_b.position, 173);
         assert_eq!(messasge_b.speed, 65_196);
-        assert_eq!(messasge_b.state.unwrap(), EncoderState::InvalidTMR);
+        assert_eq!(messasge_b.state, Some(EncoderState::InvalidTMR));
     }
 }

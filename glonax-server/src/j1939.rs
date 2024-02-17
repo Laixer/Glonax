@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use glonax::j1939::{protocol, FrameBuilder, IdBuilder, NameBuilder, PGN};
+use glonax::j1939::{protocol, NameBuilder};
 use glonax::runtime::SharedOperandState;
 
 use glonax::driver::net::J1939Unit;
@@ -54,57 +54,11 @@ pub(super) async fn rx_network_0(
             log::error!("Failed to receive from router: {}", e);
         }
 
-        enc0.try_accept(&mut router, runtime_state.clone());
-        enc1.try_accept(&mut router, runtime_state.clone());
-        enc2.try_accept(&mut router, runtime_state.clone());
-        enc3.try_accept(&mut router, runtime_state.clone());
-
-        if let Some(pgn) = router.try_accept(&mut rrp0) {
-            match pgn {
-                PGN::AddressClaimed => {
-                    let name = NameBuilder::default()
-                        .identity_number(0x1)
-                        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
-                        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
-                        .ecu_instance(J1939_NAME_ECU_INSTANCE)
-                        .function(J1939_NAME_FUNCTION)
-                        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
-                        .build();
-
-                    router
-                        .inner()
-                        .send(&protocol::address_claimed(
-                            crate::consts::J1939_ADDRESS_VMS,
-                            name,
-                        ))
-                        .await?;
-                }
-                PGN::TimeDate => {
-                    use chrono::prelude::*;
-
-                    let utc = chrono::Utc::now();
-                    let timedate = glonax::j1939::spn::TimeDate {
-                        year: utc.year(),
-                        month: utc.month(),
-                        day: utc.day(),
-                        hour: utc.hour(),
-                        minute: utc.minute(),
-                        second: utc.second(),
-                    };
-
-                    let id = IdBuilder::from_pgn(PGN::TimeDate)
-                        .sa(crate::consts::J1939_ADDRESS_VMS)
-                        .build();
-
-                    let frame = FrameBuilder::new(id)
-                        .copy_from_slice(&timedate.to_pdu())
-                        .build();
-
-                    router.inner().send(&frame).await?;
-                }
-                _ => (),
-            }
-        }
+        enc0.try_accept(&mut router, runtime_state.clone()).await;
+        enc1.try_accept(&mut router, runtime_state.clone()).await;
+        enc2.try_accept(&mut router, runtime_state.clone()).await;
+        enc3.try_accept(&mut router, runtime_state.clone()).await;
+        rrp0.try_accept(&mut router, runtime_state.clone()).await;
     }
 }
 
@@ -133,55 +87,9 @@ pub(super) async fn rx_network_1(
             log::error!("Failed to receive from router: {}", e);
         }
 
-        ems0.try_accept(&mut router, runtime_state.clone());
-        hcu0.try_accept(&mut router, runtime_state.clone());
-
-        if let Some(pgn) = router.try_accept(&mut rrp0) {
-            match pgn {
-                PGN::AddressClaimed => {
-                    let name = NameBuilder::default()
-                        .identity_number(0x1)
-                        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
-                        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
-                        .ecu_instance(J1939_NAME_ECU_INSTANCE)
-                        .function(J1939_NAME_FUNCTION)
-                        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
-                        .build();
-
-                    router
-                        .inner()
-                        .send(&protocol::address_claimed(
-                            crate::consts::J1939_ADDRESS_VMS,
-                            name,
-                        ))
-                        .await?;
-                }
-                PGN::TimeDate => {
-                    use chrono::prelude::*;
-
-                    let utc = chrono::Utc::now();
-                    let timedate = glonax::j1939::spn::TimeDate {
-                        year: utc.year(),
-                        month: utc.month(),
-                        day: utc.day(),
-                        hour: utc.hour(),
-                        minute: utc.minute(),
-                        second: utc.second(),
-                    };
-
-                    let id = IdBuilder::from_pgn(PGN::TimeDate)
-                        .sa(crate::consts::J1939_ADDRESS_VMS)
-                        .build();
-
-                    let frame = FrameBuilder::new(id)
-                        .copy_from_slice(&timedate.to_pdu())
-                        .build();
-
-                    router.inner().send(&frame).await?;
-                }
-                _ => (),
-            }
-        }
+        ems0.try_accept(&mut router, runtime_state.clone()).await;
+        hcu0.try_accept(&mut router, runtime_state.clone()).await;
+        rrp0.try_accept(&mut router, runtime_state.clone()).await;
     }
 }
 

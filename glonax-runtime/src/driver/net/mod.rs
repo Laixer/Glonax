@@ -16,5 +16,5 @@ pub trait J1939Unit {
         &mut self,
         router: &mut crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    );
+    ) -> impl std::future::Future<Output = ()> + Send;
 }
