@@ -16,13 +16,14 @@ impl RequestResponder {
 
 impl Parsable<PGN> for RequestResponder {
     fn parse(&mut self, frame: &Frame) -> Option<PGN> {
-        if frame.id().pgn() != PGN::Request {
-            return None;
-        }
-        if frame.id().destination_address() != Some(self.source_address) {
-            return None;
-        }
+        if frame.id().pgn() == PGN::Request {
+            if frame.id().destination_address() != Some(self.source_address) {
+                return None;
+            }
 
-        Some(protocol::request_from_pdu(frame.pdu()))
+            Some(protocol::request_from_pdu(frame.pdu()))
+        } else {
+            None
+        }
     }
 }

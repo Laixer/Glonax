@@ -213,9 +213,9 @@ impl std::fmt::Display for MotionConfigMessage {
 
 pub struct HydraulicControlUnit {
     /// Destination address.
-    pub destination_address: u8,
+    destination_address: u8,
     /// Source address.
-    pub source_address: u8,
+    source_address: u8,
 }
 
 impl HydraulicControlUnit {

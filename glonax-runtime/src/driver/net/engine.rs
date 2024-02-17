@@ -38,9 +38,9 @@ use super::vecraft::VecraftConfigMessage;
 #[derive(Default)]
 pub struct EngineManagementSystem {
     /// Destination address.
-    pub destination_address: u8,
+    destination_address: u8,
     /// Source address.
-    pub source_address: u8,
+    source_address: u8,
 }
 
 impl EngineManagementSystem {
@@ -141,14 +141,15 @@ impl EngineManagementSystem {
 
 impl Parsable<spn::EngineControllerMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<spn::EngineControllerMessage> {
-        if frame.id().pgn() != PGN::ElectronicEngineController1 {
-            return None;
-        }
-        if frame.id().sa() != self.destination_address {
-            return None;
-        }
+        if frame.id().pgn() == PGN::ElectronicEngineController1 {
+            if frame.id().sa() != self.destination_address {
+                return None;
+            }
 
-        Some(spn::EngineControllerMessage::from_pdu(frame.pdu()))
+            Some(spn::EngineControllerMessage::from_pdu(frame.pdu()))
+        } else {
+            None
+        }
     }
 }
 

@@ -149,9 +149,9 @@ impl std::fmt::Display for EncoderMessage {
 
 pub struct KueblerEncoder {
     /// Destination address.
-    pub destination_address: u8,
+    destination_address: u8,
     /// Source address.
-    pub source_address: u8,
+    _source_address: u8,
 }
 
 impl KueblerEncoder {
@@ -159,21 +159,22 @@ impl KueblerEncoder {
     pub fn new(da: u8, sa: u8) -> Self {
         Self {
             destination_address: da,
-            source_address: sa,
+            _source_address: sa,
         }
     }
 }
 
 impl Parsable<EncoderMessage> for KueblerEncoder {
     fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
-        if frame.id().pgn() != PGN::ProprietaryB(65_450) {
-            return None;
-        }
-        if frame.id().sa() != self.destination_address {
-            return None;
-        }
+        if frame.id().pgn() == PGN::ProprietaryB(65_450) {
+            if frame.id().sa() != self.destination_address {
+                return None;
+            }
 
-        Some(EncoderMessage::from_frame(self.destination_address, frame))
+            Some(EncoderMessage::from_frame(self.destination_address, frame))
+        } else {
+            None
+        }
     }
 }
 
