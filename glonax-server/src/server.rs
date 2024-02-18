@@ -138,10 +138,22 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         log::info!("Engine shutdown");
                         runtime_state.write().await.state.engine_request = 0;
                     }
+                    glonax::core::Control::HydraulicQuickDisconnect(on) => {
+                        log::info!("Hydraulic quick disconnect: {}", on);
+                    }
+                    glonax::core::Control::HydraulicLock(on) => {
+                        log::info!("Hydraulic lock: {}", on);
+                    }
                     glonax::core::Control::MachineShutdown => {
                         log::info!("Machine shutdown");
                         runtime_state.write().await.state.engine_request = 0;
                         // runtime_state.write().await.state.engine.shutdown();
+                    }
+                    glonax::core::Control::MachineIllumination(on) => {
+                        log::info!("Machine illumination: {}", on);
+                    }
+                    glonax::core::Control::MachineLights(on) => {
+                        log::info!("Machine lights: {}", on);
                     }
                     glonax::core::Control::MachineHorn(on) => {
                         log::info!("Machine horn: {}", on);
