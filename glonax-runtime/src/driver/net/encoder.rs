@@ -31,7 +31,6 @@ impl std::fmt::Display for EncoderState {
     }
 }
 
-// TODO: This may not be necessary
 #[derive(Debug, Clone)]
 pub struct EncoderMessage {
     /// Source address.

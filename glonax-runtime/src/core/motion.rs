@@ -1,10 +1,10 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-const PROTO_TYPE_STOP_ALL: u8 = 0x00;
-const PROTO_TYPE_RESUME_ALL: u8 = 0x01;
-const PROTO_TYPE_RESET_ALL: u8 = 0x02;
-const PROTO_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
-const PROTO_TYPE_CHANGE: u8 = 0x10;
+const MOTION_TYPE_STOP_ALL: u8 = 0x00;
+const MOTION_TYPE_RESUME_ALL: u8 = 0x01;
+const MOTION_TYPE_RESET_ALL: u8 = 0x02;
+const MOTION_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
+const MOTION_TYPE_CHANGE: u8 = 0x10;
 
 // FUTURE: Move to glonax-server or an excatavator module
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -91,20 +91,20 @@ impl Motion {
 
         match self {
             Motion::StopAll => {
-                buf.put_u8(PROTO_TYPE_STOP_ALL);
+                buf.put_u8(MOTION_TYPE_STOP_ALL);
             }
             Motion::ResumeAll => {
-                buf.put_u8(PROTO_TYPE_RESUME_ALL);
+                buf.put_u8(MOTION_TYPE_RESUME_ALL);
             }
             Motion::ResetAll => {
-                buf.put_u8(PROTO_TYPE_RESET_ALL);
+                buf.put_u8(MOTION_TYPE_RESET_ALL);
             }
             Motion::StraightDrive(value) => {
-                buf.put_u8(PROTO_TYPE_STRAIGHT_DRIVE);
+                buf.put_u8(MOTION_TYPE_STRAIGHT_DRIVE);
                 buf.put_i16(*value);
             }
             Motion::Change(changes) => {
-                buf.put_u8(PROTO_TYPE_CHANGE);
+                buf.put_u8(MOTION_TYPE_CHANGE);
                 buf.put_u8(changes.len() as u8);
                 for change in changes {
                     buf.put_u16(change.actuator as u16);
@@ -152,11 +152,11 @@ impl TryFrom<&[u8]> for Motion {
         let mut buf = Bytes::copy_from_slice(value);
 
         match buf.get_u8() {
-            PROTO_TYPE_STOP_ALL => Ok(Motion::StopAll),
-            PROTO_TYPE_RESUME_ALL => Ok(Motion::ResumeAll),
-            PROTO_TYPE_RESET_ALL => Ok(Motion::ResetAll),
-            PROTO_TYPE_STRAIGHT_DRIVE => Ok(Motion::StraightDrive(buf.get_i16())),
-            PROTO_TYPE_CHANGE => {
+            MOTION_TYPE_STOP_ALL => Ok(Motion::StopAll),
+            MOTION_TYPE_RESUME_ALL => Ok(Motion::ResumeAll),
+            MOTION_TYPE_RESET_ALL => Ok(Motion::ResetAll),
+            MOTION_TYPE_STRAIGHT_DRIVE => Ok(Motion::StraightDrive(buf.get_i16())),
+            MOTION_TYPE_CHANGE => {
                 let count = buf.get_u8();
                 let mut changes = Vec::with_capacity(count as usize);
                 for _ in 0..count {

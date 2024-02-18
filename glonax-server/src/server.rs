@@ -31,6 +31,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .recv_packet::<Request>(frame.payload_length)
                     .await
                     .unwrap();
+                // FUTURE: Pack into a single packet
                 match request.message() {
                     glonax::core::Instance::MESSAGE_TYPE => {
                         client.send_packet(&instance).await.unwrap();

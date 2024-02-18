@@ -62,12 +62,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if let Some(message) = router.try_accept(&mut ems0) {
             match message {
                 glonax::driver::net::engine::EngineMessage::TorqueSpeedControl(control) => {
+                    // TODO: Move to j1939 crate
                     info!(
-                        "{} {} {} » Torque speed control: Speed: {}",
+                        "{} {} {} » Torque speed control: Mode: {:?} Speed: {} Torque: {}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
-                        control.speed.unwrap_or(0)
+                        control.override_control_mode.unwrap_or(glonax::j1939::decode::OverrideControlMode::OverrideDisabled),
+                        control.speed.unwrap_or(0),
+                        control.torque.unwrap_or(0)
                     );
                 }
                 glonax::driver::net::engine::EngineMessage::EngineController(controller) => {
@@ -174,6 +177,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     );
                 }
                 J1939Message::AddressClaim(name) => {
+                    // TODO: Move printing to j1939 crate
                     info!(
                         "{} {} {} » Identity number: 0x{:X}; Manufacturer code: 0x{:X}; Function instance: 0x{:X}; ECU instance: 0x{:X}; Function: 0x{:X}; Vehicle system: 0x{:X}; Vehicle system instance: 0x{:X}; Industry group: {:X}; Arbitrary address: {}",
                         chrono::Utc::now().format("%T%.3f"),

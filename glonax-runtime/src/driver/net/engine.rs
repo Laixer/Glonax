@@ -151,7 +151,6 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
                 spn::TorqueSpeedControlMessage::from_pdu(frame.pdu()),
             ))
         } else if frame.id().pgn() == PGN::ElectronicEngineController1 {
-            // TODO: Do we need to check the source address?
             if frame.id().sa() != self.destination_address {
                 return None;
             }
