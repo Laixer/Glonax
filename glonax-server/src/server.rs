@@ -126,24 +126,15 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .unwrap();
 
                 match control {
-                    glonax::core::Control::EngineStart => {
-                        log::info!("Engine start");
-                        runtime_state.write().await.state.engine_request = 700;
+                    glonax::core::Control::EngineRequest(rpm) => {
+                        let rpm = rpm.clamp(0, 2100);
+
+                        log::info!("Engine request RPM: {}", rpm);
+
+                        runtime_state.write().await.state.engine_request = rpm;
                     }
-                    glonax::core::Control::EngineIdle => {
-                        log::info!("Engine idle");
-                        runtime_state.write().await.state.engine_request = 700;
-                    }
-                    glonax::core::Control::EngineMedium => {
-                        log::info!("Engine medium");
-                        runtime_state.write().await.state.engine_request = 1500;
-                    }
-                    glonax::core::Control::EngineHigh => {
-                        log::info!("Engine high");
-                        runtime_state.write().await.state.engine_request = 2100;
-                    }
-                    glonax::core::Control::EngineStop => {
-                        log::info!("Engine stop");
+                    glonax::core::Control::EngineShutdown => {
+                        log::info!("Engine shutdown");
                         runtime_state.write().await.state.engine_request = 0;
                     }
                     glonax::core::Control::RobotShutdown => {

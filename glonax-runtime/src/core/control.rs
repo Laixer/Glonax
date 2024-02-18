@@ -1,28 +1,24 @@
-// TODO: Add driver demand
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
+const CONTROL_TYPE_ENGINE_REQUEST: u8 = 0x01;
+const CONTROL_TYPE_ENGINE_SHUTDOWN: u8 = 0x02;
+const CONTROL_TYPE_MACHINE_SHUTDOWN: u8 = 0x1B;
+
 #[derive(Clone, Copy)]
 pub enum Control {
-    /// Engine start.
-    EngineStart = 3,
-    /// Engine idle.
-    EngineIdle = 4,
-    /// Engine low.
-    EngineMedium = 5,
-    /// Engine high.
-    EngineHigh = 6,
-    /// Engine stop.
-    EngineStop = 7,
+    /// Engine RPM request.
+    EngineRequest(u16),
+    /// Engine shutdown.
+    EngineShutdown,
     /// Robot shutdown.
-    RobotShutdown = 27,
+    RobotShutdown,
 }
 
 impl std::fmt::Display for Control {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Control::EngineStart => write!(f, "Engine start"),
-            Control::EngineIdle => write!(f, "Engine idle"),
-            Control::EngineMedium => write!(f, "Engine medium"),
-            Control::EngineHigh => write!(f, "Engine high"),
-            Control::EngineStop => write!(f, "Engine stop"),
+            Control::EngineRequest(rpm) => write!(f, "Engine request: {}", rpm),
+            Control::EngineShutdown => write!(f, "Engine shutdown"),
             Control::RobotShutdown => write!(f, "Robot shutdown"),
         }
     }
@@ -32,13 +28,12 @@ impl TryFrom<Vec<u8>> for Control {
     type Error = ();
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        match value[0] {
-            3 => Ok(Control::EngineStart),
-            4 => Ok(Control::EngineIdle),
-            5 => Ok(Control::EngineMedium),
-            6 => Ok(Control::EngineHigh),
-            7 => Ok(Control::EngineStop),
-            27 => Ok(Control::RobotShutdown),
+        let mut buf = Bytes::copy_from_slice(&value);
+
+        match buf.get_u8() {
+            CONTROL_TYPE_ENGINE_REQUEST => Ok(Control::EngineRequest(buf.get_u16())),
+            CONTROL_TYPE_ENGINE_SHUTDOWN => Ok(Control::EngineShutdown),
+            CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::RobotShutdown),
             _ => Err(()),
         }
     }
@@ -46,9 +41,23 @@ impl TryFrom<Vec<u8>> for Control {
 
 impl crate::protocol::Packetize for Control {
     const MESSAGE_TYPE: u8 = 0x45;
-    const MESSAGE_SIZE: Option<usize> = Some(1);
 
     fn to_bytes(&self) -> Vec<u8> {
-        vec![*self as u8]
+        let mut buf = BytesMut::with_capacity(2);
+
+        match self {
+            Control::EngineRequest(rpm) => {
+                buf.put_u8(CONTROL_TYPE_ENGINE_REQUEST);
+                buf.put_u16(*rpm);
+            }
+            Control::EngineShutdown => {
+                buf.put_u8(CONTROL_TYPE_ENGINE_SHUTDOWN);
+            }
+            Control::RobotShutdown => {
+                buf.put_u8(CONTROL_TYPE_MACHINE_SHUTDOWN);
+            }
+        }
+
+        buf.to_vec()
     }
 }
