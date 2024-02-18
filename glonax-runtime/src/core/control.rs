@@ -2,7 +2,14 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 const CONTROL_TYPE_ENGINE_REQUEST: u8 = 0x01;
 const CONTROL_TYPE_ENGINE_SHUTDOWN: u8 = 0x02;
+
+const _CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT: u8 = 0x5;
+const _CONTROL_TYPE_HYDRAULIC_LOCK: u8 = 0x6;
+
 const CONTROL_TYPE_MACHINE_SHUTDOWN: u8 = 0x1B;
+const _CONTROL_TYPE_MACHINE_ILLUMINATION: u8 = 0x1C;
+const _CONTROL_TYPE_MACHINE_LIGHTS: u8 = 0x2D;
+const CONTROL_TYPE_MACHINE_HORN: u8 = 0x1E;
 
 #[derive(Clone, Copy)]
 pub enum Control {
@@ -10,8 +17,10 @@ pub enum Control {
     EngineRequest(u16),
     /// Engine shutdown.
     EngineShutdown,
-    /// Robot shutdown.
-    RobotShutdown,
+    /// Machine shutdown.
+    MachineShutdown,
+    /// Machine horn.
+    MachineHorn(bool),
 }
 
 impl std::fmt::Display for Control {
@@ -19,7 +28,8 @@ impl std::fmt::Display for Control {
         match self {
             Control::EngineRequest(rpm) => write!(f, "Engine request: {}", rpm),
             Control::EngineShutdown => write!(f, "Engine shutdown"),
-            Control::RobotShutdown => write!(f, "Robot shutdown"),
+            Control::MachineShutdown => write!(f, "Robot shutdown"),
+            Control::MachineHorn(on) => write!(f, "Machine horn: {}", on),
         }
     }
 }
@@ -33,7 +43,8 @@ impl TryFrom<Vec<u8>> for Control {
         match buf.get_u8() {
             CONTROL_TYPE_ENGINE_REQUEST => Ok(Control::EngineRequest(buf.get_u16())),
             CONTROL_TYPE_ENGINE_SHUTDOWN => Ok(Control::EngineShutdown),
-            CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::RobotShutdown),
+            CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::MachineShutdown),
+            CONTROL_TYPE_MACHINE_HORN => Ok(Control::MachineHorn(buf.get_u8() != 0)),
             _ => Err(()),
         }
     }
@@ -53,8 +64,12 @@ impl crate::protocol::Packetize for Control {
             Control::EngineShutdown => {
                 buf.put_u8(CONTROL_TYPE_ENGINE_SHUTDOWN);
             }
-            Control::RobotShutdown => {
+            Control::MachineShutdown => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_SHUTDOWN);
+            }
+            Control::MachineHorn(on) => {
+                buf.put_u8(CONTROL_TYPE_MACHINE_HORN);
+                buf.put_u8(if *on { 1 } else { 0 });
             }
         }
 

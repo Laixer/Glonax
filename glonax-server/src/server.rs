@@ -138,10 +138,13 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         log::info!("Engine shutdown");
                         runtime_state.write().await.state.engine_request = 0;
                     }
-                    glonax::core::Control::RobotShutdown => {
-                        log::info!("Robot shutdown");
+                    glonax::core::Control::MachineShutdown => {
+                        log::info!("Machine shutdown");
                         runtime_state.write().await.state.engine_request = 0;
                         // runtime_state.write().await.state.engine.shutdown();
+                    }
+                    glonax::core::Control::MachineHorn(on) => {
+                        log::info!("Machine horn: {}", on);
                     }
                 }
             }
