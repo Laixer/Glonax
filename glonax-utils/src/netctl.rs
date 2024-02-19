@@ -43,17 +43,20 @@ fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
 /// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     use glonax::driver::{
-        EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, KueblerEncoder, J1939Message
+        EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, J1939Message,
+        KueblerEncoder,
     };
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 = EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0, consts::J1939_ADDRESS_OBDL);
+    let mut ems0 =
+        EngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0, consts::J1939_ADDRESS_OBDL);
     let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0, consts::J1939_ADDRESS_OBDL);
     let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1, consts::J1939_ADDRESS_OBDL);
     let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2, consts::J1939_ADDRESS_OBDL);
     let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3, consts::J1939_ADDRESS_OBDL);
-    let mut hcu0 = HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
+    let mut hcu0 =
+        HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
     let mut rrp0 = J1939ApplicationInspector;
 
     loop {
@@ -62,15 +65,12 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
         if let Some(message) = router.try_accept(&mut ems0) {
             match message {
                 glonax::driver::net::engine::EngineMessage::TorqueSpeedControl(control) => {
-                    // TODO: Move to j1939 crate
                     info!(
-                        "{} {} {} » Torque speed control: Mode: {:?} Speed: {} Torque: {}",
+                        "{} {} {} » Torque speed control: {}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
-                        control.override_control_mode.unwrap_or(glonax::j1939::decode::OverrideControlMode::OverrideDisabled),
-                        control.speed.unwrap_or(0),
-                        control.torque.unwrap_or(0)
+                        control
                     );
                 }
                 glonax::driver::net::engine::EngineMessage::EngineController(controller) => {
@@ -177,21 +177,12 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     );
                 }
                 J1939Message::AddressClaim(name) => {
-                    // TODO: Move printing to j1939 crate
                     info!(
-                        "{} {} {} » Identity number: 0x{:X}; Manufacturer code: 0x{:X}; Function instance: 0x{:X}; ECU instance: 0x{:X}; Function: 0x{:X}; Vehicle system: 0x{:X}; Vehicle system instance: 0x{:X}; Industry group: {:X}; Arbitrary address: {}",
+                        "{} {} {} » Name: {}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Inspector"),
-                        name.identity_number,
-                        name.manufacturer_code,
-                        name.function_instance,
-                        name.ecu_instance,
-                        name.function,
-                        name.vehicle_system,
-                        name.vehicle_system_instance,
-                        name.industry_group,
-                        name.arbitrary_address 
+                        name
                     );
                 }
                 J1939Message::Acknowledged(acknowledged) => {
@@ -421,10 +412,17 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     match args.command {
-        Command::Hcu { interval, address, command } => {
+        Command::Hcu {
+            interval,
+            address,
+            command,
+        } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let hcu0 = glonax::driver::HydraulicControlUnit::new(destination_address, consts::J1939_ADDRESS_OBDL);
+            let hcu0 = glonax::driver::HydraulicControlUnit::new(
+                destination_address,
+                consts::J1939_ADDRESS_OBDL,
+            );
 
             match command {
                 HCUCommand::Ident { toggle } => {
@@ -438,17 +436,21 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?)).await?;
+                        socket
+                            .send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?))
+                            .await?;
                     }
                 }
                 HCUCommand::Reboot => {
                     info!("{} Reboot", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -458,7 +460,8 @@ async fn main() -> anyhow::Result<()> {
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -482,7 +485,8 @@ async fn main() -> anyhow::Result<()> {
                         hcu0.unlock()
                     };
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -501,31 +505,51 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&hcu0.actuator_command([(actuator, value)].into())).await?;
+                        socket
+                            .send_vectored(&hcu0.actuator_command([(actuator, value)].into()))
+                            .await?;
                     }
                 }
                 HCUCommand::Assign { address_new } => {
                     let destination_address_new = j1939_address(address_new)?;
 
-                    info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
+                    info!(
+                        "{} Assign 0x{:X?}",
+                        style_address(destination_address),
+                        destination_address_new
+                    );
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                        socket
+                            .send_vectored(&commanded_address(
+                                destination_address,
+                                destination_address_new,
+                            ))
+                            .await?;
                     }
                 }
             }
         }
-        Command::Vcu { interval, address, command } => {
+        Command::Vcu {
+            interval,
+            address,
+            command,
+        } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
+            let ems0 = glonax::driver::EngineManagementSystem::new(
+                destination_address,
+                consts::J1939_ADDRESS_OBDL,
+            );
 
             match command {
                 VCUCommand::Ident { toggle } => {
@@ -539,17 +563,21 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&ems0.set_ident(toggle.parse::<bool>()?)).await?;
+                        socket
+                            .send_vectored(&ems0.set_ident(toggle.parse::<bool>()?))
+                            .await?;
                     }
                 }
                 VCUCommand::Reboot => {
                     info!("{} Reboot", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -559,37 +587,58 @@ async fn main() -> anyhow::Result<()> {
                 VCUCommand::Assign { address_new } => {
                     let destination_address_new = j1939_address(address_new)?;
 
-                    info!("{} Assign 0x{:X?}", style_address(destination_address), destination_address_new);
+                    info!(
+                        "{} Assign 0x{:X?}",
+                        style_address(destination_address),
+                        destination_address_new
+                    );
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&commanded_address(destination_address, destination_address_new)).await?;
+                        socket
+                            .send_vectored(&commanded_address(
+                                destination_address,
+                                destination_address_new,
+                            ))
+                            .await?;
                     }
                 }
             }
         }
-        Command::Engine { interval, address, command } => {
+        Command::Engine {
+            interval,
+            address,
+            command,
+        } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::EngineManagementSystem::new(destination_address, consts::J1939_ADDRESS_OBDL);
+            let ems0 = glonax::driver::EngineManagementSystem::new(
+                destination_address,
+                consts::J1939_ADDRESS_OBDL,
+            );
 
             match command {
                 EngineCommand::Rpm { rpm } => {
                     info!("{} Set RPM to {}", style_address(destination_address), rpm);
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&ems0.speed_request(rpm, false)).await?;
+                        socket
+                            .send_vectored(&ems0.speed_request(rpm, false))
+                            .await?;
                     }
                 }
                 EngineCommand::Start => {
                     info!("{} Start engine", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -599,7 +648,8 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Stop => {
                     info!("{} Stop engine", style_address(destination_address));
 
-                    let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+                    let mut tick =
+                        tokio::time::interval(std::time::Duration::from_millis(interval));
 
                     loop {
                         tick.tick().await;
@@ -608,8 +658,12 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Request { interval, address, command } => {
-            use glonax::j1939::{PGN, protocol};
+        Command::Request {
+            interval,
+            address,
+            command,
+        } => {
+            use glonax::j1939::{protocol, PGN};
 
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
@@ -628,7 +682,9 @@ async fn main() -> anyhow::Result<()> {
 
             loop {
                 tick.tick().await;
-                socket.send(&protocol::request(destination_address, pgn)).await?;
+                socket
+                    .send(&protocol::request(destination_address, pgn))
+                    .await?;
             }
         }
         Command::Send { interval, id, data } => {
@@ -636,9 +692,9 @@ async fn main() -> anyhow::Result<()> {
 
             let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
 
-            let frame = glonax::j1939::FrameBuilder::new(
-                glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?)
-            )
+            let frame = glonax::j1939::FrameBuilder::new(glonax::j1939::Id::new(
+                u32::from_str_radix(id.as_str(), 16)?,
+            ))
             .copy_from_slice(&hex::decode(data)?)
             .build();
 
@@ -649,10 +705,13 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Fuzzer { interval, id } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let fuz0 = glonax::driver::Fuzzer::new(glonax::j1939::Id::new(u32::from_str_radix(id.as_str(), 16)?));
+            let fuz0 = glonax::driver::Fuzzer::new(glonax::j1939::Id::new(u32::from_str_radix(
+                id.as_str(),
+                16,
+            )?));
 
             let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
-            
+
             loop {
                 tick.tick().await;
                 socket.send(&fuz0.gen_frame()).await?;
