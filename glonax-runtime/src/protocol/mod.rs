@@ -56,6 +56,8 @@ pub trait Packetize: TryFrom<Vec<u8>> + Sized {
 
 pub mod client {
     pub mod tcp {
+        use std::time::Duration;
+
         use crate::protocol::{frame, Stream};
 
         pub async fn connect(
@@ -85,7 +87,18 @@ pub mod client {
                 flags &= !frame::Session::MODE_FAILSAFE;
             }
 
-            let mut client = Stream::new(tokio::net::TcpStream::connect(address).await?);
+            let stream = tokio::net::TcpStream::connect(address).await?;
+
+            let sock_ref = socket2::SockRef::from(&stream);
+
+            let mut keep_alive = socket2::TcpKeepalive::new();
+            keep_alive = keep_alive.with_time(Duration::from_secs(2));
+            keep_alive = keep_alive.with_interval(Duration::from_secs(2));
+
+            sock_ref.set_tcp_keepalive(&keep_alive)?;
+            sock_ref.set_nodelay(true)?;
+
+            let mut client = Stream::new(stream);
 
             let instance = client.handshake(session_name, flags).await?;
 
