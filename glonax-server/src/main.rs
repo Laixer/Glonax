@@ -166,10 +166,6 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    if config.nmea_device.is_some() {
-        runtime.schedule_io_service(device::service_gnss);
-    }
-
     runtime
         .schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host_interval));
 
@@ -179,11 +175,15 @@ async fn main() -> anyhow::Result<()> {
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
-        runtime.schedule_j1939_service(j1939::rx_network_0, &config.interface[0]);
-        runtime.schedule_j1939_service(j1939::rx_network_1, &config.interface[1]);
+        if config.nmea_device.is_some() {
+            runtime.schedule_io_service(device::service_gnss);
+        }
 
+        runtime.schedule_j1939_service(j1939::rx_network_0, &config.interface[0]);
         runtime.schedule_j1939_service(j1939::tx_network_0, &config.interface[0]);
+        runtime.schedule_j1939_service(j1939::rx_network_1, &config.interface[1]);
         runtime.schedule_j1939_service(j1939::tx_network_1, &config.interface[1]);
+
         runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.interface[1]);
     }
 

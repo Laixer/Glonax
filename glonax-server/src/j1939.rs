@@ -24,7 +24,7 @@ const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 pub(super) async fn rx_network_0(
     interface: String,
     runtime_state: SharedOperandState,
-    _shutdown: tokio::sync::broadcast::Receiver<()>,
+    shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -49,7 +49,7 @@ pub(super) async fn rx_network_0(
     );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
-    loop {
+    while shutdown.is_empty() {
         if let Err(e) = router.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }
@@ -60,12 +60,14 @@ pub(super) async fn rx_network_0(
         enc3.try_accept(&mut router, runtime_state.clone()).await;
         rrp0.try_accept(&mut router, runtime_state.clone()).await;
     }
+
+    Ok(())
 }
 
 pub(super) async fn rx_network_1(
     interface: String,
     runtime_state: SharedOperandState,
-    _shutdown: tokio::sync::broadcast::Receiver<()>,
+    shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -82,7 +84,7 @@ pub(super) async fn rx_network_1(
     );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
-    loop {
+    while shutdown.is_empty() {
         if let Err(e) = router.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }
@@ -91,6 +93,8 @@ pub(super) async fn rx_network_1(
         hcu0.try_accept(&mut router, runtime_state.clone()).await;
         rrp0.try_accept(&mut router, runtime_state.clone()).await;
     }
+
+    Ok(())
 }
 
 // TODO: Move into runtime
