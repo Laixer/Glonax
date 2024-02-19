@@ -11,6 +11,7 @@ pub mod math;
 pub mod net;
 pub mod protocol;
 pub mod robot;
+pub mod service;
 pub mod world;
 
 mod can;
