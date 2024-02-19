@@ -81,9 +81,12 @@ async fn main() -> anyhow::Result<()> {
 
     fn print_help() {
         println!("Commands:");
-        println!("  r | request <class>");
-        println!("  w | watch <class>");
-        println!("  e | engine <command");
+        println!("  r  | request <class>");
+        println!("  w  | watch <class>");
+        println!("  e  | engine <command");
+        println!("  qd | quick disconnect <on|off>");
+        println!("  l  | lights <on|off>");
+        println!("  h  | horn <on|off>");
         println!("  x");
         println!();
         println!("Classes:");
@@ -220,10 +223,10 @@ async fn main() -> anyhow::Result<()> {
 
                         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                     }
-                } else {
-                    eprintln!("Invalid request");
-                    continue;
                 }
+
+                eprintln!("Invalid request");
+                continue;
             }
             s if s.starts_with("engine ") || s.starts_with("e ") => {
                 let mut parts = s.split_whitespace();
@@ -236,6 +239,51 @@ async fn main() -> anyhow::Result<()> {
                     Some("shutdown") => glonax::core::Control::EngineShutdown,
                     _ => {
                         eprintln!("Invalid engine command");
+                        continue;
+                    }
+                };
+
+                client.send_packet(&control).await?;
+            }
+            s if s.starts_with("quick disconnect ") || s.starts_with("qd ") => {
+                let mut parts = s.split_whitespace();
+                parts.next();
+
+                let control = match parts.next() {
+                    Some("on") => glonax::core::Control::HydraulicQuickDisconnect(true),
+                    Some("off") => glonax::core::Control::HydraulicQuickDisconnect(false),
+                    _ => {
+                        eprintln!("Invalid quick disconnect command");
+                        continue;
+                    }
+                };
+
+                client.send_packet(&control).await?;
+            }
+            s if s.starts_with("lights ") || s.starts_with("l ") => {
+                let mut parts = s.split_whitespace();
+                parts.next();
+
+                let control = match parts.next() {
+                    Some("on") => glonax::core::Control::MachineIllumination(true),
+                    Some("off") => glonax::core::Control::MachineIllumination(false),
+                    _ => {
+                        eprintln!("Invalid lights command");
+                        continue;
+                    }
+                };
+
+                client.send_packet(&control).await?;
+            }
+            s if s.starts_with("horn ") || s.starts_with("h ") => {
+                let mut parts = s.split_whitespace();
+                parts.next();
+
+                let control = match parts.next() {
+                    Some("on") => glonax::core::Control::MachineHorn(true),
+                    Some("off") => glonax::core::Control::MachineHorn(false),
+                    _ => {
+                        eprintln!("Invalid horn command");
                         continue;
                     }
                 };
