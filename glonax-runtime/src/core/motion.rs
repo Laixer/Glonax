@@ -41,7 +41,7 @@ impl TryFrom<u16> for Actuator {
 
 type MotionValueType = i16;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChangeSet {
     /// Actuator ID.
     pub actuator: Actuator,

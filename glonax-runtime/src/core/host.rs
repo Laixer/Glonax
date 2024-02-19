@@ -26,6 +26,7 @@ impl TryFrom<u8> for HostStatus {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Host {
     /// VMS Memory total and used in bytes.
     pub memory: (u64, u64),

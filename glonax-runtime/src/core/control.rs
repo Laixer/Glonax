@@ -9,7 +9,7 @@ const CONTROL_TYPE_MACHINE_ILLUMINATION: u8 = 0x1C;
 const CONTROL_TYPE_MACHINE_LIGHTS: u8 = 0x2D;
 const CONTROL_TYPE_MACHINE_HORN: u8 = 0x1E;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Control {
     /// Engine RPM request.
     EngineRequest(u16),

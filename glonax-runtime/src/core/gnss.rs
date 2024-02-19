@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum GnssStatus {
     /// GNSS is disabled.
     Disabled = 0xFF,
@@ -23,6 +23,7 @@ impl TryFrom<u8> for GnssStatus {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Gnss {
     /// GNSS Latitude and Longitude.
     pub location: (f32, f32),

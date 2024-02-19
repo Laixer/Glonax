@@ -1,7 +1,7 @@
 use glonax::{
     protocol::{
         frame::{Echo, Request, Session},
-        Stream,
+        Packetize, Stream,
     },
     runtime::{MotionSender, SharedOperandState},
 };
@@ -15,8 +15,6 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
     motion_sender: MotionSender,
     _permit: tokio::sync::OwnedSemaphorePermit,
 ) {
-    use glonax::protocol::Packetize;
-
     let mut client = Stream::new(stream);
 
     // Always start with an anonymous session

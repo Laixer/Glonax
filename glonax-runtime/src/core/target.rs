@@ -1,6 +1,6 @@
 use nalgebra::{Point3, UnitQuaternion};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Constraint {
     /// Unconstrained motion order.
     Unconstrained = 0,
@@ -32,7 +32,7 @@ impl TryFrom<u8> for Constraint {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Target {
     /// The point in space.
     pub point: Point3<f32>,
@@ -40,6 +40,16 @@ pub struct Target {
     pub orientation: UnitQuaternion<f32>,
     /// The motion constraint.
     pub constraint: Constraint,
+}
+
+impl Default for Target {
+    fn default() -> Self {
+        Self {
+            point: Point3::origin(),
+            orientation: UnitQuaternion::identity(),
+            constraint: Constraint::Unconstrained,
+        }
+    }
 }
 
 impl Target {

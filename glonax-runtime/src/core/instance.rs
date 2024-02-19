@@ -39,8 +39,43 @@ impl Instance {
     }
 }
 
-impl Instance {
-    pub fn to_bytes(&self) -> Vec<u8> {
+impl std::fmt::Display for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Instance ID: {}, Model: {}, Type: {:?}, Version: {}.{}.{}",
+            self.id, self.model, self.ty, self.version.0, self.version.1, self.version.2
+        )
+    }
+}
+
+impl TryFrom<Vec<u8>> for Instance {
+    type Error = ();
+
+    // TODO: Use BytesMut
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        // let mut buf = Bytes::copy_from_slice(value);
+
+        if value.len() < 6 {
+            log::warn!("Invalid buffer size");
+            return Err(());
+        }
+
+        let id = uuid::Uuid::from_slice(&value[..16]).unwrap();
+        let ty = MachineType::try_from(value[16]).unwrap();
+        let version = (value[17], value[18], value[19]);
+
+        let model_length = u16::from_be_bytes([value[20], value[21]]) as usize;
+        let model = String::from_utf8_lossy(&value[22..22 + model_length]).to_string();
+
+        Ok(Self::new(id, model, ty, version))
+    }
+}
+
+impl crate::protocol::Packetize for Instance {
+    const MESSAGE_TYPE: u8 = 0x15;
+
+    fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(64);
 
         buf.put(&self.id.as_bytes()[..]);
@@ -57,57 +92,10 @@ impl Instance {
     }
 }
 
-impl std::fmt::Display for Instance {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Instance ID: {}, Model: {}, Type: {:?}, Version: {}.{}.{}",
-            self.id, self.model, self.ty, self.version.0, self.version.1, self.version.2
-        )
-    }
-}
-
-impl TryFrom<&[u8]> for Instance {
-    type Error = ();
-
-    // TODO: Use BytesMut
-    fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
-        // let mut buf = Bytes::copy_from_slice(value);
-
-        if buffer.len() < 6 {
-            log::warn!("Invalid buffer size");
-            return Err(());
-        }
-
-        let id = uuid::Uuid::from_slice(&buffer[..16]).unwrap();
-        let ty = MachineType::try_from(buffer[16]).unwrap();
-        let version = (buffer[17], buffer[18], buffer[19]);
-
-        let model_length = u16::from_be_bytes([buffer[20], buffer[21]]) as usize;
-        let model = String::from_utf8_lossy(&buffer[22..22 + model_length]).to_string();
-
-        Ok(Self::new(id, model, ty, version))
-    }
-}
-
-impl TryFrom<Vec<u8>> for Instance {
-    type Error = ();
-
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        Instance::try_from(&value[..])
-    }
-}
-
-impl crate::protocol::Packetize for Instance {
-    const MESSAGE_TYPE: u8 = 0x15;
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_bytes()
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::protocol::Packetize;
+
     use super::*;
 
     #[test]
@@ -120,7 +108,7 @@ mod tests {
         );
 
         let bytes = instance.to_bytes();
-        let instance2 = Instance::try_from(&bytes[..]).unwrap();
+        let instance2 = Instance::try_from(bytes).unwrap();
 
         assert_eq!(instance, instance2);
     }
