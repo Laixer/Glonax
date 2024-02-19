@@ -193,7 +193,6 @@ pub(super) async fn tcp_listen(
     loop {
         let (stream, addr) = listener.accept().await?;
         stream.set_nodelay(true)?;
-        stream.set_linger(Some(std::time::Duration::ZERO))?;
 
         log::debug!("Accepted connection from: {}", addr);
 
