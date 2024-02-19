@@ -263,6 +263,7 @@ enum Command {
         #[command(subcommand)]
         command: HCUCommand,
     },
+    /// Vehicle control unit commands.
     Vcu {
         /// Message interval in milliseconds.
         #[arg(short, long, default_value_t = 10)]
@@ -286,6 +287,7 @@ enum Command {
         #[command(subcommand)]
         command: EngineCommand,
     },
+    /// Request data from a unit.
     Request {
         /// Message interval in milliseconds.
         #[arg(short, long, default_value_t = 10)]
@@ -297,6 +299,7 @@ enum Command {
         #[command(subcommand)]
         command: RequestCommand,
     },
+    /// Send raw frames.
     Send {
         /// Message interval in milliseconds.
         #[arg(short, long, default_value_t = 10)]
@@ -306,6 +309,7 @@ enum Command {
         /// Raw data to send.
         data: String,
     },
+    /// Frame fuzzer.
     Fuzzer {
         /// Message interval in milliseconds.
         #[arg(short, long, default_value_t = 10)]
@@ -319,7 +323,7 @@ enum Command {
         #[arg(long)]
         pgn: Vec<u32>,
         /// Filter on address.
-        #[arg(long)]
+        #[arg(short, long)]
         address: Vec<String>,
     },
     /// Analyze network frames.
@@ -328,7 +332,7 @@ enum Command {
         #[arg(long)]
         pgn: Vec<u32>,
         /// Filter on address.
-        #[arg(long)]
+        #[arg(short, long)]
         address: Vec<String>,
     },
 }

@@ -279,7 +279,6 @@ impl HydraulicControlUnit {
         .to_frame()
     }
 
-    // FUTURE: Move this to HCU
     /// Drive both tracks
     pub fn drive_straight(&self, value: i16) -> Vec<Frame> {
         self.actuator_command([(2, value), (3, value)].into_iter().collect())

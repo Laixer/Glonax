@@ -12,6 +12,7 @@ impl Fuzzer {
         Self { destination_id: id }
     }
 
+    /// Generate a random frame.
     pub fn gen_frame(&self) -> Frame {
         let random_number = rand::thread_rng().gen_range(0..=8);
         let random_bytes = (0..random_number)

@@ -7,34 +7,6 @@ use crate::net::Parsable;
 
 use super::vecraft::VecraftConfigMessage;
 
-// impl std::fmt::Display for EngineControllerMessage {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         let mut s = String::new();
-
-//         if let Some(engine_torque_mode) = &self.engine_torque_mode {
-//             s.push_str(&format!("Torque mode: {:?}; ", engine_torque_mode));
-//         }
-
-//         if let Some(driver_demand) = self.driver_demand {
-//             s.push_str(&format!("Driver Demand: {}%; ", driver_demand));
-//         }
-
-//         if let Some(actual_engine) = self.actual_engine {
-//             s.push_str(&format!("Actual Engine: {}%; ", actual_engine));
-//         }
-
-//         if let Some(rpm) = self.rpm {
-//             s.push_str(&format!("RPM: {}; ", rpm));
-//         }
-
-//         if let Some(starter_mode) = &self.starter_mode {
-//             s.push_str(&format!("Starter mode: {:?}; ", starter_mode));
-//         }
-
-//         write!(f, "{}", s)
-//     }
-// }
-
 pub enum EngineMessage {
     TorqueSpeedControl(spn::TorqueSpeedControlMessage),
     EngineController(spn::EngineControllerMessage),
