@@ -161,7 +161,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         "{} {} {} » Software identification: {}.{}.{}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("Inspector"),
+                        Yellow.bold().paint("J1939"),
                         major,
                         minor,
                         patch
@@ -172,7 +172,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         "{} {} {} » Request for PGN: {:?}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("Inspector"),
+                        Yellow.bold().paint("J1939"),
                         pgn
                     );
                 }
@@ -181,7 +181,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         "{} {} {} » Name: {}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("Inspector"),
+                        Yellow.bold().paint("J1939"),
                         name
                     );
                 }
@@ -190,7 +190,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         "{} {} {} » Acknowledged: {}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("Inspector"),
+                        Yellow.bold().paint("J1939"),
                         acknowledged
                     );
                 }
@@ -199,7 +199,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         "{} {} {} » Time and date: {}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("Inspector"),
+                        Yellow.bold().paint("J1939"),
                         time
                     );
                 }
@@ -208,7 +208,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         "{} {} {} » Proprietary B: {:02X?}",
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(router.frame_source().unwrap()),
-                        Yellow.bold().paint("Inspector"),
+                        Yellow.bold().paint("J1939"),
                         data
                     );
                 }

@@ -84,36 +84,15 @@ impl Motion {
             value: value.into(),
         }])
     }
+}
 
-    // FUTURE: Copy into bytes directly
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut buf = BytesMut::with_capacity(32);
-
-        match self {
-            Motion::StopAll => {
-                buf.put_u8(MOTION_TYPE_STOP_ALL);
-            }
-            Motion::ResumeAll => {
-                buf.put_u8(MOTION_TYPE_RESUME_ALL);
-            }
-            Motion::ResetAll => {
-                buf.put_u8(MOTION_TYPE_RESET_ALL);
-            }
-            Motion::StraightDrive(value) => {
-                buf.put_u8(MOTION_TYPE_STRAIGHT_DRIVE);
-                buf.put_i16(*value);
-            }
-            Motion::Change(changes) => {
-                buf.put_u8(MOTION_TYPE_CHANGE);
-                buf.put_u8(changes.len() as u8);
-                for change in changes {
-                    buf.put_u16(change.actuator as u16);
-                    buf.put_i16(change.value);
-                }
-            }
-        }
-
-        buf.to_vec()
+impl FromIterator<(Actuator, MotionValueType)> for Motion {
+    fn from_iter<T: IntoIterator<Item = (Actuator, MotionValueType)>>(iter: T) -> Self {
+        Self::Change(
+            iter.into_iter()
+                .map(|(actuator, value)| ChangeSet { actuator, value })
+                .collect(),
+        )
     }
 }
 
@@ -145,11 +124,11 @@ impl std::fmt::Display for Motion {
     }
 }
 
-impl TryFrom<&[u8]> for Motion {
+impl TryFrom<Vec<u8>> for Motion {
     type Error = ();
 
-    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut buf = Bytes::copy_from_slice(value);
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        let mut buf = Bytes::copy_from_slice(&value);
 
         match buf.get_u8() {
             MOTION_TYPE_STOP_ALL => Ok(Motion::StopAll),
@@ -172,41 +151,51 @@ impl TryFrom<&[u8]> for Motion {
     }
 }
 
-impl TryFrom<Vec<u8>> for Motion {
-    type Error = ();
-
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        Motion::try_from(&value[..])
-    }
-}
-
-impl FromIterator<(Actuator, MotionValueType)> for Motion {
-    fn from_iter<T: IntoIterator<Item = (Actuator, MotionValueType)>>(iter: T) -> Self {
-        Self::Change(
-            iter.into_iter()
-                .map(|(actuator, value)| ChangeSet { actuator, value })
-                .collect(),
-        )
-    }
-}
-
 impl crate::protocol::Packetize for Motion {
     const MESSAGE_TYPE: u8 = 0x20;
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.to_bytes()
+        let mut buf = BytesMut::with_capacity(32);
+
+        match self {
+            Motion::StopAll => {
+                buf.put_u8(MOTION_TYPE_STOP_ALL);
+            }
+            Motion::ResumeAll => {
+                buf.put_u8(MOTION_TYPE_RESUME_ALL);
+            }
+            Motion::ResetAll => {
+                buf.put_u8(MOTION_TYPE_RESET_ALL);
+            }
+            Motion::StraightDrive(value) => {
+                buf.put_u8(MOTION_TYPE_STRAIGHT_DRIVE);
+                buf.put_i16(*value);
+            }
+            Motion::Change(changes) => {
+                buf.put_u8(MOTION_TYPE_CHANGE);
+                buf.put_u8(changes.len() as u8);
+                for change in changes {
+                    buf.put_u16(change.actuator as u16);
+                    buf.put_i16(change.value);
+                }
+            }
+        }
+
+        buf.to_vec()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::protocol::Packetize;
+
     use super::*;
 
     #[test]
     fn test_motion() {
         let motion = Motion::new(Actuator::Boom, Motion::POWER_MAX);
         let bytes = motion.to_bytes();
-        let motion2 = Motion::try_from(&bytes[..]).unwrap();
+        let motion2 = Motion::try_from(bytes).unwrap();
 
         assert_eq!(motion, motion2);
     }

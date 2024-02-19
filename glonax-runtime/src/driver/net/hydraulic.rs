@@ -106,7 +106,7 @@ impl std::fmt::Display for ActuatorMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Actuator state {}",
+            "State {}",
             self.actuators
                 .iter()
                 .enumerate()
