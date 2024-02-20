@@ -72,7 +72,7 @@ async fn main() -> anyhow::Result<()> {
         config.simulation.enabled = true;
     }
     if args.pilot_only {
-        config.mode = config::OperationMode::Pilot;
+        config.mode = config::OperationMode::PilotRestrict;
     }
 
     let mut log_config = simplelog::ConfigBuilder::new();
@@ -121,23 +121,27 @@ async fn main() -> anyhow::Result<()> {
 
     use std::time::Duration;
 
-    log::debug!("Starting proxy services");
-    log::info!("{}", config.instance);
+    let instance = config.instance.clone();
+    let instance2 = glonax::core::Instance::new(
+        instance.id.clone(),
+        instance.model.clone(),
+        instance.ty,
+        (1, 0, 0),
+    );
 
-    if config.instance.id().is_nil() {
+    log::debug!("Starting proxy services");
+    log::info!("Running in operation mode: {}", config.mode);
+    log::info!("{}", instance2);
+
+    if instance2.id().is_nil() {
         log::warn!("Instance ID is not set or invalid");
     }
 
     if config.simulation.enabled {
         log::info!("Running in simulation mode");
     }
-    if config.mode == config::OperationMode::Pilot {
-        log::info!("Running in pilot only mode");
-    }
 
-    let instance = config.instance.clone();
-
-    let mut runtime = glonax::runtime::builder(&config, instance)?
+    let mut runtime = glonax::runtime::builder(&config, instance2)?
         .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
@@ -155,12 +159,12 @@ async fn main() -> anyhow::Result<()> {
             runtime.schedule_io_service(device::service_gnss);
         }
 
-        runtime.schedule_j1939_service(j1939::rx_network_0, &config.can[0].interface);
-        runtime.schedule_j1939_service(j1939::tx_network_0, &config.can[0].interface);
-        runtime.schedule_j1939_service(j1939::rx_network_1, &config.can[1].interface);
-        runtime.schedule_j1939_service(j1939::tx_network_1, &config.can[1].interface);
+        runtime.schedule_j1939_service(j1939::rx_network_0, &config.j1939[0].interface);
+        runtime.schedule_j1939_service(j1939::tx_network_0, &config.j1939[0].interface);
+        runtime.schedule_j1939_service(j1939::rx_network_1, &config.j1939[1].interface);
+        runtime.schedule_j1939_service(j1939::tx_network_1, &config.j1939[1].interface);
 
-        runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.can[1].interface);
+        runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.j1939[1].interface);
     }
 
     runtime.schedule_io_service(server::tcp_listen);
@@ -173,7 +177,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.make_dynamic::<components::LocalActor>(3),
     ];
 
-    if config.mode != config::OperationMode::Pilot {
+    if config.mode == config::OperationMode::Normal {
         components.push(runtime.make_dynamic::<components::Kinematic>(5));
         components.push(runtime.make_dynamic::<components::Controller>(10));
     }

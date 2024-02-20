@@ -3,6 +3,7 @@ use serde_derive::Deserialize;
 
 use super::MachineType;
 
+// TODO: Add serial number
 // TODO: Rename to 'Machine'
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Instance {
