@@ -221,7 +221,7 @@ async fn main() -> anyhow::Result<()> {
                         client.send_request(class).await?;
                         print_frame(&mut client).await?;
 
-                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     }
                 }
 
@@ -290,9 +290,44 @@ async fn main() -> anyhow::Result<()> {
 
                 client.send_packet(&control).await?;
             }
-            s if s.starts_with("test ") || s.starts_with("x ") => {
-                let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
+            "ping" => {
+                use glonax::protocol::Packetize;
 
+                loop {
+                    let random_number = glonax::rand::random::<i32>();
+
+                    let now = std::time::Instant::now();
+
+                    client
+                        .send_packet(&glonax::protocol::frame::Echo {
+                            payload: random_number,
+                        })
+                        .await?;
+
+                    let frame = client.read_frame().await?;
+                    if frame.message != glonax::protocol::frame::Echo::MESSAGE_TYPE {
+                        eprintln!("Invalid response from server");
+                        continue;
+                    }
+
+                    let time_elapsed = now.elapsed().as_millis();
+
+                    let echo = client
+                        .recv_packet::<glonax::protocol::frame::Echo>(frame.payload_length)
+                        .await?;
+
+                    if random_number != echo.payload {
+                        eprintln!("Invalid echo response from server");
+                        continue;
+                    }
+
+                    println!("Echo response time: {} ms", time_elapsed);
+
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                }
+            }
+            "test" => {
+                let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
                 client.send_packet(&target).await?;
             }
             "q" | "quit" => {

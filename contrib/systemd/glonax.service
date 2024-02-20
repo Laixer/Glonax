@@ -24,7 +24,7 @@ Nice=-15
 User=glonax
 Group=glonax
 ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i lo -o carrier
-ExecStart=/usr/local/bin/glonaxd --bind 0:30051 --daemon --simulation
+ExecStart=/usr/local/bin/glonaxd --daemon
 PrivateTmp=true
 
 [Install]
