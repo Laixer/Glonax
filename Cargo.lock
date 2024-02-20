@@ -424,6 +424,8 @@ dependencies = [
  "glonax-serial",
  "log",
  "nalgebra",
+ "serde",
+ "serde_derive",
  "simplelog",
  "tokio",
 ]

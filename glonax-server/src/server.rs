@@ -6,8 +6,6 @@ use glonax::{
     runtime::{MotionSender, SharedOperandState},
 };
 
-use crate::config::ProxyConfig;
-
 async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
     stream: T,
     instance: glonax::core::Instance,
@@ -174,7 +172,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 }
 
 pub(super) async fn tcp_listen(
-    config: ProxyConfig,
+    config: crate::config::Config,
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
@@ -185,8 +183,8 @@ pub(super) async fn tcp_listen(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    log::debug!("Listening on: {}", config.address);
-    let listener = TcpListener::bind(config.address.clone()).await?;
+    log::debug!("Listening on: {}", config.server.listen);
+    let listener = TcpListener::bind(config.server.listen.clone()).await?;
 
     loop {
         let (stream, addr) = listener.accept().await?;
@@ -222,7 +220,7 @@ pub(super) async fn tcp_listen(
 }
 
 pub(super) async fn unix_listen(
-    _config: ProxyConfig,
+    _config: crate::config::Config,
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
@@ -271,7 +269,7 @@ pub(super) async fn unix_listen(
 }
 
 pub(super) async fn net_announce(
-    _config: ProxyConfig,
+    _config: crate::config::Config,
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     _motion_sender: MotionSender,

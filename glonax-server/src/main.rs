@@ -34,15 +34,6 @@ pub(crate) mod consts {
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax proxy daemon", long_about = None)]
 struct Args {
-    /// Bind address.
-    #[arg(short = 'b', long = "bind", default_value = "0.0.0.0:30051")]
-    address: String,
-    /// CAN network interface.
-    #[arg(required_unless_present = "simulation", short = 'i', long)]
-    interface: Vec<String>,
-    /// Refresh host service interval in milliseconds.
-    #[arg(long, default_value_t = 200, value_name = "INTERVAL")]
-    host_interval: u64,
     /// Configuration file.
     #[arg(
         short = 'c',
@@ -52,18 +43,9 @@ struct Args {
         value_name = "FILE"
     )]
     config: std::path::PathBuf,
-    /// Path to NMEA device.
-    #[arg(long, value_name = "DEVICE")]
-    nmea_device: Option<std::path::PathBuf>,
-    /// Serial baud rate.
-    #[arg(long, default_value_t = 9_600, value_name = "RATE")]
-    nmea_baud_rate: usize,
     /// Enable simulation mode.
     #[arg(long, default_value_t = false)]
     simulation: bool,
-    /// Enable simulation jitter.
-    #[arg(long, default_value_t = false)]
-    simulation_jitter: bool,
     /// Enable pilot mode only.
     #[arg(long, default_value_t = false)]
     pilot_only: bool,
@@ -84,22 +66,14 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    let mut config = config::ProxyConfig {
-        address: args.address,
-        interface: args.interface,
-        host_interval: args.host_interval,
-        nmea_device: args.nmea_device,
-        nmea_baud_rate: args.nmea_baud_rate,
-        simulation: args.simulation,
-        simulation_jitter: args.simulation_jitter,
-        pilot_only: args.pilot_only,
-        ..Default::default()
-    };
+    let mut config: config::Config = glonax::from_file(args.config)?;
 
-    let instance: glonax::core::Instance = glonax::from_file(args.config)?;
-
-    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
-    config.global.daemon = args.daemon;
+    if args.simulation {
+        config.simulation.enabled = true;
+    }
+    if args.pilot_only {
+        config.mode = config::OperationMode::Pilot;
+    }
 
     let mut log_config = simplelog::ConfigBuilder::new();
     if args.daemon {
@@ -148,18 +122,20 @@ async fn main() -> anyhow::Result<()> {
     use std::time::Duration;
 
     log::debug!("Starting proxy services");
-    log::info!("{}", instance);
+    log::info!("{}", config.instance);
 
-    if instance.id().is_nil() {
+    if config.instance.id().is_nil() {
         log::warn!("Instance ID is not set or invalid");
     }
 
-    if config.simulation {
+    if config.simulation.enabled {
         log::info!("Running in simulation mode");
     }
-    if config.pilot_only {
+    if config.mode == config::OperationMode::Pilot {
         log::info!("Running in pilot only mode");
     }
+
+    let instance = config.instance.clone();
 
     let mut runtime = glonax::runtime::builder(&config, instance)?
         .with_shutdown()
@@ -167,24 +143,24 @@ async fn main() -> anyhow::Result<()> {
         .build();
 
     runtime
-        .schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host_interval));
+        .schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host.interval));
 
-    if config.simulation {
+    if config.simulation.enabled {
         runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_interval::<glonax::components::EngineSimulator>(Duration::from_millis(10));
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
-        if config.nmea_device.is_some() {
+        if config.nmea.is_some() {
             runtime.schedule_io_service(device::service_gnss);
         }
 
-        runtime.schedule_j1939_service(j1939::rx_network_0, &config.interface[0]);
-        runtime.schedule_j1939_service(j1939::tx_network_0, &config.interface[0]);
-        runtime.schedule_j1939_service(j1939::rx_network_1, &config.interface[1]);
-        runtime.schedule_j1939_service(j1939::tx_network_1, &config.interface[1]);
+        runtime.schedule_j1939_service(j1939::rx_network_0, &config.can[0].interface);
+        runtime.schedule_j1939_service(j1939::tx_network_0, &config.can[0].interface);
+        runtime.schedule_j1939_service(j1939::rx_network_1, &config.can[1].interface);
+        runtime.schedule_j1939_service(j1939::tx_network_1, &config.can[1].interface);
 
-        runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.interface[1]);
+        runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.can[1].interface);
     }
 
     runtime.schedule_io_service(server::tcp_listen);
@@ -197,7 +173,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.make_dynamic::<components::LocalActor>(3),
     ];
 
-    if !config.pilot_only {
+    if config.mode != config::OperationMode::Pilot {
         components.push(runtime.make_dynamic::<components::Kinematic>(5));
         components.push(runtime.make_dynamic::<components::Controller>(10));
     }
@@ -213,7 +189,7 @@ async fn main() -> anyhow::Result<()> {
 
     std::thread::sleep(Duration::from_millis(50));
 
-    log::debug!("{} was shutdown gracefully", config.global.bin_name);
+    log::debug!("{} was shutdown gracefully", env!("CARGO_BIN_NAME"));
 
     Ok(())
 }

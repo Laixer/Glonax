@@ -3,12 +3,10 @@ use glonax::{
     runtime::{MotionSender, SharedOperandState},
 };
 
-use crate::config::ProxyConfig;
-
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
 pub(super) async fn service_gnss(
-    config: ProxyConfig,
+    config: crate::config::Config,
     _instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     _motion_sender: MotionSender,
@@ -17,9 +15,11 @@ pub(super) async fn service_gnss(
 
     log::debug!("Starting GNSS service");
 
+    let nmea_config = config.nmea.as_ref().unwrap();
+
     let serial = glonax_serial::Uart::open(
-        std::path::Path::new(config.nmea_device.as_ref().unwrap()),
-        glonax_serial::BaudRate::from_speed(config.nmea_baud_rate),
+        std::path::Path::new(&nmea_config.device),
+        glonax_serial::BaudRate::from_speed(nmea_config.baud_rate),
     )
     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
@@ -56,7 +56,7 @@ pub(super) async fn service_gnss(
 }
 
 pub(super) async fn sink_net_actuator_sim(
-    _config: ProxyConfig,
+    _config: crate::config::Config,
     _instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
