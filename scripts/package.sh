@@ -62,6 +62,7 @@ cp ./target/release/glonax-cli $PACKAGE_DIR/usr/local/bin
 cp ./target/release/glonaxd $PACKAGE_DIR/usr/local/bin
 
 # Set package architecture
+sed -i "s/{VERSION}/$VERSION/" $PACKAGE_DIR/DEBIAN/control
 sed -i "s/{ARCH}/$ARCH_NAME/" $PACKAGE_DIR/DEBIAN/control
 
 # Set permissions
@@ -69,6 +70,9 @@ chmod 755 $PACKAGE_DIR/DEBIAN/postinst
 
 # Build the package
 dpkg-deb --build --root-owner-group $PACKAGE_DIR
+
+# Show package info
+dpkg-deb --info $PACKAGE_DIR.deb
 
 # Cleanup
 rm -rf $PACKAGE_DIR
