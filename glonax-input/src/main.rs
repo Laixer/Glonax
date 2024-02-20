@@ -6,7 +6,6 @@
 
 use clap::{Parser, ValueHint};
 
-mod config;
 mod gamepad;
 mod input;
 
@@ -55,16 +54,7 @@ async fn main() -> anyhow::Result<()> {
         .next()
         .unwrap();
 
-    let mut config = config::InputConfig {
-        address,
-        device: args.device,
-        fail_safe: args.fail_safe,
-        full_motion: args.full_motion,
-        ..Default::default()
-    };
-
-    config.global.bin_name = env!("CARGO_BIN_NAME").to_string();
-    config.global.daemon = args.daemon;
+    let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     let mut log_config = simplelog::ConfigBuilder::new();
     if args.daemon {
@@ -106,14 +96,12 @@ async fn main() -> anyhow::Result<()> {
         log::debug!("Running service as daemon");
     }
 
-    log::trace!("{:#?}", config);
-
-    let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&config.device)).await?;
+    let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&args.device)).await?;
 
     let mut input_state = input::InputState {
         drive_lock: false,
         motion_lock: true,
-        limit_motion: !config.full_motion,
+        limit_motion: !args.full_motion,
     };
 
     if input_state.limit_motion {
@@ -123,17 +111,17 @@ async fn main() -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    log::debug!("Waiting for connection to {}", config.address);
+    log::debug!("Waiting for connection to {}", address);
 
     let (mut client, instance) = glonax::protocol::client::tcp::connect_with(
-        config.address.to_owned(),
-        format!("{}/{}", config.global.bin_name, glonax::consts::VERSION),
+        address.to_owned(),
+        format!("{}/{}", bin_name, glonax::consts::VERSION),
         true,
-        config.fail_safe,
+        args.fail_safe,
     )
     .await?;
 
-    log::info!("Connected to {}", config.address);
+    log::info!("Connected to {}", address);
 
     log::info!("{}", instance);
 
