@@ -1,8 +1,5 @@
 /// Configuration trait.
-pub trait Configurable: Clone {
-    /// Get the global configuration
-    fn global(&self) -> &GlobalConfig;
-}
+pub trait Configurable: Clone {}
 
 pub struct Error {
     /// Error kind.
@@ -71,19 +68,4 @@ pub fn from_file<T: serde::de::DeserializeOwned>(
             path.as_ref().display()
         ),
     })
-}
-
-/// Glonax global configuration.
-#[derive(Default, Clone, Debug)]
-pub struct GlobalConfig {
-    /// Name of the binary.
-    pub bin_name: String,
-    /// Whether the application runs as daemon.
-    pub daemon: bool,
-}
-
-impl Configurable for GlobalConfig {
-    fn global(&self) -> &GlobalConfig {
-        self
-    }
 }
