@@ -25,6 +25,8 @@ pub(crate) mod consts {
     pub const J1939_ADDRESS_ENCODER2: u8 = 0x6C;
     /// Kuebler Encoder 3 J1939 address.
     pub const J1939_ADDRESS_ENCODER3: u8 = 0x6D;
+    /// Kuebler Inclinometer 0 J1939 address.
+    pub const J1939_ADDRESS_IMU0: u8 = 0x7A;
 }
 
 fn style_address(address: u8) -> String {
@@ -44,7 +46,7 @@ fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     use glonax::driver::{
         EngineManagementSystem, HydraulicControlUnit, J1939ApplicationInspector, J1939Message,
-        KueblerEncoder,
+        KueblerEncoder, KueblerInclinometer,
     };
 
     debug!("Print incoming frames to screen");
@@ -55,6 +57,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1, consts::J1939_ADDRESS_OBDL);
     let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2, consts::J1939_ADDRESS_OBDL);
     let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3, consts::J1939_ADDRESS_OBDL);
+    let mut imu0 = KueblerInclinometer::new(consts::J1939_ADDRESS_IMU0, consts::J1939_ADDRESS_OBDL);
     let mut hcu0 =
         HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
     let mut rrp0 = J1939ApplicationInspector;
@@ -113,6 +116,14 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                 chrono::Utc::now().format("%T%.3f"),
                 style_address(router.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
+                message
+            );
+        } else if let Some(message) = router.try_accept(&mut imu0) {
+            info!(
+                "{} {} {} » {}",
+                chrono::Utc::now().format("%T%.3f"),
+                style_address(router.frame_source().unwrap()),
+                Yellow.bold().paint("Inclinometer"),
                 message
             );
         } else if let Some(message) = router.try_accept(&mut hcu0) {

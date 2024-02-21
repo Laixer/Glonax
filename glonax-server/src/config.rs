@@ -68,6 +68,8 @@ pub enum OperationMode {
     Normal,
     /// Pilot restriction mode.
     PilotRestrict,
+    /// Autonomous operation mode.
+    Autonomous,
 }
 
 impl std::fmt::Display for OperationMode {
@@ -75,6 +77,7 @@ impl std::fmt::Display for OperationMode {
         match self {
             OperationMode::Normal => write!(f, "normal"),
             OperationMode::PilotRestrict => write!(f, "pilot-restrict"),
+            OperationMode::Autonomous => write!(f, "autonomous"),
         }
     }
 }

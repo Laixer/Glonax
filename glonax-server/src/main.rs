@@ -179,7 +179,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.make_dynamic::<components::LocalActor>(3),
     ];
 
-    if config.mode == config::OperationMode::Normal {
+    if config.mode == config::OperationMode::Autonomous {
         components.push(runtime.make_dynamic::<components::Kinematic>(5));
         components.push(runtime.make_dynamic::<components::Controller>(10));
     }
