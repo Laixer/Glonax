@@ -248,7 +248,7 @@ async fn main() -> anyhow::Result<()> {
         )
         .await;
 
-    // runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
+    runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
 
     std::thread::sleep(Duration::from_millis(50));
 
