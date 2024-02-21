@@ -123,11 +123,11 @@ async fn main() -> anyhow::Result<()> {
 
     use std::time::Duration;
 
-    let instance = config.instance.clone();
+    let machine = config.machine.clone();
     let instance2 = glonax::core::Instance::new(
-        instance.id.clone(),
-        instance.model.clone(),
-        instance.machine_type,
+        machine.id.clone(),
+        machine.model.clone(),
+        machine.machine_type,
         (1, 0, 0),
     );
 

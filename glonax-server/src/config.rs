@@ -72,10 +72,13 @@ pub struct CanDriverConfig {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
 pub enum OperationMode {
     /// Normal operation mode.
+    #[serde(alias = "normal")]
     Normal,
     /// Pilot restriction mode.
+    #[serde(alias = "pilot-restrict")]
     PilotRestrict,
     /// Autonomous operation mode.
+    #[serde(alias = "autonomous")]
     Autonomous,
 }
 
@@ -90,7 +93,7 @@ impl std::fmt::Display for OperationMode {
 }
 
 #[derive(Clone, Debug, serde_derive::Deserialize)]
-pub struct InstanceConfig {
+pub struct MachineConfig {
     /// Instance unique identifier.
     pub id: String,
     /// Machine model.
@@ -106,7 +109,7 @@ pub struct InstanceConfig {
 pub struct Config {
     pub mode: OperationMode,
     /// Machine instance.
-    pub instance: InstanceConfig,
+    pub machine: MachineConfig,
     /// NMEA configuration.
     pub nmea: Option<NmeaConfig>,
     /// Host configuration.
