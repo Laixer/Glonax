@@ -165,12 +165,10 @@ impl<T> Stream<T> {
 }
 
 impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
-    pub async fn handshake(
-        &mut self,
-        session_name: impl ToString,
-        flags: u8,
-    ) -> std::io::Result<crate::core::Instance> {
+    pub async fn probe(&mut self) -> std::io::Result<std::time::Duration> {
         let random_number = rand::random::<i32>();
+
+        let now = std::time::Instant::now();
 
         self.send_packet(&frame::Echo {
             payload: random_number,
@@ -185,6 +183,8 @@ impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
             ));
         }
 
+        let time_elapsed = now.elapsed();
+
         let echo = self
             .recv_packet::<frame::Echo>(frame.payload_length)
             .await?;
@@ -195,6 +195,16 @@ impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
                 "Invalid echo response from server",
             ));
         }
+
+        Ok(time_elapsed)
+    }
+
+    pub async fn handshake(
+        &mut self,
+        session_name: impl ToString,
+        flags: u8,
+    ) -> std::io::Result<crate::core::Instance> {
+        self.probe().await?;
 
         self.send_packet(&frame::Session::new(flags, session_name.to_string()))
             .await?;
