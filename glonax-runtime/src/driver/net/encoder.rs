@@ -66,7 +66,7 @@ impl EncoderMessage {
 
     /// Construct a new encoder message from a frame.
     pub fn from_frame(frame: &Frame) -> Self {
-        let mut this = Self {
+        let mut message = Self {
             source_address: frame.id().sa(),
             position: 0,
             speed: 0,
@@ -75,19 +75,19 @@ impl EncoderMessage {
 
         let position_bytes = &frame.pdu()[0..4];
         if position_bytes != [0xff; 4] {
-            this.position = u32::from_le_bytes(position_bytes.try_into().unwrap());
+            message.position = u32::from_le_bytes(position_bytes.try_into().unwrap());
         };
 
         let speed_bytes = &frame.pdu()[4..6];
         if speed_bytes != [0xff; 2] {
-            this.speed = u16::from_le_bytes(speed_bytes.try_into().unwrap());
+            message.speed = u16::from_le_bytes(speed_bytes.try_into().unwrap());
         };
 
         let state_bytes = &frame.pdu()[6..8];
         if state_bytes != [0xff; 2] {
             let state = u16::from_le_bytes(state_bytes.try_into().unwrap());
 
-            this.state = Some(match state {
+            message.state = Some(match state {
                 0x0 => EncoderState::NoError,
                 0xee00 => EncoderState::GeneralSensorError,
                 0xee01 => EncoderState::InvalidMUR,
@@ -97,7 +97,7 @@ impl EncoderMessage {
             });
         }
 
-        this
+        message
     }
 
     #[allow(dead_code)]

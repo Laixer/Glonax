@@ -89,7 +89,10 @@ pub struct InstanceConfig {
     /// Machine model.
     pub model: String,
     /// Machine machine type.
-    pub ty: glonax::core::MachineType,
+    #[serde(rename = "type")]
+    pub machine_type: glonax::core::MachineType,
+    /// Serial number.
+    pub serial: String,
 }
 
 #[derive(Clone, Debug, serde_derive::Deserialize)]

@@ -18,7 +18,7 @@ pub struct ProcessDataMessage {
 impl ProcessDataMessage {
     /// Construct a new encoder message from a frame.
     pub fn from_frame(frame: &Frame) -> Self {
-        let mut this = Self {
+        let mut message = Self {
             _source_address: frame.id().sa(),
             slope_long: 0,
             slope_lat: 0,
@@ -27,19 +27,19 @@ impl ProcessDataMessage {
 
         let slope_long_bytes = &frame.pdu()[0..2];
         if slope_long_bytes != [0xff; 2] {
-            this.slope_long = u16::from_le_bytes(slope_long_bytes.try_into().unwrap());
+            message.slope_long = u16::from_le_bytes(slope_long_bytes.try_into().unwrap());
         };
         let slope_lat_bytes = &frame.pdu()[2..4];
         if slope_lat_bytes != [0xff; 2] {
-            this.slope_lat = u16::from_le_bytes(slope_lat_bytes.try_into().unwrap());
+            message.slope_lat = u16::from_le_bytes(slope_lat_bytes.try_into().unwrap());
         };
 
         let temperature_bytes = &frame.pdu()[4..6];
         if temperature_bytes != [0xff; 2] {
-            this.temperature = u16::from_le_bytes(temperature_bytes.try_into().unwrap());
+            message.temperature = u16::from_le_bytes(temperature_bytes.try_into().unwrap());
         };
 
-        this
+        message
     }
 }
 

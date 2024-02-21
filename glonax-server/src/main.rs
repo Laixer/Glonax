@@ -127,7 +127,7 @@ async fn main() -> anyhow::Result<()> {
     let instance2 = glonax::core::Instance::new(
         instance.id.clone(),
         instance.model.clone(),
-        instance.ty,
+        instance.machine_type,
         (1, 0, 0),
     );
 
