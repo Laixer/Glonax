@@ -6,6 +6,7 @@ pub use net::encoder::KueblerEncoder;
 pub use net::engine::EngineManagementSystem;
 pub use net::fuzzer::Fuzzer;
 pub use net::hydraulic::HydraulicControlUnit;
+pub use net::inclino::KueblerInclinometer;
 pub use net::inspector::{J1939ApplicationInspector, J1939Message};
 pub use net::reqres::RequestResponder;
 pub use r#virtual::encoder::VirtualEncoder;

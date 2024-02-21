@@ -5,7 +5,8 @@ use glonax::runtime::SharedOperandState;
 
 use glonax::driver::net::J1939Unit;
 use glonax::driver::{
-    EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, RequestResponder,
+    EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, KueblerInclinometer,
+    RequestResponder,
 };
 use glonax::net::{CANSocket, Router, SockAddrCAN};
 
@@ -47,6 +48,10 @@ pub(super) async fn rx_network_0(
         crate::consts::J1939_ADDRESS_ENCODER3,
         crate::consts::J1939_ADDRESS_VMS,
     );
+    let mut imu0 = KueblerInclinometer::new(
+        crate::consts::J1939_ADDRESS_IMU0,
+        crate::consts::J1939_ADDRESS_VMS,
+    );
     let mut rrp0 = RequestResponder::new(crate::consts::J1939_ADDRESS_VMS);
 
     while shutdown.is_empty() {
@@ -58,6 +63,7 @@ pub(super) async fn rx_network_0(
         enc1.try_accept(&mut router, runtime_state.clone()).await;
         enc2.try_accept(&mut router, runtime_state.clone()).await;
         enc3.try_accept(&mut router, runtime_state.clone()).await;
+        imu0.try_accept(&mut router, runtime_state.clone()).await;
         rrp0.try_accept(&mut router, runtime_state.clone()).await;
     }
 

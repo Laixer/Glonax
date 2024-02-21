@@ -2,6 +2,7 @@ pub mod encoder;
 pub mod engine;
 pub mod fuzzer;
 pub mod hydraulic;
+pub mod inclino;
 pub mod inspector;
 pub mod reqres;
 pub(super) mod vecraft;

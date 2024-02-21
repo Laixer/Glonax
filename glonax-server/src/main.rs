@@ -27,6 +27,8 @@ pub(crate) mod consts {
     pub const J1939_ADDRESS_ENCODER2: u8 = 0x6C;
     /// Kuebler Encoder 3 J1939 address.
     pub const J1939_ADDRESS_ENCODER3: u8 = 0x6D;
+    /// Kuebler Inclinometer 0 J1939 address.
+    pub const J1939_ADDRESS_IMU0: u8 = 0x7A;
 }
 
 #[derive(Parser)]
