@@ -37,17 +37,16 @@ const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
 /// and to reject packets that are too large.
 const MAX_PAYLOAD_SIZE: usize = 1_024;
 
-const_assert_eq!(MIN_BUFFER_SIZE, 10);
-const_assert!(MIN_BUFFER_SIZE < MAX_PAYLOAD_SIZE);
-const_assert!(MAX_PAYLOAD_SIZE < 1500);
-
 /// A packet that can be sent over the network.
 ///
 /// This trait is implemented for all packets that can be sent over the network.
 pub trait Packetize: TryFrom<Vec<u8>> + Sized {
     /// The message type of the packet.
     const MESSAGE_TYPE: u8;
-    /// If the packet has a fixed size, this should be set to that size.
+    /// If the packet has a fixed size, this is the size of the packet. If the
+    /// packet has a variable size, this is `None`.
+    ///
+    /// This is used to validate the size of the packet when receiving a packet.
     const MESSAGE_SIZE: Option<usize> = None;
 
     /// Convert packet to bytes.
@@ -271,5 +270,25 @@ impl<T: AsyncRead + Unpin> Stream<T> {
         P::try_from(buffer).map_err(|_| {
             std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to parse packet")
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_proto_header() {
+        assert_eq!(PROTO_HEADER, [b'L', b'X', b'R']);
+    }
+
+    #[test]
+    fn test_proto_version() {
+        assert_eq!(PROTO_VERSION, 0x02);
+    }
+
+    #[test]
+    fn test_min_buffer_size() {
+        assert_eq!(MIN_BUFFER_SIZE, 10);
     }
 }

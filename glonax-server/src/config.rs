@@ -30,6 +30,7 @@ pub struct NmeaConfig {
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct HostConfig {
+    // Host update interval.
     pub interval: u64,
 }
 
@@ -54,7 +55,9 @@ pub struct CanConfig {
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct CanDriverConfig {
+    /// Driver identifier.
     pub id: u8,
+    /// Driver type.
     #[serde(rename = "type")]
     pub driver_type: String,
 }

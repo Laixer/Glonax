@@ -40,6 +40,9 @@ impl std::error::Error for Error {
 }
 
 /// Load configuration structure from TOML file.
+///
+/// This can be any file and any data structure that
+/// implements `serde::de::DeserializeOwned`.
 pub fn from_file<T: serde::de::DeserializeOwned>(
     path: impl AsRef<std::path::Path>,
 ) -> std::result::Result<T, Error> {

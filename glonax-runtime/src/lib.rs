@@ -19,9 +19,6 @@ mod can;
 #[macro_use]
 extern crate log;
 
-#[macro_use]
-extern crate static_assertions;
-
 mod config;
 
 pub use self::config::*;
