@@ -124,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
     use std::time::Duration;
 
     let machine = config.machine.clone();
-    let instance2 = glonax::core::Instance::new(
+    let instance = glonax::core::Instance::new(
         machine.id.clone(),
         machine.model.clone(),
         machine.machine_type,
@@ -133,9 +133,9 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Starting proxy services");
     log::info!("Running in operation mode: {}", config.mode);
-    log::info!("{}", instance2);
+    log::info!("{}", instance);
 
-    if instance2.id().is_nil() {
+    if instance.id().is_nil() {
         log::warn!("Instance ID is not set or invalid");
     }
 
@@ -143,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
         log::info!("Running in simulation mode");
     }
 
-    let mut runtime = glonax::runtime::builder(&config, instance2)?
+    let mut runtime = glonax::runtime::builder(&config, instance)?
         .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();

@@ -164,7 +164,9 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     /// will be provided with a copy of the operand and the interface name.
     pub fn schedule_j1939_service<Fut>(
         &self,
-        service: impl FnOnce(String, SharedOperandState, tokio::sync::broadcast::Receiver<()>) -> Fut + Send + 'static,
+        service: impl FnOnce(String, SharedOperandState, tokio::sync::broadcast::Receiver<()>) -> Fut
+            + Send
+            + 'static,
         interface: &str,
     ) where
         Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
