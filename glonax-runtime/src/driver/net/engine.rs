@@ -159,4 +159,64 @@ impl super::J1939Unit for EngineManagementSystem {
             }
         }
     }
+
+    // FUTURE: Optimize
+    async fn tick(
+        &self,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) {
+        let engine = runtime_state.read().await.state.engine;
+        let engine_request = runtime_state.read().await.state.engine_request;
+
+        match engine.mode() {
+            crate::core::EngineMode::Shutdown => {
+                if engine_request == 0 {
+                    if let Err(e) = router
+                        .inner()
+                        .send_vectored(&self.speed_request(engine_request, true))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
+                } else if let Err(e) = router
+                    .inner()
+                    .send_vectored(&self.start(engine_request))
+                    .await
+                {
+                    log::error!("Failed to speed request: {}", e);
+                }
+            }
+            crate::core::EngineMode::Startup => {
+                if engine_request == 0 {
+                    if let Err(e) = router
+                        .inner()
+                        .send_vectored(&self.speed_request(engine_request, true))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
+                } else if let Err(e) = router
+                    .inner()
+                    .send_vectored(&self.start(engine_request))
+                    .await
+                {
+                    log::error!("Failed to speed request: {}", e);
+                }
+            }
+            crate::core::EngineMode::Idle | crate::core::EngineMode::Running => {
+                if engine_request == 0 {
+                    if let Err(e) = router.inner().send_vectored(&self.shutdown()).await {
+                        log::error!("Failed to speed request: {}", e);
+                    }
+                } else if let Err(e) = router
+                    .inner()
+                    .send_vectored(&self.speed_request(engine_request, false))
+                    .await
+                {
+                    log::error!("Failed to speed request: {}", e);
+                }
+            }
+        }
+    }
 }

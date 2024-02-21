@@ -18,4 +18,12 @@ pub trait J1939Unit {
         router: &mut crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = ()> + Send;
+
+    fn tick(
+        &self,
+        _router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
 }
