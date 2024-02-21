@@ -358,19 +358,19 @@ async fn rx_network_xyz(
         for driver in network.iter_mut() {
             match driver {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.try_accept(&mut router, runtime_state.clone()).await;
+                    enc.try_accept(&router, runtime_state.clone()).await;
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.try_accept(&mut router, runtime_state.clone()).await;
+                    imu.try_accept(&router, runtime_state.clone()).await;
                 }
                 NetDriver::EngineManagementSystem(ems) => {
-                    ems.try_accept(&mut router, runtime_state.clone()).await;
+                    ems.try_accept(&router, runtime_state.clone()).await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.try_accept(&mut router, runtime_state.clone()).await;
+                    hcu.try_accept(&router, runtime_state.clone()).await;
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.try_accept(&mut router, runtime_state.clone()).await;
+                    rrp.try_accept(&router, runtime_state.clone()).await;
                 }
             }
         }
