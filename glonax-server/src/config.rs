@@ -31,7 +31,14 @@ pub struct NmeaConfig {
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct HostConfig {
     // Host update interval.
+    #[serde(default = "HostConfig::default_interval")]
     pub interval: u64,
+}
+
+impl HostConfig {
+    fn default_interval() -> u64 {
+        500
+    }
 }
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]

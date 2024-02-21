@@ -148,8 +148,9 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    runtime
-        .schedule_interval::<glonax::components::Host>(Duration::from_millis(config.host.interval));
+    runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(
+        config.host.interval.clamp(10, 1000),
+    ));
 
     if config.simulation.enabled {
         runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
