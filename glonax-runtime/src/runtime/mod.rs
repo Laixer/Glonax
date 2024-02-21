@@ -182,6 +182,18 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    pub fn schedule_j1939_service2(&self, network: Vec<NetDriver>, interface: &str) {
+        let operand = self.operand.clone();
+        let interface = interface.to_owned();
+        let shutdown = self.shutdown.0.subscribe();
+
+        tokio::spawn(async move {
+            if let Err(e) = rx_network_xyz(network, interface, operand, shutdown).await {
+                log::error!("Failed to start network service: {}", e);
+            }
+        });
+    }
+
     /// Listen for internal signals to trigger the service.
     ///
     /// This method will spawn a service in the background and return immediately. The service
@@ -290,4 +302,79 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     pub async fn wait_for_shutdown(&mut self) {
         self.shutdown.1.recv().await.ok();
     }
+}
+
+pub enum NetDriver {
+    KueblerEncoder(crate::driver::KueblerEncoder),
+    KueblerInclinometer(crate::driver::KueblerInclinometer),
+    EngineManagementSystem(crate::driver::EngineManagementSystem),
+    HydraulicControlUnit(crate::driver::HydraulicControlUnit),
+    RequestResponder(crate::driver::RequestResponder),
+}
+
+async fn rx_network_xyz(
+    mut network: Vec<NetDriver>,
+    interface: String,
+    runtime_state: SharedOperandState,
+    shutdown: tokio::sync::broadcast::Receiver<()>,
+) -> std::io::Result<()> {
+    use crate::driver::net::J1939Unit;
+
+    /// J1939 name manufacturer code.
+    const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
+    /// J1939 name function instance.
+    const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
+    /// J1939 name ECU instance.
+    const J1939_NAME_ECU_INSTANCE: u8 = 0;
+    /// J1939 name function.
+    const J1939_NAME_FUNCTION: u8 = 0x1C;
+    /// J1939 name vehicle system.
+    const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
+
+    log::debug!("Starting J1939 service on {}", interface);
+
+    let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&interface))?;
+    let mut router = crate::net::Router::new(socket);
+
+    let name = j1939::NameBuilder::default()
+        .identity_number(0x1)
+        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
+        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
+        .ecu_instance(J1939_NAME_ECU_INSTANCE)
+        .function(J1939_NAME_FUNCTION)
+        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
+        .build();
+
+    router
+        .inner()
+        .send(&j1939::protocol::address_claimed(0x27, name))
+        .await?;
+
+    while shutdown.is_empty() {
+        if let Err(e) = router.listen().await {
+            log::error!("Failed to receive from router: {}", e);
+        }
+
+        for driver in network.iter_mut() {
+            match driver {
+                NetDriver::KueblerEncoder(enc) => {
+                    enc.try_accept(&mut router, runtime_state.clone()).await;
+                }
+                NetDriver::KueblerInclinometer(imu) => {
+                    imu.try_accept(&mut router, runtime_state.clone()).await;
+                }
+                NetDriver::EngineManagementSystem(ems) => {
+                    ems.try_accept(&mut router, runtime_state.clone()).await;
+                }
+                NetDriver::HydraulicControlUnit(hcu) => {
+                    hcu.try_accept(&mut router, runtime_state.clone()).await;
+                }
+                NetDriver::RequestResponder(rrp) => {
+                    rrp.try_accept(&mut router, runtime_state.clone()).await;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
