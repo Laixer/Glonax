@@ -42,7 +42,7 @@ impl Parsable<PGN> for RequestResponder {
 impl super::J1939Unit for RequestResponder {
     async fn try_accept(
         &mut self,
-        router: &mut crate::net::Router,
+        router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) {
         if let Some(pgn) = router.try_accept(self) {

@@ -15,7 +15,7 @@ pub trait J1939Unit {
     /// available, the message will be parsed and the unit will be updated accordingly.
     fn try_accept(
         &mut self,
-        router: &mut crate::net::Router,
+        router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = ()> + Send;
 

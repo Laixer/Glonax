@@ -139,7 +139,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 impl super::J1939Unit for EngineManagementSystem {
     async fn try_accept(
         &mut self,
-        router: &mut crate::net::Router,
+        router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
         if let Some(message) = router.try_accept(self) {

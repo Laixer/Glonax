@@ -180,7 +180,7 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
 impl super::J1939Unit for KueblerEncoder {
     async fn try_accept(
         &mut self,
-        router: &mut crate::net::Router,
+        router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
         if let Some(message) = router.try_accept(self) {
