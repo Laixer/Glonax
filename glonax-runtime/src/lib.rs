@@ -4,7 +4,6 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-pub mod components;
 pub mod core;
 pub mod driver;
 pub mod math;
