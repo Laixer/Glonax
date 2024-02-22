@@ -149,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
         .build();
 
     runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(
-        config.host.interval.clamp(10, 1000),
+        config.host.interval.clamp(10, 1_000),
     ));
 
     if config.simulation.enabled {

@@ -51,11 +51,27 @@ pub struct SimulationConfig {
 }
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct CanConfig {
+pub struct J1939Name {
+    /// Manufacturer code.
+    pub manufacturer_code: u16,
+    /// Function instance.
+    pub function_instance: u8,
+    /// ECU instance.
+    pub ecu_instance: u8,
+    /// Function.
+    pub function: u8,
+    /// Vehicle system.
+    pub vehicle_system: u8,
+}
+
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
+pub struct J1939NetConfig {
     /// CAN network interface.
     pub interface: String,
     /// Address.
     pub address: u8,
+    /// Name.
+    pub name: J1939Name,
     /// Driver configuration.
     pub driver: Vec<CanDriverConfig>,
 }
@@ -118,8 +134,8 @@ pub struct Config {
     pub simulation: SimulationConfig,
     /// Server configuration.
     pub server: ServerConfig,
-    /// J1939 configuration.
-    pub j1939: Vec<CanConfig>,
+    /// J1939 network configuration.
+    pub j1939: Vec<J1939NetConfig>,
 }
 
 impl Configurable for Config {}

@@ -159,30 +159,10 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
-    // /// Listen for network service in the background.
-    // ///
-    // /// This method will spawn a service in the background and return immediately. The service
-    // /// will be provided with a copy of the operand and the interface name.
-    // pub fn schedule_j1939_service<Fut>(
-    //     &self,
-    //     service: impl FnOnce(String, SharedOperandState, tokio::sync::broadcast::Receiver<()>) -> Fut
-    //         + Send
-    //         + 'static,
-    //     interface: &str,
-    // ) where
-    //     Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
-    // {
-    //     let operand = self.operand.clone();
-    //     let interface = interface.to_owned();
-    //     let shutdown = self.shutdown.0.subscribe();
-
-    //     tokio::spawn(async move {
-    //         if let Err(e) = service(interface, operand, shutdown).await {
-    //             log::error!("Failed to start network service: {}", e);
-    //         }
-    //     });
-    // }
-
+    /// Listen for network service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the operand and the interface name.
     pub fn schedule_j1939_service_rx(&self, network: Vec<NetDriver>, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
@@ -194,6 +174,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
             }
         });
     }
+
     pub fn schedule_j1939_service_tx(&self, network: Vec<NetDriver>, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
