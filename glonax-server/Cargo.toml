@@ -7,7 +7,6 @@ repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
 glonax = { version = "3", path = "../glonax-runtime" }
-glonax-serial = { version = "1", path = "../glonax-serial" }
 
 log = "0.4"
 anyhow = "1.0"

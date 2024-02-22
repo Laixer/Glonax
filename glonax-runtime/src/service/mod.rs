@@ -1,6 +1,6 @@
 pub use encoder::EncoderSimulator;
 pub use engine::EngineSimulator;
-pub use gnss::Gnss;
+pub use gnss::{Gnss, GnssConfig};
 pub use host::Host;
 pub use pipeline::Pipeline;
 

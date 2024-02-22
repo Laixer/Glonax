@@ -418,7 +418,6 @@ dependencies = [
  "chrono",
  "clap",
  "glonax",
- "glonax-serial",
  "log",
  "nalgebra",
  "serde",

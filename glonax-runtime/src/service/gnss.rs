@@ -1,24 +1,32 @@
+use std::path::PathBuf;
+
+use glonax_serial::{BaudRate, Uart};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 
 use crate::runtime::{Service, SharedOperandState};
 
-pub struct Gnss {
-    line_reader: Lines<BufReader<glonax_serial::Uart>>,
+#[derive(Clone, Debug)]
+pub struct GnssConfig {
+    /// Path to the serial device
+    pub device: PathBuf,
+    /// Baud rate of the serial device
+    pub baud_rate: usize,
 }
 
-impl<Cnf> Service<Cnf> for Gnss {
-    fn new(_config: Cnf) -> Self
+pub struct Gnss {
+    line_reader: Lines<BufReader<Uart>>,
+}
+
+impl Service<GnssConfig> for Gnss {
+    fn new(config: GnssConfig) -> Self
     where
         Self: Sized,
     {
         log::debug!("Starting GNSS service");
 
-        let serial = glonax_serial::Uart::open(
-            std::path::Path::new("/dev/ttyUSB0"), // TODO: "nmea_config.device
-            glonax_serial::BaudRate::from_speed(9600), // TODO: "nmea_config.baud_rate
-        )
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
-        .unwrap();
+        let serial = Uart::open(&config.device, BaudRate::from_speed(config.baud_rate))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            .unwrap();
 
         Self {
             line_reader: BufReader::new(serial).lines(),

@@ -158,9 +158,12 @@ async fn main() -> anyhow::Result<()> {
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
-        if config.nmea.is_some() {
-            runtime.schedule_io_service::<glonax::service::Gnss, config::NmeaConfig>(
-                config.nmea.clone().unwrap(),
+        if let Some(nmea_config) = config.clone().nmea {
+            runtime.schedule_io_service::<glonax::service::Gnss, glonax::service::GnssConfig>(
+                glonax::service::GnssConfig {
+                    device: nmea_config.device.clone(),
+                    baud_rate: nmea_config.baud_rate,
+                },
             );
         }
 
