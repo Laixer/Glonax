@@ -121,6 +121,7 @@ async fn main() -> anyhow::Result<()> {
 
     ////////////////////
 
+    use glonax::service;
     use std::time::Duration;
 
     let machine = config.machine.clone();
@@ -148,17 +149,17 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    runtime.schedule_service::<glonax::service::Host, glonax::runtime::NullConfig>(
+    runtime.schedule_service::<service::Host, glonax::runtime::NullConfig>(
         glonax::runtime::NullConfig,
         Duration::from_millis(config.host.interval.clamp(10, 1_000)),
     );
 
     if config.simulation.enabled {
-        runtime.schedule_service::<glonax::service::EncoderSimulator, glonax::runtime::NullConfig>(
+        runtime.schedule_service::<service::EncoderSimulator, glonax::runtime::NullConfig>(
             glonax::runtime::NullConfig,
             Duration::from_millis(5),
         );
-        runtime.schedule_service::<glonax::service::EngineSimulator, glonax::runtime::NullConfig>(
+        runtime.schedule_service::<service::EngineSimulator, glonax::runtime::NullConfig>(
             glonax::runtime::NullConfig,
             Duration::from_millis(10),
         );
@@ -166,9 +167,7 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
         if let Some(gnss_config) = config.clone().gnss {
-            runtime.schedule_io_service::<glonax::service::Gnss, glonax::service::GnssConfig>(
-                gnss_config,
-            );
+            runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
         }
 
         let j1939_drivers_can0_rx = vec![
@@ -241,7 +240,10 @@ async fn main() -> anyhow::Result<()> {
 
     runtime.schedule_io_func(server::tcp_listen);
     runtime.schedule_io_func(server::unix_listen);
-    runtime.schedule_io_func(server::net_announce);
+    runtime.schedule_service::<service::Announcer, glonax::runtime::NullConfig>(
+        glonax::runtime::NullConfig,
+        Duration::from_millis(1_000),
+    );
 
     let mut pipe = glonax::service::Pipeline::new(config.clone(), instance);
 

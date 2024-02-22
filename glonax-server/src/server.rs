@@ -269,26 +269,26 @@ pub(super) async fn unix_listen(
     }
 }
 
-pub(super) async fn net_announce(
-    _config: crate::config::Config,
-    instance: glonax::core::Instance,
-    runtime_state: SharedOperandState,
-    _motion_sender: MotionSender,
-) -> std::io::Result<()> {
-    use tokio::net::UdpSocket;
+// pub(super) async fn net_announce(
+//     _config: crate::config::Config,
+//     instance: glonax::core::Instance,
+//     runtime_state: SharedOperandState,
+//     _motion_sender: MotionSender,
+// ) -> std::io::Result<()> {
+//     use tokio::net::UdpSocket;
 
-    let socket = UdpSocket::bind("[::1]:0").await?;
+//     let socket = UdpSocket::bind("[::1]:0").await?;
 
-    loop {
-        let instance = instance.clone();
-        let status = runtime_state.read().await.status();
+//     loop {
+//         let instance = instance.clone();
+//         let status = runtime_state.read().await.status();
 
-        log::trace!("Sending instance and status broadcast");
+//         log::trace!("Sending instance and status broadcast");
 
-        let payload = [instance.to_bytes(), status.to_bytes()].concat();
+//         let payload = [instance.to_bytes(), status.to_bytes()].concat();
 
-        socket.send_to(&payload, "[ff02::1]:30050").await?;
+//         socket.send_to(&payload, "[ff02::1]:30050").await?;
 
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    }
-}
+//         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+//     }
+// }
