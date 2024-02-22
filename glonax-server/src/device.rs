@@ -5,7 +5,7 @@ use glonax::{
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
-pub(super) async fn service_gnss(
+pub(super) async fn _service_gnss(
     config: crate::config::Config,
     _instance: glonax::core::Instance,
     runtime_state: SharedOperandState,

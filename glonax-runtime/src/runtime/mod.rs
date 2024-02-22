@@ -29,8 +29,12 @@ pub trait Service<Cnf> {
 
     fn wait_io(
         &mut self,
-        runtime_state: SharedOperandState,
-    ) -> impl std::future::Future<Output = ()> + Send;
+        _runtime_state: SharedOperandState,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
+
+    fn tick(&mut self, _runtime_state: SharedOperandState) {}
 }
 
 pub trait Component<Cnf: Configurable> {
@@ -209,6 +213,11 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    //
+    // Services
+    //
+
+    // TODO: Remove this method
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
@@ -236,7 +245,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will schedule a component to run in the background. On each tick, the component
     /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_service<C>(&self, duration: std::time::Duration)
+    pub fn schedule_service_c<C>(&self, duration: std::time::Duration)
     where
         C: Component<Cnf> + Send + Sync + 'static,
         Cnf: Configurable,
@@ -276,6 +285,29 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
 
         tokio::spawn(async move {
             service.wait_io(operand).await;
+        });
+    }
+
+    /// Schedule a component to run in the background.
+    ///
+    /// This method will schedule a component to run in the background. On each tick, the component
+    /// will be provided with a component context and a mutable reference to the runtime state.
+    pub fn schedule_service<S>(&self, duration: std::time::Duration)
+    where
+        S: Service<Cnf> + Send + Sync + 'static,
+    {
+        let mut interval = tokio::time::interval(duration);
+
+        let mut service = S::new(self.config.clone());
+
+        let operand = self.operand.clone();
+
+        tokio::spawn(async move {
+            loop {
+                interval.tick().await;
+
+                service.tick(operand.clone());
+            }
         });
     }
 

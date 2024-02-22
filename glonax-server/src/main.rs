@@ -153,8 +153,8 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     if config.simulation.enabled {
-        runtime.schedule_service::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_service::<glonax::components::EngineSimulator>(Duration::from_millis(10));
+        runtime.schedule_service_c::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
+        runtime.schedule_service_c::<glonax::components::EngineSimulator>(Duration::from_millis(10));
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
