@@ -2,6 +2,7 @@ mod error;
 
 use crate::{
     core::{Instance, Target},
+    driver::net::NetDriver,
     world::World,
     Configurable, MachineState,
 };
@@ -158,37 +159,48 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
-    /// Listen for network service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the operand and the interface name.
-    pub fn schedule_j1939_service<Fut>(
-        &self,
-        service: impl FnOnce(String, SharedOperandState, tokio::sync::broadcast::Receiver<()>) -> Fut
-            + Send
-            + 'static,
-        interface: &str,
-    ) where
-        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
-    {
+    // /// Listen for network service in the background.
+    // ///
+    // /// This method will spawn a service in the background and return immediately. The service
+    // /// will be provided with a copy of the operand and the interface name.
+    // pub fn schedule_j1939_service<Fut>(
+    //     &self,
+    //     service: impl FnOnce(String, SharedOperandState, tokio::sync::broadcast::Receiver<()>) -> Fut
+    //         + Send
+    //         + 'static,
+    //     interface: &str,
+    // ) where
+    //     Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
+    // {
+    //     let operand = self.operand.clone();
+    //     let interface = interface.to_owned();
+    //     let shutdown = self.shutdown.0.subscribe();
+
+    //     tokio::spawn(async move {
+    //         if let Err(e) = service(interface, operand, shutdown).await {
+    //             log::error!("Failed to start network service: {}", e);
+    //         }
+    //     });
+    // }
+
+    pub fn schedule_j1939_service_rx(&self, network: Vec<NetDriver>, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
         let shutdown = self.shutdown.0.subscribe();
 
         tokio::spawn(async move {
-            if let Err(e) = service(interface, operand, shutdown).await {
+            if let Err(e) = rx_network(network, interface, operand, shutdown).await {
                 log::error!("Failed to start network service: {}", e);
             }
         });
     }
-
-    pub fn schedule_j1939_service2(&self, network: Vec<NetDriver>, interface: &str) {
+    pub fn schedule_j1939_service_tx(&self, network: Vec<NetDriver>, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
         let shutdown = self.shutdown.0.subscribe();
 
         tokio::spawn(async move {
-            if let Err(e) = rx_network_xyz(network, interface, operand, shutdown).await {
+            if let Err(e) = tx_network(network, interface, operand, shutdown).await {
                 log::error!("Failed to start network service: {}", e);
             }
         });
@@ -304,15 +316,8 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     }
 }
 
-pub enum NetDriver {
-    KueblerEncoder(crate::driver::KueblerEncoder),
-    KueblerInclinometer(crate::driver::KueblerInclinometer),
-    EngineManagementSystem(crate::driver::EngineManagementSystem),
-    HydraulicControlUnit(crate::driver::HydraulicControlUnit),
-    RequestResponder(crate::driver::RequestResponder),
-}
-
-async fn rx_network_xyz(
+// TODO: Turn into service
+async fn rx_network(
     mut network: Vec<NetDriver>,
     interface: String,
     runtime_state: SharedOperandState,
@@ -371,6 +376,49 @@ async fn rx_network_xyz(
                 }
                 NetDriver::RequestResponder(rrp) => {
                     rrp.try_accept(&router, runtime_state.clone()).await;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// TODO: Turn into service
+async fn tx_network(
+    mut network: Vec<NetDriver>,
+    interface: String,
+    runtime_state: SharedOperandState,
+    shutdown: tokio::sync::broadcast::Receiver<()>,
+) -> std::io::Result<()> {
+    use crate::driver::net::J1939Unit;
+
+    log::debug!("Starting J1939 service on {}", interface);
+
+    let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&interface))?;
+    let router = crate::net::Router::new(socket);
+
+    let mut interval = tokio::time::interval(std::time::Duration::from_millis(10));
+
+    while shutdown.is_empty() {
+        interval.tick().await;
+
+        for driver in network.iter_mut() {
+            match driver {
+                NetDriver::KueblerEncoder(enc) => {
+                    enc.tick(&router, runtime_state.clone()).await;
+                }
+                NetDriver::KueblerInclinometer(imu) => {
+                    imu.tick(&router, runtime_state.clone()).await;
+                }
+                NetDriver::EngineManagementSystem(ems) => {
+                    ems.tick(&router, runtime_state.clone()).await;
+                }
+                NetDriver::HydraulicControlUnit(hcu) => {
+                    hcu.tick(&router, runtime_state.clone()).await;
+                }
+                NetDriver::RequestResponder(rrp) => {
+                    rrp.tick(&router, runtime_state.clone()).await;
                 }
             }
         }

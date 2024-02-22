@@ -162,66 +162,70 @@ async fn main() -> anyhow::Result<()> {
             runtime.schedule_io_service(device::service_gnss);
         }
 
-        // runtime.schedule_j1939_service(j1939::rx_network_0, &config.j1939[0].interface);
-        // runtime.schedule_j1939_service(j1939::rx_network_1, &config.j1939[1].interface);
-        // runtime.schedule_j1939_service(j1939::tx_network_0, &config.j1939[0].interface);
-
-        runtime.schedule_j1939_service(j1939::tx_network_1, &config.j1939[1].interface);
-
-        let j1939_drivers_can0 = vec![
-            glonax::runtime::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
+        let j1939_drivers_can0_rx = vec![
+            glonax::driver::net::NetDriver::kuebler_encoder(
                 crate::consts::J1939_ADDRESS_ENCODER0,
                 crate::consts::J1939_ADDRESS_VMS,
-            )),
-            glonax::runtime::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
+            ),
+            glonax::driver::net::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
                 crate::consts::J1939_ADDRESS_ENCODER1,
                 crate::consts::J1939_ADDRESS_VMS,
             )),
-            glonax::runtime::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
+            glonax::driver::net::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
                 crate::consts::J1939_ADDRESS_ENCODER2,
                 crate::consts::J1939_ADDRESS_VMS,
             )),
-            glonax::runtime::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
+            glonax::driver::net::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
                 crate::consts::J1939_ADDRESS_ENCODER3,
                 crate::consts::J1939_ADDRESS_VMS,
             )),
-            glonax::runtime::NetDriver::KueblerInclinometer(
+            glonax::driver::net::NetDriver::KueblerInclinometer(
                 glonax::driver::KueblerInclinometer::new(
                     crate::consts::J1939_ADDRESS_IMU0,
                     crate::consts::J1939_ADDRESS_VMS,
                 ),
             ),
-            glonax::runtime::NetDriver::RequestResponder(glonax::driver::RequestResponder::new(
-                crate::consts::J1939_ADDRESS_VMS,
-            )),
+            glonax::driver::net::NetDriver::RequestResponder(
+                glonax::driver::RequestResponder::new(crate::consts::J1939_ADDRESS_VMS),
+            ),
         ];
 
-        let j1939_drivers_can1 = vec![
-            glonax::runtime::NetDriver::EngineManagementSystem(
+        let j1939_drivers_can1_rx = vec![
+            glonax::driver::net::NetDriver::EngineManagementSystem(
                 glonax::driver::EngineManagementSystem::new(
                     crate::consts::J1939_ADDRESS_ENGINE0,
                     crate::consts::J1939_ADDRESS_VMS,
                 ),
             ),
-            glonax::runtime::NetDriver::HydraulicControlUnit(
+            glonax::driver::net::NetDriver::HydraulicControlUnit(
                 glonax::driver::HydraulicControlUnit::new(
                     crate::consts::J1939_ADDRESS_HCU0,
                     crate::consts::J1939_ADDRESS_VMS,
                 ),
             ),
-            glonax::runtime::NetDriver::KueblerInclinometer(
-                glonax::driver::KueblerInclinometer::new(
-                    crate::consts::J1939_ADDRESS_IMU0,
+            glonax::driver::net::NetDriver::RequestResponder(
+                glonax::driver::RequestResponder::new(crate::consts::J1939_ADDRESS_VMS),
+            ),
+        ];
+
+        let j1939_drivers_can1_tx = vec![
+            glonax::driver::net::NetDriver::EngineManagementSystem(
+                glonax::driver::EngineManagementSystem::new(
+                    crate::consts::J1939_ADDRESS_ENGINE0,
                     crate::consts::J1939_ADDRESS_VMS,
                 ),
             ),
-            glonax::runtime::NetDriver::RequestResponder(glonax::driver::RequestResponder::new(
-                crate::consts::J1939_ADDRESS_VMS,
-            )),
+            glonax::driver::net::NetDriver::HydraulicControlUnit(
+                glonax::driver::HydraulicControlUnit::new(
+                    crate::consts::J1939_ADDRESS_HCU0,
+                    crate::consts::J1939_ADDRESS_VMS,
+                ),
+            ),
         ];
 
-        runtime.schedule_j1939_service2(j1939_drivers_can0, &config.j1939[0].interface);
-        runtime.schedule_j1939_service2(j1939_drivers_can1, &config.j1939[1].interface);
+        runtime.schedule_j1939_service_rx(j1939_drivers_can0_rx, &config.j1939[0].interface);
+        runtime.schedule_j1939_service_rx(j1939_drivers_can1_rx, &config.j1939[1].interface);
+        runtime.schedule_j1939_service_tx(j1939_drivers_can1_tx, &config.j1939[1].interface);
 
         runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.j1939[1].interface);
     }

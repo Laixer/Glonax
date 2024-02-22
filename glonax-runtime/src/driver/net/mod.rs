@@ -7,6 +7,23 @@ pub mod inspector;
 pub mod reqres;
 pub(super) mod vecraft;
 
+pub enum NetDriver {
+    KueblerEncoder(super::KueblerEncoder),
+    KueblerInclinometer(super::KueblerInclinometer),
+    EngineManagementSystem(super::EngineManagementSystem),
+    HydraulicControlUnit(super::HydraulicControlUnit),
+    RequestResponder(super::RequestResponder),
+}
+
+impl NetDriver {
+    pub fn kuebler_encoder(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
+        crate::driver::net::NetDriver::KueblerEncoder(crate::driver::KueblerEncoder::new(
+            address,
+            vms_address,
+        ))
+    }
+}
+
 // FUTURE: Maybe move?
 pub trait J1939Unit {
     /// Try to accept a message from the router.
