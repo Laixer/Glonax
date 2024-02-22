@@ -1,14 +1,13 @@
 use crate::{
     driver::VirtualEncoder,
-    runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    runtime::{Service, SharedOperandState},
 };
 
 pub struct EncoderSimulator {
     encoder_list: [(u8, crate::core::Actuator, VirtualEncoder); 4],
 }
 
-impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
+impl<Cnf> Service<Cnf> for EncoderSimulator {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -30,18 +29,7 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
         Self { encoder_list }
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, state: &mut MachineState) {
-        for (id, actuator, encoder) in self.encoder_list.iter_mut() {
-            let velocity = state.ecu_state.speed(actuator);
-            let position = state.ecu_state.position(actuator);
-
-            let position = encoder.position(position, velocity);
-
-            state.encoders.insert(*id, position as f32);
-
-            state.ecu_state.set_position(actuator, position);
-        }
-
+    fn tick(&mut self, runtime_state: SharedOperandState) {
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());
 
@@ -49,5 +37,21 @@ impl<Cnf: Configurable> Component<Cnf> for EncoderSimulator {
         // state.encoders.insert(0x6B, 0.0);
         // state.encoders.insert(0x6C, 0.0);
         // state.encoders.insert(0x6D, 0.0);
+
+        if let Ok(mut runtime_state) = runtime_state.try_write() {
+            for (id, actuator, encoder) in self.encoder_list.iter_mut() {
+                let velocity = runtime_state.state.ecu_state.speed(actuator);
+                let position = runtime_state.state.ecu_state.position(actuator);
+
+                let position = encoder.position(position, velocity);
+
+                runtime_state.state.encoders.insert(*id, position as f32);
+
+                runtime_state
+                    .state
+                    .ecu_state
+                    .set_position(actuator, position);
+            }
+        }
     }
 }

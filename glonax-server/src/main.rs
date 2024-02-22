@@ -153,13 +153,12 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     if config.simulation.enabled {
-        runtime.schedule_service_c::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_service_c::<glonax::components::EngineSimulator>(Duration::from_millis(10));
+        runtime.schedule_service::<glonax::service::EncoderSimulator>(Duration::from_millis(5));
+        runtime.schedule_service::<glonax::service::EngineSimulator>(Duration::from_millis(10));
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
         if config.nmea.is_some() {
-            // runtime.schedule_io_func(device::service_gnss);
             runtime.schedule_io_service::<glonax::service::Gnss, config::NmeaConfig>(
                 config.nmea.clone().unwrap(),
             );

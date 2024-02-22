@@ -1,59 +1,56 @@
-use glonax::{
-    core::Motion,
-    runtime::{MotionSender, SharedOperandState},
-};
+use glonax::{core::Motion, runtime::SharedOperandState};
 
 pub type MotionReceiver = tokio::sync::mpsc::Receiver<Motion>;
 
-pub(super) async fn _service_gnss(
-    config: crate::config::Config,
-    _instance: glonax::core::Instance,
-    runtime_state: SharedOperandState,
-    _motion_sender: MotionSender,
-) -> std::io::Result<()> {
-    use tokio::io::{AsyncBufReadExt, BufReader};
+// pub(super) async fn _service_gnss(
+//     config: crate::config::Config,
+//     _instance: glonax::core::Instance,
+//     runtime_state: SharedOperandState,
+//     _motion_sender: MotionSender,
+// ) -> std::io::Result<()> {
+//     use tokio::io::{AsyncBufReadExt, BufReader};
 
-    log::debug!("Starting GNSS service");
+//     log::debug!("Starting GNSS service");
 
-    let nmea_config = config.nmea.as_ref().unwrap();
+//     let nmea_config = config.nmea.as_ref().unwrap();
 
-    let serial = glonax_serial::Uart::open(
-        std::path::Path::new(&nmea_config.device),
-        glonax_serial::BaudRate::from_speed(nmea_config.baud_rate),
-    )
-    .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+//     let serial = glonax_serial::Uart::open(
+//         std::path::Path::new(&nmea_config.device),
+//         glonax_serial::BaudRate::from_speed(nmea_config.baud_rate),
+//     )
+//     .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
-    let reader = BufReader::new(serial);
-    let mut lines = reader.lines();
+//     let reader = BufReader::new(serial);
+//     let mut lines = reader.lines();
 
-    let driver = glonax::driver::Nmea;
+//     let driver = glonax::driver::Nmea;
 
-    while let Ok(Some(line)) = lines.next_line().await {
-        if let Some(message) = driver.decode(line) {
-            let mut runtime_state = runtime_state.write().await;
+//     while let Ok(Some(line)) = lines.next_line().await {
+//         if let Some(message) = driver.decode(line) {
+//             let mut runtime_state = runtime_state.write().await;
 
-            if let Some((lat, long)) = message.coordinates {
-                runtime_state.state.gnss.location = (lat, long)
-            }
-            if let Some(altitude) = message.altitude {
-                runtime_state.state.gnss.altitude = altitude;
-            }
-            if let Some(speed) = message.speed {
-                const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
+//             if let Some((lat, long)) = message.coordinates {
+//                 runtime_state.state.gnss.location = (lat, long)
+//             }
+//             if let Some(altitude) = message.altitude {
+//                 runtime_state.state.gnss.altitude = altitude;
+//             }
+//             if let Some(speed) = message.speed {
+//                 const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
 
-                runtime_state.state.gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
-            }
-            if let Some(heading) = message.heading {
-                runtime_state.state.gnss.heading = heading;
-            }
-            if let Some(satellites) = message.satellites {
-                runtime_state.state.gnss.satellites = satellites;
-            }
-        }
-    }
+//                 runtime_state.state.gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
+//             }
+//             if let Some(heading) = message.heading {
+//                 runtime_state.state.gnss.heading = heading;
+//             }
+//             if let Some(satellites) = message.satellites {
+//                 runtime_state.state.gnss.satellites = satellites;
+//             }
+//         }
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 pub(super) async fn sink_net_actuator_sim(
     _config: crate::config::Config,
