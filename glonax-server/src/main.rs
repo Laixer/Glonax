@@ -148,18 +148,19 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    runtime.schedule_interval::<glonax::components::Host>(Duration::from_millis(
+    runtime.schedule_service::<glonax::service::Host>(Duration::from_millis(
         config.host.interval.clamp(10, 1_000),
     ));
 
     if config.simulation.enabled {
-        runtime.schedule_interval::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_interval::<glonax::components::EngineSimulator>(Duration::from_millis(10));
+        runtime.schedule_service::<glonax::components::EncoderSimulator>(Duration::from_millis(5));
+        runtime.schedule_service::<glonax::components::EngineSimulator>(Duration::from_millis(10));
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
         if config.nmea.is_some() {
-            runtime.schedule_io_service(device::service_gnss);
+            // runtime.schedule_io_func(device::service_gnss);
+            runtime.schedule_io_service::<glonax::service::Gnss>();
         }
 
         let j1939_drivers_can0_rx = vec![
@@ -230,9 +231,9 @@ async fn main() -> anyhow::Result<()> {
         runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.j1939[1].interface);
     }
 
-    runtime.schedule_io_service(server::tcp_listen);
-    runtime.schedule_io_service(server::unix_listen);
-    runtime.schedule_io_service(server::net_announce);
+    runtime.schedule_io_func(server::tcp_listen);
+    runtime.schedule_io_func(server::unix_listen);
+    runtime.schedule_io_func(server::net_announce);
 
     let mut pipe = glonax::service::Pipeline::new(config.clone(), instance);
 

@@ -17,6 +17,22 @@ pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>
 
 pub mod builder;
 
+pub trait Service<Cnf: Configurable> {
+    // TODO: Add instance to new
+    /// Construct a new component.
+    ///
+    /// This method will be called once on startup.
+    /// The component should use this method to initialize itself.
+    fn new(config: Cnf) -> Self
+    where
+        Self: Sized;
+
+    fn wait_io(
+        &mut self,
+        runtime_state: SharedOperandState,
+    ) -> impl std::future::Future<Output = ()> + Send;
+}
+
 pub trait Component<Cnf: Configurable> {
     // TODO: Add instance to new
     /// Construct a new component.
@@ -124,28 +140,6 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         self.shutdown.0.subscribe()
     }
 
-    /// Listen for IO event service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<Fut>(
-        &self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
-    ) where
-        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
-    {
-        let config = self.config.clone();
-        let instance = self.instance.clone();
-        let operand = self.operand.clone();
-        let motion_tx = self.motion_tx.clone();
-
-        tokio::spawn(async move {
-            if let Err(e) = service(config, instance, operand, motion_tx).await {
-                log::error!("Failed to start IO service: {}", e);
-            }
-        });
-    }
-
     /// Listen for network service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
@@ -215,11 +209,34 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    /// Listen for IO event service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    pub fn schedule_io_func<Fut>(
+        &self,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
+    ) where
+        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
+    {
+        let config = self.config.clone();
+        let instance = self.instance.clone();
+        let operand = self.operand.clone();
+        let motion_tx = self.motion_tx.clone();
+
+        tokio::spawn(async move {
+            if let Err(e) = service(config, instance, operand, motion_tx).await {
+                log::error!("Failed to start IO service: {}", e);
+            }
+        });
+    }
+
+    // TODO: Component should be 'service' and not 'component'
     /// Schedule a component to run in the background.
     ///
     /// This method will schedule a component to run in the background. On each tick, the component
     /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_interval<C>(&self, duration: std::time::Duration)
+    pub fn schedule_service<C>(&self, duration: std::time::Duration)
     where
         C: Component<Cnf> + Send + Sync + 'static,
         Cnf: Configurable,
@@ -244,6 +261,25 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    /// Listen for IO event service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    pub fn schedule_io_service<S>(&self)
+    where
+        S: Service<Cnf> + Send + Sync + 'static,
+        Cnf: Configurable,
+    {
+        let mut component = S::new(self.config.clone());
+
+        let operand = self.operand.clone();
+
+        tokio::spawn(async move {
+            component.wait_io(operand).await;
+        });
+    }
+
+    // TODO: Component should be 'service' and not 'component'
     // TODO: Maybe copy MachineState to component state on each tick?
     /// Run a component in the main thread.
     ///

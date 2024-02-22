@@ -11,6 +11,8 @@ categories = ["hardware", "machine", "controller", "heavy", "equipment"]
 keywords = ["hardware", "machine", "controller", "glonax"]
 
 [dependencies]
+glonax-serial = { version = "1", path = "../glonax-serial" }
+
 rand = "0.8"
 chrono = "0.4"
 bytes = "1.5"
