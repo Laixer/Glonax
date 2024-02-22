@@ -11,3 +11,4 @@ mod engine;
 mod gnss;
 mod host;
 mod pipeline;
+mod tcp_server;
