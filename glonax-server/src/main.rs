@@ -143,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
         log::info!("Running in simulation mode");
     }
 
-    let mut runtime = glonax::runtime::builder(&config, instance)?
+    let mut runtime = glonax::runtime::builder(&config, instance.clone())?
         .with_shutdown()
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
@@ -234,23 +234,18 @@ async fn main() -> anyhow::Result<()> {
     runtime.schedule_io_service(server::unix_listen);
     runtime.schedule_io_service(server::net_announce);
 
-    let mut components = vec![
-        runtime.make_dynamic::<components::WorldBuilder>(0),
-        runtime.make_dynamic::<components::SensorFusion>(2),
-        runtime.make_dynamic::<components::LocalActor>(3),
-    ];
+    let mut pipe = glonax::service::Pipeline::new(config.clone(), instance);
+
+    pipe.insert_component::<components::WorldBuilder>(0);
+    pipe.insert_component::<components::SensorFusion>(2);
+    pipe.insert_component::<components::LocalActor>(3);
 
     if config.mode == config::OperationMode::Autonomous {
-        components.push(runtime.make_dynamic::<components::Kinematic>(5));
-        components.push(runtime.make_dynamic::<components::Controller>(10));
+        pipe.insert_component::<components::Kinematic>(5);
+        pipe.insert_component::<components::Controller>(10);
     }
 
-    runtime
-        .run_interval(
-            glonax::service::Pipeline::new(components),
-            Duration::from_millis(10),
-        )
-        .await;
+    runtime.run_interval(pipe, Duration::from_millis(10)).await;
 
     runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
 
