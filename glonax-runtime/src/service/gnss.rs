@@ -1,15 +1,12 @@
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 
-use crate::{
-    runtime::{Service, SharedOperandState},
-    Configurable,
-};
+use crate::runtime::{Service, SharedOperandState};
 
 pub struct Gnss {
     line_reader: Lines<BufReader<glonax_serial::Uart>>,
 }
 
-impl<Cnf: Configurable> Service<Cnf> for Gnss {
+impl<Cnf> Service<Cnf> for Gnss {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

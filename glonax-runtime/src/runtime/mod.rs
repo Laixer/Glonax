@@ -17,7 +17,7 @@ pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>
 
 pub mod builder;
 
-pub trait Service<Cnf: Configurable> {
+pub trait Service<Cnf> {
     // TODO: Add instance to new
     /// Construct a new component.
     ///
@@ -265,17 +265,17 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<S>(&self)
+    pub fn schedule_io_service<S, Scnf>(&self, config: Scnf)
     where
-        S: Service<Cnf> + Send + Sync + 'static,
-        Cnf: Configurable,
+        S: Service<Scnf> + Send + Sync + 'static,
+        Scnf: std::clone::Clone,
     {
-        let mut component = S::new(self.config.clone());
+        let mut service = S::new(config.clone());
 
         let operand = self.operand.clone();
 
         tokio::spawn(async move {
-            component.wait_io(operand).await;
+            service.wait_io(operand).await;
         });
     }
 

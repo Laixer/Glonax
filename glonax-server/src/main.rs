@@ -160,7 +160,9 @@ async fn main() -> anyhow::Result<()> {
     } else {
         if config.nmea.is_some() {
             // runtime.schedule_io_func(device::service_gnss);
-            runtime.schedule_io_service::<glonax::service::Gnss>();
+            runtime.schedule_io_service::<glonax::service::Gnss, config::NmeaConfig>(
+                config.nmea.clone().unwrap(),
+            );
         }
 
         let j1939_drivers_can0_rx = vec![
