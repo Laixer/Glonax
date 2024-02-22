@@ -5,7 +5,7 @@ use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 
 use crate::runtime::{Service, SharedOperandState};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct GnssConfig {
     /// Path to the serial device
     pub device: PathBuf,
@@ -22,7 +22,11 @@ impl Service<GnssConfig> for Gnss {
     where
         Self: Sized,
     {
-        log::debug!("Starting GNSS service");
+        log::debug!(
+            "Starting GNSS service on {}:{}",
+            config.device.display(),
+            config.baud_rate
+        );
 
         let serial = Uart::open(&config.device, BaudRate::from_speed(config.baud_rate))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))

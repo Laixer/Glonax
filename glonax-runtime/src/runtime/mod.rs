@@ -17,6 +17,9 @@ pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>
 
 pub mod builder;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NullConfig;
+
 pub trait Service<Cnf> {
     // TODO: Add instance to new
     /// Construct a new component.
@@ -240,44 +243,14 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
         });
     }
 
-    // TODO: Component should be 'service' and not 'component'
-    /// Schedule a component to run in the background.
-    ///
-    /// This method will schedule a component to run in the background. On each tick, the component
-    /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_service_c<C>(&self, duration: std::time::Duration)
-    where
-        C: Component<Cnf> + Send + Sync + 'static,
-        Cnf: Configurable,
-    {
-        let mut interval = tokio::time::interval(duration);
-
-        let mut component = C::new(self.config.clone());
-
-        let operand = self.operand.clone();
-
-        let mut ctx = ComponentContext::new(self.motion_tx.clone());
-        tokio::spawn(async move {
-            component.once(&mut ctx, &mut operand.write().await.state);
-            ctx.post_tick();
-
-            loop {
-                interval.tick().await;
-
-                component.tick(&mut ctx, &mut operand.write().await.state);
-                ctx.post_tick();
-            }
-        });
-    }
-
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<S, Scnf>(&self, config: Scnf)
+    pub fn schedule_io_service<S, C>(&self, config: C)
     where
-        S: Service<Scnf> + Send + Sync + 'static,
-        Scnf: std::clone::Clone,
+        S: Service<C> + Send + Sync + 'static,
+        C: std::clone::Clone,
     {
         let mut service = S::new(config.clone());
 
@@ -292,13 +265,14 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will schedule a component to run in the background. On each tick, the component
     /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_service<S>(&self, duration: std::time::Duration)
+    pub fn schedule_service<S, C>(&self, config: C, duration: std::time::Duration)
     where
-        S: Service<Cnf> + Send + Sync + 'static,
+        S: Service<C> + Send + Sync + 'static,
+        C: std::clone::Clone,
     {
         let mut interval = tokio::time::interval(duration);
 
-        let mut service = S::new(self.config.clone());
+        let mut service = S::new(config.clone());
 
         let operand = self.operand.clone();
 

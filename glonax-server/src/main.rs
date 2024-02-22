@@ -148,22 +148,26 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    runtime.schedule_service::<glonax::service::Host>(Duration::from_millis(
-        config.host.interval.clamp(10, 1_000),
-    ));
+    runtime.schedule_service::<glonax::service::Host, glonax::runtime::NullConfig>(
+        glonax::runtime::NullConfig,
+        Duration::from_millis(config.host.interval.clamp(10, 1_000)),
+    );
 
     if config.simulation.enabled {
-        runtime.schedule_service::<glonax::service::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_service::<glonax::service::EngineSimulator>(Duration::from_millis(10));
+        runtime.schedule_service::<glonax::service::EncoderSimulator, glonax::runtime::NullConfig>(
+            glonax::runtime::NullConfig,
+            Duration::from_millis(5),
+        );
+        runtime.schedule_service::<glonax::service::EngineSimulator, glonax::runtime::NullConfig>(
+            glonax::runtime::NullConfig,
+            Duration::from_millis(10),
+        );
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
-        if let Some(nmea_config) = config.clone().nmea {
+        if let Some(gnss_config) = config.clone().gnss {
             runtime.schedule_io_service::<glonax::service::Gnss, glonax::service::GnssConfig>(
-                glonax::service::GnssConfig {
-                    device: nmea_config.device.clone(),
-                    baud_rate: nmea_config.baud_rate,
-                },
+                gnss_config,
             );
         }
 

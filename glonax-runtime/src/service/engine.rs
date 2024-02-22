@@ -6,8 +6,8 @@ pub struct EngineSimulator {
     rng: rand::rngs::OsRng,
 }
 
-impl<Cnf> Service<Cnf> for EngineSimulator {
-    fn new(_config: Cnf) -> Self
+impl<C> Service<C> for EngineSimulator {
+    fn new(_config: C) -> Self
     where
         Self: Sized,
     {

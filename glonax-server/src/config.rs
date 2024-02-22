@@ -21,14 +21,6 @@ impl ServerConfig {
 }
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct NmeaConfig {
-    /// Serial device for NMEA data.
-    pub device: std::path::PathBuf,
-    /// Serial baud rate for NMEA data.
-    pub baud_rate: usize,
-}
-
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct HostConfig {
     // Host update interval.
     #[serde(default = "HostConfig::default_interval")]
@@ -127,7 +119,7 @@ pub struct Config {
     /// Machine instance.
     pub machine: MachineConfig,
     /// NMEA configuration.
-    pub nmea: Option<NmeaConfig>,
+    pub gnss: Option<glonax::service::GnssConfig>,
     /// Host configuration.
     pub host: HostConfig,
     /// Simulation configuration.

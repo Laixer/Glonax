@@ -7,8 +7,8 @@ pub struct EncoderSimulator {
     encoder_list: [(u8, crate::core::Actuator, VirtualEncoder); 4],
 }
 
-impl<Cnf> Service<Cnf> for EncoderSimulator {
-    fn new(_config: Cnf) -> Self
+impl<C> Service<C> for EncoderSimulator {
+    fn new(_config: C) -> Self
     where
         Self: Sized,
     {
