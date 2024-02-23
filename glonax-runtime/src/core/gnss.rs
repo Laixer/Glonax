@@ -88,7 +88,7 @@ impl TryFrom<Vec<u8>> for Gnss {
 
 impl crate::protocol::Packetize for Gnss {
     const MESSAGE_TYPE: u8 = 0x42;
-    const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 5) + 1);
+    const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 5) + 1 + 1);
 
     fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(Self::MESSAGE_SIZE.unwrap());
