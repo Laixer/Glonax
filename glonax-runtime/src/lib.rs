@@ -53,6 +53,10 @@ pub mod consts {
 
 // TODO: Return the machine state in its entirety over the network
 // TODO: Integrate into the operand
+/// Represents the state of a machine.
+///
+/// The project refers to the machine as the entire system including
+/// hardware, software, sensors and actuators.
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.
@@ -80,7 +84,7 @@ pub struct MachineState {
 /// This is the state that is used by the runtime to control
 /// the machine and the state that is used by the middleware.
 pub struct Operand {
-    /// Robot state.
+    /// Current machine state.
     pub state: MachineState,
 }
 

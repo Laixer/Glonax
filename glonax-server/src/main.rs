@@ -4,7 +4,7 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::Parser;
+use clap::{Parser, ValueHint};
 
 mod components;
 mod config;
@@ -23,7 +23,8 @@ struct Args {
         long = "config",
         alias = "conf",
         default_value = "/etc/glonax.conf",
-        value_name = "FILE"
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath
     )]
     config: std::path::PathBuf,
     /// Enable simulation mode.
@@ -91,8 +92,10 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    ////////////////////
+    run(config).await
+}
 
+async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::driver::net::NetDriver;
     use glonax::driver::{
         EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, KueblerInclinometer,
@@ -100,6 +103,8 @@ async fn main() -> anyhow::Result<()> {
     };
     use glonax::service;
     use std::time::Duration;
+
+    let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     let machine = config.machine.clone();
     let instance = glonax::core::Instance::new(
@@ -227,7 +232,7 @@ async fn main() -> anyhow::Result<()> {
 
     std::thread::sleep(Duration::from_millis(50));
 
-    log::debug!("{} was shutdown gracefully", env!("CARGO_BIN_NAME"));
+    log::debug!("{} was shutdown gracefully", bin_name);
 
     Ok(())
 }

@@ -43,19 +43,6 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    let mut address = args.address.clone();
-
-    if !address.contains(':') {
-        address.push(':');
-        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
-    }
-
-    let address = std::net::ToSocketAddrs::to_socket_addrs(&address)?
-        .next()
-        .unwrap();
-
-    let bin_name = env!("CARGO_BIN_NAME").to_string();
-
     let is_daemon = std::env::var("INVOCATION_ID").is_ok() || args.daemon;
 
     if is_daemon {
@@ -87,7 +74,22 @@ async fn main() -> anyhow::Result<()> {
         log::info!("Running service as daemon");
     }
 
-    ////////////////////
+    run(args).await
+}
+
+async fn run(args: Args) -> anyhow::Result<()> {
+    let bin_name = env!("CARGO_BIN_NAME").to_string();
+
+    let mut address = args.address.clone();
+
+    if !address.contains(':') {
+        address.push(':');
+        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
+    }
+
+    let address = std::net::ToSocketAddrs::to_socket_addrs(&address)?
+        .next()
+        .unwrap();
 
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&args.device)).await?;
 

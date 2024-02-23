@@ -16,7 +16,7 @@ then
   exit 1
 fi
 
-VERSION=3.5-1
+VERSION=3.5-2
 ARCH=$(uname -m)
 
 case $ARCH in
