@@ -97,10 +97,6 @@ async fn main() -> anyhow::Result<()> {
 
 async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::driver::net::NetDriver;
-    use glonax::driver::{
-        EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, KueblerInclinometer,
-        RequestResponder,
-    };
     use glonax::service;
     use std::time::Duration;
 
@@ -159,46 +155,34 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         // TODO: Drivers may not match the configuration.
         let j1939_drivers_can0_rx = vec![
             NetDriver::kuebler_encoder(config.j1939[0].driver[0].id, config.j1939[0].address),
-            NetDriver::KueblerEncoder(KueblerEncoder::new(
-                config.j1939[0].driver[1].id,
-                config.j1939[0].address,
-            )),
-            NetDriver::KueblerEncoder(KueblerEncoder::new(
-                config.j1939[0].driver[2].id,
-                config.j1939[0].address,
-            )),
-            NetDriver::KueblerEncoder(KueblerEncoder::new(
-                config.j1939[0].driver[2].id,
-                config.j1939[0].address,
-            )),
-            NetDriver::KueblerInclinometer(KueblerInclinometer::new(
-                config.j1939[0].driver[3].id,
-                config.j1939[0].address,
-            )),
-            NetDriver::RequestResponder(RequestResponder::new(config.j1939[0].address)),
+            NetDriver::kuebler_encoder(config.j1939[0].driver[1].id, config.j1939[0].address),
+            NetDriver::kuebler_encoder(config.j1939[0].driver[2].id, config.j1939[0].address),
+            NetDriver::kuebler_encoder(config.j1939[0].driver[3].id, config.j1939[0].address),
+            NetDriver::kuebler_inclinometer(config.j1939[0].driver[4].id, config.j1939[0].address),
+            NetDriver::request_responder(config.j1939[0].address),
         ];
 
         let j1939_drivers_can1_rx = vec![
-            NetDriver::EngineManagementSystem(EngineManagementSystem::new(
+            NetDriver::engine_management_system(
                 config.j1939[1].driver[0].id,
                 config.j1939[1].address,
-            )),
-            NetDriver::HydraulicControlUnit(HydraulicControlUnit::new(
+            ),
+            NetDriver::hydraulic_control_unit(
                 config.j1939[1].driver[1].id,
                 config.j1939[1].address,
-            )),
-            NetDriver::RequestResponder(RequestResponder::new(config.j1939[1].address)),
+            ),
+            NetDriver::request_responder(config.j1939[1].address),
         ];
 
         let j1939_drivers_can1_tx = vec![
-            NetDriver::EngineManagementSystem(EngineManagementSystem::new(
+            NetDriver::engine_management_system(
                 config.j1939[1].driver[0].id,
                 config.j1939[1].address,
-            )),
-            NetDriver::HydraulicControlUnit(HydraulicControlUnit::new(
+            ),
+            NetDriver::hydraulic_control_unit(
                 config.j1939[1].driver[1].id,
                 config.j1939[1].address,
-            )),
+            ),
         ];
 
         runtime.schedule_j1939_service_rx(j1939_drivers_can0_rx, &config.j1939[0].interface);
@@ -231,6 +215,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     runtime.run_interval(pipe, Duration::from_millis(10)).await;
+
+    log::debug!("Sending stop all motion to network");
 
     runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
 

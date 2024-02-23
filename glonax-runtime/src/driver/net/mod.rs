@@ -22,6 +22,31 @@ impl NetDriver {
             vms_address,
         ))
     }
+
+    pub fn kuebler_inclinometer(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
+        crate::driver::net::NetDriver::KueblerInclinometer(crate::driver::KueblerInclinometer::new(
+            address,
+            vms_address,
+        ))
+    }
+
+    pub fn engine_management_system(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
+        crate::driver::net::NetDriver::EngineManagementSystem(
+            crate::driver::EngineManagementSystem::new(address, vms_address),
+        )
+    }
+
+    pub fn hydraulic_control_unit(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
+        crate::driver::net::NetDriver::HydraulicControlUnit(
+            crate::driver::HydraulicControlUnit::new(address, vms_address),
+        )
+    }
+
+    pub fn request_responder(address: u8) -> crate::driver::net::NetDriver {
+        crate::driver::net::NetDriver::RequestResponder(crate::driver::RequestResponder::new(
+            address,
+        ))
+    }
 }
 
 // FUTURE: Maybe move?
