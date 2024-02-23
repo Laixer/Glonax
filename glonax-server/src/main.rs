@@ -239,7 +239,7 @@ async fn main() -> anyhow::Result<()> {
     }
 
     runtime.schedule_io_func(server::tcp_listen);
-    // runtime.schedule_io_func(server::unix_listen);
+    runtime.schedule_io_func(server::unix_listen);
     // runtime.schedule_io_service::<service::TcpServer, service::TcpServerConfig>(
     //     config.tcp_server.clone(),
     // );
