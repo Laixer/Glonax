@@ -105,16 +105,20 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     use std::time::Duration;
 
     let bin_name = env!("CARGO_BIN_NAME").to_string();
+    let version_major: u8 = glonax::consts::VERSION_MAJOR.parse().unwrap();
+    let version_minor: u8 = glonax::consts::VERSION_MINOR.parse().unwrap();
+    let version_patch: u8 = glonax::consts::VERSION_PATCH.parse().unwrap();
 
     let machine = config.machine.clone();
     let instance = glonax::core::Instance::new(
         machine.id.clone(),
         machine.model.clone(),
         machine.machine_type,
-        (1, 0, 0),
+        (version_major, version_minor, version_patch),
     );
 
-    log::debug!("Starting proxy services");
+    log::info!("Starting {}", bin_name);
+    log::debug!("Runtime version: {}", glonax::consts::VERSION);
     log::info!("Running in operation mode: {}", config.mode);
     log::info!("{}", instance);
 
@@ -215,7 +219,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         Duration::from_millis(1_000),
     );
 
-    let mut pipe = glonax::service::Pipeline::new(config.clone(), instance);
+    let mut pipe = service::Pipeline::new(config.clone(), instance);
 
     pipe.insert_component::<components::WorldBuilder>(0);
     pipe.insert_component::<components::SensorFusion>(2);

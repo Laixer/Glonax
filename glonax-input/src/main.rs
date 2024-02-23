@@ -106,6 +106,8 @@ async fn run(args: Args) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
+    log::info!("Starting {}", bin_name);
+    log::debug!("Runtime version: {}", glonax::consts::VERSION);
     log::debug!("Waiting for connection to {}", address);
 
     let (mut client, instance) = glonax::protocol::client::tcp::connect_with(
