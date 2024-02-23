@@ -1,6 +1,6 @@
 use glonax::{
     runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    MachineState,
 };
 use nalgebra::Point3;
 
@@ -11,7 +11,7 @@ const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
 pub struct Kinematic;
 
-impl<Cnf: Configurable> Component<Cnf> for Kinematic {
+impl<Cnf: Clone> Component<Cnf> for Kinematic {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

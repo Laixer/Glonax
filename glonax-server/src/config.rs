@@ -1,5 +1,3 @@
-use glonax::Configurable;
-
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct SimulationConfig {
     /// Enable simulation mode.
@@ -96,5 +94,3 @@ pub struct Config {
     /// J1939 network configuration.
     pub j1939: Vec<J1939NetConfig>,
 }
-
-impl Configurable for Config {}

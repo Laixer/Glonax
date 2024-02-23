@@ -1,6 +1,3 @@
-/// Configuration trait.
-pub trait Configurable: Clone {}
-
 pub struct Error {
     /// Error kind.
     kind: ErrorKind,

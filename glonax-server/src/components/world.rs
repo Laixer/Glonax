@@ -2,7 +2,7 @@ use glonax::{
     core::MachineType,
     runtime::{Component, ComponentContext},
     world::{Actor, ActorBuilder, ActorSegment},
-    Configurable, MachineState,
+    MachineState,
 };
 use nalgebra::Vector3;
 
@@ -12,7 +12,7 @@ pub struct WorldBuilder {
     actor: Actor,
 }
 
-impl<Cnf: Configurable> Component<Cnf> for WorldBuilder {
+impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    MachineState,
 };
 
 pub struct Pipeline<Cnf> {
@@ -28,7 +28,7 @@ impl<Cnf> Pipeline<Cnf> {
     pub fn insert_component<C>(&mut self, order: i32)
     where
         C: Component<Cnf> + Send + Sync + 'static,
-        Cnf: Configurable,
+        Cnf: Clone,
     {
         self.map
             .insert(order, Box::new(C::new(self.config.clone())));
@@ -42,7 +42,7 @@ impl<Cnf> Pipeline<Cnf> {
     pub fn add_component<C>(&mut self, component: C)
     where
         C: Component<Cnf> + Send + Sync + 'static,
-        Cnf: Configurable,
+        Cnf: Clone,
     {
         let last_order = self.map.keys().last().unwrap_or(&0);
 
@@ -50,7 +50,7 @@ impl<Cnf> Pipeline<Cnf> {
     }
 }
 
-impl<Cnf: Configurable> Component<Cnf> for Pipeline<Cnf> {
+impl<Cnf: Clone> Component<Cnf> for Pipeline<Cnf> {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

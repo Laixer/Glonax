@@ -4,7 +4,7 @@ use crate::{
     core::{Instance, Target},
     driver::net::NetDriver,
     world::World,
-    Configurable, MachineState,
+    MachineState,
 };
 
 pub use self::error::Error;
@@ -40,7 +40,7 @@ pub trait Service<Cnf> {
     fn tick(&mut self, _runtime_state: SharedOperandState) {}
 }
 
-pub trait Component<Cnf: Configurable> {
+pub trait Component<Cnf: Clone> {
     // TODO: Add instance to new
     /// Construct a new component.
     ///
@@ -115,7 +115,7 @@ impl ComponentContext {
 ///
 /// Note that this method is certain to block.
 #[inline]
-pub fn builder<Cnf: Configurable>(
+pub fn builder<Cnf: Clone>(
     config: &Cnf,
     instance: crate::core::Instance,
 ) -> self::Result<builder::Builder<Cnf>> {
@@ -140,7 +140,7 @@ pub struct Runtime<Conf> {
     ),
 }
 
-impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
+impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     /// Listen for shutdown signal.
     #[inline]
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
@@ -295,7 +295,7 @@ impl<Cnf: Configurable + Send + 'static> Runtime<Cnf> {
     pub async fn run_interval<C>(&self, mut component: C, duration: std::time::Duration)
     where
         C: Component<Cnf>,
-        Cnf: Configurable,
+        Cnf: Clone,
     {
         let mut interval = tokio::time::interval(duration);
 

@@ -1,7 +1,7 @@
 use glonax::{
     driver::EncoderConverter,
     runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    MachineState,
 };
 
 const FRAME_ENCODER: u8 = 0x6A;
@@ -18,7 +18,7 @@ pub struct SensorFusion {
     attachment_encoder_converter: EncoderConverter,
 }
 
-impl<Cnf: Configurable> Component<Cnf> for SensorFusion {
+impl<Cnf: Clone> Component<Cnf> for SensorFusion {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

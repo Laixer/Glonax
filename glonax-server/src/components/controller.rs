@@ -1,7 +1,7 @@
 use glonax::{
     core::{Actuator, Motion},
     runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    MachineState,
 };
 
 struct ActuatorMotionEvent {
@@ -56,7 +56,7 @@ pub struct Controller {
     stopall: bool,
 }
 
-impl<Cnf: Configurable> Component<Cnf> for Controller {
+impl<Cnf: Clone> Component<Cnf> for Controller {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

@@ -1,4 +1,4 @@
-use crate::{config::Configurable, Runtime};
+use crate::Runtime;
 
 /// Runtime builder.
 ///
@@ -10,7 +10,7 @@ use crate::{config::Configurable, Runtime};
 /// The runtime builder *must* be used to construct a runtime.
 pub struct Builder<Cnf>(Runtime<Cnf>);
 
-impl<Cnf: Configurable> Builder<Cnf> {
+impl<Cnf: Clone> Builder<Cnf> {
     /// Construct runtime service from configuration and instance.
     ///
     /// Note that this method is certain to block.

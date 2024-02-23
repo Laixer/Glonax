@@ -1,6 +1,6 @@
 use glonax::{
     runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    MachineState,
 };
 
 // TODO: Get this from config
@@ -8,7 +8,7 @@ const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
 pub struct LocalActor;
 
-impl<Cnf: Configurable> Component<Cnf> for LocalActor {
+impl<Cnf: Clone> Component<Cnf> for LocalActor {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

@@ -1,14 +1,14 @@
 use glonax::{
     math::EulerAngles,
     runtime::{Component, ComponentContext},
-    Configurable, MachineState,
+    MachineState,
 };
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
 pub struct Example;
 
-impl<Cnf: Configurable> Component<Cnf> for Example {
+impl<Cnf: Clone> Component<Cnf> for Example {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
