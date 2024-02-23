@@ -2,12 +2,25 @@ use sysinfo::System;
 
 use crate::runtime::{Service, SharedOperandState};
 
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
+pub struct HostConfig {
+    // Host update interval.
+    #[serde(default = "HostConfig::default_interval")]
+    pub interval: u64,
+}
+
+impl HostConfig {
+    fn default_interval() -> u64 {
+        500
+    }
+}
+
 pub struct Host {
     system: System,
 }
 
-impl<Cnf> Service<Cnf> for Host {
-    fn new(_config: Cnf) -> Self
+impl Service<HostConfig> for Host {
+    fn new(_config: HostConfig) -> Self
     where
         Self: Sized,
     {

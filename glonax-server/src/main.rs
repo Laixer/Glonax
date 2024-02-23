@@ -149,8 +149,8 @@ async fn main() -> anyhow::Result<()> {
         .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
-    runtime.schedule_service::<service::Host, glonax::runtime::NullConfig>(
-        glonax::runtime::NullConfig,
+    runtime.schedule_service::<service::Host, service::HostConfig>(
+        config.host.clone(),
         Duration::from_millis(config.host.interval.clamp(10, 1_000)),
     );
 

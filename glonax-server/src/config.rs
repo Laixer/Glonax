@@ -1,39 +1,6 @@
 use glonax::Configurable;
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct ServerConfig {
-    /// Network address to listen on.
-    #[serde(default = "ServerConfig::default_listen")]
-    pub listen: String,
-    /// Maximum number of connections.
-    #[serde(default = "ServerConfig::default_max_connections")]
-    pub max_connections: usize,
-}
-
-impl ServerConfig {
-    fn default_listen() -> String {
-        "127.0.0.1:30051".to_owned()
-    }
-
-    fn default_max_connections() -> usize {
-        10
-    }
-}
-
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct HostConfig {
-    // Host update interval.
-    #[serde(default = "HostConfig::default_interval")]
-    pub interval: u64,
-}
-
-impl HostConfig {
-    fn default_interval() -> u64 {
-        500
-    }
-}
-
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct SimulationConfig {
     /// Enable simulation mode.
     #[serde(default)]
@@ -121,7 +88,7 @@ pub struct Config {
     /// NMEA configuration.
     pub gnss: Option<glonax::service::GnssConfig>,
     /// Host configuration.
-    pub host: HostConfig,
+    pub host: glonax::service::HostConfig,
     /// Simulation configuration.
     pub simulation: SimulationConfig,
     /// TCP Server configuration.
