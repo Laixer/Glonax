@@ -13,6 +13,8 @@
 
 [Unit]
 Description=Glonax Server
+Wants=network-online.target
+After=network-online.target
 StartLimitIntervalSec=5
 StartLimitBurst=5
 
@@ -21,10 +23,12 @@ WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
 Nice=-15
+IOSchedulingPriority=2
 User=glonax
 Group=glonax
-ExecCondition=/usr/lib/systemd/systemd-networkd-wait-online -i lo -o carrier
 ExecStart=/usr/local/bin/glonaxd --daemon
+RuntimeDirectory=glonax
+ConfigurationDirectory=glonax
 PrivateTmp=true
 
 [Install]
