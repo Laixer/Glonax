@@ -6,6 +6,7 @@
 
 pub mod core;
 pub mod driver;
+pub mod logger;
 pub mod math;
 pub mod net;
 pub mod protocol;

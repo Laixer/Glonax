@@ -243,6 +243,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    // TODO: Services should be able to return a result
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service

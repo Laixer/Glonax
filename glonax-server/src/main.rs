@@ -79,39 +79,30 @@ async fn main() -> anyhow::Result<()> {
 
     let is_daemon = std::env::var("INVOCATION_ID").is_ok() || args.daemon;
 
-    let mut log_config = simplelog::ConfigBuilder::new();
     if is_daemon {
-        log_config.set_time_level(LevelFilter::Off);
-        log_config.set_thread_level(LevelFilter::Off);
+        log::set_max_level(LevelFilter::Debug);
+        log::set_boxed_logger(Box::new(glonax::logger::SystemdLogger))?;
+    } else {
+        let log_level = if args.quiet {
+            LevelFilter::Off
+        } else {
+            match args.verbose {
+                0 => LevelFilter::Info,
+                1 => LevelFilter::Debug,
+                _ => LevelFilter::Trace,
+            }
+        };
+
+        simplelog::TermLogger::init(
+            log_level,
+            simplelog::ConfigBuilder::new()
+                .set_target_level(LevelFilter::Off)
+                .set_location_level(LevelFilter::Off)
+                .build(),
+            simplelog::TerminalMode::Mixed,
+            simplelog::ColorChoice::Auto,
+        )?;
     }
-
-    log_config.set_target_level(LevelFilter::Off);
-    log_config.set_location_level(LevelFilter::Off);
-
-    let log_level = if is_daemon {
-        LevelFilter::Info
-    } else if args.quiet {
-        LevelFilter::Off
-    } else {
-        match args.verbose {
-            0 => LevelFilter::Info,
-            1 => LevelFilter::Debug,
-            _ => LevelFilter::Trace,
-        }
-    };
-
-    let color_choice = if is_daemon {
-        simplelog::ColorChoice::Never
-    } else {
-        simplelog::ColorChoice::Auto
-    };
-
-    simplelog::TermLogger::init(
-        log_level,
-        log_config.build(),
-        simplelog::TerminalMode::Mixed,
-        color_choice,
-    )?;
 
     if is_daemon {
         log::info!("Running service as daemon");
