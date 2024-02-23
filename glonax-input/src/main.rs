@@ -56,8 +56,10 @@ async fn main() -> anyhow::Result<()> {
 
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
+    let is_daemon = std::env::var("INVOCATION_ID").is_ok() || args.daemon;
+
     let mut log_config = simplelog::ConfigBuilder::new();
-    if args.daemon {
+    if is_daemon {
         log_config.set_time_level(log::LevelFilter::Off);
         log_config.set_thread_level(log::LevelFilter::Off);
     }
@@ -67,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
     log_config.add_filter_ignore_str("sled");
     log_config.add_filter_ignore_str("mio");
 
-    let log_level = if args.daemon {
+    let log_level = if is_daemon {
         LevelFilter::Info
     } else if args.quiet {
         LevelFilter::Off
@@ -79,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    let color_choice = if args.daemon {
+    let color_choice = if is_daemon {
         simplelog::ColorChoice::Never
     } else {
         simplelog::ColorChoice::Auto
@@ -92,9 +94,11 @@ async fn main() -> anyhow::Result<()> {
         color_choice,
     )?;
 
-    if args.daemon {
-        log::debug!("Running service as daemon");
+    if is_daemon {
+        log::info!("Running service as daemon");
     }
+
+    ////////////////////
 
     let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&args.device)).await?;
 
