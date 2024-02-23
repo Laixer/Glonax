@@ -232,12 +232,17 @@ pub(super) async fn unix_listen(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    if std::path::Path::new(glonax::consts::DEFAULT_SOCKET_PATH).exists() {
-        std::fs::remove_file(glonax::consts::DEFAULT_SOCKET_PATH)?;
+    let unix_path = glonax::consts::DEFAULT_SOCKET_PATH;
+    if std::path::Path::new(unix_path).exists() {
+        std::fs::remove_file(unix_path)?;
     }
 
-    log::debug!("Listening on: {}", glonax::consts::DEFAULT_SOCKET_PATH);
-    let listener = UnixListener::bind(glonax::consts::DEFAULT_SOCKET_PATH)?;
+    log::debug!("Listening on: {}", unix_path);
+    let listener = UnixListener::bind(unix_path)?;
+
+    use std::os::unix::fs::PermissionsExt;
+
+    tokio::fs::set_permissions(unix_path, std::fs::Permissions::from_mode(0o777)).await?;
 
     loop {
         let (stream, _addr) = listener.accept().await?;

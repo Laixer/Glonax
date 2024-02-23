@@ -19,17 +19,15 @@ StartLimitIntervalSec=5
 StartLimitBurst=5
 
 [Service]
-WorkingDirectory=/var/lib/glonax
 Restart=always
 RestartSec=2
 Nice=-15
 IOSchedulingPriority=2
-User=glonax
-Group=glonax
+DynamicUser=true
+SupplementaryGroups=tty dialout
 ExecStart=/usr/local/bin/glonaxd --daemon
 RuntimeDirectory=glonax
 ConfigurationDirectory=glonax
-PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
