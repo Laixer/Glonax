@@ -1,4 +1,6 @@
-use tokio::net::TcpListener;
+use std::sync::Arc;
+
+use tokio::{net::TcpListener, sync::Semaphore};
 
 use crate::runtime::{Service, SharedOperandState};
 
@@ -23,7 +25,7 @@ impl TcpServerConfig {
 }
 
 pub struct TcpServer {
-    tcp_listener: TcpListener,
+    config: TcpServerConfig,
 }
 
 impl TcpServer {
@@ -36,6 +38,8 @@ impl TcpServer {
             frame::{Echo, Request, Session},
             Packetize, Stream,
         };
+
+        log::info!("Client session started");
 
         let mut client = Stream::new(stream);
 
@@ -53,9 +57,16 @@ impl TcpServer {
                         .unwrap();
                     // FUTURE: Pack into a single packet
                     match request.message() {
-                        // crate::core::Instance::MESSAGE_TYPE => {
-                        //     client.send_packet(&instance).await.unwrap();
-                        // }
+                        crate::core::Instance::MESSAGE_TYPE => {
+                            // TODO: Return the actual instance
+                            let instance = crate::core::Instance::new(
+                                "f0c4e7f1-f4e1-42b8-b002-afcdf1c76d12",
+                                "kaas",
+                                crate::core::MachineType::Excavator,
+                                (1, 2, 3),
+                            );
+                            client.send_packet(&instance).await.unwrap();
+                        }
                         crate::core::Status::MESSAGE_TYPE => {
                             client
                                 .send_packet(&runtime_state.read().await.status())
@@ -89,16 +100,23 @@ impl TcpServer {
                         _ => {}
                     }
                 }
-                // crate::protocol::frame::Session::MESSAGE_TYPE => {
-                //     session = client
-                //         .recv_packet::<Session>(frame.payload_length)
-                //         .await
-                //         .unwrap();
+                crate::protocol::frame::Session::MESSAGE_TYPE => {
+                    session = client
+                        .recv_packet::<Session>(frame.payload_length)
+                        .await
+                        .unwrap();
 
-                //     log::info!("Session started for: {}", session.name());
+                    log::info!("Session started for: {}", session.name());
 
-                //     client.send_packet(&instance).await.unwrap();
-                // }
+                    // TODO: Return the actual instance
+                    let instance = crate::core::Instance::new(
+                        "f0c4e7f1-f4e1-42b8-b002-afcdf1c76d12",
+                        "kaas",
+                        crate::core::MachineType::Excavator,
+                        (1, 2, 3),
+                    );
+                    client.send_packet(&instance).await.unwrap();
+                }
                 crate::protocol::frame::Echo::MESSAGE_TYPE => {
                     let echo = client
                         .recv_packet::<Echo>(frame.payload_length)
@@ -117,21 +135,21 @@ impl TcpServer {
                     session_shutdown = true;
                     break;
                 }
-                // crate::core::Motion::MESSAGE_TYPE => {
-                //     let motion = client
-                //         .recv_packet::<crate::core::Motion>(frame.payload_length)
-                //         .await
-                //         .unwrap();
+                crate::core::Motion::MESSAGE_TYPE => {
+                    // let motion = client
+                    //     .recv_packet::<crate::core::Motion>(frame.payload_length)
+                    //     .await
+                    //     .unwrap();
 
-                //     if session.is_control() {
-                //         if let Err(e) = motion_sender.send(motion).await {
-                //             log::error!("Failed to send motion: {}", e);
-                //             break;
-                //         }
-                //     } else {
-                //         log::warn!("Client is not authorized to send motion");
-                //     }
-                // }
+                    if session.is_control() {
+                        // if let Err(e) = motion_sender.send(motion).await {
+                        //     log::error!("Failed to send motion: {}", e);
+                        //     break;
+                        // }
+                    } else {
+                        log::warn!("Client is not authorized to send motion");
+                    }
+                }
                 crate::core::Target::MESSAGE_TYPE => {
                     let target = client
                         .recv_packet::<crate::core::Target>(frame.payload_length)
@@ -184,13 +202,13 @@ impl TcpServer {
             }
         }
 
-        // if !session_shutdown && session.is_control() && session.is_failsafe() {
-        //     log::warn!("Enacting failsafe for: {}", session.name());
+        if !session_shutdown && session.is_control() && session.is_failsafe() {
+            log::warn!("Enacting failsafe for: {}", session.name());
 
-        //     if let Err(e) = motion_sender.send(crate::core::Motion::StopAll).await {
-        //         log::error!("Failed to send motion: {}", e);
-        //     }
-        // }
+            // if let Err(e) = motion_sender.send(crate::core::Motion::StopAll).await {
+            //     log::error!("Failed to send motion: {}", e);
+            // }
+        }
 
         log::info!("Session shutdown for: {}", session.name());
     }
@@ -203,18 +221,18 @@ impl Service<TcpServerConfig> for TcpServer {
     {
         log::debug!("Listening on: {}", config.listen);
 
-        let listener = std::net::TcpListener::bind(config.listen).unwrap();
-
-        Self {
-            tcp_listener: TcpListener::from_std(listener).unwrap(),
-        }
+        Self { config }
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
+        let semaphore = Arc::new(Semaphore::new(self.config.max_connections));
+
+        let listener = TcpListener::bind(self.config.listen.clone()).await.unwrap();
 
         loop {
-            let (stream, addr) = self.tcp_listener.accept().await.unwrap();
+            log::debug!("Waiting for connection");
+
+            let (stream, addr) = listener.accept().await.unwrap();
             stream.set_nodelay(true).unwrap();
 
             log::debug!("Accepted connection from: {}", addr);
@@ -227,9 +245,13 @@ impl Service<TcpServerConfig> for TcpServer {
                 }
             };
 
-            let active_client_count = 10 - semaphore.available_permits();
+            let active_client_count = self.config.max_connections - semaphore.available_permits();
 
-            log::trace!("Connections: {}/{}", active_client_count, 10);
+            log::trace!(
+                "Connections: {}/{}",
+                active_client_count,
+                self.config.max_connections
+            );
 
             tokio::spawn(Self::spawn_client_session(
                 stream,

@@ -124,8 +124,8 @@ pub struct Config {
     pub host: HostConfig,
     /// Simulation configuration.
     pub simulation: SimulationConfig,
-    /// Server configuration.
-    pub server: ServerConfig,
+    /// TCP Server configuration.
+    pub tcp_server: glonax::service::TcpServerConfig,
     /// J1939 network configuration.
     pub j1939: Vec<J1939NetConfig>,
 }

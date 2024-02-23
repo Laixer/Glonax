@@ -184,8 +184,8 @@ pub(super) async fn tcp_listen(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    log::debug!("Listening on: {}", config.server.listen);
-    let listener = TcpListener::bind(config.server.listen.clone()).await?;
+    log::debug!("Listening on: {}", config.tcp_server.listen);
+    let listener = TcpListener::bind(config.tcp_server.listen.clone()).await?;
 
     loop {
         let (stream, addr) = listener.accept().await?;
