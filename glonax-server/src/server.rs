@@ -177,19 +177,24 @@ pub(super) async fn tcp_listen(
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
-) -> std::io::Result<()> {
+) -> std::result::Result<(), glonax::runtime::ServiceError> {
+    use glonax::runtime::ServiceErrorBuilder;
     use tokio::net::TcpListener;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
+    let service = ServiceErrorBuilder::new("tcp_server", config.tcp_server.listen.clone());
+
     log::debug!("Listening on: {}", config.tcp_server.listen);
-    let listener = TcpListener::bind(config.tcp_server.listen.clone()).await?;
+    let listener = TcpListener::bind(config.tcp_server.listen.clone())
+        .await
+        .map_err(|e| service.io_error(e))?;
 
     loop {
-        let (stream, addr) = listener.accept().await?;
-        stream.set_nodelay(true)?;
+        let (stream, addr) = listener.accept().await.map_err(|e| service.io_error(e))?;
+        stream.set_nodelay(true).map_err(|e| service.io_error(e))?;
 
         log::debug!("Accepted connection from: {}", addr);
 
@@ -225,7 +230,9 @@ pub(super) async fn unix_listen(
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
-) -> std::io::Result<()> {
+) -> std::result::Result<(), glonax::runtime::ServiceError> {
+    use glonax::runtime::ServiceErrorBuilder;
+    use std::os::unix::fs::PermissionsExt;
     use tokio::net::UnixListener;
 
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(
@@ -233,19 +240,22 @@ pub(super) async fn unix_listen(
     ));
 
     let unix_path = glonax::consts::DEFAULT_SOCKET_PATH;
+
+    let service = ServiceErrorBuilder::new("unix_server", unix_path.to_string());
+
     if std::path::Path::new(unix_path).exists() {
-        std::fs::remove_file(unix_path)?;
+        std::fs::remove_file(unix_path).map_err(|e| service.io_error(e))?;
     }
 
     log::debug!("Listening on: {}", unix_path);
-    let listener = UnixListener::bind(unix_path)?;
+    let listener = UnixListener::bind(unix_path).map_err(|e| service.io_error(e))?;
 
-    use std::os::unix::fs::PermissionsExt;
-
-    tokio::fs::set_permissions(unix_path, std::fs::Permissions::from_mode(0o777)).await?;
+    tokio::fs::set_permissions(unix_path, std::fs::Permissions::from_mode(0o777))
+        .await
+        .map_err(|e| service.io_error(e))?;
 
     loop {
-        let (stream, _addr) = listener.accept().await?;
+        let (stream, _addr) = listener.accept().await.map_err(|e| service.io_error(e))?;
 
         let permit = match semaphore.clone().try_acquire_owned() {
             Ok(permit) => permit,

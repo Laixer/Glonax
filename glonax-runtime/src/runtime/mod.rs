@@ -20,6 +20,49 @@ pub mod builder;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
 
+// TODO: Change to ServiceContext
+pub struct ServiceErrorBuilder {
+    name: String,
+    address: String,
+}
+
+impl ServiceErrorBuilder {
+    pub fn new(name: impl ToString, address: impl ToString) -> Self {
+        Self {
+            name: name.to_string(),
+            address: address.to_string(),
+        }
+    }
+
+    pub fn io_error(&self, io_error: std::io::Error) -> ServiceError {
+        ServiceError {
+            name: self.name.clone(),
+            address: self.address.clone(),
+            io_error,
+        }
+    }
+}
+
+pub struct ServiceError {
+    name: String,
+    address: String,
+    io_error: std::io::Error,
+}
+
+impl std::fmt::Display for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Service {} error: {}", self.name, self.io_error)
+    }
+}
+
+impl std::fmt::Debug for ServiceError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Service {} error: {:?}", self.name, self.io_error)
+    }
+}
+
+impl std::error::Error for ServiceError {}
+
 pub trait Service<Cnf> {
     // TODO: Add instance to new
     /// Construct a new component.
@@ -229,7 +272,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         &self,
         service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
     ) where
-        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
+        Fut: std::future::Future<Output = std::result::Result<(), ServiceError>> + Send + 'static,
     {
         let config = self.config.clone();
         let instance = self.instance.clone();
@@ -238,7 +281,12 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         tokio::spawn(async move {
             if let Err(e) = service(config, instance, operand, motion_tx).await {
-                log::error!("Failed to start IO service: {}", e);
+                log::error!(
+                    "Failed to schedule '{}' at {}: {}",
+                    e.name,
+                    e.address,
+                    e.io_error
+                );
             }
         });
     }
