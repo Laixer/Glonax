@@ -4,6 +4,11 @@ use glonax::driver::net::J1939Unit;
 use glonax::driver::HydraulicControlUnit;
 use glonax::net::{CANSocket, Router, SockAddrCAN};
 
+/// Vehicle Management System J1939 address.
+const J1939_ADDRESS_VMS: u8 = 0x27;
+/// Hydraulic Control Unit 0 J1939 address.
+const J1939_ADDRESS_HCU0: u8 = 0x4a;
+
 // TODO: Move into runtime
 pub(super) async fn atx_network_1(
     interface: String,
@@ -15,10 +20,7 @@ pub(super) async fn atx_network_1(
     let socket = CANSocket::bind(&SockAddrCAN::new(&interface))?;
     let router = Router::new(socket);
 
-    let hcu0 = HydraulicControlUnit::new(
-        crate::consts::J1939_ADDRESS_HCU0,
-        crate::consts::J1939_ADDRESS_VMS,
-    );
+    let hcu0 = HydraulicControlUnit::new(J1939_ADDRESS_HCU0, J1939_ADDRESS_VMS);
 
     while let Some(motion) = motion_rx.recv().await {
         runtime_state.write().await.state.motion = motion.clone();

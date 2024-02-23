@@ -12,25 +12,6 @@ mod device;
 mod j1939;
 mod server;
 
-pub(crate) mod consts {
-    /// Vehicle Management System J1939 address.
-    pub const J1939_ADDRESS_VMS: u8 = 0x27;
-    /// Engine J1939 address.
-    pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
-    /// Hydraulic Control Unit J1939 address.
-    pub const J1939_ADDRESS_HCU0: u8 = 0x4A;
-    /// Kuebler Encoder 0 J1939 address.
-    pub const J1939_ADDRESS_ENCODER0: u8 = 0x6A;
-    /// Kuebler Encoder 1 J1939 address.
-    pub const J1939_ADDRESS_ENCODER1: u8 = 0x6B;
-    /// Kuebler Encoder 2 J1939 address.
-    pub const J1939_ADDRESS_ENCODER2: u8 = 0x6C;
-    /// Kuebler Encoder 3 J1939 address.
-    pub const J1939_ADDRESS_ENCODER3: u8 = 0x6D;
-    /// Kuebler Inclinometer 0 J1939 address.
-    pub const J1939_ADDRESS_IMU0: u8 = 0x7A;
-}
-
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
@@ -112,6 +93,11 @@ async fn main() -> anyhow::Result<()> {
 
     ////////////////////
 
+    use glonax::driver::net::NetDriver;
+    use glonax::driver::{
+        EngineManagementSystem, HydraulicControlUnit, KueblerEncoder, KueblerInclinometer,
+        RequestResponder,
+    };
     use glonax::service;
     use std::time::Duration;
 
@@ -161,65 +147,49 @@ async fn main() -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
         }
 
+        // TODO: Drivers may not match the configuration.
         let j1939_drivers_can0_rx = vec![
-            glonax::driver::net::NetDriver::kuebler_encoder(
-                crate::consts::J1939_ADDRESS_ENCODER0,
-                crate::consts::J1939_ADDRESS_VMS,
-            ),
-            glonax::driver::net::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
-                crate::consts::J1939_ADDRESS_ENCODER1,
-                crate::consts::J1939_ADDRESS_VMS,
+            NetDriver::kuebler_encoder(config.j1939[0].driver[0].id, config.j1939[0].address),
+            NetDriver::KueblerEncoder(KueblerEncoder::new(
+                config.j1939[0].driver[1].id,
+                config.j1939[0].address,
             )),
-            glonax::driver::net::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
-                crate::consts::J1939_ADDRESS_ENCODER2,
-                crate::consts::J1939_ADDRESS_VMS,
+            NetDriver::KueblerEncoder(KueblerEncoder::new(
+                config.j1939[0].driver[2].id,
+                config.j1939[0].address,
             )),
-            glonax::driver::net::NetDriver::KueblerEncoder(glonax::driver::KueblerEncoder::new(
-                crate::consts::J1939_ADDRESS_ENCODER3,
-                crate::consts::J1939_ADDRESS_VMS,
+            NetDriver::KueblerEncoder(KueblerEncoder::new(
+                config.j1939[0].driver[2].id,
+                config.j1939[0].address,
             )),
-            glonax::driver::net::NetDriver::KueblerInclinometer(
-                glonax::driver::KueblerInclinometer::new(
-                    crate::consts::J1939_ADDRESS_IMU0,
-                    crate::consts::J1939_ADDRESS_VMS,
-                ),
-            ),
-            glonax::driver::net::NetDriver::RequestResponder(
-                glonax::driver::RequestResponder::new(crate::consts::J1939_ADDRESS_VMS),
-            ),
+            NetDriver::KueblerInclinometer(KueblerInclinometer::new(
+                config.j1939[0].driver[3].id,
+                config.j1939[0].address,
+            )),
+            NetDriver::RequestResponder(RequestResponder::new(config.j1939[0].address)),
         ];
 
         let j1939_drivers_can1_rx = vec![
-            glonax::driver::net::NetDriver::EngineManagementSystem(
-                glonax::driver::EngineManagementSystem::new(
-                    crate::consts::J1939_ADDRESS_ENGINE0,
-                    crate::consts::J1939_ADDRESS_VMS,
-                ),
-            ),
-            glonax::driver::net::NetDriver::HydraulicControlUnit(
-                glonax::driver::HydraulicControlUnit::new(
-                    crate::consts::J1939_ADDRESS_HCU0,
-                    crate::consts::J1939_ADDRESS_VMS,
-                ),
-            ),
-            glonax::driver::net::NetDriver::RequestResponder(
-                glonax::driver::RequestResponder::new(crate::consts::J1939_ADDRESS_VMS),
-            ),
+            NetDriver::EngineManagementSystem(EngineManagementSystem::new(
+                config.j1939[1].driver[0].id,
+                config.j1939[1].address,
+            )),
+            NetDriver::HydraulicControlUnit(HydraulicControlUnit::new(
+                config.j1939[1].driver[1].id,
+                config.j1939[1].address,
+            )),
+            NetDriver::RequestResponder(RequestResponder::new(config.j1939[1].address)),
         ];
 
         let j1939_drivers_can1_tx = vec![
-            glonax::driver::net::NetDriver::EngineManagementSystem(
-                glonax::driver::EngineManagementSystem::new(
-                    crate::consts::J1939_ADDRESS_ENGINE0,
-                    crate::consts::J1939_ADDRESS_VMS,
-                ),
-            ),
-            glonax::driver::net::NetDriver::HydraulicControlUnit(
-                glonax::driver::HydraulicControlUnit::new(
-                    crate::consts::J1939_ADDRESS_HCU0,
-                    crate::consts::J1939_ADDRESS_VMS,
-                ),
-            ),
+            NetDriver::EngineManagementSystem(EngineManagementSystem::new(
+                config.j1939[1].driver[0].id,
+                config.j1939[1].address,
+            )),
+            NetDriver::HydraulicControlUnit(HydraulicControlUnit::new(
+                config.j1939[1].driver[1].id,
+                config.j1939[1].address,
+            )),
         ];
 
         runtime.schedule_j1939_service_rx(j1939_drivers_can0_rx, &config.j1939[0].interface);
