@@ -25,7 +25,7 @@ Nice=-15
 IOSchedulingPriority=2
 DynamicUser=true
 SupplementaryGroups=tty dialout
-ExecStart=/usr/local/bin/glonaxd --daemon
+ExecStart=/usr/local/bin/glonaxd
 RuntimeDirectory=glonax
 ConfigurationDirectory=glonax
 

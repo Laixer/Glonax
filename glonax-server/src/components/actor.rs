@@ -20,7 +20,7 @@ impl<Cnf: Clone> Component<Cnf> for LocalActor {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
         let body_world_location = actor.world_location("frame");
-        log::debug!(
+        log::trace!(
             "Frame: X={:.2} Y={:.2} Z={:.2}",
             body_world_location.x,
             body_world_location.y,
@@ -28,7 +28,7 @@ impl<Cnf: Clone> Component<Cnf> for LocalActor {
         );
 
         let boom_world_location = actor.world_location("boom");
-        log::debug!(
+        log::trace!(
             "Boom: X={:.2} Y={:.2} Z={:.2}",
             boom_world_location.x,
             boom_world_location.y,
@@ -36,7 +36,7 @@ impl<Cnf: Clone> Component<Cnf> for LocalActor {
         );
 
         let arm_world_location = actor.world_location("arm");
-        log::debug!(
+        log::trace!(
             "Arm: X={:.2} Y={:.2} Z={:.2}",
             arm_world_location.x,
             arm_world_location.y,
@@ -44,7 +44,7 @@ impl<Cnf: Clone> Component<Cnf> for LocalActor {
         );
 
         let bucket_world_location = actor.world_location("attachment");
-        log::debug!(
+        log::trace!(
             "Attachment: X={:.2} Y={:.2} Z={:.2}",
             bucket_world_location.x,
             bucket_world_location.y,
