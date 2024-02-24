@@ -21,7 +21,9 @@ pub mod builder;
 pub struct NullConfig;
 
 pub struct ServiceContext {
+    /// Service name.
     name: String,
+    /// Service address.
     address: Option<String>,
 }
 

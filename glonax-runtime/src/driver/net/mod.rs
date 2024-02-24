@@ -49,7 +49,7 @@ impl NetDriver {
     }
 }
 
-// FUTURE: Maybe move?
+// FUTURE: Maybe move to runtime?
 pub trait J1939Unit {
     /// Try to accept a message from the router.
     ///
@@ -61,6 +61,13 @@ pub trait J1939Unit {
         runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = ()> + Send;
 
+    /// Tick the unit on interval.
+    ///
+    /// This method will be called on interval to allow the unit to perform any necessary
+    /// operations. This method should be non-blocking and should only perform asynchronous
+    /// I/O operations.
+    ///
+    /// This method is optional and may be a no-op.
     fn tick(
         &self,
         _router: &crate::net::Router,
