@@ -9,11 +9,11 @@ impl<C> Service<C> for Announcer {
     where
         Self: Sized,
     {
-        log::debug!("Starting network announcer service");
+        Self(UdpSocket::bind("[::1]:0").unwrap())
+    }
 
-        let socket = UdpSocket::bind("[::1]:0").unwrap();
-
-        Self(socket)
+    fn ctx(&self) -> crate::runtime::ServiceContext {
+        crate::runtime::ServiceContext::new("announcer", Some("[::1]:0"))
     }
 
     fn tick(&mut self, runtime_state: SharedOperandState) {

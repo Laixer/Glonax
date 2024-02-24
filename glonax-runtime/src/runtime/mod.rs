@@ -20,6 +20,20 @@ pub mod builder;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
 
+pub struct ServiceContext {
+    name: String,
+    address: Option<String>,
+}
+
+impl ServiceContext {
+    pub fn new(name: impl ToString, address: Option<impl ToString>) -> Self {
+        Self {
+            name: name.to_string(),
+            address: address.map(|a| a.to_string()),
+        }
+    }
+}
+
 // TODO: Change to ServiceContext
 pub struct ServiceErrorBuilder {
     name: String,
@@ -73,6 +87,14 @@ pub trait Service<Cnf> {
     where
         Self: Sized;
 
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext {
+            name: std::any::type_name::<Self>().to_string(),
+            address: None,
+        }
+    }
+
+    /// Wait for IO event.
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
@@ -302,8 +324,15 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         C: std::clone::Clone,
     {
         let mut service = S::new(config.clone());
+        let ctx = service.ctx();
 
         let operand = self.operand.clone();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting {} service on {}", ctx.name, address,);
+        } else {
+            log::debug!("Starting {} service", ctx.name);
+        }
 
         tokio::spawn(async move {
             service.wait_io(operand).await;
@@ -322,8 +351,15 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let mut interval = tokio::time::interval(duration);
 
         let mut service = S::new(config.clone());
+        let ctx = service.ctx();
 
         let operand = self.operand.clone();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting {} service on {}", ctx.name, address,);
+        } else {
+            log::debug!("Starting {} service", ctx.name);
+        }
 
         tokio::spawn(async move {
             loop {

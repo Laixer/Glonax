@@ -24,11 +24,13 @@ impl Service<HostConfig> for Host {
     where
         Self: Sized,
     {
-        log::debug!("Starting host component");
-
         Self {
             system: System::new_all(),
         }
+    }
+
+    fn ctx(&self) -> crate::runtime::ServiceContext {
+        crate::runtime::ServiceContext::new("host", Option::<String>::None)
     }
 
     fn tick(&mut self, runtime_state: SharedOperandState) {
