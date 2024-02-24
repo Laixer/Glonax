@@ -29,6 +29,10 @@ impl<C> Service<C> for EncoderSimulator {
         Self { encoder_list }
     }
 
+    fn ctx(&self) -> crate::runtime::ServiceContext {
+        crate::runtime::ServiceContext::new("encoder simulator", Option::<String>::None)
+    }
+
     fn tick(&mut self, runtime_state: SharedOperandState) {
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());

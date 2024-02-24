@@ -15,6 +15,7 @@ pub struct GnssConfig {
 
 pub struct Gnss {
     line_reader: Lines<BufReader<Uart>>,
+    path: PathBuf,
 }
 
 impl Service<GnssConfig> for Gnss {
@@ -22,19 +23,18 @@ impl Service<GnssConfig> for Gnss {
     where
         Self: Sized,
     {
-        log::debug!(
-            "Starting GNSS service on {}:{}",
-            config.device.display(),
-            config.baud_rate
-        );
-
         let serial = Uart::open(&config.device, BaudRate::from_speed(config.baud_rate))
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
             .unwrap();
 
         Self {
             line_reader: BufReader::new(serial).lines(),
+            path: config.device,
         }
+    }
+
+    fn ctx(&self) -> crate::runtime::ServiceContext {
+        crate::runtime::ServiceContext::new("gnss", Some(self.path.display().to_string()))
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {

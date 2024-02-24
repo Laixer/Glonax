@@ -224,6 +224,10 @@ impl Service<TcpServerConfig> for TcpServer {
         Self { config }
     }
 
+    fn ctx(&self) -> crate::runtime::ServiceContext {
+        crate::runtime::ServiceContext::new("tcp_server", Some(self.config.listen.clone()))
+    }
+
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
         let semaphore = Arc::new(Semaphore::new(self.config.max_connections));
 
