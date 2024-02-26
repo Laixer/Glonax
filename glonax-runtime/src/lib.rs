@@ -67,6 +67,10 @@ pub struct MachineState {
     pub engine: core::Engine,
     /// Engine requested RPM.
     pub engine_request: u16, // TODO: Move into engine request struct
+    /// Hydraulic quick disconnect.
+    pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct
+    /// Hydraulic lock.
+    pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct
     /// Motion data.
     pub motion: core::Motion,
     /// Encoder data.

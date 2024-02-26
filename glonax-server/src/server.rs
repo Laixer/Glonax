@@ -28,6 +28,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .recv_packet::<Request>(frame.payload_length)
                     .await
                     .unwrap();
+
                 // FUTURE: Pack into a single packet
                 match request.message() {
                     glonax::core::Instance::MESSAGE_TYPE => {
@@ -125,7 +126,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
                 match control {
                     glonax::core::Control::EngineRequest(rpm) => {
-                        let rpm = rpm.clamp(0, 2100);
+                        let rpm = rpm.clamp(0, 2_100);
 
                         log::info!("Engine request RPM: {}", rpm);
 
@@ -135,16 +136,18 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         log::info!("Engine shutdown");
                         runtime_state.write().await.state.engine_request = 0;
                     }
+
                     glonax::core::Control::HydraulicQuickDisconnect(on) => {
                         log::info!("Hydraulic quick disconnect: {}", on);
+                        runtime_state.write().await.state.hydraulic_quick_disconnect = on;
                     }
                     glonax::core::Control::HydraulicLock(on) => {
                         log::info!("Hydraulic lock: {}", on);
+                        runtime_state.write().await.state.hydraulic_lock = on;
                     }
+
                     glonax::core::Control::MachineShutdown => {
                         log::info!("Machine shutdown");
-                        runtime_state.write().await.state.engine_request = 0;
-                        // runtime_state.write().await.state.engine.shutdown();
                     }
                     glonax::core::Control::MachineIllumination(on) => {
                         log::info!("Machine illumination: {}", on);
