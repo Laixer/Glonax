@@ -12,8 +12,8 @@ if command -v udevadm &> /dev/null; then
   echo "..done"
 fi
 
-# Enable a service and restart if it is currently running.
-enable_glonax_service() {
+# Restart the glonax service
+systemd_start_service() {
   local SERVICE_NAME="$1"
 
   if systemctl is-active "$SERVICE_NAME" &> /dev/null; then
@@ -21,10 +21,6 @@ enable_glonax_service() {
     systemctl restart "$SERVICE_NAME"
     echo "..done"
   fi
-
-  echo -n "Enabling $SERVICE_NAME.."
-  systemctl enable "$SERVICE_NAME"
-  echo "..done"
 }
 
 # Enable the glonax services if systemd is available
@@ -34,5 +30,5 @@ if [ -d /run/systemd/system ]; then
   systemctl daemon-reload
   echo "..done"
 
-  enable_glonax_service glonax.service
+  systemd_start_service glonax.service
 fi
