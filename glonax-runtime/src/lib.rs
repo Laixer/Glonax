@@ -83,6 +83,34 @@ pub struct MachineState {
     pub ecu_state: driver::VirtualHCU,
 }
 
+struct Governor {
+    rpm_start: u16,
+    rpm_idle: u16,
+    rpm_max: u16,
+}
+
+impl Governor {
+    fn new(rpm_start: u16, rpm_idle: u16, rpm_max: u16) -> Self {
+        Self {
+            rpm_start,
+            rpm_idle,
+            rpm_max,
+        }
+    }
+
+    fn mode(&self, engine: &core::Engine, engine_request: u16) -> crate::core::EngineMode {
+        let engine_request = engine_request.clamp(self.rpm_idle, self.rpm_max);
+
+        if engine_request == 0 {
+            crate::core::EngineMode::NoRequest
+        } else if engine.rpm == 0 || engine.rpm < self.rpm_start {
+            crate::core::EngineMode::Start
+        } else {
+            crate::core::EngineMode::Request(engine_request)
+        }
+    }
+}
+
 /// The operand is the current state of the machine.
 ///
 /// This is the state that is used by the runtime to control
@@ -90,28 +118,32 @@ pub struct MachineState {
 pub struct Operand {
     /// Current machine state.
     pub state: MachineState,
+    /// Governor for the engine.
+    governor: Governor,
 }
 
 impl Operand {
     pub fn governor(&self) -> crate::core::EngineMode {
-        const ENGINE_RPM_START: u16 = 500;
-        const ENGINE_RPM_IDLE: u16 = 700;
-        const ENGINE_RPM_MAX: u16 = 2_100;
+        // const ENGINE_RPM_START: u16 = 500;
+        // const ENGINE_RPM_IDLE: u16 = 700;
+        // const ENGINE_RPM_MAX: u16 = 2_100;
 
-        let engine = self.state.engine;
-        let engine_request = self
-            .state
-            .engine_request
-            .clamp(ENGINE_RPM_IDLE, ENGINE_RPM_MAX);
+        // let engine = self.state.engine;
+        // let engine_request = self
+        //     .state
+        //     .engine_request
+        //     .clamp(ENGINE_RPM_IDLE, ENGINE_RPM_MAX);
 
-        // TODO: Missing off=off
-        if engine_request == 0 {
-            crate::core::EngineMode::NoRequest
-        } else if engine.rpm == 0 || engine.rpm < ENGINE_RPM_START {
-            crate::core::EngineMode::Start
-        } else {
-            crate::core::EngineMode::Request(engine_request)
-        }
+        // // TODO: Missing off=off
+        // if engine_request == 0 {
+        //     crate::core::EngineMode::NoRequest
+        // } else if engine.rpm == 0 || engine.rpm < ENGINE_RPM_START {
+        //     crate::core::EngineMode::Start
+        // } else {
+        //     crate::core::EngineMode::Request(engine_request)
+        // }
+        self.governor
+            .mode(&self.state.engine, self.state.engine_request)
     }
 
     /// Current machine state.
