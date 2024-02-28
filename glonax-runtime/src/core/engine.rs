@@ -33,9 +33,7 @@ pub enum EngineMode {
     /// Engine is starting up.
     Start,
     /// Engine is running.
-    Running,
-    /// Engine is idling.
-    Idle,
+    Request(u16),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,7 +55,7 @@ impl Engine {
         } else if self.rpm < 500 {
             EngineMode::Start
         } else {
-            EngineMode::Running
+            EngineMode::Request(self.rpm)
         }
     }
 }

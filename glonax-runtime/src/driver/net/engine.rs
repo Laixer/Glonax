@@ -204,7 +204,7 @@ impl super::J1939Unit for EngineManagementSystem {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Idle | crate::core::EngineMode::Running => {
+            crate::core::EngineMode::Request(_) => {
                 if engine_request == 0 {
                     if let Err(e) = router.inner().send_vectored(&self.shutdown()).await {
                         log::error!("Failed to speed request: {}", e);

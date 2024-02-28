@@ -93,13 +93,16 @@ pub struct Operand {
 }
 
 impl Operand {
-    pub async fn governor(&self) -> crate::core::EngineMode {
+    pub fn governor(&self) -> crate::core::EngineMode {
         const ENGINE_RPM_START: u16 = 500;
-        const _ENGINE_RPM_IDLE: u16 = 700;
-        const _ENGINE_RPM_MAX: u16 = 2_100;
+        const ENGINE_RPM_IDLE: u16 = 700;
+        const ENGINE_RPM_MAX: u16 = 2_100;
 
         let engine = self.state.engine;
-        let engine_request = self.state.engine_request;
+        let engine_request = self
+            .state
+            .engine_request
+            .clamp(ENGINE_RPM_IDLE, ENGINE_RPM_MAX);
 
         // TODO: Missing off=off
         if engine_request == 0 {
@@ -107,7 +110,7 @@ impl Operand {
         } else if engine.rpm == 0 || engine.rpm < ENGINE_RPM_START {
             crate::core::EngineMode::Start
         } else {
-            crate::core::EngineMode::Running
+            crate::core::EngineMode::Request(engine_request)
         }
     }
 
