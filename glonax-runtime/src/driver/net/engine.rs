@@ -170,7 +170,7 @@ impl super::J1939Unit for EngineManagementSystem {
         let engine_request = runtime_state.read().await.state.engine_request;
 
         match engine.mode() {
-            crate::core::EngineMode::Shutdown => {
+            crate::core::EngineMode::NoRequest => {
                 if engine_request == 0 {
                     if let Err(e) = router
                         .inner()
@@ -187,7 +187,7 @@ impl super::J1939Unit for EngineManagementSystem {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Startup => {
+            crate::core::EngineMode::Start => {
                 if engine_request == 0 {
                     if let Err(e) = router
                         .inner()

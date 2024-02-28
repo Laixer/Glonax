@@ -28,10 +28,10 @@ impl TryFrom<u8> for EngineStatus {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EngineMode {
-    /// Engine is shutdown.
-    Shutdown,
+    /// Engine is shut down.
+    NoRequest,
     /// Engine is starting up.
-    Startup,
+    Start,
     /// Engine is running.
     Running,
     /// Engine is idling.
@@ -53,9 +53,9 @@ pub struct Engine {
 impl Engine {
     pub fn mode(&self) -> EngineMode {
         if self.rpm == 0 {
-            EngineMode::Shutdown
+            EngineMode::NoRequest
         } else if self.rpm < 500 {
-            EngineMode::Startup
+            EngineMode::Start
         } else {
             EngineMode::Running
         }
@@ -75,13 +75,11 @@ impl Default for Engine {
 
 impl std::fmt::Display for Engine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-
-        s.push_str(&format!("Driver Demand: {}%; ", self.driver_demand));
-        s.push_str(&format!("Actual Engine: {}%; ", self.actual_engine));
-        s.push_str(&format!("RPM: {}; ", self.rpm));
-
-        write!(f, "{}", s)
+        write!(
+            f,
+            "Driver Demand: {}% Actual Engine: {}% RPM: {}",
+            self.driver_demand, self.actual_engine, self.rpm
+        )
     }
 }
 
