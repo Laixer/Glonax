@@ -236,7 +236,19 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
         router.listen().await?;
 
         if let Some(frame) = router.take() {
-            println!("{} {}", chrono::Utc::now().format("%T%.3f"), frame);
+            let specification_part = match frame.id().pgn() {
+                glonax::j1939::PGN::ProprietaryA => "PA",
+                glonax::j1939::PGN::ProprietaryB(_) => "PB",
+                glonax::j1939::PGN::Other(_) => "OT",
+                _ => "71",
+            };
+
+            println!(
+                "{} {} {}",
+                chrono::Utc::now().format("%T%.3f"),
+                specification_part,
+                frame
+            );
         };
     }
 }
