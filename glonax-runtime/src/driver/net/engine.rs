@@ -1,15 +1,12 @@
-use j1939::{
-    decode::{self},
-    spn, Frame, FrameBuilder, IdBuilder, PDU_MAX_LENGTH, PGN,
-};
+use j1939::{spn, Frame, FrameBuilder, IdBuilder, PDU_MAX_LENGTH, PGN};
 
 use crate::net::Parsable;
 
 use super::vecraft::VecraftConfigMessage;
 
 pub enum EngineMessage {
-    TorqueSpeedControl(spn::TorqueSpeedControlMessage),
-    EngineController(spn::EngineControllerMessage),
+    TorqueSpeedControl(spn::TorqueSpeedControl1Message),
+    EngineController(spn::ElectronicEngineController1Message),
 }
 
 #[derive(Default)]
@@ -61,8 +58,8 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        let mut message = spn::TorqueSpeedControlMessage {
-            override_control_mode: Some(decode::OverrideControlMode::OverrideDisabled),
+        let mut message = spn::TorqueSpeedControl1Message {
+            override_control_mode: Some(spn::OverrideControlMode::OverrideDisabled),
             speed_control_condition: None,
             control_mode_priority: None,
             speed: None,
@@ -70,7 +67,7 @@ impl EngineManagementSystem {
         };
 
         if !idle {
-            message.override_control_mode = Some(decode::OverrideControlMode::SpeedControl);
+            message.override_control_mode = Some(spn::OverrideControlMode::SpeedControl);
             message.speed = Some(rpm);
         }
 
@@ -88,8 +85,8 @@ impl EngineManagementSystem {
         );
 
         // TODO: This is not correct. 0x3 is not used for starting the engine.
-        let message = spn::TorqueSpeedControlMessage {
-            override_control_mode: Some(decode::OverrideControlMode::SpeedTorqueLimitControl),
+        let message = spn::TorqueSpeedControl1Message {
+            override_control_mode: Some(spn::OverrideControlMode::SpeedTorqueLimitControl),
             speed_control_condition: None,
             control_mode_priority: None,
             speed: Some(rpm),
@@ -120,7 +117,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
         if frame.id().pgn() == PGN::TorqueSpeedControl1 {
             Some(EngineMessage::TorqueSpeedControl(
-                spn::TorqueSpeedControlMessage::from_pdu(frame.pdu()),
+                spn::TorqueSpeedControl1Message::from_pdu(frame.pdu()),
             ))
         } else if frame.id().pgn() == PGN::ElectronicEngineController1 {
             if frame.id().sa() != self.destination_address {
@@ -128,7 +125,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
             }
 
             Some(EngineMessage::EngineController(
-                spn::EngineControllerMessage::from_pdu(frame.pdu()),
+                spn::ElectronicEngineController1Message::from_pdu(frame.pdu()),
             ))
         } else {
             None
