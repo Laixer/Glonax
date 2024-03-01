@@ -49,7 +49,7 @@ impl EngineManagementSystem {
     }
 
     /// Request torque control
-    pub fn torque_control(&self, rpm: u16, idle: bool) -> Frame {
+    pub fn torque_control(&self, rpm: u16) -> Frame {
         let frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
@@ -58,20 +58,18 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        let mut message = spn::TorqueSpeedControl1Message {
-            override_control_mode: Some(spn::OverrideControlMode::OverrideDisabled),
-            speed_control_condition: None,
-            control_mode_priority: None,
-            speed: None,
-            torque: None,
-        };
-
-        if !idle {
-            message.override_control_mode = Some(spn::OverrideControlMode::SpeedControl);
-            message.speed = Some(rpm);
-        }
-
-        frame_builder.copy_from_slice(&message.to_pdu()).build()
+        frame_builder
+            .copy_from_slice(
+                &spn::TorqueSpeedControl1Message {
+                    override_control_mode: Some(spn::OverrideControlMode::SpeedControl),
+                    speed_control_condition: None,
+                    control_mode_priority: None,
+                    speed: Some(rpm),
+                    torque: None,
+                }
+                .to_pdu(),
+            )
+            .build()
     }
 
     pub fn start(&self, rpm: u16) -> Frame {
@@ -83,16 +81,19 @@ impl EngineManagementSystem {
                 .build(),
         );
 
-        // TODO: This is not correct. 0x3 is not used for starting the engine.
-        let message = spn::TorqueSpeedControl1Message {
-            override_control_mode: Some(spn::OverrideControlMode::SpeedTorqueLimitControl),
-            speed_control_condition: None,
-            control_mode_priority: None,
-            speed: Some(rpm),
-            torque: None,
-        };
-
-        frame_builder.copy_from_slice(&message.to_pdu()).build()
+        // TODO: This is not correct. 'SpeedTorqueLimitControl' is not used for starting the engine.
+        frame_builder
+            .copy_from_slice(
+                &spn::TorqueSpeedControl1Message {
+                    override_control_mode: Some(spn::OverrideControlMode::SpeedTorqueLimitControl),
+                    speed_control_condition: None,
+                    control_mode_priority: None,
+                    speed: Some(rpm),
+                    torque: None,
+                }
+                .to_pdu(),
+            )
+            .build()
     }
 
     pub fn shutdown(&self) -> Frame {
@@ -167,11 +168,7 @@ impl super::J1939Unit for EngineManagementSystem {
         match engine.mode() {
             crate::core::EngineMode::NoRequest => {
                 if engine_request == 0 {
-                    if let Err(e) = router
-                        .inner()
-                        .send(&self.torque_control(engine_request, true))
-                        .await
-                    {
+                    if let Err(e) = router.inner().send(&self.torque_control(0)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
@@ -180,11 +177,7 @@ impl super::J1939Unit for EngineManagementSystem {
             }
             crate::core::EngineMode::Start => {
                 if engine_request == 0 {
-                    if let Err(e) = router
-                        .inner()
-                        .send(&self.torque_control(engine_request, true))
-                        .await
-                    {
+                    if let Err(e) = router.inner().send(&self.torque_control(0)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
@@ -198,7 +191,7 @@ impl super::J1939Unit for EngineManagementSystem {
                     }
                 } else if let Err(e) = router
                     .inner()
-                    .send(&self.torque_control(engine_request, false))
+                    .send(&self.torque_control(engine_request))
                     .await
                 {
                     log::error!("Failed to speed request: {}", e);

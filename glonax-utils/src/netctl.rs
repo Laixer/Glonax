@@ -656,7 +656,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.torque_control(rpm, false)).await?;
+                        socket.send(&ems0.torque_control(rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
