@@ -48,8 +48,8 @@ impl EngineManagementSystem {
         .to_frame()
     }
 
-    /// Request speed control
-    pub fn speed_request(&self, rpm: u16, idle: bool) -> Vec<Frame> {
+    /// Request torque control
+    pub fn torque_control(&self, rpm: u16, idle: bool) -> Frame {
         let frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
@@ -71,11 +71,10 @@ impl EngineManagementSystem {
             message.speed = Some(rpm);
         }
 
-        let frame = frame_builder.copy_from_slice(&message.to_pdu()).build();
-        vec![frame]
+        frame_builder.copy_from_slice(&message.to_pdu()).build()
     }
 
-    pub fn start(&self, rpm: u16) -> Vec<Frame> {
+    pub fn start(&self, rpm: u16) -> Frame {
         let frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
@@ -93,11 +92,10 @@ impl EngineManagementSystem {
             torque: None,
         };
 
-        let frame = frame_builder.copy_from_slice(&message.to_pdu()).build();
-        vec![frame]
+        frame_builder.copy_from_slice(&message.to_pdu()).build()
     }
 
-    pub fn shutdown(&self) -> Vec<Frame> {
+    pub fn shutdown(&self) -> Frame {
         // TODO: Make this a J1939 message
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
@@ -109,7 +107,7 @@ impl EngineManagementSystem {
 
         frame_builder.as_mut()[3] = 0b0001_0000;
 
-        vec![frame_builder.set_len(PDU_MAX_LENGTH).build()]
+        frame_builder.set_len(PDU_MAX_LENGTH).build()
     }
 }
 
@@ -171,16 +169,12 @@ impl super::J1939Unit for EngineManagementSystem {
                 if engine_request == 0 {
                     if let Err(e) = router
                         .inner()
-                        .send_vectored(&self.speed_request(engine_request, true))
+                        .send(&self.torque_control(engine_request, true))
                         .await
                     {
                         log::error!("Failed to speed request: {}", e);
                     }
-                } else if let Err(e) = router
-                    .inner()
-                    .send_vectored(&self.start(engine_request))
-                    .await
-                {
+                } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
@@ -188,27 +182,23 @@ impl super::J1939Unit for EngineManagementSystem {
                 if engine_request == 0 {
                     if let Err(e) = router
                         .inner()
-                        .send_vectored(&self.speed_request(engine_request, true))
+                        .send(&self.torque_control(engine_request, true))
                         .await
                     {
                         log::error!("Failed to speed request: {}", e);
                     }
-                } else if let Err(e) = router
-                    .inner()
-                    .send_vectored(&self.start(engine_request))
-                    .await
-                {
+                } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
             crate::core::EngineMode::Request(_) => {
                 if engine_request == 0 {
-                    if let Err(e) = router.inner().send_vectored(&self.shutdown()).await {
+                    if let Err(e) = router.inner().send(&self.shutdown()).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 } else if let Err(e) = router
                     .inner()
-                    .send_vectored(&self.speed_request(engine_request, false))
+                    .send(&self.torque_control(engine_request, false))
                     .await
                 {
                     log::error!("Failed to speed request: {}", e);
