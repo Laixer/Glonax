@@ -88,6 +88,8 @@ pub struct Router {
     socket_list: Vec<CANSocket>,
     /// The current frame.
     frame: Option<Frame>,
+    /// The priority filter.
+    filter_priority: Vec<u8>,
     /// The PGN filter.
     filter_pgn: Vec<u32>,
     /// The address filter.
@@ -102,10 +104,17 @@ impl Router {
         Self {
             socket_list: vec![socket],
             frame: None,
+            filter_priority: vec![],
             filter_pgn: vec![],
             filter_address: vec![],
             fix_frame_size: true,
         }
+    }
+
+    /// Add a filter based on priority.
+    #[inline]
+    pub fn add_priority_filter(&mut self, priority: u8) {
+        self.filter_priority.push(priority);
     }
 
     /// Add a filter based on PGN.
@@ -150,7 +159,11 @@ impl Router {
     /// Returns `true` if the frame is accepted. Returns `false` if the frame is not accepted.
     /// If no filters are set, all frames are accepted.
     fn filter(&self, frame: &Frame) -> bool {
-        if !self.filter_pgn.is_empty() && !self.filter_pgn.contains(&frame.id().pgn_raw()) {
+        if !self.filter_priority.is_empty()
+            && !self.filter_priority.contains(&frame.id().priority())
+        {
+            false
+        } else if !self.filter_pgn.is_empty() && !self.filter_pgn.contains(&frame.id().pgn_raw()) {
             false
         } else {
             !(!self.filter_address.is_empty() && !self.filter_address.contains(&frame.id().sa()))

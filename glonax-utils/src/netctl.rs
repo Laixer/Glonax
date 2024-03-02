@@ -363,6 +363,9 @@ enum Command {
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
+        /// Filter on priority.
+        #[arg(long)]
+        priority: Vec<u8>,
         /// Filter on address.
         #[arg(short, long)]
         address: Vec<String>,
@@ -372,6 +375,9 @@ enum Command {
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
+        /// Filter on priority.
+        #[arg(long)]
+        priority: Vec<u8>,
         /// Filter on address.
         #[arg(short, long)]
         address: Vec<String>,
@@ -760,12 +766,19 @@ async fn main() -> anyhow::Result<()> {
                 socket.send(&fuz0.gen_frame()).await?;
             }
         }
-        Command::Dump { pgn, address } => {
+        Command::Dump {
+            pgn,
+            priority,
+            address,
+        } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let mut router = Router::new(socket).set_fix_frame_size(false);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);
+            }
+            for priority in priority {
+                router.add_priority_filter(priority);
             }
             for addr in address
                 .iter()
@@ -777,12 +790,19 @@ async fn main() -> anyhow::Result<()> {
 
             print_frames(router).await?;
         }
-        Command::Analyze { pgn, address } => {
+        Command::Analyze {
+            pgn,
+            priority,
+            address,
+        } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let mut router = Router::new(socket);
 
             for pgn in pgn {
                 router.add_pgn_filter(pgn);
+            }
+            for priority in priority {
+                router.add_priority_filter(priority);
             }
             for addr in address
                 .iter()
