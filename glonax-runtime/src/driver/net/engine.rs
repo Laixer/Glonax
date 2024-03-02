@@ -6,7 +6,9 @@ use super::vecraft::VecraftConfigMessage;
 
 pub enum EngineMessage {
     TorqueSpeedControl(spn::TorqueSpeedControl1Message),
-    EngineController(spn::ElectronicEngineController1Message),
+    EngineController1(spn::ElectronicEngineController1Message),
+    EngineController2(spn::ElectronicEngineController2Message),
+    EngineController3(spn::ElectronicEngineController3Message),
 }
 
 #[derive(Default)]
@@ -123,8 +125,24 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
                 return None;
             }
 
-            Some(EngineMessage::EngineController(
+            Some(EngineMessage::EngineController1(
                 spn::ElectronicEngineController1Message::from_pdu(frame.pdu()),
+            ))
+        } else if frame.id().pgn() == PGN::ElectronicEngineController2 {
+            if frame.id().sa() != self.destination_address {
+                return None;
+            }
+
+            Some(EngineMessage::EngineController2(
+                spn::ElectronicEngineController2Message::from_pdu(frame.pdu()),
+            ))
+        } else if frame.id().pgn() == PGN::ElectronicEngineController3 {
+            if frame.id().sa() != self.destination_address {
+                return None;
+            }
+
+            Some(EngineMessage::EngineController3(
+                spn::ElectronicEngineController3Message::from_pdu(frame.pdu()),
             ))
         } else {
             None
@@ -144,12 +162,18 @@ impl super::J1939Unit for EngineManagementSystem {
                     EngineMessage::TorqueSpeedControl(_control) => {
                         //
                     }
-                    EngineMessage::EngineController(controller) => {
+                    EngineMessage::EngineController1(controller) => {
                         runtime_state.state.engine.driver_demand =
                             controller.driver_demand.unwrap_or(0);
                         runtime_state.state.engine.actual_engine =
                             controller.actual_engine.unwrap_or(0);
                         runtime_state.state.engine.rpm = controller.rpm.unwrap_or(0);
+                    }
+                    EngineMessage::EngineController2(_controller) => {
+                        //
+                    }
+                    EngineMessage::EngineController3(_controller) => {
+                        //
                     }
                 }
             }

@@ -76,7 +76,25 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         control
                     );
                 }
-                glonax::driver::net::engine::EngineMessage::EngineController(controller) => {
+                glonax::driver::net::engine::EngineMessage::EngineController1(controller) => {
+                    info!(
+                        "{} {} {} » Engine controller: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        controller
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::EngineController2(controller) => {
+                    info!(
+                        "{} {} {} » Engine controller: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        controller
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::EngineController3(controller) => {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
