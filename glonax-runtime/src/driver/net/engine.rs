@@ -168,6 +168,32 @@ impl super::J1939Unit for EngineManagementSystem {
                         runtime_state.state.engine.actual_engine =
                             controller.actual_engine.unwrap_or(0);
                         runtime_state.state.engine.rpm = controller.rpm.unwrap_or(0);
+
+                        if let Some(starter_mode) = controller.starter_mode {
+                            match starter_mode {
+                                spn::EngineStarterMode::StarterActiveGearNotEngaged
+                                | spn::EngineStarterMode::StarterActiveGearEngaged => {
+                                    let _ = crate::core::EngineMode::Starting;
+                                }
+                                spn::EngineStarterMode::StartFinished => {
+                                    if let Some(rpm) = controller.rpm {
+                                        if rpm > 0 {
+                                            let _ = crate::core::EngineMode::Request(rpm);
+                                        }
+                                    }
+                                }
+                                spn::EngineStarterMode::StartNotRequested
+                                | spn::EngineStarterMode::StarterInhibitedEngineRunning
+                                | spn::EngineStarterMode::StarterInhibitedEngineNotReady
+                                | spn::EngineStarterMode::StarterInhibitedTransmissionInhibited
+                                | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
+                                | spn::EngineStarterMode::StarterInhibitedOverHeat
+                                | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
+                                    let _ = crate::core::EngineMode::NoRequest;
+                                }
+                                _ => {}
+                            }
+                        }
                     }
                     EngineMessage::EngineController2(_controller) => {
                         //
@@ -199,7 +225,7 @@ impl super::J1939Unit for EngineManagementSystem {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Start => {
+            crate::core::EngineMode::Starting => {
                 if engine_request == 0 {
                     if let Err(e) = router.inner().send(&self.torque_control(0)).await {
                         log::error!("Failed to speed request: {}", e);

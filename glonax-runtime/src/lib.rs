@@ -104,7 +104,7 @@ impl Governor {
         if engine_request == 0 {
             crate::core::EngineMode::NoRequest
         } else if engine.rpm == 0 || engine.rpm < self.rpm_start {
-            crate::core::EngineMode::Start
+            crate::core::EngineMode::Starting
         } else {
             crate::core::EngineMode::Request(engine_request)
         }

@@ -31,7 +31,7 @@ pub enum EngineMode {
     /// Engine is shut down.
     NoRequest,
     /// Engine is starting up.
-    Start,
+    Starting,
     /// Engine is running.
     Request(u16),
 }
@@ -53,7 +53,7 @@ impl Engine {
         if self.rpm == 0 {
             EngineMode::NoRequest
         } else if self.rpm < 500 {
-            EngineMode::Start
+            EngineMode::Starting
         } else {
             EngineMode::Request(self.rpm)
         }
