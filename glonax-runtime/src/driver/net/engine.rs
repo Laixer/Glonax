@@ -159,15 +159,16 @@ impl super::J1939Unit for EngineManagementSystem {
         if let Some(message) = router.try_accept(self) {
             if let Ok(mut runtime_state) = runtime_state.try_write() {
                 match message {
-                    EngineMessage::TorqueSpeedControl(_control) => {
-                        //
-                    }
                     EngineMessage::EngineController1(controller) => {
-                        runtime_state.state.engine.driver_demand =
-                            controller.driver_demand.unwrap_or(0);
-                        runtime_state.state.engine.actual_engine =
-                            controller.actual_engine.unwrap_or(0);
-                        runtime_state.state.engine.rpm = controller.rpm.unwrap_or(0);
+                        if let Some(driver_demand) = controller.driver_demand {
+                            runtime_state.state.engine.driver_demand = driver_demand;
+                        }
+                        if let Some(actual_engine) = controller.actual_engine {
+                            runtime_state.state.engine.actual_engine = actual_engine;
+                        }
+                        if let Some(rpm) = controller.rpm {
+                            runtime_state.state.engine.rpm = rpm;
+                        }
 
                         if let Some(starter_mode) = controller.starter_mode {
                             match starter_mode {
@@ -201,6 +202,7 @@ impl super::J1939Unit for EngineManagementSystem {
                     EngineMessage::EngineController3(_controller) => {
                         //
                     }
+                    _ => {}
                 }
             }
         }
