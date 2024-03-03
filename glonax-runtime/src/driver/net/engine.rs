@@ -6,9 +6,14 @@ use super::vecraft::VecraftConfigMessage;
 
 pub enum EngineMessage {
     TorqueSpeedControl(spn::TorqueSpeedControl1Message),
+    BrakeController1(spn::ElectronicBrakeController1Message),
     EngineController1(spn::ElectronicEngineController1Message),
     EngineController2(spn::ElectronicEngineController2Message),
     EngineController3(spn::ElectronicEngineController3Message),
+    FanDrive(spn::FanDriveMessage),
+    VehicleDistance(spn::VehicleDistanceMessage),
+    Shutdown(spn::ShutdownMessage),
+    PowerTakeoffInformation(spn::PowerTakeoffInformationMessage),
 }
 
 #[derive(Default)]
@@ -116,36 +121,83 @@ impl EngineManagementSystem {
 
 impl Parsable<EngineMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
-        if frame.id().pgn() == PGN::TorqueSpeedControl1 {
-            Some(EngineMessage::TorqueSpeedControl(
+        match frame.id().pgn() {
+            PGN::TorqueSpeedControl1 => Some(EngineMessage::TorqueSpeedControl(
                 spn::TorqueSpeedControl1Message::from_pdu(frame.pdu()),
-            ))
-        } else if frame.id().pgn() == PGN::ElectronicEngineController1 {
-            if frame.id().sa() != self.destination_address {
-                return None;
-            }
+            )),
+            PGN::ElectronicBrakeController1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
 
-            Some(EngineMessage::EngineController1(
-                spn::ElectronicEngineController1Message::from_pdu(frame.pdu()),
-            ))
-        } else if frame.id().pgn() == PGN::ElectronicEngineController2 {
-            if frame.id().sa() != self.destination_address {
-                return None;
+                Some(EngineMessage::BrakeController1(
+                    spn::ElectronicBrakeController1Message::from_pdu(frame.pdu()),
+                ))
             }
+            PGN::ElectronicEngineController1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
 
-            Some(EngineMessage::EngineController2(
-                spn::ElectronicEngineController2Message::from_pdu(frame.pdu()),
-            ))
-        } else if frame.id().pgn() == PGN::ElectronicEngineController3 {
-            if frame.id().sa() != self.destination_address {
-                return None;
+                Some(EngineMessage::EngineController1(
+                    spn::ElectronicEngineController1Message::from_pdu(frame.pdu()),
+                ))
             }
+            PGN::ElectronicEngineController2 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
 
-            Some(EngineMessage::EngineController3(
-                spn::ElectronicEngineController3Message::from_pdu(frame.pdu()),
-            ))
-        } else {
-            None
+                Some(EngineMessage::EngineController2(
+                    spn::ElectronicEngineController2Message::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::ElectronicEngineController3 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::EngineController3(
+                    spn::ElectronicEngineController3Message::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::FanDrive => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::FanDrive(spn::FanDriveMessage::from_pdu(
+                    frame.pdu(),
+                )))
+            }
+            PGN::VehicleDistance => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::VehicleDistance(
+                    spn::VehicleDistanceMessage::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::Shutdown => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::Shutdown(spn::ShutdownMessage::from_pdu(
+                    frame.pdu(),
+                )))
+            }
+            PGN::PowerTakeoffInformation => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::PowerTakeoffInformation(
+                    spn::PowerTakeoffInformationMessage::from_pdu(frame.pdu()),
+                ))
+            }
+            _ => None,
         }
     }
 }

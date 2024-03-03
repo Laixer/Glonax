@@ -76,6 +76,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         control
                     );
                 }
+                glonax::driver::net::engine::EngineMessage::BrakeController1(controller) => {
+                    info!(
+                        "{} {} {} » Brake controller: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        controller
+                    );
+                }
                 glonax::driver::net::engine::EngineMessage::EngineController1(controller) => {
                     info!(
                         "{} {} {} » Engine controller: {}",
@@ -101,6 +110,42 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         controller
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::FanDrive(fan) => {
+                    info!(
+                        "{} {} {} » Fan drive: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        fan
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::VehicleDistance(distance) => {
+                    info!(
+                        "{} {} {} » Vehicle distance: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        distance
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::Shutdown(shutdown) => {
+                    info!(
+                        "{} {} {} » Shutdown: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        shutdown
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::PowerTakeoffInformation(info) => {
+                    info!(
+                        "{} {} {} » Power takeoff information: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        info
                     );
                 }
             }
