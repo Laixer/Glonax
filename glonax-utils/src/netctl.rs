@@ -139,6 +139,42 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         shutdown
                     );
                 }
+                glonax::driver::net::engine::EngineMessage::EngineTemperature1(temperature) => {
+                    info!(
+                        "{} {} {} » Engine temperature: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        temperature
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::EngineFluidLevelPressure1(fluid) => {
+                    info!(
+                        "{} {} {} » Engine fluid level pressure: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        fluid
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::FuelEconomy(economy) => {
+                    info!(
+                        "{} {} {} » Fuel economy: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        economy
+                    );
+                }
+                glonax::driver::net::engine::EngineMessage::AmbientConditions(conditions) => {
+                    info!(
+                        "{} {} {} » Ambient conditions: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        conditions
+                    );
+                }
                 glonax::driver::net::engine::EngineMessage::PowerTakeoffInformation(info) => {
                     info!(
                         "{} {} {} » Power takeoff information: {}",

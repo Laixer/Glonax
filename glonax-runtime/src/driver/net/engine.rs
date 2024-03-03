@@ -13,6 +13,10 @@ pub enum EngineMessage {
     FanDrive(spn::FanDriveMessage),
     VehicleDistance(spn::VehicleDistanceMessage),
     Shutdown(spn::ShutdownMessage),
+    EngineTemperature1(spn::EngineTemperature1Message),
+    EngineFluidLevelPressure1(spn::EngineFluidLevelPressure1Message),
+    FuelEconomy(spn::FuelEconomyMessage),
+    AmbientConditions(spn::AmbientConditionsMessage),
     PowerTakeoffInformation(spn::PowerTakeoffInformationMessage),
 }
 
@@ -187,6 +191,42 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
                 Some(EngineMessage::Shutdown(spn::ShutdownMessage::from_pdu(
                     frame.pdu(),
                 )))
+            }
+            PGN::EngineTemperature1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::EngineTemperature1(
+                    spn::EngineTemperature1Message::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::EngineFluidLevelPressure1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::EngineFluidLevelPressure1(
+                    spn::EngineFluidLevelPressure1Message::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::FuelEconomy => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::FuelEconomy(
+                    spn::FuelEconomyMessage::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::AmbientConditions => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::AmbientConditions(
+                    spn::AmbientConditionsMessage::from_pdu(frame.pdu()),
+                ))
             }
             PGN::PowerTakeoffInformation => {
                 if frame.id().sa() != self.destination_address {
