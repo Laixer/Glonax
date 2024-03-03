@@ -4,6 +4,30 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
+/// The `glonax-runtime` library provides a runtime environment for the Glonax system.
+///
+/// This library contains modules for core functionality, drivers, logging, mathematics,
+/// networking, protocols, robots, services, and the world. It also includes a `can` module
+/// for CAN bus communication. The library exports the `config` module and re-exports the
+/// `j1939` and `rand` crates.
+///
+/// The `runtime` module provides the `Runtime` struct and the `Error` enum for managing
+/// the Glonax runtime. The `consts` module defines various constants used in the runtime,
+/// such as the version, default network port, default socket path, default configuration path,
+/// queue size for motion commands, and maximum number of network clients.
+///
+/// The `MachineState` struct represents the state of a machine in the Glonax system. It
+/// includes data for the vehicle management system, global navigation satellite system,
+/// engine, engine request, hydraulic quick disconnect, hydraulic lock, motion, encoders,
+/// robot actor, program queue, and electronic control unit state.
+///
+/// The `Governor` struct represents a governor for the engine. It has fields for the default
+/// engine speed and maximum RPM. It provides methods for reshaping torque and determining
+/// the engine mode based on the actual and requested engine modes.
+///
+/// The `Operand` struct represents the operand, which is the current state of the machine.
+/// It includes the machine state and a governor for the engine. It provides methods for
+/// determining the governor mode and the status of the machine.
 pub mod core;
 pub mod driver;
 pub mod logger;
@@ -84,29 +108,53 @@ pub struct MachineState {
 }
 
 struct Governor {
-    rpm_start: u16,
+    /// Default engine speed.
     rpm_idle: u16,
+    /// Maximum RPM for the engine.
     rpm_max: u16,
 }
 
 impl Governor {
-    fn new(rpm_start: u16, rpm_idle: u16, rpm_max: u16) -> Self {
-        Self {
-            rpm_start,
-            rpm_idle,
-            rpm_max,
-        }
+    /// Construct a new governor.
+    fn new(rpm_idle: u16, rpm_max: u16) -> Self {
+        Self { rpm_idle, rpm_max }
     }
 
-    fn mode(&self, engine: &core::Engine, engine_request: u16) -> crate::core::EngineMode {
-        let engine_request = engine_request.clamp(self.rpm_idle, self.rpm_max);
+    fn reshape(&self, torque: u16) -> u16 {
+        torque.clamp(self.rpm_idle, self.rpm_max)
+    }
 
-        if engine_request == 0 {
-            crate::core::EngineMode::NoRequest
-        } else if engine.rpm == 0 || engine.rpm < self.rpm_start {
-            crate::core::EngineMode::Starting
-        } else {
-            crate::core::EngineMode::Request(engine_request)
+    /// Determine the next engine state based on the actual and requested states.
+    ///
+    /// # Arguments
+    ///
+    /// * `actual` - The actual engine mode.
+    /// * `request` - The requested engine mode.
+    ///
+    /// # Returns
+    ///
+    /// The resulting engine mode.
+    fn mode(
+        &self,
+        actual: &core::EngineMode,
+        request: &core::EngineMode,
+    ) -> crate::core::EngineMode {
+        use crate::core::EngineMode;
+
+        match (actual, request) {
+            (EngineMode::NoRequest, EngineMode::Starting(_)) => EngineMode::Starting(self.rpm_idle),
+            (EngineMode::NoRequest, EngineMode::Request(_)) => EngineMode::Starting(self.rpm_idle),
+            (EngineMode::NoRequest, _) => EngineMode::NoRequest,
+            (EngineMode::Starting(_), _) => EngineMode::Starting(self.rpm_idle),
+            (EngineMode::Stopping, _) => EngineMode::Stopping,
+            (EngineMode::Request(_), EngineMode::NoRequest) => EngineMode::Stopping,
+            (EngineMode::Request(r), EngineMode::Starting(_)) => {
+                EngineMode::Request(self.reshape(*r))
+            }
+            (EngineMode::Request(_), EngineMode::Stopping) => EngineMode::Stopping,
+            (EngineMode::Request(_), EngineMode::Request(r)) => {
+                EngineMode::Request(self.reshape(*r))
+            }
         }
     }
 }
@@ -123,34 +171,26 @@ pub struct Operand {
 }
 
 impl Operand {
-    pub fn governor(&self) -> crate::core::EngineMode {
-        // const ENGINE_RPM_START: u16 = 500;
-        // const ENGINE_RPM_IDLE: u16 = 700;
-        // const ENGINE_RPM_MAX: u16 = 2_100;
+    /// Get the governor mode for the engine.
+    ///
+    /// This method determines the governor mode based on the current
+    /// engine request and the actual engine mode.
+    pub fn governor_mode(&self) -> crate::core::EngineMode {
+        let request = if self.state.engine_request == 0 {
+            core::EngineMode::NoRequest
+        } else {
+            core::EngineMode::Request(self.state.engine_request)
+        };
 
-        // let engine = self.state.engine;
-        // let engine_request = self
-        //     .state
-        //     .engine_request
-        //     .clamp(ENGINE_RPM_IDLE, ENGINE_RPM_MAX);
-
-        // // TODO: Missing off=off
-        // if engine_request == 0 {
-        //     crate::core::EngineMode::NoRequest
-        // } else if engine.rpm == 0 || engine.rpm < ENGINE_RPM_START {
-        //     crate::core::EngineMode::Start
-        // } else {
-        //     crate::core::EngineMode::Request(engine_request)
-        // }
-        self.governor
-            .mode(&self.state.engine, self.state.engine_request)
+        self.governor.mode(&self.state.engine.mode(), &request)
     }
 
-    /// Current machine state.
+    /// Get the status of the machine.
     ///
-    /// This method returns the current machine state based
-    /// on the current operand state. It is a convenience
-    /// method to avoid having to lock the operand state
+    /// This method returns the status of the machine based on the
+    /// current machine state. It takes into account the status of
+    /// the vehicle management system, global navigation satellite
+    /// system, engine, and other factors.
     pub fn status(&self) -> core::Status {
         use crate::core::{EngineStatus, GnssStatus, HostStatus, Status};
 

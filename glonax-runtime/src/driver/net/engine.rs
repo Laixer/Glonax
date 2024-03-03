@@ -93,6 +93,7 @@ impl EngineManagementSystem {
         );
 
         // TODO: This is not correct. 'SpeedTorqueLimitControl' is not used for starting the engine.
+        // Change to proprietary PGN.
         frame_builder
             .copy_from_slice(
                 &spn::TorqueSpeedControl1Message {
@@ -107,6 +108,7 @@ impl EngineManagementSystem {
             .build()
     }
 
+    // TODO: Rename to 'brake'.
     pub fn shutdown(&self) -> Frame {
         // TODO: Make this a J1939 message
         let mut frame_builder = FrameBuilder::new(
@@ -306,41 +308,64 @@ impl super::J1939Unit for EngineManagementSystem {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        let engine = runtime_state.read().await.state.engine;
-        let engine_request = runtime_state.read().await.state.engine_request;
-
-        match engine.mode() {
+        match runtime_state.read().await.governor_mode() {
             crate::core::EngineMode::NoRequest => {
-                if engine_request == 0 {
-                    if let Err(e) = router.inner().send(&self.torque_control(0)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
-                } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
+                if let Err(e) = router.inner().send(&self.torque_control(0)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Starting => {
-                if engine_request == 0 {
-                    if let Err(e) = router.inner().send(&self.torque_control(0)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
-                } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
+            crate::core::EngineMode::Starting(rpm) => {
+                if let Err(e) = router.inner().send(&self.start(rpm)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Request(_) => {
-                if engine_request == 0 {
-                    if let Err(e) = router.inner().send(&self.shutdown()).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
-                } else if let Err(e) = router
-                    .inner()
-                    .send(&self.torque_control(engine_request))
-                    .await
-                {
+            crate::core::EngineMode::Stopping => {
+                if let Err(e) = router.inner().send(&self.shutdown()).await {
+                    log::error!("Failed to speed request: {}", e);
+                }
+            }
+            crate::core::EngineMode::Request(rpm) => {
+                if let Err(e) = router.inner().send(&self.torque_control(rpm)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
         }
+
+        // let engine = runtime_state.read().await.state.engine;
+        // let engine_request = runtime_state.read().await.state.engine_request;
+
+        // match engine.mode() {
+        //     crate::core::EngineMode::NoRequest => {
+        //         if engine_request == 0 {
+        //             if let Err(e) = router.inner().send(&self.torque_control(0)).await {
+        //                 log::error!("Failed to speed request: {}", e);
+        //             }
+        //         } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        //     crate::core::EngineMode::Starting => {
+        //         if engine_request == 0 {
+        //             if let Err(e) = router.inner().send(&self.torque_control(0)).await {
+        //                 log::error!("Failed to speed request: {}", e);
+        //             }
+        //         } else if let Err(e) = router.inner().send(&self.start(engine_request)).await {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        //     crate::core::EngineMode::Request(_) => {
+        //         if engine_request == 0 {
+        //             if let Err(e) = router.inner().send(&self.shutdown()).await {
+        //                 log::error!("Failed to speed request: {}", e);
+        //             }
+        //         } else if let Err(e) = router
+        //             .inner()
+        //             .send(&self.torque_control(engine_request))
+        //             .await
+        //         {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        // }
     }
 }

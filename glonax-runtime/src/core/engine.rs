@@ -26,12 +26,15 @@ impl TryFrom<u8> for EngineStatus {
     }
 }
 
+// TODO: Rename to EngineState
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EngineMode {
     /// Engine is shut down.
     NoRequest,
     /// Engine is starting up.
-    Starting,
+    Starting(u16),
+    /// Engine is shutting down.
+    Stopping,
     /// Engine is running.
     Request(u16),
 }
@@ -53,7 +56,7 @@ impl Engine {
         if self.rpm == 0 {
             EngineMode::NoRequest
         } else if self.rpm < 500 {
-            EngineMode::Starting
+            EngineMode::Starting(self.rpm)
         } else {
             EngineMode::Request(self.rpm)
         }
