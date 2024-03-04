@@ -2,13 +2,14 @@ use nalgebra::{Rotation3, UnitVector3};
 
 pub use error::{DeviceError, ErrorKind, Result};
 pub use hardware::nmea::Nmea;
+pub use net::bosch_ems::BoschEngineManagementSystem;
 pub use net::encoder::KueblerEncoder;
-pub use net::engine::EngineManagementSystem;
 pub use net::fuzzer::Fuzzer;
 pub use net::hydraulic::HydraulicControlUnit;
 pub use net::inclino::KueblerInclinometer;
 pub use net::inspector::{J1939ApplicationInspector, J1939Message};
 pub use net::reqres::RequestResponder;
+pub use net::volvo_ems::VolvoEngineManagementSystem;
 pub use r#virtual::encoder::VirtualEncoder;
 pub use r#virtual::hcu::VirtualHCU;
 
@@ -17,6 +18,7 @@ mod hardware;
 pub mod net;
 mod r#virtual;
 
+// TODO: Move this to a more appropriate location.
 pub struct EncoderConverter {
     /// Encoder factor.
     factor: f32,

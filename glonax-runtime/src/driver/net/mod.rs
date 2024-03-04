@@ -1,16 +1,18 @@
+pub mod bosch_ems;
 pub mod encoder;
-pub mod engine;
 pub mod fuzzer;
 pub mod hydraulic;
 pub mod inclino;
 pub mod inspector;
 pub mod reqres;
 pub(super) mod vecraft;
+pub mod volvo_ems;
 
 pub enum NetDriver {
     KueblerEncoder(super::KueblerEncoder),
     KueblerInclinometer(super::KueblerInclinometer),
-    EngineManagementSystem(super::EngineManagementSystem),
+    VolvoEngineManagementSystem(super::VolvoEngineManagementSystem),
+    BoschEngineManagementSystem(super::BoschEngineManagementSystem),
     HydraulicControlUnit(super::HydraulicControlUnit),
     RequestResponder(super::RequestResponder),
 }
@@ -31,8 +33,8 @@ impl NetDriver {
     }
 
     pub fn engine_management_system(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
-        crate::driver::net::NetDriver::EngineManagementSystem(
-            crate::driver::EngineManagementSystem::new(address, vms_address),
+        crate::driver::net::NetDriver::VolvoEngineManagementSystem(
+            crate::driver::VolvoEngineManagementSystem::new(address, vms_address),
         )
     }
 
