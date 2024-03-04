@@ -185,6 +185,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         info
                     );
                 }
+                glonax::driver::EngineMessage::TankInformation1(info) => {
+                    info!(
+                        "{} {} {} » Tank information: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        info
+                    );
+                }
             }
         } else if let Some(message) = router.try_accept(&mut enc2) {
             info!(

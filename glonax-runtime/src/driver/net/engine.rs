@@ -16,6 +16,7 @@ pub enum EngineMessage {
     FuelEconomy(spn::FuelEconomyMessage),
     AmbientConditions(spn::AmbientConditionsMessage),
     PowerTakeoffInformation(spn::PowerTakeoffInformationMessage),
+    TankInformation1(spn::TankInformation1Message),
 }
 
 #[derive(Default)]
@@ -46,9 +47,10 @@ impl EngineManagementSystem {
         )
         .copy_from_slice(
             &spn::TorqueSpeedControl1Message {
-                override_control_mode: Some(spn::OverrideControlMode::SpeedControl),
-                speed_control_condition: None,
-                control_mode_priority: None,
+                override_control_mode: spn::OverrideControlMode::SpeedControl,
+                speed_control_condition:
+                    spn::RequestedSpeedControlCondition::TransientOptimizedDriveLineDisengaged,
+                control_mode_priority: spn::OverrideControlModePriority::HighPriority,
                 speed: Some(rpm),
                 torque: None,
             }
@@ -208,6 +210,15 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 
                 Some(EngineMessage::PowerTakeoffInformation(
                     spn::PowerTakeoffInformationMessage::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::TANKInformation1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::TankInformation1(
+                    spn::TankInformation1Message::from_pdu(frame.pdu()),
                 ))
             }
             _ => None,
