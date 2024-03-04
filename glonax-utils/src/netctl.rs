@@ -13,6 +13,8 @@ use log::{debug, info};
 pub(crate) mod consts {
     /// On-Board Data Logger J1939 address.
     pub const J1939_ADDRESS_OBDL: u8 = 0xFB;
+    /// Volvo VECU J1939 address.
+    pub const J1939_ADDRESS_VOLVO_VECU: u8 = 0x11;
     /// Engine J1939 address.
     pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
     /// Hydraulic Control Unit J1939 address.
@@ -749,7 +751,7 @@ async fn main() -> anyhow::Result<()> {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let ems0 = glonax::driver::VolvoEngineManagementSystem::new(
                 destination_address,
-                consts::J1939_ADDRESS_OBDL,
+                consts::J1939_ADDRESS_VOLVO_VECU,
             );
 
             match command {
@@ -761,7 +763,12 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.speed_control(glonax::driver::net::volvo_ems::VolvoEngineState::Nominal, rpm)).await?;
+                        socket
+                            .send(&ems0.speed_control(
+                                glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
+                                rpm,
+                            ))
+                            .await?;
                     }
                 }
                 EngineCommand::Start => {
@@ -772,7 +779,12 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.speed_control(glonax::driver::net::volvo_ems::VolvoEngineState::Nominal, 700)).await?;
+                        socket
+                            .send(&ems0.speed_control(
+                                glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
+                                700,
+                            ))
+                            .await?;
                     }
                 }
                 EngineCommand::Stop => {
@@ -783,7 +795,12 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.speed_control(glonax::driver::net::volvo_ems::VolvoEngineState::Shutdown, 700)).await?;
+                        socket
+                            .send(&ems0.speed_control(
+                                glonax::driver::net::volvo_ems::VolvoEngineState::Shutdown,
+                                700,
+                            ))
+                            .await?;
                     }
                 }
             }

@@ -163,10 +163,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         ];
 
         let j1939_drivers_can1_rx = vec![
-            NetDriver::engine_management_system(
-                config.j1939[1].driver[0].id,
-                config.j1939[1].address,
-            ),
+            NetDriver::engine_management_system(config.j1939[1].driver[0].id, 0x11),
             NetDriver::hydraulic_control_unit(
                 config.j1939[1].driver[1].id,
                 config.j1939[1].address,
@@ -175,10 +172,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         ];
 
         let j1939_drivers_can1_tx = vec![
-            NetDriver::engine_management_system(
-                config.j1939[1].driver[0].id,
-                config.j1939[1].address,
-            ),
+            NetDriver::engine_management_system(config.j1939[1].driver[0].id, 0x11),
             NetDriver::hydraulic_control_unit(
                 config.j1939[1].driver[1].id,
                 config.j1939[1].address,

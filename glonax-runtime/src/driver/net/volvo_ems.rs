@@ -4,9 +4,6 @@ use crate::net::Parsable;
 
 use super::vecraft::VecraftConfigMessage;
 
-/// Volvo Engine Management System source address.
-const J1939_ADDRESS_VECU: u8 = 0x11;
-
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum VolvoEngineState {
     /// Engine shutdown.
@@ -79,7 +76,7 @@ impl VolvoEngineManagementSystem {
         FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
                 .priority(3)
-                .sa(J1939_ADDRESS_VECU)
+                .sa(self.source_address)
                 .build(),
         )
         .copy_from_slice(&[
