@@ -61,7 +61,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut imu0 = KueblerInclinometer::new(consts::J1939_ADDRESS_IMU0, consts::J1939_ADDRESS_OBDL);
     let mut hcu0 =
         HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
-    let mut rrp0 = J1939ApplicationInspector;
+    let mut jis0 = J1939ApplicationInspector;
 
     loop {
         router.listen().await?;
@@ -274,7 +274,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     );
                 }
             }
-        } else if let Some(message) = router.try_accept(&mut rrp0) {
+        } else if let Some(message) = router.try_accept(&mut jis0) {
             match message {
                 J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(
@@ -358,6 +358,106 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
                 specification_part,
                 frame
             );
+        };
+    }
+}
+
+async fn diagnose(mut router: Router) -> anyhow::Result<()> {
+    debug!("Print incoming frames to screen");
+
+    let mut ecu_addresses = vec![];
+
+    let mut jis0 = glonax::driver::J1939ApplicationInspector;
+
+    async fn probe(router: &Router, address: u8) -> anyhow::Result<()> {
+        use glonax::j1939::{protocol, PGN};
+
+        println!("Probe ECU {}", Purple.paint(format!("0x{:X?}", address)));
+
+        router
+            .inner()
+            .send(&protocol::request(address, PGN::AddressClaimed))
+            .await?;
+        router
+            .inner()
+            .send(&protocol::request(address, PGN::SoftwareIdentification))
+            .await?;
+        router
+            .inner()
+            .send(&protocol::request(address, PGN::ComponentIdentification))
+            .await?;
+        router
+            .inner()
+            .send(&protocol::request(address, PGN::VehicleIdentification))
+            .await?;
+        router
+            .inner()
+            .send(&protocol::request(address, PGN::TimeDate))
+            .await?;
+
+        Ok(())
+    }
+
+    loop {
+        router.listen().await?;
+
+        if let Some(message) = router.try_accept(&mut jis0) {
+            match message {
+                glonax::driver::J1939Message::AddressClaim(name) => {
+                    println!(
+                        "{} Name: {}",
+                        Purple.paint(format!("[0x{:X?}]", router.frame_source().unwrap())),
+                        name
+                    );
+                }
+                glonax::driver::J1939Message::SoftwareIndent((major, minor, patch)) => {
+                    println!(
+                        "{} Software identification: {}.{}.{}",
+                        style_address(router.frame_source().unwrap()),
+                        major,
+                        minor,
+                        patch
+                    );
+                }
+                glonax::driver::J1939Message::TimeDate(time) => {
+                    println!(
+                        "{} Time and date: {}",
+                        style_address(router.frame_source().unwrap()),
+                        time
+                    );
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(frame) = router.take() {
+            if !ecu_addresses.contains(&frame.id().sa()) {
+                ecu_addresses.push(frame.id().sa());
+
+                println!(
+                    "Found source address {}",
+                    Purple.paint(format!("0x{:X?}", frame.id().sa()))
+                );
+
+                probe(&router, frame.id().sa()).await?;
+            }
+
+            if let Some(da) = frame.id().destination_address() {
+                if da == 0xff {
+                    continue;
+                }
+
+                if !ecu_addresses.contains(&da) {
+                    ecu_addresses.push(da);
+
+                    println!(
+                        "Found destination address {}",
+                        Purple.paint(format!("0x{:X?}", da))
+                    );
+
+                    probe(&router, da).await?;
+                }
+            }
         };
     }
 }
@@ -449,6 +549,7 @@ enum Command {
         /// Frame ID.
         id: String,
     },
+    Diagnostic,
     /// Show raw frames on screen.
     Dump {
         /// Filter on PGN.
@@ -869,6 +970,12 @@ async fn main() -> anyhow::Result<()> {
                 tick.tick().await;
                 socket.send(&fuz0.gen_frame()).await?;
             }
+        }
+        Command::Diagnostic => {
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+            let router = Router::new(socket);
+
+            diagnose(router).await?;
         }
         Command::Dump {
             pgn,
