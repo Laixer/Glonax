@@ -139,7 +139,7 @@ impl Governor {
     /// # Returns
     ///
     /// The resulting engine mode.
-    fn mode(
+    fn next_state(
         &self,
         actual: &core::EngineRequest,
         request: &core::EngineRequest,
@@ -147,17 +147,44 @@ impl Governor {
         use crate::core::EngineState;
 
         match (actual.state, request.state) {
-            (EngineState::NoRequest, EngineState::Starting) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Starting },
-            (EngineState::NoRequest, EngineState::Request) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Starting },
-            (EngineState::NoRequest, _) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::NoRequest },
+            (EngineState::NoRequest, EngineState::Starting) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::Starting,
+            },
+            (EngineState::NoRequest, EngineState::Request) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::Starting,
+            },
+            (EngineState::NoRequest, _) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::NoRequest,
+            },
 
-            (EngineState::Starting, _) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Starting },
-            (EngineState::Stopping, _) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Stopping },
+            (EngineState::Starting, _) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::Starting,
+            },
+            (EngineState::Stopping, _) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::Stopping,
+            },
 
-            (EngineState::Request, EngineState::NoRequest) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Stopping },
-            (EngineState::Request, EngineState::Starting) => core::EngineRequest { speed: self.reshape(actual.speed), state: EngineState::Request },
-            (EngineState::Request, EngineState::Stopping) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Stopping },
-            (EngineState::Request, EngineState::Request) => core::EngineRequest { speed: self.reshape(request.speed), state: EngineState::Request },
+            (EngineState::Request, EngineState::NoRequest) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::Stopping,
+            },
+            (EngineState::Request, EngineState::Starting) => core::EngineRequest {
+                speed: self.reshape(actual.speed),
+                state: EngineState::Request,
+            },
+            (EngineState::Request, EngineState::Stopping) => core::EngineRequest {
+                speed: self.reshape(self.rpm_idle),
+                state: EngineState::Stopping,
+            },
+            (EngineState::Request, EngineState::Request) => core::EngineRequest {
+                speed: self.reshape(request.speed),
+                state: EngineState::Request,
+            },
         }
     }
 }
@@ -180,13 +207,19 @@ impl Operand {
     /// engine request and the actual engine mode.
     pub fn governor_mode(&self) -> crate::core::EngineRequest {
         let request = if self.state.engine_request == 0 {
-            core::EngineRequest { speed: 0, state: core::EngineState::NoRequest }
+            core::EngineRequest {
+                speed: 0,
+                state: core::EngineState::NoRequest,
+            }
         } else {
-            core::EngineRequest { speed: self.state.engine_request, state: core::EngineState::Request }
+            core::EngineRequest {
+                speed: self.state.engine_request,
+                state: core::EngineState::Request,
+            }
         };
 
         self.governor
-            .mode(&self.state.engine_state_actual, &request)
+            .next_state(&self.state.engine_state_actual, &request)
     }
 
     /// Get the status of the machine.
