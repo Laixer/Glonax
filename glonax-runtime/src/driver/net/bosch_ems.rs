@@ -40,7 +40,8 @@ impl super::J1939Unit for BoschEngineManagementSystem {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        match runtime_state.read().await.governor_mode() {
+        let request = runtime_state.read().await.governor_mode();
+        match request.state {
             crate::core::EngineState::NoRequest => {
                 if let Err(e) = router.inner().send(&self.ems.speed_control(0)).await {
                     log::error!("Failed to speed request: {}", e);
@@ -51,8 +52,12 @@ impl super::J1939Unit for BoschEngineManagementSystem {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineState::Starting(rpm) | crate::core::EngineState::Request(rpm) => {
-                if let Err(e) = router.inner().send(&self.ems.speed_control(rpm)).await {
+            crate::core::EngineState::Starting | crate::core::EngineState::Request => {
+                if let Err(e) = router
+                    .inner()
+                    .send(&self.ems.speed_control(request.speed))
+                    .await
+                {
                     log::error!("Failed to speed request: {}", e);
                 }
             }

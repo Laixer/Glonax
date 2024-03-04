@@ -31,16 +31,27 @@ pub enum EngineState {
     /// Engine is shut down, ready to start.
     NoRequest,
     /// Engine is starting up.
-    Starting(u16),
+    Starting,
     /// Engine is shutting down.
     Stopping,
     /// Engine is running.
-    Request(u16),
+    Request,
 }
 
-impl Default for EngineState {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EngineRequest {
+    /// Engine speed request.
+    pub speed: u16,
+    /// Engine state.
+    pub state: EngineState,
+}
+
+impl Default for EngineRequest {
     fn default() -> Self {
-        Self::NoRequest
+        Self {
+            speed: Default::default(),
+            state: EngineState::NoRequest,
+        }
     }
 }
 

@@ -126,20 +126,21 @@ impl super::J1939Unit for VolvoD7E {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        match runtime_state.read().await.governor_mode() {
+        let request = runtime_state.read().await.governor_mode();
+        match request.state {
             crate::core::EngineState::NoRequest => {
                 if let Err(e) = router
                     .inner()
-                    .send(&self.speed_control(VolvoEngineState::Nominal, 810))
+                    .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
                     .await
                 {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineState::Starting(rpm) => {
+            crate::core::EngineState::Starting => {
                 if let Err(e) = router
                     .inner()
-                    .send(&self.speed_control(VolvoEngineState::Starting, rpm))
+                    .send(&self.speed_control(VolvoEngineState::Starting, request.speed))
                     .await
                 {
                     log::error!("Failed to speed request: {}", e);
@@ -148,16 +149,16 @@ impl super::J1939Unit for VolvoD7E {
             crate::core::EngineState::Stopping => {
                 if let Err(e) = router
                     .inner()
-                    .send(&self.speed_control(VolvoEngineState::Shutdown, 810))
+                    .send(&self.speed_control(VolvoEngineState::Shutdown, request.speed))
                     .await
                 {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineState::Request(rpm) => {
+            crate::core::EngineState::Request => {
                 if let Err(e) = router
                     .inner()
-                    .send(&self.speed_control(VolvoEngineState::Nominal, rpm))
+                    .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
                     .await
                 {
                     log::error!("Failed to speed request: {}", e);

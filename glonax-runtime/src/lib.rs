@@ -90,9 +90,9 @@ pub struct MachineState {
     /// Engine data.
     pub engine: core::Engine,
     /// Engine state actual.
-    pub engine_state_actual: core::EngineState,
+    pub engine_state_actual: core::EngineRequest,
     /// Engine state request.
-    pub engine_state_request: core::EngineState,
+    pub engine_state_request: core::EngineRequest,
     /// Engine requested RPM.
     pub engine_request: u16, // TODO: Move into engine request struct
     /// Hydraulic quick disconnect.
@@ -124,6 +124,7 @@ impl Governor {
         Self { rpm_idle, rpm_max }
     }
 
+    #[inline]
     fn reshape(&self, torque: u16) -> u16 {
         torque.clamp(self.rpm_idle, self.rpm_max)
     }
@@ -140,29 +141,23 @@ impl Governor {
     /// The resulting engine mode.
     fn mode(
         &self,
-        actual: &core::EngineState,
-        request: &core::EngineState,
-    ) -> crate::core::EngineState {
+        actual: &core::EngineRequest,
+        request: &core::EngineRequest,
+    ) -> crate::core::EngineRequest {
         use crate::core::EngineState;
 
-        match (actual, request) {
-            (EngineState::NoRequest, EngineState::Starting(_)) => {
-                EngineState::Starting(self.rpm_idle)
-            }
-            (EngineState::NoRequest, EngineState::Request(_)) => {
-                EngineState::Starting(self.rpm_idle)
-            }
-            (EngineState::NoRequest, _) => EngineState::NoRequest,
-            (EngineState::Starting(_), _) => EngineState::Starting(self.rpm_idle),
-            (EngineState::Stopping, _) => EngineState::Stopping,
-            (EngineState::Request(_), EngineState::NoRequest) => EngineState::Stopping,
-            (EngineState::Request(r), EngineState::Starting(_)) => {
-                EngineState::Request(self.reshape(*r))
-            }
-            (EngineState::Request(_), EngineState::Stopping) => EngineState::Stopping,
-            (EngineState::Request(_), EngineState::Request(r)) => {
-                EngineState::Request(self.reshape(*r))
-            }
+        match (actual.state, request.state) {
+            (EngineState::NoRequest, EngineState::Starting) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Starting },
+            (EngineState::NoRequest, EngineState::Request) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Starting },
+            (EngineState::NoRequest, _) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::NoRequest },
+
+            (EngineState::Starting, _) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Starting },
+            (EngineState::Stopping, _) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Stopping },
+
+            (EngineState::Request, EngineState::NoRequest) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Stopping },
+            (EngineState::Request, EngineState::Starting) => core::EngineRequest { speed: self.reshape(actual.speed), state: EngineState::Request },
+            (EngineState::Request, EngineState::Stopping) => core::EngineRequest { speed: self.reshape(self.rpm_idle), state: EngineState::Stopping },
+            (EngineState::Request, EngineState::Request) => core::EngineRequest { speed: self.reshape(request.speed), state: EngineState::Request },
         }
     }
 }
@@ -183,11 +178,11 @@ impl Operand {
     ///
     /// This method determines the governor mode based on the current
     /// engine request and the actual engine mode.
-    pub fn governor_mode(&self) -> crate::core::EngineState {
+    pub fn governor_mode(&self) -> crate::core::EngineRequest {
         let request = if self.state.engine_request == 0 {
-            core::EngineState::NoRequest
+            core::EngineRequest { speed: 0, state: core::EngineState::NoRequest }
         } else {
-            core::EngineState::Request(self.state.engine_request)
+            core::EngineRequest { speed: self.state.engine_request, state: core::EngineState::Request }
         };
 
         self.governor
