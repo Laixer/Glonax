@@ -1,4 +1,5 @@
 pub mod bosch_ems;
+pub mod cummins_ems;
 pub mod encoder;
 pub mod fuzzer;
 pub mod hydraulic;
