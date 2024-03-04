@@ -4,6 +4,18 @@ use crate::net::Parsable;
 
 use super::vecraft::VecraftConfigMessage;
 
+#[derive(PartialEq, Eq, Clone, Debug)]
+pub enum VolvoEngineState {
+    /// Engine shutdown.
+    Shutdown = 0b0000_0111,
+    /// Engine starter locked.
+    Locked = 0b0100_0111,
+    /// Engine running at requested speed.
+    Nominal = 0b0100_0011,
+    /// Engine starter engaged.
+    Starting = 0b1100_0011,
+}
+
 pub enum EngineMessage {
     TorqueSpeedControl(spn::TorqueSpeedControl1Message),
     BrakeController1(spn::ElectronicBrakeController1Message),
@@ -61,26 +73,46 @@ impl VolvoEngineManagementSystem {
 
     /// Request torque control
     pub fn torque_control(&self, rpm: u16) -> Frame {
-        let frame_builder = FrameBuilder::new(
+        FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
                 .da(self.destination_address)
                 .sa(self.source_address)
                 .build(),
-        );
+        )
+        .copy_from_slice(
+            &spn::TorqueSpeedControl1Message {
+                override_control_mode: Some(spn::OverrideControlMode::SpeedControl),
+                speed_control_condition: None,
+                control_mode_priority: None,
+                speed: Some(rpm),
+                torque: None,
+            }
+            .to_pdu(),
+        )
+        .build()
+    }
 
-        frame_builder
-            .copy_from_slice(
-                &spn::TorqueSpeedControl1Message {
-                    override_control_mode: Some(spn::OverrideControlMode::SpeedControl),
-                    speed_control_condition: None,
-                    control_mode_priority: None,
-                    speed: Some(rpm),
-                    torque: None,
-                }
-                .to_pdu(),
-            )
-            .build()
+    /// Request speed control
+    pub fn speed_control(&self, state: VolvoEngineState, rpm: u16) -> Frame {
+        FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
+                .priority(3)
+                .da(0x11)
+                .sa(self.source_address)
+                .build(),
+        )
+        .copy_from_slice(&[
+            0x00,
+            state as u8,
+            0x1f,
+            0x00,
+            0x00,
+            0x00,
+            0x20,
+            (rpm as f32 / 10.0) as u8,
+        ])
+        .build()
     }
 
     pub fn start(&self, rpm: u16) -> Frame {
@@ -322,6 +354,45 @@ impl super::J1939Unit for VolvoEngineManagementSystem {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
+        // match runtime_state.read().await.governor_mode() {
+        //     crate::core::EngineState::NoRequest => {
+        //         if let Err(e) = router
+        //             .inner()
+        //             .send(&self.speed_control(VolvoEngineState::Nominal, 0))
+        //             .await
+        //         {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        //     crate::core::EngineState::Starting(rpm) => {
+        //         if let Err(e) = router
+        //             .inner()
+        //             .send(&self.speed_control(VolvoEngineState::Starting, rpm))
+        //             .await
+        //         {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        //     crate::core::EngineState::Stopping => {
+        //         if let Err(e) = router
+        //             .inner()
+        //             .send(&self.speed_control(VolvoEngineState::Shutdown, 0))
+        //             .await
+        //         {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        //     crate::core::EngineState::Request(rpm) => {
+        //         if let Err(e) = router
+        //             .inner()
+        //             .send(&self.speed_control(VolvoEngineState::Nominal, rpm))
+        //             .await
+        //         {
+        //             log::error!("Failed to speed request: {}", e);
+        //         }
+        //     }
+        // }
+
         match runtime_state.read().await.governor_mode() {
             crate::core::EngineState::NoRequest => {
                 if let Err(e) = router.inner().send(&self.torque_control(0)).await {
