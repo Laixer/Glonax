@@ -2,6 +2,8 @@ use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, NameBuilder, PGN};
 
 use crate::net::Parsable;
 
+// TODO: Get from configuration.
+
 /// J1939 name manufacturer code.
 const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
 /// J1939 name function instance.
@@ -63,6 +65,23 @@ impl super::J1939Unit for RequestResponder {
                         .await
                     {
                         log::error!("Failed to send address claimed: {}", e);
+                    }
+                }
+                PGN::SoftwareIdentification => {
+                    let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)
+                        .sa(self.source_address)
+                        .build();
+
+                    let version_major: u8 = crate::consts::VERSION_MAJOR.parse().unwrap();
+                    let version_minor: u8 = crate::consts::VERSION_MINOR.parse().unwrap();
+                    let version_patch: u8 = crate::consts::VERSION_PATCH.parse().unwrap();
+
+                    let frame = FrameBuilder::new(id)
+                        .copy_from_slice(&[1, version_major, version_minor, version_patch, b'*'])
+                        .build();
+
+                    if let Err(e) = router.inner().send(&frame).await {
+                        log::error!("Failed to send software identification: {}", e);
                     }
                 }
                 PGN::TimeDate => {
