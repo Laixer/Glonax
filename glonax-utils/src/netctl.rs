@@ -761,7 +761,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.torque_control(rpm)).await?;
+                        socket.send(&ems0.speed_control(glonax::driver::net::volvo_ems::VolvoEngineState::Nominal, rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
@@ -772,7 +772,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.start(700)).await?;
+                        socket.send(&ems0.speed_control(glonax::driver::net::volvo_ems::VolvoEngineState::Nominal, 700)).await?;
                     }
                 }
                 EngineCommand::Stop => {
@@ -783,7 +783,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.shutdown()).await?;
+                        socket.send(&ems0.speed_control(glonax::driver::net::volvo_ems::VolvoEngineState::Shutdown, 700)).await?;
                     }
                 }
             }
