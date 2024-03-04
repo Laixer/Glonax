@@ -8,6 +8,7 @@ pub mod inspector;
 pub mod reqres;
 pub(super) mod vecraft;
 pub mod volvo_ems;
+mod volvo_vecu;
 
 pub enum NetDriver {
     KueblerEncoder(super::KueblerEncoder),
