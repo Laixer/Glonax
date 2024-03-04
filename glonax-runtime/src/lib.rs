@@ -89,6 +89,10 @@ pub struct MachineState {
     pub gnss: core::Gnss,
     /// Engine data.
     pub engine: core::Engine,
+    /// Engine state actual.
+    pub engine_state_actual: core::EngineState,
+    /// Engine state request.
+    pub engine_state_request: core::EngineState,
     /// Engine requested RPM.
     pub engine_request: u16, // TODO: Move into engine request struct
     /// Hydraulic quick disconnect.
@@ -136,24 +140,28 @@ impl Governor {
     /// The resulting engine mode.
     fn mode(
         &self,
-        actual: &core::EngineMode,
-        request: &core::EngineMode,
-    ) -> crate::core::EngineMode {
-        use crate::core::EngineMode;
+        actual: &core::EngineState,
+        request: &core::EngineState,
+    ) -> crate::core::EngineState {
+        use crate::core::EngineState;
 
         match (actual, request) {
-            (EngineMode::NoRequest, EngineMode::Starting(_)) => EngineMode::Starting(self.rpm_idle),
-            (EngineMode::NoRequest, EngineMode::Request(_)) => EngineMode::Starting(self.rpm_idle),
-            (EngineMode::NoRequest, _) => EngineMode::NoRequest,
-            (EngineMode::Starting(_), _) => EngineMode::Starting(self.rpm_idle),
-            (EngineMode::Stopping, _) => EngineMode::Stopping,
-            (EngineMode::Request(_), EngineMode::NoRequest) => EngineMode::Stopping,
-            (EngineMode::Request(r), EngineMode::Starting(_)) => {
-                EngineMode::Request(self.reshape(*r))
+            (EngineState::NoRequest, EngineState::Starting(_)) => {
+                EngineState::Starting(self.rpm_idle)
             }
-            (EngineMode::Request(_), EngineMode::Stopping) => EngineMode::Stopping,
-            (EngineMode::Request(_), EngineMode::Request(r)) => {
-                EngineMode::Request(self.reshape(*r))
+            (EngineState::NoRequest, EngineState::Request(_)) => {
+                EngineState::Starting(self.rpm_idle)
+            }
+            (EngineState::NoRequest, _) => EngineState::NoRequest,
+            (EngineState::Starting(_), _) => EngineState::Starting(self.rpm_idle),
+            (EngineState::Stopping, _) => EngineState::Stopping,
+            (EngineState::Request(_), EngineState::NoRequest) => EngineState::Stopping,
+            (EngineState::Request(r), EngineState::Starting(_)) => {
+                EngineState::Request(self.reshape(*r))
+            }
+            (EngineState::Request(_), EngineState::Stopping) => EngineState::Stopping,
+            (EngineState::Request(_), EngineState::Request(r)) => {
+                EngineState::Request(self.reshape(*r))
             }
         }
     }
@@ -175,14 +183,15 @@ impl Operand {
     ///
     /// This method determines the governor mode based on the current
     /// engine request and the actual engine mode.
-    pub fn governor_mode(&self) -> crate::core::EngineMode {
+    pub fn governor_mode(&self) -> crate::core::EngineState {
         let request = if self.state.engine_request == 0 {
-            core::EngineMode::NoRequest
+            core::EngineState::NoRequest
         } else {
-            core::EngineMode::Request(self.state.engine_request)
+            core::EngineState::Request(self.state.engine_request)
         };
 
-        self.governor.mode(&self.state.engine.mode(), &request)
+        self.governor
+            .mode(&self.state.engine_state_actual, &request)
     }
 
     /// Get the status of the machine.

@@ -268,12 +268,14 @@ impl super::J1939Unit for EngineManagementSystem {
                             match starter_mode {
                                 spn::EngineStarterMode::StarterActiveGearNotEngaged
                                 | spn::EngineStarterMode::StarterActiveGearEngaged => {
-                                    let _ = crate::core::EngineMode::Starting;
+                                    runtime_state.state.engine_state_actual =
+                                        crate::core::EngineState::Starting(0)
                                 }
                                 spn::EngineStarterMode::StartFinished => {
                                     if let Some(rpm) = controller.rpm {
                                         if rpm > 0 {
-                                            let _ = crate::core::EngineMode::Request(rpm);
+                                            runtime_state.state.engine_state_actual =
+                                                crate::core::EngineState::Request(rpm);
                                         }
                                     }
                                 }
@@ -284,9 +286,21 @@ impl super::J1939Unit for EngineManagementSystem {
                                 | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
                                 | spn::EngineStarterMode::StarterInhibitedOverHeat
                                 | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
-                                    let _ = crate::core::EngineMode::NoRequest;
+                                    runtime_state.state.engine_state_actual =
+                                        crate::core::EngineState::NoRequest;
                                 }
                                 _ => {}
+                            }
+                        } else if let Some(rpm) = controller.rpm {
+                            if rpm == 0 {
+                                runtime_state.state.engine_state_actual =
+                                    crate::core::EngineState::NoRequest;
+                            } else if rpm < 500 {
+                                runtime_state.state.engine_state_actual =
+                                    crate::core::EngineState::Starting(rpm);
+                            } else {
+                                runtime_state.state.engine_state_actual =
+                                    crate::core::EngineState::Request(rpm);
                             }
                         }
                     }
@@ -309,22 +323,22 @@ impl super::J1939Unit for EngineManagementSystem {
         runtime_state: crate::runtime::SharedOperandState,
     ) {
         match runtime_state.read().await.governor_mode() {
-            crate::core::EngineMode::NoRequest => {
+            crate::core::EngineState::NoRequest => {
                 if let Err(e) = router.inner().send(&self.torque_control(0)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Starting(rpm) => {
+            crate::core::EngineState::Starting(rpm) => {
                 if let Err(e) = router.inner().send(&self.start(rpm)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Stopping => {
+            crate::core::EngineState::Stopping => {
                 if let Err(e) = router.inner().send(&self.shutdown()).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
-            crate::core::EngineMode::Request(rpm) => {
+            crate::core::EngineState::Request(rpm) => {
                 if let Err(e) = router.inner().send(&self.torque_control(rpm)).await {
                     log::error!("Failed to speed request: {}", e);
                 }

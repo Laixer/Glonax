@@ -26,10 +26,9 @@ impl TryFrom<u8> for EngineStatus {
     }
 }
 
-// TODO: Rename to EngineState
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EngineMode {
-    /// Engine is shut down.
+pub enum EngineState {
+    /// Engine is shut down, ready to start.
     NoRequest,
     /// Engine is starting up.
     Starting(u16),
@@ -37,6 +36,12 @@ pub enum EngineMode {
     Stopping,
     /// Engine is running.
     Request(u16),
+}
+
+impl Default for EngineState {
+    fn default() -> Self {
+        Self::NoRequest
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,18 +54,6 @@ pub struct Engine {
     pub rpm: u16,
     /// Engine status.
     pub status: EngineStatus,
-}
-
-impl Engine {
-    pub fn mode(&self) -> EngineMode {
-        if self.rpm == 0 {
-            EngineMode::NoRequest
-        } else if self.rpm < 500 {
-            EngineMode::Starting(self.rpm)
-        } else {
-            EngineMode::Request(self.rpm)
-        }
-    }
 }
 
 impl Default for Engine {
