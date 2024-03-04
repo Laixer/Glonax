@@ -48,13 +48,12 @@ fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
 async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     use glonax::driver::{
         HydraulicControlUnit, J1939ApplicationInspector, J1939Message, KueblerEncoder,
-        KueblerInclinometer, VolvoEngineManagementSystem,
+        KueblerInclinometer, VolvoD7E,
     };
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 =
-        VolvoEngineManagementSystem::new(consts::J1939_ADDRESS_ENGINE0, consts::J1939_ADDRESS_OBDL);
+    let mut ems0 = VolvoD7E::new(consts::J1939_ADDRESS_ENGINE0, consts::J1939_ADDRESS_OBDL);
     let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0, consts::J1939_ADDRESS_OBDL);
     let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1, consts::J1939_ADDRESS_OBDL);
     let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2, consts::J1939_ADDRESS_OBDL);
@@ -69,7 +68,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 
         if let Some(message) = router.try_accept(&mut ems0) {
             match message {
-                glonax::driver::net::volvo_ems::EngineMessage::TorqueSpeedControl(control) => {
+                glonax::driver::EngineMessage::TorqueSpeedControl(control) => {
                     info!(
                         "{} {} {} » Torque speed control: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -78,7 +77,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         control
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::BrakeController1(controller) => {
+                glonax::driver::EngineMessage::BrakeController1(controller) => {
                     info!(
                         "{} {} {} » Brake controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -87,7 +86,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         controller
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::EngineController1(controller) => {
+                glonax::driver::EngineMessage::EngineController1(controller) => {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -96,7 +95,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         controller
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::EngineController2(controller) => {
+                glonax::driver::EngineMessage::EngineController2(controller) => {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -105,7 +104,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         controller
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::EngineController3(controller) => {
+                glonax::driver::EngineMessage::EngineController3(controller) => {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -114,7 +113,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         controller
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::FanDrive(fan) => {
+                glonax::driver::EngineMessage::FanDrive(fan) => {
                     info!(
                         "{} {} {} » Fan drive: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -123,7 +122,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         fan
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::VehicleDistance(distance) => {
+                glonax::driver::EngineMessage::VehicleDistance(distance) => {
                     info!(
                         "{} {} {} » Vehicle distance: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -132,7 +131,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         distance
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::Shutdown(shutdown) => {
+                glonax::driver::EngineMessage::Shutdown(shutdown) => {
                     info!(
                         "{} {} {} » Shutdown: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -141,7 +140,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         shutdown
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::EngineTemperature1(temperature) => {
+                glonax::driver::EngineMessage::EngineTemperature1(temperature) => {
                     info!(
                         "{} {} {} » Engine temperature: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -150,7 +149,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         temperature
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::EngineFluidLevelPressure1(fluid) => {
+                glonax::driver::EngineMessage::EngineFluidLevelPressure1(fluid) => {
                     info!(
                         "{} {} {} » Engine fluid level pressure: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -159,7 +158,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         fluid
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::FuelEconomy(economy) => {
+                glonax::driver::EngineMessage::FuelEconomy(economy) => {
                     info!(
                         "{} {} {} » Fuel economy: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -168,7 +167,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         economy
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::AmbientConditions(conditions) => {
+                glonax::driver::EngineMessage::AmbientConditions(conditions) => {
                     info!(
                         "{} {} {} » Ambient conditions: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -177,7 +176,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         conditions
                     );
                 }
-                glonax::driver::net::volvo_ems::EngineMessage::PowerTakeoffInformation(info) => {
+                glonax::driver::EngineMessage::PowerTakeoffInformation(info) => {
                     info!(
                         "{} {} {} » Power takeoff information: {}",
                         chrono::Utc::now().format("%T%.3f"),
@@ -680,10 +679,8 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::VolvoEngineManagementSystem::new(
-                destination_address,
-                consts::J1939_ADDRESS_OBDL,
-            );
+            let ems0 =
+                glonax::driver::VolvoD7E::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
             match command {
                 VCUCommand::Ident { toggle } => {
@@ -749,7 +746,7 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::VolvoEngineManagementSystem::new(
+            let ems0 = glonax::driver::VolvoD7E::new(
                 destination_address,
                 consts::J1939_ADDRESS_VOLVO_VECU,
             );

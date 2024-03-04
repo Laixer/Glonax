@@ -465,7 +465,7 @@ async fn rx_network(
                 NetDriver::KueblerInclinometer(imu) => {
                     imu.try_accept(&router, runtime_state.clone()).await;
                 }
-                NetDriver::VolvoEngineManagementSystem(ems) => {
+                NetDriver::VolvoD7E(ems) => {
                     ems.try_accept(&router, runtime_state.clone()).await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
@@ -509,7 +509,7 @@ async fn tx_network(
                 NetDriver::KueblerInclinometer(imu) => {
                     imu.tick(&router, runtime_state.clone()).await;
                 }
-                NetDriver::VolvoEngineManagementSystem(ems) => {
+                NetDriver::VolvoD7E(ems) => {
                     ems.tick(&router, runtime_state.clone()).await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {

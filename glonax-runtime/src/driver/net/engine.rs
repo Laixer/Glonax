@@ -19,14 +19,14 @@ pub enum EngineMessage {
 }
 
 #[derive(Default)]
-pub struct CumminsEngineManagementSystem {
+pub struct EngineManagementSystem {
     /// Destination address.
     destination_address: u8,
     /// Source address.
     source_address: u8,
 }
 
-impl CumminsEngineManagementSystem {
+impl EngineManagementSystem {
     /// Construct a new engine management system.
     pub fn new(da: u8, sa: u8) -> Self {
         Self {
@@ -96,7 +96,7 @@ impl CumminsEngineManagementSystem {
     }
 }
 
-impl Parsable<EngineMessage> for CumminsEngineManagementSystem {
+impl Parsable<EngineMessage> for EngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
         match frame.id().pgn() {
             PGN::TorqueSpeedControl1 => Some(EngineMessage::TorqueSpeedControl(
@@ -215,7 +215,7 @@ impl Parsable<EngineMessage> for CumminsEngineManagementSystem {
     }
 }
 
-impl super::J1939Unit for CumminsEngineManagementSystem {
+impl super::J1939Unit for EngineManagementSystem {
     async fn try_accept(
         &mut self,
         router: &crate::net::Router,
