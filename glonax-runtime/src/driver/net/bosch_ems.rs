@@ -36,27 +36,25 @@ impl BoschEngineManagementSystem {
     }
 
     /// Request torque control
-    pub fn torque_control(&self, rpm: u16) -> Frame {
-        let frame_builder = FrameBuilder::new(
+    pub fn speed_control(&self, rpm: u16) -> Frame {
+        FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
                 .priority(3)
                 .da(self.destination_address)
                 .sa(self.source_address)
                 .build(),
-        );
-
-        frame_builder
-            .copy_from_slice(
-                &spn::TorqueSpeedControl1Message {
-                    override_control_mode: Some(spn::OverrideControlMode::SpeedControl),
-                    speed_control_condition: None,
-                    control_mode_priority: None,
-                    speed: Some(rpm),
-                    torque: None,
-                }
-                .to_pdu(),
-            )
-            .build()
+        )
+        .copy_from_slice(
+            &spn::TorqueSpeedControl1Message {
+                override_control_mode: Some(spn::OverrideControlMode::SpeedControl),
+                speed_control_condition: None,
+                control_mode_priority: None,
+                speed: Some(rpm),
+                torque: None,
+            }
+            .to_pdu(),
+        )
+        .build()
     }
 
     // TODO: Rename to 'brake'.
@@ -275,7 +273,7 @@ impl super::J1939Unit for BoschEngineManagementSystem {
     ) {
         match runtime_state.read().await.governor_mode() {
             crate::core::EngineState::NoRequest => {
-                if let Err(e) = router.inner().send(&self.torque_control(0)).await {
+                if let Err(e) = router.inner().send(&self.speed_control(0)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
@@ -285,7 +283,7 @@ impl super::J1939Unit for BoschEngineManagementSystem {
                 }
             }
             crate::core::EngineState::Starting(rpm) | crate::core::EngineState::Request(rpm) => {
-                if let Err(e) = router.inner().send(&self.torque_control(rpm)).await {
+                if let Err(e) = router.inner().send(&self.speed_control(rpm)).await {
                     log::error!("Failed to speed request: {}", e);
                 }
             }
