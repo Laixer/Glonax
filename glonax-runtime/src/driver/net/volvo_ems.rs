@@ -142,18 +142,43 @@ impl VolvoEngineManagementSystem {
 
     // TODO: Rename to 'brake'.
     pub fn shutdown(&self) -> Frame {
+        // frame_builder.as_mut()[3] = 0b0001_0000;
+
         // TODO: Make this a J1939 message
-        let mut frame_builder = FrameBuilder::new(
+        FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ElectronicBrakeController1)
                 .priority(3)
                 .da(self.destination_address)
                 .sa(self.source_address)
                 .build(),
-        );
-
-        frame_builder.as_mut()[3] = 0b0001_0000;
-
-        frame_builder.set_len(PDU_MAX_LENGTH).build()
+        )
+        .copy_from_slice(
+            &spn::ElectronicBrakeController1Message {
+                asr_engine_control_active: None,
+                asr_brake_control_active: None,
+                abs_active: None,
+                ebs_brake_switch: None,
+                brake_pedal_position: None,
+                abs_off_road_switch: None,
+                asr_off_road_switch: None,
+                asr_hill_holder_switch: None,
+                traction_control_override_switch: None,
+                accelerator_interlock_switch: None,
+                engine_derate_switch: None,
+                auxiliary_engine_shutdown_switch: Some(true),
+                remote_accelerator_enable_switch: None,
+                engine_retarder_selection: None,
+                abs_fully_operational: None,
+                ebs_red_warning_signal: None,
+                abs_ebs_amber_warning_signal: None,
+                atc_asr_information_signal: None,
+                source_address: None,
+                trailer_abs_status: None,
+                tractor_mounted_trailer_abs_warning_signal: None,
+            }
+            .to_pdu(),
+        )
+        .build()
     }
 }
 
