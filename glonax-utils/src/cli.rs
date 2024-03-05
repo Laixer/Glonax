@@ -233,9 +233,16 @@ async fn main() -> anyhow::Result<()> {
                 parts.next();
 
                 let control = match parts.next() {
-                    Some("idle") => glonax::core::Control::EngineRequest(700),
-                    Some("medium") => glonax::core::Control::EngineRequest(1500),
-                    Some("high") => glonax::core::Control::EngineRequest(1900),
+                    Some("i1") => glonax::core::Control::EngineRequest(800),
+                    Some("i2") => glonax::core::Control::EngineRequest(1000),
+                    Some("f1") => glonax::core::Control::EngineRequest(1200),
+                    Some("f2") => glonax::core::Control::EngineRequest(1300),
+                    Some("f3") => glonax::core::Control::EngineRequest(1400),
+                    Some("g1") => glonax::core::Control::EngineRequest(1500),
+                    Some("g2") => glonax::core::Control::EngineRequest(1600),
+                    Some("g3") => glonax::core::Control::EngineRequest(1700),
+                    Some("h") => glonax::core::Control::EngineRequest(1800),
+                    Some("p") => glonax::core::Control::EngineRequest(1900),
                     Some("shutdown") => glonax::core::Control::EngineShutdown,
                     _ => {
                         eprintln!("Invalid engine command");
