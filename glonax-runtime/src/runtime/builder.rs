@@ -24,7 +24,7 @@ impl<Cnf: Clone> Builder<Cnf> {
             instance: instance.clone(),
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
                 state: crate::MachineState::default(),
-                governor: crate::Governor::new(700, 2_100), // TODO: Remove hardcoded values, use config
+                governor: crate::Governor::new(800, 2_100), // TODO: Remove hardcoded values, use config
             })),
             motion_tx,
             motion_rx: Some(motion_rx),

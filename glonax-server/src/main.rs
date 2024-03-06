@@ -152,32 +152,83 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
         }
 
-        // TODO: Drivers may not match the configuration.
-        let j1939_drivers_can0_rx = vec![
-            NetDriver::kuebler_encoder(config.j1939[0].driver[0].id, config.j1939[0].address),
-            NetDriver::kuebler_encoder(config.j1939[0].driver[1].id, config.j1939[0].address),
-            NetDriver::kuebler_encoder(config.j1939[0].driver[2].id, config.j1939[0].address),
-            NetDriver::kuebler_encoder(config.j1939[0].driver[3].id, config.j1939[0].address),
-            NetDriver::kuebler_inclinometer(config.j1939[0].driver[4].id, config.j1939[0].address),
-            NetDriver::request_responder(config.j1939[0].address),
-        ];
+        let mut j1939_drivers_can0_rx = vec![NetDriver::request_responder(config.j1939[0].address)];
 
-        let j1939_drivers_can1_rx = vec![
-            NetDriver::volvo_d7e(config.j1939[1].driver[0].id, 0x11),
-            NetDriver::hydraulic_control_unit(
-                config.j1939[1].driver[1].id,
-                config.j1939[1].address,
-            ),
-            NetDriver::request_responder(config.j1939[1].address),
-        ];
+        for driver in &config.j1939[0].driver {
+            if driver.driver_type == "kuebler_encoder" {
+                log::debug!(
+                    "J1939 driver {} with address 0x{:X} ",
+                    driver.driver_type,
+                    driver.id
+                );
 
-        let j1939_drivers_can1_tx = vec![
-            NetDriver::volvo_d7e(config.j1939[1].driver[0].id, 0x11),
-            NetDriver::hydraulic_control_unit(
-                config.j1939[1].driver[1].id,
-                config.j1939[1].address,
-            ),
-        ];
+                j1939_drivers_can0_rx.push(NetDriver::kuebler_encoder(
+                    driver.id,
+                    config.j1939[0].address,
+                ));
+            } else if driver.driver_type == "kuebler_inclinometer" {
+                log::debug!(
+                    "J1939 driver {} with address 0x{:X} ",
+                    driver.driver_type,
+                    driver.id
+                );
+
+                j1939_drivers_can0_rx.push(NetDriver::kuebler_inclinometer(
+                    driver.id,
+                    config.j1939[0].address,
+                ));
+            }
+        }
+
+        let mut j1939_drivers_can1_rx = vec![NetDriver::request_responder(config.j1939[1].address)];
+
+        for driver in &config.j1939[1].driver {
+            if driver.driver_type == "volvo_d7e" {
+                log::debug!(
+                    "J1939 driver {} with address 0x{:X} ",
+                    driver.driver_type,
+                    driver.id
+                );
+
+                j1939_drivers_can1_rx.push(NetDriver::volvo_d7e(driver.id, 0x11));
+            } else if driver.driver_type == "hydraulic_control_unit" {
+                log::debug!(
+                    "J1939 driver {} with address 0x{:X} ",
+                    driver.driver_type,
+                    driver.id
+                );
+
+                j1939_drivers_can1_rx.push(NetDriver::hydraulic_control_unit(
+                    driver.id,
+                    config.j1939[1].address,
+                ));
+            }
+        }
+
+        let mut j1939_drivers_can1_tx = vec![];
+
+        for driver in &config.j1939[1].driver {
+            if driver.driver_type == "volvo_d7e" {
+                log::debug!(
+                    "J1939 driver {} with address 0x{:X} ",
+                    driver.driver_type,
+                    driver.id
+                );
+
+                j1939_drivers_can1_tx.push(NetDriver::volvo_d7e(driver.id, 0x11));
+            } else if driver.driver_type == "hydraulic_control_unit" {
+                log::debug!(
+                    "J1939 driver {} with address 0x{:X} ",
+                    driver.driver_type,
+                    driver.id
+                );
+
+                j1939_drivers_can1_tx.push(NetDriver::hydraulic_control_unit(
+                    driver.id,
+                    config.j1939[1].address,
+                ));
+            }
+        }
 
         runtime.schedule_j1939_service_rx(j1939_drivers_can0_rx, &config.j1939[0].interface);
         runtime.schedule_j1939_service_rx(j1939_drivers_can1_rx, &config.j1939[1].interface);
