@@ -237,7 +237,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.j1939[1].interface);
     }
 
-    runtime.schedule_io_func(server::tcp_listen);
+    if config.tcp_server.is_some() {
+        runtime.schedule_io_func(server::tcp_listen);
+    }
     runtime.schedule_io_func(server::unix_listen);
     // runtime.schedule_io_service::<service::TcpServer, service::TcpServerConfig>(
     //     config.tcp_server.clone(),

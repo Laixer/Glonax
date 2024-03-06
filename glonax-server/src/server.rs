@@ -188,10 +188,12 @@ pub(super) async fn tcp_listen(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    let service = ServiceErrorBuilder::new("tcp_server", config.tcp_server.listen.clone());
+    let tcp_server_config = config.tcp_server.clone().unwrap();
 
-    log::debug!("Listening on: {}", config.tcp_server.listen);
-    let listener = TcpListener::bind(config.tcp_server.listen.clone())
+    let service = ServiceErrorBuilder::new("tcp_server", tcp_server_config.listen.clone());
+
+    log::debug!("Listening on: {}", tcp_server_config.listen);
+    let listener = TcpListener::bind(tcp_server_config.listen.clone())
         .await
         .map_err(|e| service.io_error(e))?;
 
