@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
     let mut config: config::Config = glonax::from_file(args.config)?;
 
     if args.simulation {
-        config.simulation.enabled = true;
+        config.is_simulation = true;
     }
     if args.pilot_only {
         config.mode = config::OperationMode::PilotRestrict;
@@ -122,7 +122,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         log::warn!("Instance ID is not set or invalid");
     }
 
-    if config.simulation.enabled {
+    if config.is_simulation {
         log::info!("Running in simulation mode");
     }
 
@@ -136,7 +136,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         Duration::from_millis(config.host.interval.clamp(10, 1_000)),
     );
 
-    if config.simulation.enabled {
+    if config.is_simulation {
         runtime.schedule_service::<service::EncoderSimulator, glonax::runtime::NullConfig>(
             glonax::runtime::NullConfig,
             Duration::from_millis(5),

@@ -1,8 +1,5 @@
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct SimulationConfig {
-    /// Enable simulation mode.
-    #[serde(default)]
-    pub enabled: bool,
     /// Enable simulation jitter.
     pub jitter: bool,
 }
@@ -80,7 +77,11 @@ pub struct MachineConfig {
 
 #[derive(Clone, Debug, serde_derive::Deserialize)]
 pub struct Config {
+    /// Mode of operation.
     pub mode: OperationMode,
+    /// Enable simulation mode.
+    #[serde(default)]
+    pub is_simulation: bool,
     /// Machine instance.
     pub machine: MachineConfig,
     /// NMEA configuration.
@@ -88,7 +89,7 @@ pub struct Config {
     /// Host configuration.
     pub host: glonax::service::HostConfig,
     /// Simulation configuration.
-    pub simulation: SimulationConfig,
+    pub simulation: Option<SimulationConfig>,
     /// TCP Server configuration.
     pub tcp_server: Option<glonax::service::TcpServerConfig>,
     /// J1939 network configuration.
