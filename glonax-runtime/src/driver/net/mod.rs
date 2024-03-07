@@ -10,6 +10,16 @@ pub(super) mod vecraft;
 pub mod volvo_ems;
 mod volvo_vecu;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NetDriverConfig {
+    /// Destination address.
+    pub destination: u8,
+    /// Source address.
+    pub source: u8,
+    /// Driver type.
+    pub driver_type: String,
+}
+
 pub enum NetDriver {
     KueblerEncoder(super::KueblerEncoder),
     KueblerInclinometer(super::KueblerInclinometer),
@@ -20,35 +30,37 @@ pub enum NetDriver {
 }
 
 impl NetDriver {
-    pub fn kuebler_encoder(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
-        crate::driver::net::NetDriver::KueblerEncoder(crate::driver::KueblerEncoder::new(
-            address,
-            vms_address,
-        ))
-    }
-
-    pub fn kuebler_inclinometer(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
-        crate::driver::net::NetDriver::KueblerInclinometer(crate::driver::KueblerInclinometer::new(
-            address,
-            vms_address,
-        ))
-    }
-
-    pub fn volvo_d7e(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
-        crate::driver::net::NetDriver::VolvoD7E(crate::driver::VolvoD7E::new(address, vms_address))
-    }
-
-    // TODO: Renamw ro laixer_hcu
-    pub fn hydraulic_control_unit(address: u8, vms_address: u8) -> crate::driver::net::NetDriver {
-        crate::driver::net::NetDriver::HydraulicControlUnit(
-            crate::driver::HydraulicControlUnit::new(address, vms_address),
-        )
-    }
-
     pub fn request_responder(address: u8) -> crate::driver::net::NetDriver {
         crate::driver::net::NetDriver::RequestResponder(crate::driver::RequestResponder::new(
             address,
         ))
+    }
+}
+
+impl TryFrom<NetDriverConfig> for NetDriver {
+    // type Error = crate::Error;
+    type Error = ();
+
+    fn try_from(config: NetDriverConfig) -> Result<Self, Self::Error> {
+        match config.driver_type.as_str() {
+            "kuebler_encoder" => Ok(NetDriver::KueblerEncoder(
+                crate::driver::KueblerEncoder::new(config.destination, config.source),
+            )),
+            "kuebler_inclinometer" => Ok(NetDriver::KueblerInclinometer(
+                crate::driver::KueblerInclinometer::new(config.destination, config.source),
+            )),
+            "volvo_d7e" => Ok(NetDriver::VolvoD7E(crate::driver::VolvoD7E::new(
+                config.destination,
+                config.source,
+            ))),
+            "hydraulic_control_unit" => Ok(NetDriver::HydraulicControlUnit(
+                crate::driver::HydraulicControlUnit::new(config.destination, config.source),
+            )),
+            "request_responder" => Ok(NetDriver::RequestResponder(
+                crate::driver::RequestResponder::new(config.source),
+            )),
+            _ => Err(()),
+        }
     }
 }
 
