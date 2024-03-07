@@ -152,73 +152,47 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
         }
 
-        let mut j1939_drivers_can0_rx = config.j1939[0]
-            .driver
-            .iter()
-            .map(|driver| {
-                let net_driver_config = glonax::driver::net::NetDriverConfig {
-                    driver_type: driver.driver_type.clone(),
-                    destination: driver.id,
-                    source: config.j1939[0].address,
-                };
+        let mut net0_rx =
+            glonax::runtime::ControlNetwork::with_request_responder(config.j1939[0].address);
 
-                log::debug!(
-                    "J1939 driver {} with address 0x{:X} ",
-                    driver.driver_type,
-                    driver.id
-                );
+        for driver in &config.j1939[0].driver {
+            let net_driver_config = glonax::driver::net::NetDriverConfig {
+                driver_type: driver.driver_type.clone(),
+                destination: driver.id,
+                source: config.j1939[0].address,
+            };
 
-                NetDriver::try_from(net_driver_config).unwrap()
-            })
-            .collect::<Vec<NetDriver>>();
+            net0_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+        }
 
-        j1939_drivers_can0_rx.push(NetDriver::request_responder(config.j1939[0].address));
+        let mut net1_rx =
+            glonax::runtime::ControlNetwork::with_request_responder(config.j1939[1].address);
 
-        let mut j1939_drivers_can1_rx = config.j1939[1]
-            .driver
-            .iter()
-            .map(|driver| {
-                let net_driver_config = glonax::driver::net::NetDriverConfig {
-                    driver_type: driver.driver_type.clone(),
-                    destination: driver.id,
-                    source: config.j1939[1].address,
-                };
+        for driver in &config.j1939[1].driver {
+            let net_driver_config = glonax::driver::net::NetDriverConfig {
+                driver_type: driver.driver_type.clone(),
+                destination: driver.id,
+                source: config.j1939[1].address,
+            };
 
-                log::debug!(
-                    "J1939 driver {} with address 0x{:X} ",
-                    driver.driver_type,
-                    driver.id
-                );
+            net1_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+        }
 
-                NetDriver::try_from(net_driver_config).unwrap()
-            })
-            .collect::<Vec<NetDriver>>();
+        let mut net1_tx = glonax::runtime::ControlNetwork::new(config.j1939[1].address);
 
-        j1939_drivers_can1_rx.push(NetDriver::request_responder(config.j1939[1].address));
+        for driver in &config.j1939[1].driver {
+            let net_driver_config = glonax::driver::net::NetDriverConfig {
+                driver_type: driver.driver_type.clone(),
+                destination: driver.id,
+                source: config.j1939[1].address,
+            };
 
-        let j1939_drivers_can1_tx = config.j1939[1]
-            .driver
-            .iter()
-            .map(|driver| {
-                let net_driver_config = glonax::driver::net::NetDriverConfig {
-                    driver_type: driver.driver_type.clone(),
-                    destination: driver.id,
-                    source: config.j1939[1].address,
-                };
+            net1_tx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+        }
 
-                log::debug!(
-                    "J1939 driver {} with address 0x{:X} ",
-                    driver.driver_type,
-                    driver.id
-                );
-
-                NetDriver::try_from(net_driver_config).unwrap()
-            })
-            .collect::<Vec<NetDriver>>();
-
-        runtime.schedule_j1939_service_rx(j1939_drivers_can0_rx, &config.j1939[0].interface);
-        runtime.schedule_j1939_service_rx(j1939_drivers_can1_rx, &config.j1939[1].interface);
-        runtime.schedule_j1939_service_tx(j1939_drivers_can1_tx, &config.j1939[1].interface);
+        runtime.schedule_j1939_service_rx(net0_rx, &config.j1939[0].interface);
+        runtime.schedule_j1939_service_rx(net1_rx, &config.j1939[1].interface);
+        runtime.schedule_j1939_service_tx(net1_tx, &config.j1939[1].interface);
 
         runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.j1939[1].interface);
     }

@@ -20,6 +20,31 @@ pub mod builder;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
 
+pub struct ControlNetwork {
+    pub default_source_address: u8,
+    pub network: Vec<NetDriver>,
+}
+
+impl ControlNetwork {
+    pub fn new(default_source_address: u8) -> Self {
+        Self {
+            default_source_address,
+            network: vec![],
+        }
+    }
+
+    pub fn with_request_responder(address: u8) -> Self {
+        Self {
+            default_source_address: address,
+            network: vec![NetDriver::request_responder(address)],
+        }
+    }
+
+    pub fn register_driver(&mut self, driver: NetDriver) {
+        self.network.push(driver);
+    }
+}
+
 pub struct ServiceContext {
     /// Service name.
     name: String,
@@ -218,25 +243,25 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the operand and the interface name.
-    pub fn schedule_j1939_service_rx(&self, network: Vec<NetDriver>, interface: &str) {
+    pub fn schedule_j1939_service_rx(&self, network: ControlNetwork, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
         let shutdown = self.shutdown.0.subscribe();
 
         tokio::spawn(async move {
-            if let Err(e) = rx_network(network, interface, operand, shutdown).await {
+            if let Err(e) = rx_network(network.network, interface, operand, shutdown).await {
                 log::error!("Failed to start network service: {}", e);
             }
         });
     }
 
-    pub fn schedule_j1939_service_tx(&self, network: Vec<NetDriver>, interface: &str) {
+    pub fn schedule_j1939_service_tx(&self, network: ControlNetwork, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
         let shutdown = self.shutdown.0.subscribe();
 
         tokio::spawn(async move {
-            if let Err(e) = tx_network(network, interface, operand, shutdown).await {
+            if let Err(e) = tx_network(network.network, interface, operand, shutdown).await {
                 log::error!("Failed to start network service: {}", e);
             }
         });
