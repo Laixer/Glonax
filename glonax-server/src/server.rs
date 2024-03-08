@@ -132,11 +132,19 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     match control {
                         glonax::core::Control::EngineRequest(rpm) => {
                             log::info!("Engine request RPM: {}", rpm);
-                            runtime_state.write().await.state.engine_request = Some(rpm);
+                            runtime_state.write().await.state.engine_state_request =
+                                Some(glonax::core::EngineRequest {
+                                    speed: rpm,
+                                    state: glonax::core::EngineState::Request,
+                                });
                         }
                         glonax::core::Control::EngineShutdown => {
                             log::info!("Engine shutdown");
-                            runtime_state.write().await.state.engine_request = Some(0);
+                            runtime_state.write().await.state.engine_state_request =
+                                Some(glonax::core::EngineRequest {
+                                    speed: 0,
+                                    state: glonax::core::EngineState::NoRequest,
+                                });
                         }
 
                         glonax::core::Control::HydraulicQuickDisconnect(on) => {
@@ -160,12 +168,12 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         glonax::core::Control::MachineHorn(on) => {
                             log::info!("Machine horn: {}", on);
                         }
-                        _ => {}
                     }
                 } else {
                     log::warn!("Client is not authorized to control the machine");
                 }
             }
+            _ => {}
         }
     }
 
