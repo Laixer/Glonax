@@ -93,12 +93,16 @@ pub struct MachineState {
     pub engine_state_actual: core::EngineRequest,
     /// Engine state request.
     pub engine_state_request: Option<core::EngineRequest>,
+    /// Engine state request instant.
+    pub engine_state_request_instant: Option<std::time::Instant>,
     /// Hydraulic quick disconnect.
     pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct
     /// Hydraulic lock.
     pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct
     /// Motion data.
     pub motion: core::Motion,
+    /// Motion instant.
+    pub motion_instant: Option<std::time::Instant>,
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here
     /// Robot as an actor.

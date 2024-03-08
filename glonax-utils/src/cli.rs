@@ -59,9 +59,11 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", address);
 
-    let (mut client, instance) = glonax::protocol::client::tcp::connect(
+    let (mut client, instance) = glonax::protocol::client::tcp::connect_with(
         address.to_owned(),
         format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
+        true,
+        false,
     )
     .await?;
 
