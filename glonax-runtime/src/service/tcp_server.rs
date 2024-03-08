@@ -170,11 +170,11 @@ impl TcpServer {
 
                             log::info!("Engine request RPM: {}", rpm);
 
-                            runtime_state.write().await.state.engine_request = rpm;
+                            runtime_state.write().await.state.engine_request = Some(rpm);
                         }
                         crate::core::Control::EngineShutdown => {
                             log::info!("Engine shutdown");
-                            runtime_state.write().await.state.engine_request = 0;
+                            runtime_state.write().await.state.engine_request = Some(0);
                         }
                         crate::core::Control::HydraulicQuickDisconnect(on) => {
                             log::info!("Hydraulic quick disconnect: {}", on);
@@ -184,7 +184,7 @@ impl TcpServer {
                         }
                         crate::core::Control::MachineShutdown => {
                             log::info!("Machine shutdown");
-                            runtime_state.write().await.state.engine_request = 0;
+                            runtime_state.write().await.state.engine_request = Some(0);
                             // runtime_state.write().await.state.engine.shutdown();
                         }
                         crate::core::Control::MachineIllumination(on) => {

@@ -130,11 +130,11 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
                         log::info!("Engine request RPM: {}", rpm);
 
-                        runtime_state.write().await.state.engine_request = rpm;
+                        runtime_state.write().await.state.engine_request = Some(rpm);
                     }
                     glonax::core::Control::EngineShutdown => {
                         log::info!("Engine shutdown");
-                        runtime_state.write().await.state.engine_request = 0;
+                        runtime_state.write().await.state.engine_request = Some(0);
                     }
 
                     glonax::core::Control::HydraulicQuickDisconnect(on) => {

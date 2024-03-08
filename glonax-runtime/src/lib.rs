@@ -94,7 +94,7 @@ pub struct MachineState {
     /// Engine state request.
     pub engine_state_request: core::EngineRequest,
     /// Engine requested RPM.
-    pub engine_request: u16, // TODO: Move into engine request struct
+    pub engine_request: Option<u16>, // TODO: Move into engine request struct
     /// Hydraulic quick disconnect.
     pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct
     /// Hydraulic lock.
@@ -207,20 +207,24 @@ impl Operand {
     /// This method determines the governor mode based on the current
     /// engine request and the actual engine mode.
     pub fn governor_mode(&self) -> crate::core::EngineRequest {
-        let request = if self.state.engine_request == 0 {
-            core::EngineRequest {
-                speed: 0,
-                state: core::EngineState::NoRequest,
-            }
-        } else {
-            core::EngineRequest {
-                speed: self.state.engine_request,
-                state: core::EngineState::Request,
-            }
-        };
+        if let Some(engine_request) = self.state.engine_request {
+            let request = if engine_request == 0 {
+                core::EngineRequest {
+                    speed: 0,
+                    state: core::EngineState::NoRequest,
+                }
+            } else {
+                core::EngineRequest {
+                    speed: engine_request,
+                    state: core::EngineState::Request,
+                }
+            };
 
-        self.governor
-            .next_state(&self.state.engine_state_actual, &request)
+            self.governor
+                .next_state(&self.state.engine_state_actual, &request)
+        } else {
+            self.state.engine_state_actual
+        }
     }
 
     /// Get the status of the machine.
