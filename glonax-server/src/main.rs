@@ -158,8 +158,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         for driver in &config.j1939[0].driver {
             let net_driver_config = glonax::driver::net::NetDriverConfig {
                 driver_type: driver.driver_type.clone(),
-                destination: driver.id,
-                source: config.j1939[0].address,
+                destination: driver.da,
+                source: driver.sa.unwrap_or(config.j1939[0].address),
             };
 
             net0_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
@@ -171,8 +171,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         for driver in &config.j1939[1].driver {
             let net_driver_config = glonax::driver::net::NetDriverConfig {
                 driver_type: driver.driver_type.clone(),
-                destination: driver.id,
-                source: config.j1939[1].address,
+                destination: driver.da,
+                source: driver.sa.unwrap_or(config.j1939[0].address),
             };
 
             net1_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
@@ -183,8 +183,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         for driver in &config.j1939[1].driver {
             let net_driver_config = glonax::driver::net::NetDriverConfig {
                 driver_type: driver.driver_type.clone(),
-                destination: driver.id,
-                source: config.j1939[1].address,
+                destination: driver.da,
+                source: driver.sa.unwrap_or(config.j1939[0].address),
             };
 
             net1_tx.register_driver(NetDriver::try_from(net_driver_config).unwrap());

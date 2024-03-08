@@ -32,8 +32,10 @@ pub struct J1939NetConfig {
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct CanDriverConfig {
-    /// Driver identifier.
-    pub id: u8,
+    /// Driver destination.
+    pub da: u8,
+    /// Driver source.
+    pub sa: Option<u8>,
     /// Driver type.
     #[serde(rename = "type")]
     pub driver_type: String,
