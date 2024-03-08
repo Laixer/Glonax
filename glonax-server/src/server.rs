@@ -116,7 +116,11 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .await
                     .unwrap();
 
-                runtime_state.write().await.state.program.push_back(target);
+                if session.is_control() {
+                    runtime_state.write().await.state.program.push_back(target);
+                } else {
+                    log::warn!("Client is not authorized to queue targets");
+                }
             }
             glonax::core::Control::MESSAGE_TYPE => {
                 let control = client
@@ -124,43 +128,44 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .await
                     .unwrap();
 
-                match control {
-                    glonax::core::Control::EngineRequest(rpm) => {
-                        let rpm = rpm.clamp(0, 2_100);
+                if session.is_control() {
+                    match control {
+                        glonax::core::Control::EngineRequest(rpm) => {
+                            log::info!("Engine request RPM: {}", rpm);
+                            runtime_state.write().await.state.engine_request = Some(rpm);
+                        }
+                        glonax::core::Control::EngineShutdown => {
+                            log::info!("Engine shutdown");
+                            runtime_state.write().await.state.engine_request = Some(0);
+                        }
 
-                        log::info!("Engine request RPM: {}", rpm);
+                        glonax::core::Control::HydraulicQuickDisconnect(on) => {
+                            log::info!("Hydraulic quick disconnect: {}", on);
+                            runtime_state.write().await.state.hydraulic_quick_disconnect = on;
+                        }
+                        glonax::core::Control::HydraulicLock(on) => {
+                            log::info!("Hydraulic lock: {}", on);
+                            runtime_state.write().await.state.hydraulic_lock = on;
+                        }
 
-                        runtime_state.write().await.state.engine_request = Some(rpm);
+                        glonax::core::Control::MachineShutdown => {
+                            log::info!("Machine shutdown");
+                        }
+                        glonax::core::Control::MachineIllumination(on) => {
+                            log::info!("Machine illumination: {}", on);
+                        }
+                        glonax::core::Control::MachineLights(on) => {
+                            log::info!("Machine lights: {}", on);
+                        }
+                        glonax::core::Control::MachineHorn(on) => {
+                            log::info!("Machine horn: {}", on);
+                        }
+                        _ => {}
                     }
-                    glonax::core::Control::EngineShutdown => {
-                        log::info!("Engine shutdown");
-                        runtime_state.write().await.state.engine_request = Some(0);
-                    }
-
-                    glonax::core::Control::HydraulicQuickDisconnect(on) => {
-                        log::info!("Hydraulic quick disconnect: {}", on);
-                        runtime_state.write().await.state.hydraulic_quick_disconnect = on;
-                    }
-                    glonax::core::Control::HydraulicLock(on) => {
-                        log::info!("Hydraulic lock: {}", on);
-                        runtime_state.write().await.state.hydraulic_lock = on;
-                    }
-
-                    glonax::core::Control::MachineShutdown => {
-                        log::info!("Machine shutdown");
-                    }
-                    glonax::core::Control::MachineIllumination(on) => {
-                        log::info!("Machine illumination: {}", on);
-                    }
-                    glonax::core::Control::MachineLights(on) => {
-                        log::info!("Machine lights: {}", on);
-                    }
-                    glonax::core::Control::MachineHorn(on) => {
-                        log::info!("Machine horn: {}", on);
-                    }
+                } else {
+                    log::warn!("Client is not authorized to control the machine");
                 }
             }
-            _ => {}
         }
     }
 

@@ -15,8 +15,6 @@ impl<Cnf: Clone> Builder<Cnf> {
     ///
     /// Note that this method is certain to block.
     pub fn new(config: &Cnf, instance: crate::core::Instance) -> super::Result<Self> {
-        use tokio::sync::broadcast;
-
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(Runtime::<Cnf> {
@@ -28,7 +26,7 @@ impl<Cnf: Clone> Builder<Cnf> {
             })),
             motion_tx,
             motion_rx: Some(motion_rx),
-            shutdown: broadcast::channel(1),
+            shutdown: tokio::sync::broadcast::channel(1),
         }))
     }
 
