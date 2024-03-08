@@ -111,6 +111,7 @@ pub struct MachineState {
     pub ecu_state: driver::VirtualHCU,
 }
 
+// TODO: Accept the first state from the network
 struct Governor {
     /// Default engine speed.
     rpm_idle: u16,

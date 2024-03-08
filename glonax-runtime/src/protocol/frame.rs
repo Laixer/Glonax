@@ -132,6 +132,7 @@ impl Session {
     pub const MODE_CONTROL: u8 = 0b0000_0010;
     pub const MODE_FAILSAFE: u8 = 0b0001_0000;
 
+    // TODO: Convert mode to enum
     pub fn new(mode: u8, name: String) -> Self {
         Self {
             flags: mode,

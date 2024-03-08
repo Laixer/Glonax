@@ -256,9 +256,12 @@ impl super::J1939Unit for EngineManagementSystem {
                                 }
                                 spn::EngineStarterMode::StartFinished => {
                                     if let Some(rpm) = controller.rpm {
-                                        if rpm > 0 {
+                                        if rpm > 500 {
                                             runtime_state.state.engine_state_actual.state =
                                                 crate::core::EngineState::Request;
+                                        } else if rpm > 0 {
+                                            runtime_state.state.engine_state_actual.state =
+                                                crate::core::EngineState::NoRequest;
                                         }
                                     }
                                 }
