@@ -302,7 +302,6 @@ impl super::J1939Unit for EngineManagementSystem {
         }
     }
 
-    // FUTURE: Optimize
     async fn tick(
         &self,
         router: &crate::net::Router,

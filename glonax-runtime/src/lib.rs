@@ -208,12 +208,22 @@ impl Operand {
     /// This method determines the governor mode based on the current
     /// engine request and the actual engine mode.
     pub fn governor_mode(&self) -> crate::core::EngineRequest {
-        self.state
+        let mut request = self
+            .state
             .engine_state_request
-            .map_or(self.state.engine_state_actual, |request| {
-                self.governor
-                    .next_state(&self.state.engine_state_actual, &request)
-            })
+            .unwrap_or(self.state.engine_state_actual);
+
+        if let Some(last_update) = self.state.motion_instant {
+            if last_update.elapsed() < std::time::Duration::from_secs(30) {
+                request = core::EngineRequest {
+                    speed: request.speed.max(1500),
+                    state: crate::core::EngineState::Request,
+                };
+            }
+        }
+
+        self.governor
+            .next_state(&self.state.engine_state_actual, &request)
     }
 
     /// Get the status of the machine.

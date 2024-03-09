@@ -106,8 +106,14 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         log::error!("Failed to send motion: {}", e);
                         break;
                     }
-                    runtime_state.write().await.state.motion_instant =
-                        Some(std::time::Instant::now());
+
+                    let state = &mut runtime_state.write().await.state;
+                    // state.engine_state_request = Some(glonax::core::EngineRequest {
+                    //     speed: 1_500,
+                    //     state: glonax::core::EngineState::Request,
+                    // });
+                    // state.engine_state_request_instant = Some(std::time::Instant::now());
+                    state.motion_instant = Some(std::time::Instant::now());
                 } else {
                     log::warn!("Client is not authorized to send motion");
                 }

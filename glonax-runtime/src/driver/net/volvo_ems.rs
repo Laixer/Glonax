@@ -120,7 +120,6 @@ impl super::J1939Unit for VolvoD7E {
         self.ems.try_accept(router, runtime_state).await;
     }
 
-    // FUTURE: Optimize
     async fn tick(
         &self,
         router: &crate::net::Router,
