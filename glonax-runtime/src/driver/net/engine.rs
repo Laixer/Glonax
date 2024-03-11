@@ -17,6 +17,7 @@ pub enum EngineMessage {
     AmbientConditions(spn::AmbientConditionsMessage),
     PowerTakeoffInformation(spn::PowerTakeoffInformationMessage),
     TankInformation1(spn::TankInformation1Message),
+    VehicleElectricalPower(spn::VehicleElectricalPowerMessage),
 }
 
 #[derive(Default)]
@@ -219,6 +220,15 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 
                 Some(EngineMessage::TankInformation1(
                     spn::TankInformation1Message::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::VehicleElectricalPower1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::VehicleElectricalPower(
+                    spn::VehicleElectricalPowerMessage::from_pdu(frame.pdu()),
                 ))
             }
             _ => None,

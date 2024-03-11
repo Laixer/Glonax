@@ -194,6 +194,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         info
                     );
                 }
+                glonax::driver::EngineMessage::VehicleElectricalPower(power) => {
+                    info!(
+                        "{} {} {} » Vehicle electrical power: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        power
+                    );
+                }
             }
         } else if let Some(message) = router.try_accept(&mut enc2) {
             info!(
