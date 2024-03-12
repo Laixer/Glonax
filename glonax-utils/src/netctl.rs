@@ -332,6 +332,16 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         time
                     );
                 }
+                J1939Message::ActiveDiagnosticTroubleCodes(diagnostic) => {
+                    info!(
+                        "{} {} {} » Active diagnostic trouble codes: SPN: {} FMI {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("J1939"),
+                        diagnostic.suspect_parameter_number,
+                        diagnostic.failure_mode_identifier
+                    );
+                }
                 J1939Message::ProprietaryB(data) => {
                     debug!(
                         "{} {} {} » Proprietary B: {:02X?}",
