@@ -20,6 +20,7 @@ pub enum EngineMessage {
     VehicleElectricalPower(spn::VehicleElectricalPowerMessage),
 }
 
+// TODO: Implement Engine trait
 #[derive(Default)]
 pub struct EngineManagementSystem {
     /// Destination address.

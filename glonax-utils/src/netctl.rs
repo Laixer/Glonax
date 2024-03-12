@@ -601,6 +601,10 @@ enum RequestCommand {
     Vehicle,
     /// Request unit time and date.
     Time,
+    /// Request previous diagnostic trouble codes.
+    PreviousDiagnostic,
+    /// Clear diagnostic trouble codes.
+    ClearDiagnostic,
 }
 
 #[derive(clap::Subcommand)]
@@ -869,9 +873,13 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 = glonax::driver::VolvoD7E::new(
+            // let ems0 = glonax::driver::VolvoD7E::new(
+            //     destination_address,
+            //     consts::J1939_ADDRESS_VOLVO_VECU,
+            // );
+            let ems0 = glonax::driver::net::engine::EngineManagementSystem::new(
                 destination_address,
-                consts::J1939_ADDRESS_VOLVO_VECU,
+                consts::J1939_ADDRESS_OBDL,
             );
 
             match command {
@@ -885,7 +893,7 @@ async fn main() -> anyhow::Result<()> {
                         tick.tick().await;
                         socket
                             .send(&ems0.speed_control(
-                                glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
+                                // glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
                                 rpm,
                             ))
                             .await?;
@@ -901,7 +909,7 @@ async fn main() -> anyhow::Result<()> {
                         tick.tick().await;
                         socket
                             .send(&ems0.speed_control(
-                                glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
+                                // glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
                                 700,
                             ))
                             .await?;
@@ -917,7 +925,7 @@ async fn main() -> anyhow::Result<()> {
                         tick.tick().await;
                         socket
                             .send(&ems0.speed_control(
-                                glonax::driver::net::volvo_ems::VolvoEngineState::Shutdown,
+                                // glonax::driver::net::volvo_ems::VolvoEngineState::Shutdown,
                                 700,
                             ))
                             .await?;
@@ -941,6 +949,8 @@ async fn main() -> anyhow::Result<()> {
                 RequestCommand::Component => PGN::ComponentIdentification,
                 RequestCommand::Vehicle => PGN::VehicleIdentification,
                 RequestCommand::Time => PGN::TimeDate,
+                RequestCommand::PreviousDiagnostic => PGN::DiagnosticMessage2,
+                RequestCommand::ClearDiagnostic => PGN::DiagnosticMessage3,
             };
 
             info!("{} Request {:?}", style_address(destination_address), pgn);
