@@ -9,7 +9,6 @@ use clap::{Parser, ValueHint};
 mod components;
 mod config;
 mod device;
-mod j1939;
 mod server;
 
 #[derive(Parser)]
@@ -152,6 +151,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
         }
 
+        // TODO: Check if RX,TX,ATX services should be scheduled.
         for j1939_net_config in &config.j1939 {
             let mut net_rx =
                 glonax::runtime::ControlNetwork::with_request_responder(j1939_net_config.address);
@@ -186,7 +186,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         let j1939_index = 1;
         if j1939_index < config.j1939.len() {
             runtime.schedule_j1939_motion_service(
-                j1939::atx_network_1,
+                glonax::runtime::atx_network_1,
                 &config.j1939[j1939_index].interface,
             );
         }

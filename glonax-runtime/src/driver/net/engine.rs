@@ -240,6 +240,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 impl super::J1939Unit for EngineManagementSystem {
     async fn try_accept(
         &mut self,
+        _state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
@@ -315,32 +316,35 @@ impl super::J1939Unit for EngineManagementSystem {
 
     async fn tick(
         &self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        let request = runtime_state.read().await.governor_mode();
-        match request.state {
-            crate::core::EngineState::NoRequest => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.speed_control(request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+        if state == &super::J1939UnitOperationState::Running {
+            let request = runtime_state.read().await.governor_mode();
+            match request.state {
+                crate::core::EngineState::NoRequest => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.speed_control(request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Stopping => {
-                if let Err(e) = router.inner().send(&self.brake_control()).await {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Stopping => {
+                    if let Err(e) = router.inner().send(&self.brake_control()).await {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Starting | crate::core::EngineState::Request => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.speed_control(request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Starting | crate::core::EngineState::Request => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.speed_control(request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
             }
         }

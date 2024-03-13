@@ -44,6 +44,7 @@ impl Parsable<PGN> for RequestResponder {
 impl super::J1939Unit for RequestResponder {
     async fn try_accept(
         &mut self,
+        _state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) {

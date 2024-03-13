@@ -28,37 +28,41 @@ impl Parsable<EngineMessage> for BoschEngineManagementSystem {
 impl super::J1939Unit for BoschEngineManagementSystem {
     async fn try_accept(
         &mut self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        self.ems.try_accept(router, runtime_state).await;
+        self.ems.try_accept(state, router, runtime_state).await;
     }
 
     // FUTURE: Optimize
     async fn tick(
         &self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        let request = runtime_state.read().await.governor_mode();
-        match request.state {
-            crate::core::EngineState::NoRequest => {
-                if let Err(e) = router.inner().send(&self.ems.speed_control(0)).await {
-                    log::error!("Failed to speed request: {}", e);
+        if state == &super::J1939UnitOperationState::Running {
+            let request = runtime_state.read().await.governor_mode();
+            match request.state {
+                crate::core::EngineState::NoRequest => {
+                    if let Err(e) = router.inner().send(&self.ems.speed_control(0)).await {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Stopping => {
-                if let Err(e) = router.inner().send(&self.ems.brake_control()).await {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Stopping => {
+                    if let Err(e) = router.inner().send(&self.ems.brake_control()).await {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Starting | crate::core::EngineState::Request => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.ems.speed_control(request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Starting | crate::core::EngineState::Request => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.ems.speed_control(request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
             }
         }

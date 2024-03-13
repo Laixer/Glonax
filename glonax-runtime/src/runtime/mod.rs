@@ -445,7 +445,7 @@ async fn rx_network(
     runtime_state: SharedOperandState,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
-    use crate::driver::net::J1939Unit;
+    use crate::driver::net::{J1939Unit, J1939UnitOperationState};
 
     /// J1939 name manufacturer code.
     const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
@@ -477,30 +477,75 @@ async fn rx_network(
         .send(&j1939::protocol::address_claimed(0x27, name))
         .await?;
 
+    let state = J1939UnitOperationState::Setup;
+    for driver in network.iter_mut() {
+        match driver {
+            NetDriver::KueblerEncoder(enc) => {
+                enc.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::KueblerInclinometer(imu) => {
+                imu.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::VolvoD7E(ems) => {
+                ems.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::HydraulicControlUnit(hcu) => {
+                hcu.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::RequestResponder(rrp) => {
+                rrp.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            _ => {}
+        }
+    }
+
     while shutdown.is_empty() {
         if let Err(e) = router.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }
 
+        let state = J1939UnitOperationState::Running;
         for driver in network.iter_mut() {
             match driver {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.try_accept(&router, runtime_state.clone()).await;
+                    enc.try_accept(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.try_accept(&router, runtime_state.clone()).await;
+                    imu.try_accept(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    ems.try_accept(&router, runtime_state.clone()).await;
+                    ems.try_accept(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.try_accept(&router, runtime_state.clone()).await;
+                    hcu.try_accept(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.try_accept(&router, runtime_state.clone()).await;
+                    rrp.try_accept(&state, &router, runtime_state.clone()).await;
                 }
                 _ => {}
             }
+        }
+    }
+
+    let state = J1939UnitOperationState::Teardown;
+    for driver in network.iter_mut() {
+        match driver {
+            NetDriver::KueblerEncoder(enc) => {
+                enc.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::KueblerInclinometer(imu) => {
+                imu.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::VolvoD7E(ems) => {
+                ems.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::HydraulicControlUnit(hcu) => {
+                hcu.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            NetDriver::RequestResponder(rrp) => {
+                rrp.try_accept(&state, &router, runtime_state.clone()).await;
+            }
+            _ => {}
         }
     }
 
@@ -514,7 +559,7 @@ async fn tx_network(
     runtime_state: SharedOperandState,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 ) -> std::io::Result<()> {
-    use crate::driver::net::J1939Unit;
+    use crate::driver::net::{J1939Unit, J1939UnitOperationState};
 
     log::debug!("Starting J1939 service on {}", interface);
 
@@ -526,26 +571,57 @@ async fn tx_network(
     while shutdown.is_empty() {
         interval.tick().await;
 
+        let state = J1939UnitOperationState::Running;
         for driver in network.iter_mut() {
             match driver {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.tick(&router, runtime_state.clone()).await;
+                    enc.tick(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.tick(&router, runtime_state.clone()).await;
+                    imu.tick(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    ems.tick(&router, runtime_state.clone()).await;
+                    ems.tick(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.tick(&router, runtime_state.clone()).await;
+                    hcu.tick(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.tick(&router, runtime_state.clone()).await;
+                    rrp.tick(&state, &router, runtime_state.clone()).await;
                 }
                 _ => {}
             }
         }
+    }
+
+    Ok(())
+}
+
+// TODO: Turn into service
+pub async fn atx_network_1(
+    interface: String,
+    runtime_state: SharedOperandState,
+    mut motion_rx: MotionReceiver,
+) -> std::io::Result<()> {
+    use crate::driver::net::{J1939Unit, J1939UnitOperationState};
+
+    log::debug!("Starting J1939 ATX service on {}", interface);
+
+    /// Vehicle Management System J1939 address.
+    const J1939_ADDRESS_VMS: u8 = 0x27;
+    /// Hydraulic Control Unit 0 J1939 address.
+    const J1939_ADDRESS_HCU0: u8 = 0x4a;
+
+    let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&interface))?;
+    let router = crate::net::Router::new(socket);
+
+    let hcu0 = crate::driver::HydraulicControlUnit::new(J1939_ADDRESS_HCU0, J1939_ADDRESS_VMS);
+
+    let state = J1939UnitOperationState::Running;
+    while let Some(motion) = motion_rx.recv().await {
+        runtime_state.write().await.state.motion = motion.clone();
+
+        hcu0.tick(&state, &router, runtime_state.clone()).await;
     }
 
     Ok(())

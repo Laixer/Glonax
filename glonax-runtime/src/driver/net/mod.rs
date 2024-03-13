@@ -64,14 +64,35 @@ impl TryFrom<NetDriverConfig> for NetDriver {
     }
 }
 
-// FUTURE: Maybe move to runtime?
+/// Operational states for a J1939 unit.
+///
+/// A unit can transition between these states during its lifetime,
+/// however, the order of the states is fixed. The unit will always
+/// start in the `Setup` state and end in the `Teardown` state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum J1939UnitOperationState {
+    /// The unit is in the setup phase.
+    Setup,
+    /// The unit is running.
+    Running,
+    /// The unit is in the teardown phase.
+    Teardown,
+}
+
+// FUTURE: Maybe move to runtime or a network module?
 pub trait J1939Unit {
     /// Try to accept a message from the router.
     ///
     /// This method will try to accept a message from the router. If the router has a message
-    /// available, the message will be parsed and the unit will be updated accordingly.
+    /// available, the message will be parsed and the unit will be updated accordingly. This
+    /// method should be non-blocking and should only perform asynchronous I/O operations.
+    ///
+    /// It is advised to use the `try_accept` method, as opposed to the `tick` method, to handle
+    /// unit setup and teardown. Do not perform any actual work in the `setup` and `teardown`
+    /// methods, as they can cause network congestion and slow down the system.
     fn try_accept(
         &mut self,
+        state: &J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = ()> + Send;
@@ -85,6 +106,7 @@ pub trait J1939Unit {
     /// This method is optional and may be a no-op.
     fn tick(
         &self,
+        _state: &J1939UnitOperationState,
         _router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = ()> + Send {

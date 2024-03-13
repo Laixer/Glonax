@@ -180,15 +180,18 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
 impl super::J1939Unit for KueblerEncoder {
     async fn try_accept(
         &mut self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        if let Some(message) = router.try_accept(self) {
-            if let Ok(mut runtime_state) = runtime_state.try_write() {
-                runtime_state
-                    .state
-                    .encoders
-                    .insert(message.source_address, message.position as f32);
+        if state == &super::J1939UnitOperationState::Running {
+            if let Some(message) = router.try_accept(self) {
+                if let Ok(mut runtime_state) = runtime_state.try_write() {
+                    runtime_state
+                        .state
+                        .encoders
+                        .insert(message.source_address, message.position as f32);
+                }
             }
         }
     }

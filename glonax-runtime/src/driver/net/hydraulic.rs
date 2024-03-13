@@ -378,36 +378,61 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
 impl super::J1939Unit for HydraulicControlUnit {
     async fn try_accept(
         &mut self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        if let Some(message) = router.try_accept(self) {
-            if let Ok(_runtime_state) = runtime_state.try_write() {
-                match message {
-                    HydraulicMessage::Actuator(_actuator) => {
-                        // runtime_state.state.actuators.insert(
-                        //     (self.destination_address, self.source_address),
-                        //     actuator.actuators,
-                        // );
+        match state {
+            super::J1939UnitOperationState::Setup => {
+                log::debug!("Hydraulic control unit setup");
+
+                if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
+                    log::error!("Failed to send motion: {}", e);
+                }
+                if let Err(e) = router.inner().send_vectored(&self.set_ident(true)).await {
+                    log::error!("Failed to send config: {}", e);
+                }
+                if let Err(e) = router.inner().send_vectored(&self.set_ident(false)).await {
+                    log::error!("Failed to send config: {}", e);
+                }
+            }
+            super::J1939UnitOperationState::Running => {
+                if let Some(message) = router.try_accept(self) {
+                    if let Ok(_runtime_state) = runtime_state.try_write() {
+                        match message {
+                            HydraulicMessage::Actuator(_actuator) => {
+                                // runtime_state.state.actuators.insert(
+                                //     (self.destination_address, self.source_address),
+                                //     actuator.actuators,
+                                // );
+                            }
+                            HydraulicMessage::MotionConfig(_config) => {
+                                // runtime_state
+                                //     .state
+                                //     .motion_config
+                                //     .insert((self.destination_address, self.source_address), config);
+                            }
+                            HydraulicMessage::VecraftConfig(_config) => {
+                                // runtime_state
+                                //     .state
+                                //     .vecraft_config
+                                //     .insert((self.destination_address, self.source_address), config);
+                            }
+                            HydraulicMessage::Status(_status) => {
+                                // runtime_state
+                                //     .state
+                                //     .hcu_status
+                                //     .insert((self.destination_address, self.source_address), status);
+                            }
+                        }
                     }
-                    HydraulicMessage::MotionConfig(_config) => {
-                        // runtime_state
-                        //     .state
-                        //     .motion_config
-                        //     .insert((self.destination_address, self.source_address), config);
-                    }
-                    HydraulicMessage::VecraftConfig(_config) => {
-                        // runtime_state
-                        //     .state
-                        //     .vecraft_config
-                        //     .insert((self.destination_address, self.source_address), config);
-                    }
-                    HydraulicMessage::Status(_status) => {
-                        // runtime_state
-                        //     .state
-                        //     .hcu_status
-                        //     .insert((self.destination_address, self.source_address), status);
-                    }
+                }
+            }
+            super::J1939UnitOperationState::Teardown => {
+                log::debug!("Hydraulic control unit teardown");
+
+                if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
+                    log::error!("Failed to send motion: {}", e);
                 }
             }
         }
@@ -416,41 +441,44 @@ impl super::J1939Unit for HydraulicControlUnit {
     // FUTURE: Optimize
     async fn tick(
         &self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        match &runtime_state.read().await.state.motion {
-            crate::core::Motion::StopAll => {
-                if let Err(e) = router.inner().send_vectored(&self.lock()).await {
-                    log::error!("Failed to send motion: {}", e);
+        if state == &super::J1939UnitOperationState::Running {
+            match &runtime_state.read().await.state.motion {
+                crate::core::Motion::StopAll => {
+                    if let Err(e) = router.inner().send_vectored(&self.lock()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
-            }
-            crate::core::Motion::ResumeAll => {
-                if let Err(e) = router.inner().send_vectored(&self.unlock()).await {
-                    log::error!("Failed to send motion: {}", e);
+                crate::core::Motion::ResumeAll => {
+                    if let Err(e) = router.inner().send_vectored(&self.unlock()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
-            }
-            crate::core::Motion::ResetAll => {
-                if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
-                    log::error!("Failed to send motion: {}", e);
+                crate::core::Motion::ResetAll => {
+                    if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
-            }
-            crate::core::Motion::StraightDrive(value) => {
-                let frames = &self.drive_straight(*value);
-                if let Err(e) = router.inner().send_vectored(frames).await {
-                    log::error!("Failed to send motion: {}", e);
+                crate::core::Motion::StraightDrive(value) => {
+                    let frames = &self.drive_straight(*value);
+                    if let Err(e) = router.inner().send_vectored(frames).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
-            }
-            crate::core::Motion::Change(changes) => {
-                let frames = &self.actuator_command(
-                    changes
-                        .iter()
-                        .map(|changeset| (changeset.actuator as u8, changeset.value))
-                        .collect(),
-                );
+                crate::core::Motion::Change(changes) => {
+                    let frames = &self.actuator_command(
+                        changes
+                            .iter()
+                            .map(|changeset| (changeset.actuator as u8, changeset.value))
+                            .collect(),
+                    );
 
-                if let Err(e) = router.inner().send_vectored(frames).await {
-                    log::error!("Failed to send motion: {}", e);
+                    if let Err(e) = router.inner().send_vectored(frames).await {
+                        log::error!("Failed to send motion: {}", e);
+                    }
                 }
             }
         }

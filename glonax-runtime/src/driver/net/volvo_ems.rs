@@ -114,53 +114,57 @@ impl Parsable<EngineMessage> for VolvoD7E {
 impl super::J1939Unit for VolvoD7E {
     async fn try_accept(
         &mut self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        self.ems.try_accept(router, runtime_state).await;
+        self.ems.try_accept(state, router, runtime_state).await;
     }
 
     async fn tick(
         &self,
+        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        let request = runtime_state.read().await.governor_mode();
-        match request.state {
-            crate::core::EngineState::NoRequest => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+        if state == &super::J1939UnitOperationState::Running {
+            let request = runtime_state.read().await.governor_mode();
+            match request.state {
+                crate::core::EngineState::NoRequest => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Starting => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.speed_control(VolvoEngineState::Starting, request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Starting => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.speed_control(VolvoEngineState::Starting, request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Stopping => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.speed_control(VolvoEngineState::Shutdown, request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Stopping => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.speed_control(VolvoEngineState::Shutdown, request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
-            }
-            crate::core::EngineState::Request => {
-                if let Err(e) = router
-                    .inner()
-                    .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
-                    .await
-                {
-                    log::error!("Failed to speed request: {}", e);
+                crate::core::EngineState::Request => {
+                    if let Err(e) = router
+                        .inner()
+                        .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
+                        .await
+                    {
+                        log::error!("Failed to speed request: {}", e);
+                    }
                 }
             }
         }
