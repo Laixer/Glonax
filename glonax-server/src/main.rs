@@ -152,49 +152,44 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
         }
 
-        let mut net0_rx =
-            glonax::runtime::ControlNetwork::with_request_responder(config.j1939[0].address);
+        for j1939_net_config in &config.j1939 {
+            let mut net_rx =
+                glonax::runtime::ControlNetwork::with_request_responder(j1939_net_config.address);
 
-        for driver in &config.j1939[0].driver {
-            let net_driver_config = glonax::driver::net::NetDriverConfig {
-                driver_type: driver.driver_type.clone(),
-                destination: driver.da,
-                source: driver.sa.unwrap_or(config.j1939[0].address),
-            };
+            for driver in &j1939_net_config.driver {
+                let net_driver_config = glonax::driver::net::NetDriverConfig {
+                    driver_type: driver.driver_type.clone(),
+                    destination: driver.da,
+                    source: driver.sa.unwrap_or(j1939_net_config.address),
+                };
 
-            net0_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+                net_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+            }
+
+            runtime.schedule_j1939_service_rx(net_rx, &j1939_net_config.interface);
+
+            let mut net_tx = glonax::runtime::ControlNetwork::new(j1939_net_config.address);
+
+            for driver in &j1939_net_config.driver {
+                let net_driver_config = glonax::driver::net::NetDriverConfig {
+                    driver_type: driver.driver_type.clone(),
+                    destination: driver.da,
+                    source: driver.sa.unwrap_or(j1939_net_config.address),
+                };
+
+                net_tx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+            }
+
+            runtime.schedule_j1939_service_tx(net_tx, &j1939_net_config.interface);
         }
 
-        let mut net1_rx =
-            glonax::runtime::ControlNetwork::with_request_responder(config.j1939[1].address);
-
-        for driver in &config.j1939[1].driver {
-            let net_driver_config = glonax::driver::net::NetDriverConfig {
-                driver_type: driver.driver_type.clone(),
-                destination: driver.da,
-                source: driver.sa.unwrap_or(config.j1939[0].address),
-            };
-
-            net1_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
+        let j1939_index = 1;
+        if j1939_index < config.j1939.len() {
+            runtime.schedule_j1939_motion_service(
+                j1939::atx_network_1,
+                &config.j1939[j1939_index].interface,
+            );
         }
-
-        let mut net1_tx = glonax::runtime::ControlNetwork::new(config.j1939[1].address);
-
-        for driver in &config.j1939[1].driver {
-            let net_driver_config = glonax::driver::net::NetDriverConfig {
-                driver_type: driver.driver_type.clone(),
-                destination: driver.da,
-                source: driver.sa.unwrap_or(config.j1939[0].address),
-            };
-
-            net1_tx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
-        }
-
-        runtime.schedule_j1939_service_rx(net0_rx, &config.j1939[0].interface);
-        runtime.schedule_j1939_service_rx(net1_rx, &config.j1939[1].interface);
-        runtime.schedule_j1939_service_tx(net1_tx, &config.j1939[1].interface);
-
-        runtime.schedule_j1939_motion_service(j1939::atx_network_1, &config.j1939[1].interface);
     }
 
     if config.tcp_server.is_some() {
