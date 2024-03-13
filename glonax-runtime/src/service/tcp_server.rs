@@ -24,6 +24,21 @@ impl TcpServerConfig {
     }
 }
 
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
+pub struct UnixServerConfig {
+    /// Unix domain socket path to listen on.
+    pub path: std::path::PathBuf,
+    /// Maximum number of connections.
+    #[serde(default = "UnixServerConfig::default_max_connections")]
+    pub max_connections: usize,
+}
+
+impl UnixServerConfig {
+    fn default_max_connections() -> usize {
+        10
+    }
+}
+
 pub struct TcpServer {
     config: TcpServerConfig,
 }

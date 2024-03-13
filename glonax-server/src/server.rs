@@ -256,7 +256,7 @@ pub(super) async fn tcp_listen(
 }
 
 pub(super) async fn unix_listen(
-    _config: crate::config::Config,
+    config: crate::config::Config,
     instance: glonax::core::Instance,
     runtime_state: SharedOperandState,
     motion_sender: MotionSender,
@@ -269,18 +269,20 @@ pub(super) async fn unix_listen(
         glonax::consts::NETWORK_MAX_CLIENTS,
     ));
 
-    let unix_path = glonax::consts::DEFAULT_SOCKET_PATH;
+    let unix_server_config = config.unix_server.clone().unwrap();
 
-    let service = ServiceErrorBuilder::new("unix_server", unix_path.to_string());
+    let path = unix_server_config.path.as_path();
 
-    if std::path::Path::new(unix_path).exists() {
-        std::fs::remove_file(unix_path).map_err(|e| service.io_error(e))?;
+    let service = ServiceErrorBuilder::new("unix_server", path.display());
+
+    if path.exists() {
+        std::fs::remove_file(path).map_err(|e| service.io_error(e))?;
     }
 
-    log::debug!("Listening on: {}", unix_path);
-    let listener = UnixListener::bind(unix_path).map_err(|e| service.io_error(e))?;
+    log::debug!("Listening on: {}", path.display());
+    let listener = UnixListener::bind(path).map_err(|e| service.io_error(e))?;
 
-    tokio::fs::set_permissions(unix_path, std::fs::Permissions::from_mode(0o777))
+    tokio::fs::set_permissions(path, std::fs::Permissions::from_mode(0o777))
         .await
         .map_err(|e| service.io_error(e))?;
 

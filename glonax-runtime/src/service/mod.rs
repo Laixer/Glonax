@@ -4,7 +4,7 @@ pub use engine::EngineSimulator;
 pub use gnss::{Gnss, GnssConfig};
 pub use host::{Host, HostConfig};
 pub use pipeline::Pipeline;
-pub use tcp_server::{TcpServer, TcpServerConfig};
+pub use tcp_server::{TcpServer, TcpServerConfig, UnixServerConfig};
 
 mod announcer;
 mod encoder;

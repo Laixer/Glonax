@@ -113,7 +113,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     );
 
     log::info!("Starting {}", bin_name);
-    log::debug!("Runtime version: {}", glonax::consts::VERSION);
+    log::info!("Runtime version: {}", glonax::consts::VERSION);
     log::info!("Running in operation mode: {}", config.mode);
     log::info!("{}", instance);
 
