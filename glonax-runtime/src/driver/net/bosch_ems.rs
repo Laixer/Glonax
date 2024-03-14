@@ -19,6 +19,20 @@ impl BoschEngineManagementSystem {
     }
 }
 
+impl super::engine::Engine for BoschEngineManagementSystem {
+    fn request(&self, speed: u16) -> Frame {
+        self.ems.request(speed)
+    }
+
+    fn start(&self, speed: u16) -> Frame {
+        self.ems.speed_control(speed)
+    }
+
+    fn stop(&self, _speed: u16) -> Frame {
+        self.ems.brake_control()
+    }
+}
+
 impl Parsable<EngineMessage> for BoschEngineManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
         self.ems.parse(frame)
@@ -35,32 +49,12 @@ impl super::J1939Unit for BoschEngineManagementSystem {
         self.ems.try_accept(state, router, runtime_state).await;
     }
 
-    // FUTURE: Optimize
     async fn tick(
         &self,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        if state == &super::J1939UnitOperationState::Running {
-            let request = runtime_state.read().await.governor_mode();
-            match request.state {
-                crate::core::EngineState::NoRequest => {
-                    if let Err(e) = router.send(&self.ems.speed_control(0)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
-                }
-                crate::core::EngineState::Stopping => {
-                    if let Err(e) = router.send(&self.ems.brake_control()).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
-                }
-                crate::core::EngineState::Starting | crate::core::EngineState::Request => {
-                    if let Err(e) = router.send(&self.ems.speed_control(request.speed)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
-                }
-            }
-        }
+        self.ems.tick(state, router, runtime_state).await;
     }
 }

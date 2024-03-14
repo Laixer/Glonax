@@ -83,6 +83,20 @@ impl VolvoD7E {
     // }
 }
 
+impl super::engine::Engine for VolvoD7E {
+    fn request(&self, speed: u16) -> Frame {
+        self.speed_control(VolvoEngineState::Nominal, speed)
+    }
+
+    fn start(&self, speed: u16) -> Frame {
+        self.speed_control(VolvoEngineState::Starting, speed)
+    }
+
+    fn stop(&self, speed: u16) -> Frame {
+        self.speed_control(VolvoEngineState::Shutdown, speed)
+    }
+}
+
 impl Parsable<EngineMessage> for VolvoD7E {
     fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
         self.ems.parse(frame)
@@ -105,38 +119,28 @@ impl super::J1939Unit for VolvoD7E {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
+        use super::engine::Engine;
+
         if state == &super::J1939UnitOperationState::Running {
             let request = runtime_state.read().await.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    if let Err(e) = router
-                        .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
-                        .await
-                    {
+                    if let Err(e) = router.send(&self.request(request.speed)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }
                 crate::core::EngineState::Starting => {
-                    if let Err(e) = router
-                        .send(&self.speed_control(VolvoEngineState::Starting, request.speed))
-                        .await
-                    {
+                    if let Err(e) = router.send(&self.start(request.speed)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }
                 crate::core::EngineState::Stopping => {
-                    if let Err(e) = router
-                        .send(&self.speed_control(VolvoEngineState::Shutdown, request.speed))
-                        .await
-                    {
+                    if let Err(e) = router.send(&self.stop(request.speed)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }
                 crate::core::EngineState::Request => {
-                    if let Err(e) = router
-                        .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
-                        .await
-                    {
+                    if let Err(e) = router.send(&self.request(request.speed)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }
