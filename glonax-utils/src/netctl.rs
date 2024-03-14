@@ -158,6 +158,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         fluid
                     );
                 }
+                glonax::driver::EngineMessage::EngineFluidLevelPressure2(fluid) => {
+                    info!(
+                        "{} {} {} » Engine fluid level pressure: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        fluid
+                    );
+                }
                 glonax::driver::EngineMessage::FuelEconomy(economy) => {
                     info!(
                         "{} {} {} » Fuel economy: {}",
@@ -165,6 +174,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         economy
+                    );
+                }
+                glonax::driver::EngineMessage::FuelConsumption(consumption) => {
+                    info!(
+                        "{} {} {} » Fuel consumption: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        consumption
                     );
                 }
                 glonax::driver::EngineMessage::AmbientConditions(conditions) => {
@@ -201,6 +219,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         style_address(router.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         power
+                    );
+                }
+                glonax::driver::EngineMessage::InletExhaustConditions1(conditions) => {
+                    info!(
+                        "{} {} {} » Inlet exhaust conditions: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(router.frame_source().unwrap()),
+                        Yellow.bold().paint("Engine"),
+                        conditions
                     );
                 }
             }

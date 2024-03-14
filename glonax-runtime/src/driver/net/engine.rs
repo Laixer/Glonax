@@ -13,11 +13,14 @@ pub enum EngineMessage {
     Shutdown(spn::ShutdownMessage),
     EngineTemperature1(spn::EngineTemperature1Message),
     EngineFluidLevelPressure1(spn::EngineFluidLevelPressure1Message),
+    EngineFluidLevelPressure2(spn::EngineFluidLevelPressure2Message),
     FuelEconomy(spn::FuelEconomyMessage),
+    FuelConsumption(spn::FuelConsumptionMessage),
     AmbientConditions(spn::AmbientConditionsMessage),
     PowerTakeoffInformation(spn::PowerTakeoffInformationMessage),
     TankInformation1(spn::TankInformation1Message),
     VehicleElectricalPower(spn::VehicleElectricalPowerMessage),
+    InletExhaustConditions1(spn::InletExhaustConditions1Message),
 }
 
 // TODO: Implement Engine trait
@@ -187,6 +190,15 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
                     spn::EngineFluidLevelPressure1Message::from_pdu(frame.pdu()),
                 ))
             }
+            PGN::EngineFluidLevelPressure2 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::EngineFluidLevelPressure2(
+                    spn::EngineFluidLevelPressure2Message::from_pdu(frame.pdu()),
+                ))
+            }
             PGN::FuelEconomy => {
                 if frame.id().sa() != self.destination_address {
                     return None;
@@ -194,6 +206,15 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 
                 Some(EngineMessage::FuelEconomy(
                     spn::FuelEconomyMessage::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::FuelConsumption => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::FuelConsumption(
+                    spn::FuelConsumptionMessage::from_pdu(frame.pdu()),
                 ))
             }
             PGN::AmbientConditions => {
@@ -230,6 +251,15 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 
                 Some(EngineMessage::VehicleElectricalPower(
                     spn::VehicleElectricalPowerMessage::from_pdu(frame.pdu()),
+                ))
+            }
+            PGN::InletExhaustConditions1 => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(EngineMessage::InletExhaustConditions1(
+                    spn::InletExhaustConditions1Message::from_pdu(frame.pdu()),
                 ))
             }
             _ => None,

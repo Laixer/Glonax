@@ -510,9 +510,9 @@ checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
 name = "j1939"
-version = "0.1.27"
+version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3ee0d1664d21623a4da7f8f165b9b6623dc93d78b6364dfb725cbcc6781046"
+checksum = "18f1ce4a249267d7ad1ebe3214773342731f2f29f9e904892ef026a598860ae0"
 
 [[package]]
 name = "js-sys"
