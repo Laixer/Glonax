@@ -93,7 +93,10 @@ impl super::J1939Unit for KueblerInclinometer {
     ) {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!("Kubler inclinometer setup");
+                log::debug!(
+                    "[0x{:X}] Kubler inclinometer setup",
+                    self.destination_address
+                );
             }
             super::J1939UnitOperationState::Running => {
                 //     if let Some(_message) = router.try_accept(self) {
@@ -106,7 +109,10 @@ impl super::J1939Unit for KueblerInclinometer {
                 //     }
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!("Kubler inclinometer teardown");
+                log::debug!(
+                    "[0x{:X}] Kubler inclinometer teardown",
+                    self.destination_address
+                );
             }
         }
     }

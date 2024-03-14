@@ -276,7 +276,10 @@ impl super::J1939Unit for EngineManagementSystem {
     ) {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!("Engine management system setup");
+                log::debug!(
+                    "[0x{:X}] Engine management system setup",
+                    self.destination_address
+                );
             }
             &super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
@@ -349,7 +352,10 @@ impl super::J1939Unit for EngineManagementSystem {
                 }
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!("Engine management system teardown");
+                log::debug!(
+                    "[0x{:X}] Engine management system teardown",
+                    self.destination_address
+                );
             }
         }
     }
@@ -364,25 +370,17 @@ impl super::J1939Unit for EngineManagementSystem {
             let request = runtime_state.read().await.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    if let Err(e) = router
-                        .inner()
-                        .send(&self.speed_control(request.speed))
-                        .await
-                    {
+                    if let Err(e) = router.send(&self.speed_control(request.speed)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }
                 crate::core::EngineState::Stopping => {
-                    if let Err(e) = router.inner().send(&self.brake_control()).await {
+                    if let Err(e) = router.send(&self.brake_control()).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }
                 crate::core::EngineState::Starting | crate::core::EngineState::Request => {
-                    if let Err(e) = router
-                        .inner()
-                        .send(&self.speed_control(request.speed))
-                        .await
-                    {
+                    if let Err(e) = router.send(&self.speed_control(request.speed)).await {
                         log::error!("Failed to speed request: {}", e);
                     }
                 }

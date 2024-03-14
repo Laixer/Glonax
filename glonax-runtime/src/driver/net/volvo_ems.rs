@@ -132,7 +132,6 @@ impl super::J1939Unit for VolvoD7E {
             match request.state {
                 crate::core::EngineState::NoRequest => {
                     if let Err(e) = router
-                        .inner()
                         .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
                         .await
                     {
@@ -141,7 +140,6 @@ impl super::J1939Unit for VolvoD7E {
                 }
                 crate::core::EngineState::Starting => {
                     if let Err(e) = router
-                        .inner()
                         .send(&self.speed_control(VolvoEngineState::Starting, request.speed))
                         .await
                     {
@@ -150,7 +148,6 @@ impl super::J1939Unit for VolvoD7E {
                 }
                 crate::core::EngineState::Stopping => {
                     if let Err(e) = router
-                        .inner()
                         .send(&self.speed_control(VolvoEngineState::Shutdown, request.speed))
                         .await
                     {
@@ -159,7 +156,6 @@ impl super::J1939Unit for VolvoD7E {
                 }
                 crate::core::EngineState::Request => {
                     if let Err(e) = router
-                        .inner()
                         .send(&self.speed_control(VolvoEngineState::Nominal, request.speed))
                         .await
                     {

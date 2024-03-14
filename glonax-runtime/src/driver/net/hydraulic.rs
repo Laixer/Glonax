@@ -384,15 +384,18 @@ impl super::J1939Unit for HydraulicControlUnit {
     ) {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!("Hydraulic control unit setup");
+                log::debug!(
+                    "[0x{:X}] Hydraulic control unit setup",
+                    self.destination_address
+                );
 
-                if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
+                if let Err(e) = router.send_vectored(&self.motion_reset()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
-                if let Err(e) = router.inner().send_vectored(&self.set_ident(true)).await {
+                if let Err(e) = router.send_vectored(&self.set_ident(true)).await {
                     log::error!("Failed to send config: {}", e);
                 }
-                if let Err(e) = router.inner().send_vectored(&self.set_ident(false)).await {
+                if let Err(e) = router.send_vectored(&self.set_ident(false)).await {
                     log::error!("Failed to send config: {}", e);
                 }
             }
@@ -429,9 +432,12 @@ impl super::J1939Unit for HydraulicControlUnit {
                 }
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!("Hydraulic control unit teardown");
+                log::debug!(
+                    "[0x{:X}] Hydraulic control unit teardown",
+                    self.destination_address
+                );
 
-                if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
+                if let Err(e) = router.send_vectored(&self.motion_reset()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
@@ -448,23 +454,23 @@ impl super::J1939Unit for HydraulicControlUnit {
         if state == &super::J1939UnitOperationState::Running {
             match &runtime_state.read().await.state.motion {
                 crate::core::Motion::StopAll => {
-                    if let Err(e) = router.inner().send_vectored(&self.lock()).await {
+                    if let Err(e) = router.send_vectored(&self.lock()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
                 crate::core::Motion::ResumeAll => {
-                    if let Err(e) = router.inner().send_vectored(&self.unlock()).await {
+                    if let Err(e) = router.send_vectored(&self.unlock()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
                 crate::core::Motion::ResetAll => {
-                    if let Err(e) = router.inner().send_vectored(&self.motion_reset()).await {
+                    if let Err(e) = router.send_vectored(&self.motion_reset()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
                 crate::core::Motion::StraightDrive(value) => {
                     let frames = &self.drive_straight(*value);
-                    if let Err(e) = router.inner().send_vectored(frames).await {
+                    if let Err(e) = router.send_vectored(frames).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
@@ -476,7 +482,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             .collect(),
                     );
 
-                    if let Err(e) = router.inner().send_vectored(frames).await {
+                    if let Err(e) = router.send_vectored(frames).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }

@@ -186,7 +186,7 @@ impl super::J1939Unit for KueblerEncoder {
     ) {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!("Kubler encoder setup");
+                log::debug!("[0x{:X}] Kubler encoder setup", self.destination_address);
             }
             super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
@@ -199,7 +199,7 @@ impl super::J1939Unit for KueblerEncoder {
                 }
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!("Kubler encoder teardown");
+                log::debug!("[0x{:X}] Kubler encoder teardown", self.destination_address);
             }
         }
     }

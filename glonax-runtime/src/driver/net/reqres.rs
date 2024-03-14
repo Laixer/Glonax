@@ -61,7 +61,6 @@ impl super::J1939Unit for RequestResponder {
                         .build();
 
                     if let Err(e) = router
-                        .inner()
                         .send(&protocol::address_claimed(self.source_address, name))
                         .await
                     {
@@ -81,7 +80,7 @@ impl super::J1939Unit for RequestResponder {
                         .copy_from_slice(&[1, version_major, version_minor, version_patch, b'*'])
                         .build();
 
-                    if let Err(e) = router.inner().send(&frame).await {
+                    if let Err(e) = router.send(&frame).await {
                         log::error!("Failed to send software identification: {}", e);
                     }
                 }
@@ -106,7 +105,7 @@ impl super::J1939Unit for RequestResponder {
                         .copy_from_slice(&timedate.to_pdu())
                         .build();
 
-                    if let Err(e) = router.inner().send(&frame).await {
+                    if let Err(e) = router.send(&frame).await {
                         log::error!("Failed to send time date: {}", e);
                     }
                 }

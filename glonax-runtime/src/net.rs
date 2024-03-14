@@ -154,6 +154,18 @@ impl Router {
         &self.socket_list[0]
     }
 
+    /// Send a frame.
+    #[inline]
+    pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
+        self.socket_list[0].send(frame).await
+    }
+
+    /// Send a vector of frames.
+    #[inline]
+    pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
+        self.socket_list[0].send_vectored(frames).await
+    }
+
     /// Filter the frame based on PGN and address.
     ///
     /// Returns `true` if the frame is accepted. Returns `false` if the frame is not accepted.
