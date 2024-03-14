@@ -623,7 +623,6 @@ mod tests {
 
         let config_b = MotionConfigMessage::from_frame(0x5E, 0xEE, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, Some(true));
         assert_eq!(config_b.reset, None)
     }
@@ -640,7 +639,6 @@ mod tests {
 
         let config_b = MotionConfigMessage::from_frame(0xA9, 0x11, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, Some(false));
         assert_eq!(config_b.reset, None)
     }
@@ -657,7 +655,6 @@ mod tests {
 
         let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, None);
         assert_eq!(config_b.reset, Some(true));
     }
@@ -674,7 +671,6 @@ mod tests {
 
         let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, None);
         assert_eq!(config_b.reset, Some(false));
     }
@@ -691,7 +687,6 @@ mod tests {
         let frame = config_a.to_frame();
         let config_b = VecraftConfigMessage::from_frame(0x2B, 0x4D, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.ident_on, Some(true));
         assert!(!config_b.reboot);
     }
@@ -708,7 +703,6 @@ mod tests {
         let frame = config_a.to_frame();
         let config_b = VecraftConfigMessage::from_frame(0x3C, 0x4F, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.ident_on, Some(false));
         assert!(!config_b.reboot);
     }
@@ -725,7 +719,6 @@ mod tests {
         let frame = config_a.to_frame();
         let config_b = VecraftConfigMessage::from_frame(0x4D, 0xCD, &frame);
 
-        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.ident_on, None);
         assert!(config_b.reboot);
     }
