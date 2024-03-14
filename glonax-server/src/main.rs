@@ -127,7 +127,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     let mut runtime = glonax::runtime::builder(&config, instance.clone())?
         .with_shutdown()
-        .enqueue_startup_motion(glonax::core::Motion::ResetAll)
         .build();
 
     runtime.schedule_service::<service::Host, service::HostConfig>(
@@ -135,6 +134,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         Duration::from_millis(config.host.interval.clamp(10, 1_000)),
     );
 
+    // TODO: Do we need a simulator?
     if config.is_simulation {
         runtime.schedule_service::<service::EncoderSimulator, glonax::runtime::NullConfig>(
             glonax::runtime::NullConfig,
@@ -218,9 +218,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     runtime.run_interval(pipe, Duration::from_millis(10)).await;
 
-    log::debug!("Sending stop all motion to network");
-
-    runtime.enqueue_motion(glonax::core::Motion::StopAll).await;
+    log::debug!("Waiting for shutdown");
 
     // TODO: Shutdown all services and drivers.
 

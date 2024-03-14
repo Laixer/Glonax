@@ -184,14 +184,22 @@ impl super::J1939Unit for KueblerEncoder {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) {
-        if state == &super::J1939UnitOperationState::Running {
-            if let Some(message) = router.try_accept(self) {
-                if let Ok(mut runtime_state) = runtime_state.try_write() {
-                    runtime_state
-                        .state
-                        .encoders
-                        .insert(message.source_address, message.position as f32);
+        match state {
+            super::J1939UnitOperationState::Setup => {
+                log::debug!("Kubler encoder setup");
+            }
+            super::J1939UnitOperationState::Running => {
+                if let Some(message) = router.try_accept(self) {
+                    if let Ok(mut runtime_state) = runtime_state.try_write() {
+                        runtime_state
+                            .state
+                            .encoders
+                            .insert(message.source_address, message.position as f32);
+                    }
                 }
+            }
+            super::J1939UnitOperationState::Teardown => {
+                log::debug!("Kubler encoder teardown");
             }
         }
     }

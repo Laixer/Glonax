@@ -206,15 +206,12 @@ impl Operand {
     /// Get the governor mode for the engine.
     ///
     /// This method determines the governor mode based on the current
-    /// engine request,the actual engine mode and the last motion update.
+    /// engine request, the actual engine mode and the last motion update.
     ///
     /// If no engine state request is present, the governor will use the
     /// actual engine state, essentially maintaining the current state.
     pub fn governor_mode(&self) -> crate::core::EngineRequest {
-        let mut request = self
-            .state
-            .engine_state_request
-            .unwrap_or(self.state.engine_state_actual);
+        let mut request = self.state.engine_state_actual;
 
         if let Some(last_update) = self.state.motion_instant {
             if last_update.elapsed() < std::time::Duration::from_secs(30) {
@@ -223,6 +220,10 @@ impl Operand {
                     state: crate::core::EngineState::Request,
                 };
             }
+        }
+
+        if let Some(engine_state_request) = self.state.engine_state_request {
+            request = engine_state_request;
         }
 
         self.governor
