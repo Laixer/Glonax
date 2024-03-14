@@ -14,7 +14,7 @@ pub(crate) mod consts {
     /// On-Board Data Logger J1939 address.
     pub const J1939_ADDRESS_OBDL: u8 = 0xFB;
     /// Volvo VECU J1939 address.
-    pub const J1939_ADDRESS_VOLVO_VECU: u8 = 0x11;
+    pub const _J1939_ADDRESS_VOLVO_VECU: u8 = 0x11;
     /// Engine J1939 address.
     pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
     /// Hydraulic Control Unit J1939 address.
@@ -739,7 +739,7 @@ async fn main() -> anyhow::Result<()> {
                     loop {
                         tick.tick().await;
                         socket
-                            .send_vectored(&hcu0.set_ident(toggle.parse::<bool>()?))
+                            .send(&hcu0.set_ident(toggle.parse::<bool>()?))
                             .await?;
                     }
                 }
@@ -751,7 +751,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&hcu0.reboot()).await?;
+                        socket.send(&hcu0.reboot()).await?;
                     }
                 }
                 HCUCommand::MotionReset => {
@@ -762,7 +762,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&hcu0.motion_reset()).await?;
+                        socket.send(&hcu0.motion_reset()).await?;
                     }
                 }
                 HCUCommand::Lock { toggle } => {
@@ -787,7 +787,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send_vectored(&frames).await?;
+                        socket.send(&frames).await?;
                     }
                 }
                 HCUCommand::Actuator { actuator, value } => {
@@ -843,41 +843,15 @@ async fn main() -> anyhow::Result<()> {
         } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let ems0 =
-                glonax::driver::VolvoD7E::new(destination_address, consts::J1939_ADDRESS_OBDL);
+            // let ems0 =
+            //     glonax::driver::VolvoD7E::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
             match command {
-                VCUCommand::Ident { toggle } => {
-                    info!(
-                        "{} Turn identification mode {}",
-                        style_address(destination_address),
-                        if toggle.parse::<bool>()? {
-                            Green.paint("on")
-                        } else {
-                            Red.paint("off")
-                        },
-                    );
-
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket
-                            .send_vectored(&ems0.set_ident(toggle.parse::<bool>()?))
-                            .await?;
-                    }
+                VCUCommand::Ident { .. } => {
+                    unimplemented!()
                 }
                 VCUCommand::Reboot => {
-                    info!("{} Reboot", style_address(destination_address));
-
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket.send_vectored(&ems0.reboot()).await?;
-                    }
+                    unimplemented!()
                 }
                 VCUCommand::Assign { address_new } => {
                     let destination_address_new = j1939_address(address_new)?;

@@ -152,8 +152,8 @@ impl MotionConfigMessage {
         }
     }
 
-    fn to_frame(&self) -> Vec<Frame> {
-        let frame = FrameBuilder::new(
+    fn to_frame(&self) -> Frame {
+        FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage3)
                 .priority(3)
                 .da(self.destination_address)
@@ -183,9 +183,7 @@ impl MotionConfigMessage {
                 0xff
             },
         ])
-        .build();
-
-        vec![frame]
+        .build()
     }
 }
 
@@ -225,7 +223,7 @@ impl HydraulicControlUnit {
     }
 
     /// Locks the motion controller
-    pub fn lock(&self) -> Vec<Frame> {
+    pub fn lock(&self) -> Frame {
         MotionConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
@@ -236,7 +234,7 @@ impl HydraulicControlUnit {
     }
 
     /// Unlocks the motion controller
-    pub fn unlock(&self) -> Vec<Frame> {
+    pub fn unlock(&self) -> Frame {
         MotionConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
@@ -247,7 +245,7 @@ impl HydraulicControlUnit {
     }
 
     /// Motion reset
-    pub fn motion_reset(&self) -> Vec<Frame> {
+    pub fn motion_reset(&self) -> Frame {
         MotionConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
@@ -258,7 +256,7 @@ impl HydraulicControlUnit {
     }
 
     /// Set or unset identification mode.
-    pub fn set_ident(&self, on: bool) -> Vec<Frame> {
+    pub fn set_ident(&self, on: bool) -> Frame {
         VecraftConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
@@ -269,7 +267,7 @@ impl HydraulicControlUnit {
     }
 
     /// System reboot / reset
-    pub fn reboot(&self) -> Vec<Frame> {
+    pub fn reboot(&self) -> Frame {
         VecraftConfigMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
@@ -389,13 +387,13 @@ impl super::J1939Unit for HydraulicControlUnit {
                     self.destination_address
                 );
 
-                if let Err(e) = router.send_vectored(&self.motion_reset()).await {
+                if let Err(e) = router.send(&self.motion_reset()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
-                if let Err(e) = router.send_vectored(&self.set_ident(true)).await {
+                if let Err(e) = router.send(&self.set_ident(true)).await {
                     log::error!("Failed to send config: {}", e);
                 }
-                if let Err(e) = router.send_vectored(&self.set_ident(false)).await {
+                if let Err(e) = router.send(&self.set_ident(false)).await {
                     log::error!("Failed to send config: {}", e);
                 }
             }
@@ -437,7 +435,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                     self.destination_address
                 );
 
-                if let Err(e) = router.send_vectored(&self.motion_reset()).await {
+                if let Err(e) = router.send(&self.motion_reset()).await {
                     log::error!("Failed to send motion: {}", e);
                 }
             }
@@ -454,17 +452,17 @@ impl super::J1939Unit for HydraulicControlUnit {
         if state == &super::J1939UnitOperationState::Running {
             match &runtime_state.read().await.state.motion {
                 crate::core::Motion::StopAll => {
-                    if let Err(e) = router.send_vectored(&self.lock()).await {
+                    if let Err(e) = router.send(&self.lock()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
                 crate::core::Motion::ResumeAll => {
-                    if let Err(e) = router.send_vectored(&self.unlock()).await {
+                    if let Err(e) = router.send(&self.unlock()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
                 crate::core::Motion::ResetAll => {
-                    if let Err(e) = router.send_vectored(&self.motion_reset()).await {
+                    if let Err(e) = router.send(&self.motion_reset()).await {
                         log::error!("Failed to send motion: {}", e);
                     }
                 }
@@ -615,7 +613,7 @@ mod tests {
 
     #[test]
     fn motion_config_message_1() {
-        let frames = MotionConfigMessage {
+        let frame = MotionConfigMessage {
             destination_address: 0x5E,
             source_address: 0xEE,
             locked: Some(true),
@@ -623,16 +621,16 @@ mod tests {
         }
         .to_frame();
 
-        let config_b = MotionConfigMessage::from_frame(0x5E, 0xEE, &frames[0]);
+        let config_b = MotionConfigMessage::from_frame(0x5E, 0xEE, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, Some(true));
         assert_eq!(config_b.reset, None)
     }
 
     #[test]
     fn motion_config_message_2() {
-        let frames = MotionConfigMessage {
+        let frame = MotionConfigMessage {
             destination_address: 0xA9,
             source_address: 0x11,
             locked: Some(false),
@@ -640,16 +638,16 @@ mod tests {
         }
         .to_frame();
 
-        let config_b = MotionConfigMessage::from_frame(0xA9, 0x11, &frames[0]);
+        let config_b = MotionConfigMessage::from_frame(0xA9, 0x11, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, Some(false));
         assert_eq!(config_b.reset, None)
     }
 
     #[test]
     fn motion_config_message_3() {
-        let frames = MotionConfigMessage {
+        let frame = MotionConfigMessage {
             destination_address: 0x66,
             source_address: 0x22,
             locked: None,
@@ -657,16 +655,16 @@ mod tests {
         }
         .to_frame();
 
-        let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frames[0]);
+        let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, None);
         assert_eq!(config_b.reset, Some(true));
     }
 
     #[test]
     fn motion_config_message_4() {
-        let frames = MotionConfigMessage {
+        let frame = MotionConfigMessage {
             destination_address: 0x66,
             source_address: 0x22,
             locked: None,
@@ -674,9 +672,9 @@ mod tests {
         }
         .to_frame();
 
-        let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frames[0]);
+        let config_b = MotionConfigMessage::from_frame(0x66, 0x22, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.locked, None);
         assert_eq!(config_b.reset, Some(false));
     }
@@ -690,10 +688,10 @@ mod tests {
             reboot: false,
         };
 
-        let frames = config_a.to_frame();
-        let config_b = VecraftConfigMessage::from_frame(0x2B, 0x4D, &frames[0]);
+        let frame = config_a.to_frame();
+        let config_b = VecraftConfigMessage::from_frame(0x2B, 0x4D, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.ident_on, Some(true));
         assert!(!config_b.reboot);
     }
@@ -707,10 +705,10 @@ mod tests {
             reboot: false,
         };
 
-        let frames = config_a.to_frame();
-        let config_b = VecraftConfigMessage::from_frame(0x3C, 0x4F, &frames[0]);
+        let frame = config_a.to_frame();
+        let config_b = VecraftConfigMessage::from_frame(0x3C, 0x4F, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.ident_on, Some(false));
         assert!(!config_b.reboot);
     }
@@ -724,10 +722,10 @@ mod tests {
             reboot: true,
         };
 
-        let frames = config_a.to_frame();
-        let config_b = VecraftConfigMessage::from_frame(0x4D, 0xCD, &frames[0]);
+        let frame = config_a.to_frame();
+        let config_b = VecraftConfigMessage::from_frame(0x4D, 0xCD, &frame);
 
-        assert_eq!(frames.len(), 1);
+        assert_eq!(frame.len(), 1);
         assert_eq!(config_b.ident_on, None);
         assert!(config_b.reboot);
     }

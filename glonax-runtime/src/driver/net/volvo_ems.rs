@@ -2,7 +2,7 @@ use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::{driver::EngineMessage, net::Parsable};
 
-use super::{engine::EngineManagementSystem, vecraft::VecraftConfigMessage};
+use super::engine::EngineManagementSystem;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum VolvoEngineState {
@@ -19,7 +19,7 @@ pub enum VolvoEngineState {
 #[derive(Default)]
 pub struct VolvoD7E {
     /// Destination address.
-    destination_address: u8,
+    _destination_address: u8,
     /// Source address.
     source_address: u8,
     /// Engine management system.
@@ -30,32 +30,10 @@ impl VolvoD7E {
     /// Construct a new engine management system.
     pub fn new(da: u8, sa: u8) -> Self {
         Self {
-            destination_address: da,
+            _destination_address: da,
             source_address: sa,
             ems: EngineManagementSystem::new(da, sa),
         }
-    }
-
-    /// Set or unset identification mode.
-    pub fn set_ident(&self, on: bool) -> Vec<Frame> {
-        VecraftConfigMessage {
-            destination_address: self.destination_address,
-            source_address: self.source_address,
-            ident_on: Some(on),
-            reboot: false,
-        }
-        .to_frame()
-    }
-
-    /// System reboot / reset
-    pub fn reboot(&self) -> Vec<Frame> {
-        VecraftConfigMessage {
-            destination_address: self.destination_address,
-            source_address: self.source_address,
-            ident_on: None,
-            reboot: true,
-        }
-        .to_frame()
     }
 
     /// Request speed control

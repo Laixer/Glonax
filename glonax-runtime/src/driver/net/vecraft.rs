@@ -36,7 +36,7 @@ impl VecraftConfigMessage {
         }
     }
 
-    pub(crate) fn to_frame(&self) -> Vec<Frame> {
+    pub(crate) fn to_frame(&self) -> Frame {
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage1)
                 .da(self.destination_address)
@@ -53,7 +53,7 @@ impl VecraftConfigMessage {
             frame_builder.as_mut()[3] = 0x69;
         }
 
-        vec![frame_builder.build()]
+        frame_builder.build()
     }
 }
 
