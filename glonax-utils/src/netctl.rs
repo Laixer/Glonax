@@ -599,6 +599,7 @@ enum Command {
         /// Frame ID.
         id: String,
     },
+    /// Diagnose network.
     Diagnostic,
     /// Show raw frames on screen.
     Dump {
