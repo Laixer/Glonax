@@ -191,6 +191,8 @@ impl Governor {
     }
 }
 
+const ENGINE_MOTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
 /// The operand is the current state of the machine.
 ///
 /// This is the state that is used by the runtime to control
@@ -214,7 +216,7 @@ impl Operand {
         let mut request = self.state.engine_state_actual;
 
         if let Some(last_update) = self.state.motion_instant {
-            if last_update.elapsed() < std::time::Duration::from_secs(30) {
+            if last_update.elapsed() < ENGINE_MOTION_TIMEOUT {
                 request = core::EngineRequest {
                     speed: request.speed.max(1500),
                     state: crate::core::EngineState::Request,
