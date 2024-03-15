@@ -668,19 +668,19 @@ pub async fn atx_network_1(
     for driver in network.network.iter_mut() {
         match driver {
             NetDriver::KueblerEncoder(enc) => {
-                enc.tick(&state, &router, runtime_state.clone()).await;
+                enc.trigger(&state, &router, runtime_state.clone()).await;
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.tick(&state, &router, runtime_state.clone()).await;
+                imu.trigger(&state, &router, runtime_state.clone()).await;
             }
             NetDriver::VolvoD7E(ems) => {
-                ems.tick(&state, &router, runtime_state.clone()).await;
+                ems.trigger(&state, &router, runtime_state.clone()).await;
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.tick(&state, &router, runtime_state.clone()).await;
+                hcu.trigger(&state, &router, runtime_state.clone()).await;
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.tick(&state, &router, runtime_state.clone()).await;
+                rrp.trigger(&state, &router, runtime_state.clone()).await;
             }
             _ => {}
         }
@@ -693,19 +693,19 @@ pub async fn atx_network_1(
         for driver in network.network.iter_mut() {
             match driver {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.tick(&state, &router, runtime_state.clone()).await;
+                    enc.trigger(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.tick(&state, &router, runtime_state.clone()).await;
+                    imu.trigger(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    ems.tick(&state, &router, runtime_state.clone()).await;
+                    ems.trigger(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.tick(&state, &router, runtime_state.clone()).await;
+                    hcu.trigger(&state, &router, runtime_state.clone()).await;
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.tick(&state, &router, runtime_state.clone()).await;
+                    rrp.trigger(&state, &router, runtime_state.clone()).await;
                 }
                 _ => {}
             }

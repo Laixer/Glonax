@@ -112,4 +112,19 @@ pub trait J1939Unit {
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
+
+    /// Trigger the unit manually.
+    ///
+    /// This method will be called to trigger the unit manually. This method should be non-blocking
+    /// and should only perform asynchronous I/O operations.
+    ///
+    /// This method is optional and may be a no-op.
+    fn trigger(
+        &self,
+        _state: &J1939UnitOperationState,
+        _router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
 }

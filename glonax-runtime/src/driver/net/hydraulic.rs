@@ -383,7 +383,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         match state {
             super::J1939UnitOperationState::Setup => {
                 log::debug!(
-                    "[0x{:X}] Hydraulic control unit setup",
+                    "[0x{:X}] Hydraulic control unit ingress setup",
                     self.destination_address
                 );
 
@@ -434,7 +434,7 @@ impl super::J1939Unit for HydraulicControlUnit {
             }
             super::J1939UnitOperationState::Teardown => {
                 log::debug!(
-                    "[0x{:X}] Hydraulic control unit teardown",
+                    "[0x{:X}] Hydraulic control unit ingress teardown",
                     self.destination_address
                 );
 
@@ -445,7 +445,6 @@ impl super::J1939Unit for HydraulicControlUnit {
         }
     }
 
-    // FUTURE: Optimize
     async fn tick(
         &self,
         state: &super::J1939UnitOperationState,
@@ -455,7 +454,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         match state {
             super::J1939UnitOperationState::Setup => {
                 log::debug!(
-                    "[0x{:X}] Hydraulic control unit setup",
+                    "[0x{:X}] Hydraulic control unit egress setup",
                     self.destination_address
                 );
             }
@@ -498,7 +497,66 @@ impl super::J1939Unit for HydraulicControlUnit {
             }
             super::J1939UnitOperationState::Teardown => {
                 log::debug!(
-                    "[0x{:X}] Hydraulic control unit teardown",
+                    "[0x{:X}] Hydraulic control unit egress teardown",
+                    self.destination_address
+                );
+            }
+        }
+    }
+
+    async fn trigger(
+        &self,
+        state: &super::J1939UnitOperationState,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) {
+        match state {
+            super::J1939UnitOperationState::Setup => {
+                log::debug!(
+                    "[0x{:X}] Hydraulic control unit trigger setup",
+                    self.destination_address
+                );
+            }
+            super::J1939UnitOperationState::Running => {
+                match &runtime_state.read().await.state.motion {
+                    crate::core::Motion::StopAll => {
+                        if let Err(e) = router.send(&self.lock()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    crate::core::Motion::ResumeAll => {
+                        if let Err(e) = router.send(&self.unlock()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    crate::core::Motion::ResetAll => {
+                        if let Err(e) = router.send(&self.motion_reset()).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    crate::core::Motion::StraightDrive(value) => {
+                        let frames = &self.drive_straight(*value);
+                        if let Err(e) = router.send_vectored(frames).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                    crate::core::Motion::Change(changes) => {
+                        let frames = &self.actuator_command(
+                            changes
+                                .iter()
+                                .map(|changeset| (changeset.actuator as u8, changeset.value))
+                                .collect(),
+                        );
+
+                        if let Err(e) = router.send_vectored(frames).await {
+                            log::error!("Failed to send motion: {}", e);
+                        }
+                    }
+                }
+            }
+            super::J1939UnitOperationState::Teardown => {
+                log::debug!(
+                    "[0x{:X}] Hydraulic control unit trigger teardown",
                     self.destination_address
                 );
             }
