@@ -85,20 +85,30 @@ pub mod consts {
 pub struct MachineState {
     /// Vehicle management system data.
     pub vms: core::Host,
+
     /// Global navigation satellite system data.
     pub gnss: core::Gnss,
+    /// GNSS actual instant.
+    pub gnss_actual_instant: Option<std::time::Instant>,
+
     /// Engine data.
     pub engine: core::Engine,
     /// Engine state actual.
     pub engine_state_actual: core::EngineRequest,
+    /// Engine state actual instant.
+    pub engine_state_actual_instant: Option<std::time::Instant>,
     /// Engine state request.
     pub engine_state_request: Option<core::EngineRequest>,
     /// Engine state request instant.
     pub engine_state_request_instant: Option<std::time::Instant>,
+
     /// Hydraulic quick disconnect.
     pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct
     /// Hydraulic lock.
     pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct
+    /// Hydraulic actual instant.
+    pub hydraulic_actual_instant: Option<std::time::Instant>,
+
     /// Motion data.
     pub motion: core::Motion,
     /// Motion instant.
@@ -131,16 +141,10 @@ impl Governor {
         torque.clamp(self.rpm_idle, self.rpm_max)
     }
 
-    /// Determine the next engine state based on the actual and requested states.
+    /// Get the next engine state.
     ///
-    /// # Arguments
-    ///
-    /// * `actual` - The actual engine mode.
-    /// * `request` - The requested engine mode.
-    ///
-    /// # Returns
-    ///
-    /// The resulting engine mode.
+    /// This method determines the next engine state based on the actual and requested
+    /// engine states. It returns the next engine state as an `EngineRequest`.
     fn next_state(
         &self,
         actual: &core::EngineRequest,
@@ -218,8 +222,8 @@ impl Operand {
         if let Some(last_update) = self.state.motion_instant {
             if last_update.elapsed() < ENGINE_MOTION_TIMEOUT {
                 request = core::EngineRequest {
-                    speed: request.speed.max(1500),
-                    state: crate::core::EngineState::Request,
+                    speed: request.speed.max(1_500),
+                    state: core::EngineState::Request,
                 };
             }
         }

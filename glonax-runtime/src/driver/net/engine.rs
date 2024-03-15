@@ -307,6 +307,9 @@ impl super::J1939Unit for EngineManagementSystem {
             &super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
                     if let Ok(mut runtime_state) = runtime_state.try_write() {
+                        runtime_state.state.engine_state_actual_instant =
+                            Some(std::time::Instant::now());
+
                         match message {
                             EngineMessage::EngineController1(controller) => {
                                 if let Some(driver_demand) = controller.driver_demand {

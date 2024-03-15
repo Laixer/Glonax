@@ -399,7 +399,10 @@ impl super::J1939Unit for HydraulicControlUnit {
             }
             super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
-                    if let Ok(_runtime_state) = runtime_state.try_write() {
+                    if let Ok(mut runtime_state) = runtime_state.try_write() {
+                        runtime_state.state.hydraulic_actual_instant =
+                            Some(std::time::Instant::now());
+
                         match message {
                             HydraulicMessage::Actuator(_actuator) => {
                                 // runtime_state.state.actuators.insert(
