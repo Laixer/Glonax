@@ -98,17 +98,12 @@ impl From<u8> for State {
 
 impl std::fmt::Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self, f)
+        write!(f, "{:?}", self)
     }
 }
 
+// TODO: Remove the lock field.
 pub struct VecraftStatusMessage {
-    /// Destination address.
-    #[allow(dead_code)]
-    pub(crate) destination_address: u8,
-    /// Source address.
-    #[allow(dead_code)]
-    pub(crate) source_address: u8,
     /// ECU status
     pub state: State,
     /// Motion lock
@@ -118,10 +113,8 @@ pub struct VecraftStatusMessage {
 }
 
 impl VecraftStatusMessage {
-    pub(crate) fn from_frame(destination_address: u8, source_address: u8, frame: &Frame) -> Self {
+    pub(crate) fn from_frame(frame: &Frame) -> Self {
         Self {
-            destination_address,
-            source_address,
             state: State::from(frame.pdu()[0]),
             locked: frame.pdu()[2] != PDU_NOT_AVAILABLE && frame.pdu()[2] == 0x1,
             uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),

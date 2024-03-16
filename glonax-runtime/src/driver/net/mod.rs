@@ -106,6 +106,8 @@ pub enum J1939UnitError {
     InvalidConfiguration,
     /// Version mismatch.
     VersionMismatch,
+    /// Bus error.
+    BusError,
     /// Unit has an i/o error.
     IOError(std::io::Error),
 }

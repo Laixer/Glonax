@@ -386,8 +386,6 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 }
 
                 Some(HydraulicMessage::Status(VecraftStatusMessage::from_frame(
-                    self.destination_address,
-                    self.source_address,
                     frame,
                 )))
             }
@@ -451,11 +449,12 @@ impl super::J1939Unit for HydraulicControlUnit {
                                 //     .vecraft_config
                                 //     .insert((self.destination_address, self.source_address), config);
                             }
-                            HydraulicMessage::Status(_status) => {
-                                // runtime_state
-                                //     .state
-                                //     .hcu_status
-                                //     .insert((self.destination_address, self.source_address), status);
+                            HydraulicMessage::Status(status) => {
+                                if status.state == super::vecraft::State::FaultyGenericError
+                                    || status.state == super::vecraft::State::FaultyBusError
+                                {
+                                    Err(super::J1939UnitError::BusError)?;
+                                }
                             }
                         }
                     }
