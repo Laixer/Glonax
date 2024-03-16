@@ -1,5 +1,6 @@
 use bytes::{BufMut, BytesMut};
 
+// TODO: Remove this.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EngineStatus {
     /// Engine is disabled.
@@ -12,6 +13,7 @@ pub enum EngineStatus {
     Nominal = 0x02,
 }
 
+// TODO: Remove this.
 impl TryFrom<u8> for EngineStatus {
     type Error = ();
 

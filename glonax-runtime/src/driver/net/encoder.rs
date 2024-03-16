@@ -180,16 +180,19 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
 impl super::J1939Unit for KueblerEncoder {
     async fn try_accept(
         &mut self,
+        ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    ) {
+    ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
                 log::debug!("[0x{:X}] Kubler encoder setup", self.destination_address);
             }
             super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
+                    ctx.rx_last = std::time::Instant::now();
+
                     if let Ok(mut runtime_state) = runtime_state.try_write() {
                         runtime_state
                             .state
@@ -202,6 +205,8 @@ impl super::J1939Unit for KueblerEncoder {
                 log::debug!("[0x{:X}] Kubler encoder teardown", self.destination_address);
             }
         }
+
+        Ok(())
     }
 }
 

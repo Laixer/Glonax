@@ -42,19 +42,21 @@ impl Parsable<EngineMessage> for BoschEngineManagementSystem {
 impl super::J1939Unit for BoschEngineManagementSystem {
     async fn try_accept(
         &mut self,
+        ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    ) {
-        self.ems.try_accept(state, router, runtime_state).await;
+    ) -> Result<(), super::J1939UnitError> {
+        self.ems.try_accept(ctx, state, router, runtime_state).await
     }
 
     async fn tick(
         &self,
+        ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    ) {
-        self.ems.tick(state, router, runtime_state).await;
+    ) -> Result<(), super::J1939UnitError> {
+        self.ems.tick(ctx, state, router, runtime_state).await
     }
 }

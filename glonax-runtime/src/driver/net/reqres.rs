@@ -44,10 +44,11 @@ impl Parsable<PGN> for RequestResponder {
 impl super::J1939Unit for RequestResponder {
     async fn try_accept(
         &mut self,
+        _ctx: &mut super::NetDriverContext,
         _state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
-    ) {
+    ) -> Result<(), super::J1939UnitError> {
         if let Some(pgn) = router.try_accept(self) {
             match pgn {
                 PGN::AddressClaimed => {
@@ -60,12 +61,9 @@ impl super::J1939Unit for RequestResponder {
                         .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
                         .build();
 
-                    if let Err(e) = router
+                    router
                         .send(&protocol::address_claimed(self.source_address, name))
-                        .await
-                    {
-                        log::error!("Failed to send address claimed: {}", e);
-                    }
+                        .await?;
                 }
                 PGN::SoftwareIdentification => {
                     let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)
@@ -80,9 +78,7 @@ impl super::J1939Unit for RequestResponder {
                         .copy_from_slice(&[1, version_major, version_minor, version_patch, b'*'])
                         .build();
 
-                    if let Err(e) = router.send(&frame).await {
-                        log::error!("Failed to send software identification: {}", e);
-                    }
+                    router.send(&frame).await?;
                 }
                 PGN::TimeDate => {
                     use chrono::prelude::*;
@@ -105,12 +101,12 @@ impl super::J1939Unit for RequestResponder {
                         .copy_from_slice(&timedate.to_pdu())
                         .build();
 
-                    if let Err(e) = router.send(&frame).await {
-                        log::error!("Failed to send time date: {}", e);
-                    }
+                    router.send(&frame).await?;
                 }
                 _ => (),
             }
         }
+
+        Ok(())
     }
 }

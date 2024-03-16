@@ -64,6 +64,66 @@ impl TryFrom<NetDriverConfig> for NetDriver {
     }
 }
 
+pub struct NetDriverContext {
+    /// Last time a message was sent.
+    pub tx_last: std::time::Instant,
+    /// Last time a message was received.
+    pub rx_last: std::time::Instant,
+}
+
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum J1939UnitStatus {
+    /// Unit is disabled.
+    #[default]
+    Disabled = 0xFF,
+    /// Unit is online and nominal.
+    Online = 0x00,
+    /// Unit has not sent a message in a while.
+    MessageTimeout = 0x01,
+    /// Unit has an invalid configuration.
+    InvalidConfiguration = 0x02,
+}
+
+impl TryFrom<u8> for J1939UnitStatus {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0xFF => Ok(J1939UnitStatus::Disabled),
+            0x00 => Ok(J1939UnitStatus::Online),
+            0x01 => Ok(J1939UnitStatus::MessageTimeout),
+            0x02 => Ok(J1939UnitStatus::InvalidConfiguration),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum J1939UnitError {
+    /// Unit has not sent a message in a while.
+    MessageTimeout,
+    /// Unit has an invalid configuration.
+    InvalidConfiguration,
+    /// Version mismatch.
+    VersionMismatch,
+    /// Unit has an i/o error.
+    IOError(std::io::Error),
+}
+
+impl std::fmt::Display for J1939UnitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for J1939UnitError {}
+
+impl From<std::io::Error> for J1939UnitError {
+    fn from(error: std::io::Error) -> Self {
+        J1939UnitError::IOError(error)
+    }
+}
+
 /// Operational states for a J1939 unit.
 ///
 /// A unit can transition between these states during its lifetime,
@@ -92,10 +152,11 @@ pub trait J1939Unit {
     /// methods, as they can cause network congestion and slow down the system.
     fn try_accept(
         &mut self,
+        ctx: &mut NetDriverContext,
         state: &J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    ) -> impl std::future::Future<Output = ()> + Send;
+    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send;
 
     /// Tick the unit on interval.
     ///
@@ -106,11 +167,12 @@ pub trait J1939Unit {
     /// This method is optional and may be a no-op.
     fn tick(
         &self,
+        _ctx: &mut NetDriverContext,
         _state: &J1939UnitOperationState,
         _router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
-    ) -> impl std::future::Future<Output = ()> + Send {
-        std::future::ready(())
+    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
+        std::future::ready(Ok(()))
     }
 
     /// Trigger the unit manually.
@@ -121,10 +183,11 @@ pub trait J1939Unit {
     /// This method is optional and may be a no-op.
     fn trigger(
         &self,
+        _ctx: &mut NetDriverContext,
         _state: &J1939UnitOperationState,
         _router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
-    ) -> impl std::future::Future<Output = ()> + Send {
-        std::future::ready(())
+    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
+        std::future::ready(Ok(()))
     }
 }

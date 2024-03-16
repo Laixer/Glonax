@@ -216,7 +216,11 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.insert_component::<components::Controller>(10);
     }
 
-    runtime.run_interval(pipe, Duration::from_millis(10)).await;
+    if config.mode != config::OperationMode::PilotRestrict {
+        runtime.run_interval(pipe, Duration::from_millis(10)).await;
+    } else {
+        runtime.wait_for_shutdown().await;
+    }
 
     log::debug!("Waiting for shutdown");
 

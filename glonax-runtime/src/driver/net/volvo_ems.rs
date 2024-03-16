@@ -106,45 +106,45 @@ impl Parsable<EngineMessage> for VolvoD7E {
 impl super::J1939Unit for VolvoD7E {
     async fn try_accept(
         &mut self,
+        ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    ) {
-        self.ems.try_accept(state, router, runtime_state).await;
+    ) -> Result<(), super::J1939UnitError> {
+        self.ems.try_accept(ctx, state, router, runtime_state).await
     }
 
     async fn tick(
         &self,
+        ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
-    ) {
+    ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
         if state == &super::J1939UnitOperationState::Running {
             let request = runtime_state.read().await.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    if let Err(e) = router.send(&self.request(request.speed)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
+                    router.send(&self.request(request.speed)).await?;
                 }
                 crate::core::EngineState::Starting => {
-                    if let Err(e) = router.send(&self.start(request.speed)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
+                    router.send(&self.start(request.speed)).await?;
                 }
                 crate::core::EngineState::Stopping => {
-                    if let Err(e) = router.send(&self.stop(request.speed)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
+                    router.send(&self.stop(request.speed)).await?;
                 }
                 crate::core::EngineState::Request => {
-                    if let Err(e) = router.send(&self.request(request.speed)).await {
-                        log::error!("Failed to speed request: {}", e);
-                    }
+                    router.send(&self.request(request.speed)).await?;
                 }
             }
+
+            if ctx.rx_last.elapsed().as_millis() > 500 {
+                Err(super::J1939UnitError::MessageTimeout)?;
+            }
         }
+
+        Ok(())
     }
 }

@@ -2,7 +2,7 @@ mod error;
 
 use crate::{
     core::{Instance, Target},
-    driver::net::NetDriver,
+    driver::net::{NetDriver, NetDriverContext},
     world::World,
     MachineState,
 };
@@ -22,7 +22,7 @@ pub struct NullConfig;
 
 pub struct ControlNetwork {
     pub default_source_address: u8,
-    pub network: Vec<NetDriver>,
+    pub network: Vec<(NetDriver, NetDriverContext)>,
 }
 
 impl ControlNetwork {
@@ -36,12 +36,24 @@ impl ControlNetwork {
     pub fn with_request_responder(address: u8) -> Self {
         Self {
             default_source_address: address,
-            network: vec![NetDriver::request_responder(address)],
+            network: vec![(
+                NetDriver::request_responder(address),
+                NetDriverContext {
+                    tx_last: std::time::Instant::now(),
+                    rx_last: std::time::Instant::now(),
+                },
+            )],
         }
     }
 
     pub fn register_driver(&mut self, driver: NetDriver) {
-        self.network.push(driver);
+        self.network.push((
+            driver,
+            NetDriverContext {
+                tx_last: std::time::Instant::now(),
+                rx_last: std::time::Instant::now(),
+            },
+        ));
     }
 }
 
@@ -440,7 +452,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
 // TODO: Turn into service
 async fn rx_network(
-    mut network: Vec<NetDriver>,
+    mut network: Vec<(NetDriver, NetDriverContext)>,
     interface: String,
     runtime_state: SharedOperandState,
     shutdown: tokio::sync::broadcast::Receiver<()>,
@@ -473,29 +485,40 @@ async fn rx_network(
         .build();
 
     router
-        .inner()
         .send(&j1939::protocol::address_claimed(0x27, name))
         .await?;
 
     let state = J1939UnitOperationState::Setup;
-    for driver in network.iter_mut() {
-        match driver {
+    for (drv, ctx) in network.iter_mut() {
+        let result = match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.try_accept(&state, &router, runtime_state.clone()).await;
+                enc.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.try_accept(&state, &router, runtime_state.clone()).await;
+                imu.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::VolvoD7E(ems) => {
-                ems.try_accept(&state, &router, runtime_state.clone()).await;
+                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
+            }
+            NetDriver::BoschEngineManagementSystem(ems) => {
+                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.try_accept(&state, &router, runtime_state.clone()).await;
+                hcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.try_accept(&state, &router, runtime_state.clone()).await;
+                rrp.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
-            _ => {}
+        };
+
+        if let Err(e) = result {
+            log::error!("Failed to setup network: {}", e);
         }
     }
 
@@ -505,47 +528,71 @@ async fn rx_network(
         }
 
         let state = J1939UnitOperationState::Running;
-        for driver in network.iter_mut() {
-            match driver {
+        for (drv, ctx) in network.iter_mut() {
+            let result = match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.try_accept(&state, &router, runtime_state.clone()).await;
+                    enc.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.try_accept(&state, &router, runtime_state.clone()).await;
+                    imu.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    ems.try_accept(&state, &router, runtime_state.clone()).await;
+                    ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
+                }
+                NetDriver::BoschEngineManagementSystem(ems) => {
+                    ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.try_accept(&state, &router, runtime_state.clone()).await;
+                    hcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.try_accept(&state, &router, runtime_state.clone()).await;
+                    rrp.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
-                _ => {}
+            };
+
+            if let Err(e) = result {
+                log::error!("Failed to tick network: {}", e);
             }
         }
     }
 
     let state = J1939UnitOperationState::Teardown;
-    for driver in network.iter_mut() {
-        match driver {
+    for (drv, ctx) in network.iter_mut() {
+        let result = match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.try_accept(&state, &router, runtime_state.clone()).await;
+                enc.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.try_accept(&state, &router, runtime_state.clone()).await;
+                imu.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::VolvoD7E(ems) => {
-                ems.try_accept(&state, &router, runtime_state.clone()).await;
+                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
+            }
+            NetDriver::BoschEngineManagementSystem(ems) => {
+                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.try_accept(&state, &router, runtime_state.clone()).await;
+                hcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.try_accept(&state, &router, runtime_state.clone()).await;
+                rrp.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
-            _ => {}
+        };
+
+        if let Err(e) = result {
+            log::error!("Failed to tick network: {}", e);
         }
     }
 
@@ -554,7 +601,7 @@ async fn rx_network(
 
 // TODO: Turn into service
 async fn tx_network(
-    mut network: Vec<NetDriver>,
+    mut network: Vec<(NetDriver, NetDriverContext)>,
     interface: String,
     runtime_state: SharedOperandState,
     shutdown: tokio::sync::broadcast::Receiver<()>,
@@ -569,24 +616,28 @@ async fn tx_network(
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(10));
 
     let state = J1939UnitOperationState::Setup;
-    for driver in network.iter_mut() {
-        match driver {
+    for (drv, ctx) in network.iter_mut() {
+        let result = match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.tick(&state, &router, runtime_state.clone()).await;
+                enc.tick(ctx, &state, &router, runtime_state.clone()).await
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.tick(&state, &router, runtime_state.clone()).await;
+                imu.tick(ctx, &state, &router, runtime_state.clone()).await
             }
-            NetDriver::VolvoD7E(ems) => {
-                ems.tick(&state, &router, runtime_state.clone()).await;
+            NetDriver::VolvoD7E(ems) => ems.tick(ctx, &state, &router, runtime_state.clone()).await,
+            NetDriver::BoschEngineManagementSystem(ems) => {
+                ems.tick(ctx, &state, &router, runtime_state.clone()).await
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.tick(&state, &router, runtime_state.clone()).await;
+                hcu.tick(ctx, &state, &router, runtime_state.clone()).await
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.tick(&state, &router, runtime_state.clone()).await;
+                rrp.tick(ctx, &state, &router, runtime_state.clone()).await
             }
-            _ => {}
+        };
+
+        if let Err(e) = result {
+            log::error!("Failed to tick network: {}", e);
         }
     }
 
@@ -594,47 +645,57 @@ async fn tx_network(
         interval.tick().await;
 
         let state = J1939UnitOperationState::Running;
-        for driver in network.iter_mut() {
-            match driver {
+        for (drv, ctx) in network.iter_mut() {
+            let result = match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.tick(&state, &router, runtime_state.clone()).await;
+                    enc.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.tick(&state, &router, runtime_state.clone()).await;
+                    imu.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    ems.tick(&state, &router, runtime_state.clone()).await;
+                    ems.tick(ctx, &state, &router, runtime_state.clone()).await
+                }
+                NetDriver::BoschEngineManagementSystem(ems) => {
+                    ems.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.tick(&state, &router, runtime_state.clone()).await;
+                    hcu.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.tick(&state, &router, runtime_state.clone()).await;
+                    rrp.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
-                _ => {}
+            };
+
+            if let Err(e) = result {
+                log::error!("Failed to tick network: {}", e);
             }
         }
     }
 
     let state = J1939UnitOperationState::Teardown;
-    for driver in network.iter_mut() {
-        match driver {
+    for (drv, ctx) in network.iter_mut() {
+        let result = match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.tick(&state, &router, runtime_state.clone()).await;
+                enc.tick(ctx, &state, &router, runtime_state.clone()).await
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.tick(&state, &router, runtime_state.clone()).await;
+                imu.tick(ctx, &state, &router, runtime_state.clone()).await
             }
-            NetDriver::VolvoD7E(ems) => {
-                ems.tick(&state, &router, runtime_state.clone()).await;
+            NetDriver::VolvoD7E(ems) => ems.tick(ctx, &state, &router, runtime_state.clone()).await,
+            NetDriver::BoschEngineManagementSystem(ems) => {
+                ems.tick(ctx, &state, &router, runtime_state.clone()).await
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.tick(&state, &router, runtime_state.clone()).await;
+                hcu.tick(ctx, &state, &router, runtime_state.clone()).await
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.tick(&state, &router, runtime_state.clone()).await;
+                rrp.tick(ctx, &state, &router, runtime_state.clone()).await
             }
-            _ => {}
+        };
+
+        if let Err(e) = result {
+            log::error!("Failed to tick network: {}", e);
         }
     }
 
@@ -665,49 +726,74 @@ pub async fn atx_network_1(
     network.register_driver(NetDriver::HydraulicControlUnit(hcu0));
 
     let state = J1939UnitOperationState::Setup;
-    for driver in network.network.iter_mut() {
-        match driver {
+    for (drv, ctx) in network.network.iter_mut() {
+        let result = match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.trigger(&state, &router, runtime_state.clone()).await;
+                enc.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.trigger(&state, &router, runtime_state.clone()).await;
+                imu.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::VolvoD7E(ems) => {
-                ems.trigger(&state, &router, runtime_state.clone()).await;
+                ems.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
+            }
+            NetDriver::BoschEngineManagementSystem(ems) => {
+                ems.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.trigger(&state, &router, runtime_state.clone()).await;
+                hcu.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.trigger(&state, &router, runtime_state.clone()).await;
+                rrp.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
             }
-            _ => {}
+        };
+
+        if let Err(e) = result {
+            log::error!("Failed to tick network: {}", e);
         }
     }
 
     while let Some(motion) = motion_rx.recv().await {
+        // TODO: Move
         runtime_state.write().await.state.motion = motion.clone();
 
         let state = J1939UnitOperationState::Running;
-        for driver in network.network.iter_mut() {
-            match driver {
+        for (drv, ctx) in network.network.iter_mut() {
+            let result = match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    enc.trigger(&state, &router, runtime_state.clone()).await;
+                    enc.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    imu.trigger(&state, &router, runtime_state.clone()).await;
+                    imu.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    ems.trigger(&state, &router, runtime_state.clone()).await;
+                    ems.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
+                }
+                NetDriver::BoschEngineManagementSystem(ems) => {
+                    ems.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.trigger(&state, &router, runtime_state.clone()).await;
+                    hcu.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    rrp.trigger(&state, &router, runtime_state.clone()).await;
+                    rrp.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
-                _ => {}
+            };
+
+            if let Err(e) = result {
+                log::error!("Failed to tick network: {}", e);
             }
         }
     }

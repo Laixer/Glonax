@@ -87,10 +87,11 @@ impl Parsable<ProcessDataMessage> for KueblerInclinometer {
 impl super::J1939Unit for KueblerInclinometer {
     async fn try_accept(
         &mut self,
+        ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
-        _router: &crate::net::Router,
+        router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
-    ) {
+    ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
                 log::debug!(
@@ -99,14 +100,9 @@ impl super::J1939Unit for KueblerInclinometer {
                 );
             }
             super::J1939UnitOperationState::Running => {
-                //     if let Some(_message) = router.try_accept(self) {
-                //         if let Ok(mut _runtime_state) = runtime_state.try_write() {
-                //             // runtime_state
-                //             //     .state
-                //             //     .encoders
-                //             //     .insert(message.source_address, message.position as f32);
-                //         }
-                //     }
+                if let Some(_message) = router.try_accept(self) {
+                    ctx.rx_last = std::time::Instant::now();
+                }
             }
             super::J1939UnitOperationState::Teardown => {
                 log::debug!(
@@ -115,5 +111,7 @@ impl super::J1939Unit for KueblerInclinometer {
                 );
             }
         }
+
+        Ok(())
     }
 }
