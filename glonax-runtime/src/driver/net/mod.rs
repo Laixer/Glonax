@@ -114,7 +114,13 @@ pub enum J1939UnitError {
 
 impl std::fmt::Display for J1939UnitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{}", match self {
+            J1939UnitError::MessageTimeout => "communication timeout",
+            J1939UnitError::InvalidConfiguration => "invalid configuration",
+            J1939UnitError::VersionMismatch => "version mismatch",
+            J1939UnitError::BusError => "bus error",
+            J1939UnitError::IOError(error) => return write!(f, "i/o error: {}", error),
+        })
     }
 }
 

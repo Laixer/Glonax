@@ -406,7 +406,6 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
 }
 
 impl super::J1939Unit for HydraulicControlUnit {
-    // TODO: Should self be mutable?
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
@@ -431,24 +430,9 @@ impl super::J1939Unit for HydraulicControlUnit {
 
                     if let Ok(_runtime_state) = runtime_state.try_write() {
                         match message {
-                            HydraulicMessage::Actuator(_actuator) => {
-                                // runtime_state.state.actuators.insert(
-                                //     (self.destination_address, self.source_address),
-                                //     actuator.actuators,
-                                // );
-                            }
-                            HydraulicMessage::MotionConfig(_config) => {
-                                // runtime_state
-                                //     .state
-                                //     .motion_config
-                                //     .insert((self.destination_address, self.source_address), config);
-                            }
-                            HydraulicMessage::VecraftConfig(_config) => {
-                                // runtime_state
-                                //     .state
-                                //     .vecraft_config
-                                //     .insert((self.destination_address, self.source_address), config);
-                            }
+                            HydraulicMessage::Actuator(_actuator) => {}
+                            HydraulicMessage::MotionConfig(_config) => {}
+                            HydraulicMessage::VecraftConfig(_config) => {}
                             HydraulicMessage::Status(status) => {
                                 if status.state == super::vecraft::State::FaultyGenericError
                                     || status.state == super::vecraft::State::FaultyBusError
@@ -490,6 +474,8 @@ impl super::J1939Unit for HydraulicControlUnit {
             super::J1939UnitOperationState::Running => {
                 self.send_motion_command(router, runtime_state).await?;
 
+                ctx.tx_last = std::time::Instant::now();
+
                 if ctx.rx_last.elapsed().as_millis() > 500 {
                     Err(super::J1939UnitError::MessageTimeout)?;
                 }
@@ -521,6 +507,8 @@ impl super::J1939Unit for HydraulicControlUnit {
             }
             super::J1939UnitOperationState::Running => {
                 self.send_motion_command(router, runtime_state).await?;
+
+                ctx.tx_last = std::time::Instant::now();
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
                     Err(super::J1939UnitError::MessageTimeout)?;
