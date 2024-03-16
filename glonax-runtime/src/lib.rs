@@ -108,8 +108,6 @@ pub struct MachineState {
     pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct
     /// Hydraulic actual instant.
     pub hydraulic_actual_instant: Option<std::time::Instant>,
-    /// Hydraulic unit status.
-    pub hydraulic_unit_status: driver::net::J1939UnitStatus,
 
     /// Motion data.
     pub motion: core::Motion,

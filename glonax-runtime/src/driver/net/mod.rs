@@ -71,33 +71,6 @@ pub struct NetDriverContext {
     pub rx_last: std::time::Instant,
 }
 
-#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum J1939UnitStatus {
-    /// Unit is disabled.
-    #[default]
-    Disabled = 0xFF,
-    /// Unit is online and nominal.
-    Online = 0x00,
-    /// Unit has not sent a message in a while.
-    MessageTimeout = 0x01,
-    /// Unit has an invalid configuration.
-    InvalidConfiguration = 0x02,
-}
-
-impl TryFrom<u8> for J1939UnitStatus {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0xFF => Ok(J1939UnitStatus::Disabled),
-            0x00 => Ok(J1939UnitStatus::Online),
-            0x01 => Ok(J1939UnitStatus::MessageTimeout),
-            0x02 => Ok(J1939UnitStatus::InvalidConfiguration),
-            _ => Err(()),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum J1939UnitError {
     /// Unit has not sent a message in a while.
@@ -114,13 +87,17 @@ pub enum J1939UnitError {
 
 impl std::fmt::Display for J1939UnitError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            J1939UnitError::MessageTimeout => "communication timeout",
-            J1939UnitError::InvalidConfiguration => "invalid configuration",
-            J1939UnitError::VersionMismatch => "version mismatch",
-            J1939UnitError::BusError => "bus error",
-            J1939UnitError::IOError(error) => return write!(f, "i/o error: {}", error),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                J1939UnitError::MessageTimeout => "communication timeout",
+                J1939UnitError::InvalidConfiguration => "invalid configuration",
+                J1939UnitError::VersionMismatch => "version mismatch",
+                J1939UnitError::BusError => "bus error",
+                J1939UnitError::IOError(error) => return write!(f, "i/o error: {}", error),
+            }
+        )
     }
 }
 
