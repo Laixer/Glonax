@@ -421,27 +421,22 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
         println!("Probe ECU {}", Purple.paint(format!("0x{:X?}", address)));
 
         router
-            .inner()
             .send(&protocol::request(address, PGN::AddressClaimed))
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         router
-            .inner()
             .send(&protocol::request(address, PGN::SoftwareIdentification))
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         router
-            .inner()
             .send(&protocol::request(address, PGN::ComponentIdentification))
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         router
-            .inner()
             .send(&protocol::request(address, PGN::VehicleIdentification))
             .await?;
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         router
-            .inner()
             .send(&protocol::request(address, PGN::TimeDate))
             .await?;
 

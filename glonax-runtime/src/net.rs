@@ -98,7 +98,7 @@ const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 /// service.
 pub struct Router {
     /// The network.
-    socket_list: Vec<CANSocket>,
+    socket: CANSocket,
     /// The current frame.
     frame: Option<Frame>,
     /// The priority filter.
@@ -117,7 +117,7 @@ impl Router {
     /// Construct a new router.
     pub fn new(socket: CANSocket) -> Self {
         Self {
-            socket_list: vec![socket],
+            socket,
             frame: None,
             filter_priority: vec![],
             filter_pgn: vec![],
@@ -171,12 +171,6 @@ impl Router {
         self.frame.take()
     }
 
-    /// Return the inner network socket.
-    #[inline]
-    pub fn inner(&self) -> &CANSocket {
-        &self.socket_list[0]
-    }
-
     /// Return the name of the ECU.
     #[inline]
     pub fn name(&self) -> &Name {
@@ -186,13 +180,13 @@ impl Router {
     /// Send a frame.
     #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {
-        self.socket_list[0].send(frame).await
+        self.socket.send(frame).await
     }
 
     /// Send a vector of frames.
     #[inline]
     pub async fn send_vectored(&self, frames: &Vec<Frame>) -> io::Result<Vec<usize>> {
-        self.socket_list[0].send_vectored(frames).await
+        self.socket.send_vectored(frames).await
     }
 
     /// Filter the frame based on PGN and address.
@@ -214,7 +208,7 @@ impl Router {
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
-            let frame = self.socket_list[0].recv().await?;
+            let frame = self.socket.recv().await?;
             if self.filter(&frame) {
                 if self.fix_frame_size {
                     self.frame = Some(
