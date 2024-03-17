@@ -160,7 +160,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
                 let net_driver_config = glonax::driver::net::NetDriverConfig {
                     driver_type: driver.driver_type.clone(),
                     destination: driver.da,
-                    source: driver.sa.unwrap_or(j1939_net_config.address),
+                    source: driver.sa.unwrap_or(j1939_net_config.address), // TODO: Maybe remove 'source' from config.
                 };
 
                 net_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());

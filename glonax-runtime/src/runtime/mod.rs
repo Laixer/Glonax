@@ -465,7 +465,10 @@ async fn rx_network(
     let mut router = crate::net::Router::new(socket);
 
     router
-        .send(&j1939::protocol::address_claimed(0x27, *router.name()))
+        .send(&j1939::protocol::address_claimed(
+            router.source_address(),
+            *router.name(),
+        ))
         .await?;
 
     let state = J1939UnitOperationState::Setup;
