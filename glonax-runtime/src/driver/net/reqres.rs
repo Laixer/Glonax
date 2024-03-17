@@ -1,19 +1,6 @@
-use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, NameBuilder, PGN};
+use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
-
-// TODO: Get from configuration.
-
-/// J1939 name manufacturer code.
-const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
-/// J1939 name function instance.
-const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
-/// J1939 name ECU instance.
-const J1939_NAME_ECU_INSTANCE: u8 = 0;
-/// J1939 name function.
-const J1939_NAME_FUNCTION: u8 = 0x1C;
-/// J1939 name vehicle system.
-const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 
 #[derive(Default)]
 pub struct RequestResponder {
@@ -52,17 +39,11 @@ impl super::J1939Unit for RequestResponder {
         if let Some(pgn) = router.try_accept(self) {
             match pgn {
                 PGN::AddressClaimed => {
-                    let name = NameBuilder::default()
-                        .identity_number(0x1)
-                        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
-                        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
-                        .ecu_instance(J1939_NAME_ECU_INSTANCE)
-                        .function(J1939_NAME_FUNCTION)
-                        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
-                        .build();
-
                     router
-                        .send(&protocol::address_claimed(self.source_address, name))
+                        .send(&protocol::address_claimed(
+                            self.source_address,
+                            *router.name(),
+                        ))
                         .await?;
                 }
                 PGN::SoftwareIdentification => {

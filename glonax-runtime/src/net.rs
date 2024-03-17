@@ -1,6 +1,6 @@
 use std::io;
 
-use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
+use j1939::{Frame, FrameBuilder, IdBuilder, Name, NameBuilder, PGN};
 
 pub use crate::can::{CANSocket, SockAddrCAN};
 
@@ -74,6 +74,19 @@ pub trait Parsable<T>: Send + Sync {
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 
+// TODO: Get from configuration.
+
+/// J1939 name manufacturer code.
+const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
+/// J1939 name function instance.
+const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
+/// J1939 name ECU instance.
+const J1939_NAME_ECU_INSTANCE: u8 = 0;
+/// J1939 name function.
+const J1939_NAME_FUNCTION: u8 = 0x1C;
+/// J1939 name vehicle system.
+const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
+
 /// The router is used to route incoming frames to compatible services.
 ///
 /// Frames are routed based on the PGN and the ECU address. The router
@@ -96,6 +109,8 @@ pub struct Router {
     filter_address: Vec<u8>,
     /// The fixed frame size.
     fix_frame_size: bool,
+    /// ECU Name.
+    name: Name,
 }
 
 impl Router {
@@ -108,6 +123,14 @@ impl Router {
             filter_pgn: vec![],
             filter_address: vec![],
             fix_frame_size: true,
+            name: NameBuilder::default()
+                .identity_number(0x1)
+                .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
+                .function_instance(J1939_NAME_FUNCTION_INSTANCE)
+                .ecu_instance(J1939_NAME_ECU_INSTANCE)
+                .function(J1939_NAME_FUNCTION)
+                .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
+                .build(),
         }
     }
 
@@ -152,6 +175,12 @@ impl Router {
     #[inline]
     pub fn inner(&self) -> &CANSocket {
         &self.socket_list[0]
+    }
+
+    /// Return the name of the ECU.
+    #[inline]
+    pub fn name(&self) -> &Name {
+        &self.name
     }
 
     /// Send a frame.

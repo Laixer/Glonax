@@ -423,7 +423,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 router.send(&self.motion_reset()).await?;
                 router.send(&self.set_ident(true)).await?;
                 router.send(&self.set_ident(false)).await?;
-
                 router
                     .send(&protocol::request(
                         self.destination_address,

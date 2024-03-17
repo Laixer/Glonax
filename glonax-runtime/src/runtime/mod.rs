@@ -459,33 +459,13 @@ async fn rx_network(
 ) -> std::io::Result<()> {
     use crate::driver::net::{J1939Unit, J1939UnitOperationState};
 
-    /// J1939 name manufacturer code.
-    const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
-    /// J1939 name function instance.
-    const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
-    /// J1939 name ECU instance.
-    const J1939_NAME_ECU_INSTANCE: u8 = 0;
-    /// J1939 name function.
-    const J1939_NAME_FUNCTION: u8 = 0x1C;
-    /// J1939 name vehicle system.
-    const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
-
     log::debug!("Starting J1939 service on {}", interface);
 
     let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&interface))?;
     let mut router = crate::net::Router::new(socket);
 
-    let name = j1939::NameBuilder::default()
-        .identity_number(0x1)
-        .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
-        .function_instance(J1939_NAME_FUNCTION_INSTANCE)
-        .ecu_instance(J1939_NAME_ECU_INSTANCE)
-        .function(J1939_NAME_FUNCTION)
-        .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
-        .build();
-
     router
-        .send(&j1939::protocol::address_claimed(0x27, name))
+        .send(&j1939::protocol::address_claimed(0x27, *router.name()))
         .await?;
 
     let state = J1939UnitOperationState::Setup;
