@@ -136,6 +136,9 @@ impl Governor {
         Self { rpm_idle, rpm_max }
     }
 
+    /// Reshape the torque.
+    ///
+    /// This method reshapes the torque based on the engine speed.
     #[inline]
     fn reshape(&self, torque: u16) -> u16 {
         torque.clamp(self.rpm_idle, self.rpm_max)
