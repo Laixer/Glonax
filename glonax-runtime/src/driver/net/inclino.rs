@@ -114,4 +114,24 @@ impl super::J1939Unit for KueblerInclinometer {
 
         Ok(())
     }
+
+    async fn tick(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        state: &super::J1939UnitOperationState,
+        _router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        if state == &super::J1939UnitOperationState::Running
+            && ctx.rx_last.elapsed().as_millis() > 1_000
+        {
+            Err(super::J1939UnitError::new(
+                "Kubler inclinometer".to_owned(),
+                self.destination_address,
+                super::J1939UnitErrorKind::MessageTimeout,
+            ))?;
+        }
+
+        Ok(())
+    }
 }
