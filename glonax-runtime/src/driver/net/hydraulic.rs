@@ -532,7 +532,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if let super::J1939UnitOperationState::Running = state {
+        if state == &super::J1939UnitOperationState::Running {
             self.send_motion_command(router, runtime_state).await?;
 
             ctx.tx_last = std::time::Instant::now();
@@ -548,7 +548,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if let super::J1939UnitOperationState::Running = state {
+        if state == &super::J1939UnitOperationState::Running {
             self.send_motion_command(router, runtime_state).await?;
 
             ctx.tx_last = std::time::Instant::now();

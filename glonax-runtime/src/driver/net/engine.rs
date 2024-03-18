@@ -306,98 +306,86 @@ impl super::J1939Unit for EngineManagementSystem {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match state {
-            super::J1939UnitOperationState::Setup => {
-                // log::debug!(
-                //     "[0x{:X}] Engine management system setup",
-                //     self.destination_address
-                // );
+        if state == &super::J1939UnitOperationState::Running {
+            let mut result = Result::<(), super::J1939UnitError>::Ok(());
+
+            if ctx.rx_last.elapsed().as_millis() > 500 {
+                result = Err(super::J1939UnitError::new(
+                    "Engine management system".to_owned(),
+                    self.destination_address,
+                    super::J1939UnitErrorKind::MessageTimeout,
+                ));
             }
-            super::J1939UnitOperationState::Running => {
-                let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                if ctx.rx_last.elapsed().as_millis() > 500 {
-                    result = Err(super::J1939UnitError::new(
-                        "Engine management system".to_owned(),
-                        self.destination_address,
-                        super::J1939UnitErrorKind::MessageTimeout,
-                    ));
-                }
+            if let Some(message) = router.try_accept(self) {
+                ctx.rx_last = std::time::Instant::now();
 
-                if let Some(message) = router.try_accept(self) {
-                    ctx.rx_last = std::time::Instant::now();
+                if let Ok(mut runtime_state) = runtime_state.try_write() {
+                    runtime_state.state.engine_state_actual_instant =
+                        Some(std::time::Instant::now());
 
-                    if let Ok(mut runtime_state) = runtime_state.try_write() {
-                        runtime_state.state.engine_state_actual_instant =
-                            Some(std::time::Instant::now());
+                    if let EngineMessage::EngineController1(controller) = message {
+                        if let Some(driver_demand) = controller.driver_demand {
+                            runtime_state.state.engine.driver_demand = driver_demand;
+                        }
+                        if let Some(actual_engine) = controller.actual_engine {
+                            runtime_state.state.engine.actual_engine = actual_engine;
+                        }
+                        if let Some(rpm) = controller.rpm {
+                            runtime_state.state.engine.rpm = rpm;
+                            runtime_state.state.engine_state_actual.speed = rpm;
+                        }
 
-                        if let EngineMessage::EngineController1(controller) = message {
-                            if let Some(driver_demand) = controller.driver_demand {
-                                runtime_state.state.engine.driver_demand = driver_demand;
-                            }
-                            if let Some(actual_engine) = controller.actual_engine {
-                                runtime_state.state.engine.actual_engine = actual_engine;
-                            }
-                            if let Some(rpm) = controller.rpm {
-                                runtime_state.state.engine.rpm = rpm;
-                                runtime_state.state.engine_state_actual.speed = rpm;
-                            }
-
-                            if let Some(starter_mode) = controller.starter_mode {
-                                match starter_mode {
-                                    spn::EngineStarterMode::StarterActiveGearNotEngaged
-                                    | spn::EngineStarterMode::StarterActiveGearEngaged => {
-                                        runtime_state.state.engine_state_actual.state =
-                                            crate::core::EngineState::Starting
-                                    }
-                                    spn::EngineStarterMode::StartFinished => {
-                                        if let Some(rpm) = controller.rpm {
-                                            if rpm > 0 {
-                                                runtime_state.state.engine_state_actual.state = crate::core::EngineState::Request;
-                                            }
+                        if let Some(starter_mode) = controller.starter_mode {
+                            match starter_mode {
+                                spn::EngineStarterMode::StarterActiveGearNotEngaged
+                                | spn::EngineStarterMode::StarterActiveGearEngaged => {
+                                    runtime_state.state.engine_state_actual.state =
+                                        crate::core::EngineState::Starting
+                                }
+                                spn::EngineStarterMode::StartFinished => {
+                                    if let Some(rpm) = controller.rpm {
+                                        if rpm > 0 {
+                                            runtime_state.state.engine_state_actual.state =
+                                                crate::core::EngineState::Request;
                                         }
                                     }
-                                    spn::EngineStarterMode::StartNotRequested
-                                    | spn::EngineStarterMode::StarterInhibitedEngineRunning
-                                    | spn::EngineStarterMode::StarterInhibitedEngineNotReady
-                                    | spn::EngineStarterMode::StarterInhibitedTransmissionInhibited
-                                    | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
-                                    | spn::EngineStarterMode::StarterInhibitedOverHeat
-                                    | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
-                                        runtime_state.state.engine_state_actual.state = crate::core::EngineState::NoRequest;
-                                    }
-                                    _ => {}
                                 }
-                            } else if let Some(rpm) = controller.rpm {
-                                if rpm == 0 {
+                                spn::EngineStarterMode::StartNotRequested
+                                | spn::EngineStarterMode::StarterInhibitedEngineRunning
+                                | spn::EngineStarterMode::StarterInhibitedEngineNotReady
+                                | spn::EngineStarterMode::StarterInhibitedTransmissionInhibited
+                                | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
+                                | spn::EngineStarterMode::StarterInhibitedOverHeat
+                                | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
                                     runtime_state.state.engine_state_actual.state =
                                         crate::core::EngineState::NoRequest;
-                                } else if rpm < 500 {
-                                    runtime_state.state.engine_state_actual.state =
-                                        crate::core::EngineState::Starting;
-                                } else {
-                                    runtime_state.state.engine_state_actual.state =
-                                        crate::core::EngineState::Request;
                                 }
-                            } else if controller.rpm.is_none()
-                                || controller.actual_engine.is_none()
-                                || controller.engine_torque_mode.is_none()
-                            {
+                                _ => {}
+                            }
+                        } else if let Some(rpm) = controller.rpm {
+                            if rpm == 0 {
                                 runtime_state.state.engine_state_actual.state =
                                     crate::core::EngineState::NoRequest;
+                            } else if rpm < 500 {
+                                runtime_state.state.engine_state_actual.state =
+                                    crate::core::EngineState::Starting;
+                            } else {
+                                runtime_state.state.engine_state_actual.state =
+                                    crate::core::EngineState::Request;
                             }
+                        } else if controller.rpm.is_none()
+                            || controller.actual_engine.is_none()
+                            || controller.engine_torque_mode.is_none()
+                        {
+                            runtime_state.state.engine_state_actual.state =
+                                crate::core::EngineState::NoRequest;
                         }
                     }
                 }
+            }
 
-                result?
-            }
-            super::J1939UnitOperationState::Teardown => {
-                // log::debug!(
-                //     "[0x{:X}] Engine management system teardown",
-                //     self.destination_address
-                // );
-            }
+            result?
         }
 
         Ok(())
