@@ -197,11 +197,7 @@ impl super::J1939Unit for KueblerEncoder {
             let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
             if ctx.rx_last.elapsed().as_millis() > 1_000 {
-                result = Err(super::J1939UnitError::new(
-                    "Kubler encoder".to_owned(),
-                    self.destination_address,
-                    super::J1939UnitErrorKind::MessageTimeout,
-                ));
+                result = Err(super::J1939UnitError::MessageTimeout);
             }
 
             if let Some(message) = router.try_accept(self) {

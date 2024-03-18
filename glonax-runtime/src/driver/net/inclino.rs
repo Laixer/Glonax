@@ -104,11 +104,7 @@ impl super::J1939Unit for KueblerInclinometer {
             let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
             if ctx.rx_last.elapsed().as_millis() > 1_000 {
-                result = Err(super::J1939UnitError::new(
-                    "Kubler inclinometer".to_owned(),
-                    self.destination_address,
-                    super::J1939UnitErrorKind::MessageTimeout,
-                ));
+                result = Err(super::J1939UnitError::MessageTimeout);
             }
 
             if let Some(_message) = router.try_accept(self) {

@@ -310,11 +310,7 @@ impl super::J1939Unit for EngineManagementSystem {
             let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
             if ctx.rx_last.elapsed().as_millis() > 500 {
-                result = Err(super::J1939UnitError::new(
-                    "Engine management system".to_owned(),
-                    self.destination_address,
-                    super::J1939UnitErrorKind::MessageTimeout,
-                ));
+                result = Err(super::J1939UnitError::MessageTimeout);
             }
 
             if let Some(message) = router.try_accept(self) {
@@ -402,49 +398,19 @@ impl super::J1939Unit for EngineManagementSystem {
             let request = runtime_state.read().await.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    router
-                        .send(&self.request(request.speed))
-                        .await
-                        .map_err(|e| {
-                            super::J1939UnitError::new(
-                                "Engine management system".to_owned(),
-                                self.destination_address,
-                                e.into(),
-                            )
-                        })?;
+                    router.send(&self.request(request.speed)).await?;
                     ctx.tx_last = std::time::Instant::now();
                 }
                 crate::core::EngineState::Stopping => {
-                    router.send(&self.stop(request.speed)).await.map_err(|e| {
-                        super::J1939UnitError::new(
-                            "Engine management system".to_owned(),
-                            self.destination_address,
-                            e.into(),
-                        )
-                    })?;
+                    router.send(&self.stop(request.speed)).await?;
                     ctx.tx_last = std::time::Instant::now();
                 }
                 crate::core::EngineState::Starting => {
-                    router.send(&self.start(request.speed)).await.map_err(|e| {
-                        super::J1939UnitError::new(
-                            "Engine management system".to_owned(),
-                            self.destination_address,
-                            e.into(),
-                        )
-                    })?;
+                    router.send(&self.start(request.speed)).await?;
                     ctx.tx_last = std::time::Instant::now();
                 }
                 crate::core::EngineState::Request => {
-                    router
-                        .send(&self.request(request.speed))
-                        .await
-                        .map_err(|e| {
-                            super::J1939UnitError::new(
-                                "Engine management system".to_owned(),
-                                self.destination_address,
-                                e.into(),
-                            )
-                        })?;
+                    router.send(&self.request(request.speed)).await?;
                     ctx.tx_last = std::time::Instant::now();
                 }
             }

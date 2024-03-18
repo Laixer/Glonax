@@ -308,41 +308,17 @@ impl HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         match &runtime_state.read().await.state.motion {
             crate::core::Motion::StopAll => {
-                router.send(&self.lock()).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send(&self.lock()).await?;
             }
             crate::core::Motion::ResumeAll => {
-                router.send(&self.unlock()).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send(&self.unlock()).await?;
             }
             crate::core::Motion::ResetAll => {
-                router.send(&self.motion_reset()).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send(&self.motion_reset()).await?;
             }
             crate::core::Motion::StraightDrive(value) => {
                 let frames = &self.drive_straight(*value);
-                router.send_vectored(frames).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send_vectored(frames).await?;
             }
             crate::core::Motion::Change(changes) => {
                 let frames = &self.actuator_command(
@@ -352,13 +328,7 @@ impl HydraulicControlUnit {
                         .collect(),
                 );
 
-                router.send_vectored(frames).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send_vectored(frames).await?;
             }
         }
 
@@ -439,27 +409,9 @@ impl super::J1939Unit for HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
-                router.send(&self.motion_reset()).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
-                router.send(&self.set_ident(true)).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
-                router.send(&self.set_ident(false)).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send(&self.motion_reset()).await?;
+                router.send(&self.set_ident(true)).await?;
+                router.send(&self.set_ident(false)).await?;
 
                 // TODO: FIX: It is possible that the request is send from 0x0.
                 router
@@ -467,14 +419,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         self.destination_address,
                         PGN::AddressClaimed,
                     ))
-                    .await
-                    .map_err(|e| {
-                        super::J1939UnitError::new(
-                            "Hydraulic control unit".to_owned(),
-                            self.destination_address,
-                            e.into(),
-                        )
-                    })?;
+                    .await?;
 
                 Ok(())
             }
@@ -482,11 +427,12 @@ impl super::J1939Unit for HydraulicControlUnit {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
-                    result = Err(super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        super::J1939UnitErrorKind::MessageTimeout,
-                    ));
+                    // result = Err(super::J1939UnitError::new(
+                    //     "Hydraulic control unit".to_owned(),
+                    //     self.destination_address,
+                    //     super::J1939UnitErrorKind::MessageTimeout,
+                    // ));
+                    result = Err(super::J1939UnitError::MessageTimeout);
                 }
 
                 if let Some(message) = router.try_accept(self) {
@@ -499,11 +445,12 @@ impl super::J1939Unit for HydraulicControlUnit {
                             if status.state == super::vecraft::State::FaultyGenericError
                                 || status.state == super::vecraft::State::FaultyBusError
                             {
-                                result = Err(super::J1939UnitError::new(
-                                    "Hydraulic control unit".to_owned(),
-                                    self.destination_address,
-                                    super::J1939UnitErrorKind::BusError,
-                                ));
+                                // result = Err(super::J1939UnitError::new(
+                                //     "Hydraulic control unit".to_owned(),
+                                //     self.destination_address,
+                                //     super::J1939UnitErrorKind::BusError,
+                                // ));
+                                result = Err(super::J1939UnitError::BusError);
                             }
                         }
                     }
@@ -512,13 +459,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                 result
             }
             super::J1939UnitOperationState::Teardown => {
-                router.send(&self.motion_reset()).await.map_err(|e| {
-                    super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        e.into(),
-                    )
-                })?;
+                router.send(&self.motion_reset()).await?;
 
                 Ok(())
             }

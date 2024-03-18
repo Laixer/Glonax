@@ -482,7 +482,7 @@ async fn rx_network(
                     enc.name()
                 );
 
-                if let Err(e) = enc
+                if let Err(error) = enc
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -491,7 +491,7 @@ async fn rx_network(
                         interface,
                         enc.destination(),
                         enc.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -503,7 +503,7 @@ async fn rx_network(
                     imu.name()
                 );
 
-                if let Err(e) = imu
+                if let Err(error) = imu
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -512,7 +512,7 @@ async fn rx_network(
                         interface,
                         imu.destination(),
                         imu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -524,7 +524,7 @@ async fn rx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems
+                if let Err(error) = ems
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -533,7 +533,7 @@ async fn rx_network(
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -545,7 +545,7 @@ async fn rx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems
+                if let Err(error) = ems
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -554,7 +554,7 @@ async fn rx_network(
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -566,7 +566,7 @@ async fn rx_network(
                     hcu.name()
                 );
 
-                if let Err(e) = hcu
+                if let Err(error) = hcu
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -575,7 +575,7 @@ async fn rx_network(
                         interface,
                         hcu.destination(),
                         hcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -587,7 +587,7 @@ async fn rx_network(
                     rrp.name()
                 );
 
-                if let Err(e) = rrp
+                if let Err(error) = rrp
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -596,7 +596,7 @@ async fn rx_network(
                         interface,
                         rrp.destination(),
                         rrp.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -608,7 +608,7 @@ async fn rx_network(
                     vcu.name()
                 );
 
-                if let Err(e) = vcu
+                if let Err(error) = vcu
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -617,7 +617,7 @@ async fn rx_network(
                         interface,
                         vcu.destination(),
                         vcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -633,7 +633,7 @@ async fn rx_network(
         for (drv, ctx) in network.iter_mut() {
             match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    if let Err(e) = enc
+                    if let Err(error) = enc
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -642,12 +642,12 @@ async fn rx_network(
                             interface,
                             enc.destination(),
                             enc.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    if let Err(e) = imu
+                    if let Err(error) = imu
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -656,12 +656,12 @@ async fn rx_network(
                             interface,
                             imu.destination(),
                             imu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    if let Err(e) = ems
+                    if let Err(error) = ems
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -670,12 +670,12 @@ async fn rx_network(
                             interface,
                             ems.destination(),
                             ems.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::BoschEngineManagementSystem(ems) => {
-                    if let Err(e) = ems
+                    if let Err(error) = ems
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -684,12 +684,12 @@ async fn rx_network(
                             interface,
                             ems.destination(),
                             ems.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    if let Err(e) = hcu
+                    if let Err(error) = hcu
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -698,12 +698,12 @@ async fn rx_network(
                             interface,
                             hcu.destination(),
                             hcu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    if let Err(e) = rrp
+                    if let Err(error) = rrp
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -712,12 +712,12 @@ async fn rx_network(
                             interface,
                             rrp.destination(),
                             rrp.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::VehicleControlUnit(vcu) => {
-                    if let Err(e) = vcu
+                    if let Err(error) = vcu
                         .try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -726,7 +726,7 @@ async fn rx_network(
                             interface,
                             vcu.destination(),
                             vcu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
@@ -745,7 +745,7 @@ async fn rx_network(
                     enc.name()
                 );
 
-                if let Err(e) = enc
+                if let Err(error) = enc
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -754,7 +754,7 @@ async fn rx_network(
                         interface,
                         enc.destination(),
                         enc.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -766,7 +766,7 @@ async fn rx_network(
                     imu.name()
                 );
 
-                if let Err(e) = imu
+                if let Err(error) = imu
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -775,7 +775,7 @@ async fn rx_network(
                         interface,
                         imu.destination(),
                         imu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -787,7 +787,7 @@ async fn rx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems
+                if let Err(error) = ems
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -796,7 +796,7 @@ async fn rx_network(
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -808,7 +808,7 @@ async fn rx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems
+                if let Err(error) = ems
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -817,7 +817,7 @@ async fn rx_network(
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -829,7 +829,7 @@ async fn rx_network(
                     hcu.name()
                 );
 
-                if let Err(e) = hcu
+                if let Err(error) = hcu
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -838,7 +838,7 @@ async fn rx_network(
                         interface,
                         hcu.destination(),
                         hcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -850,7 +850,7 @@ async fn rx_network(
                     rrp.name()
                 );
 
-                if let Err(e) = rrp
+                if let Err(error) = rrp
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -859,7 +859,7 @@ async fn rx_network(
                         interface,
                         rrp.destination(),
                         rrp.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -871,7 +871,7 @@ async fn rx_network(
                     vcu.name()
                 );
 
-                if let Err(e) = vcu
+                if let Err(error) = vcu
                     .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -880,7 +880,7 @@ async fn rx_network(
                         interface,
                         vcu.destination(),
                         vcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -917,13 +917,13 @@ async fn tx_network(
                     enc.name()
                 );
 
-                if let Err(e) = enc.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = enc.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         enc.destination(),
                         enc.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -935,13 +935,13 @@ async fn tx_network(
                     imu.name()
                 );
 
-                if let Err(e) = imu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = imu.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         imu.destination(),
                         imu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -953,13 +953,13 @@ async fn tx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -971,13 +971,13 @@ async fn tx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -989,13 +989,13 @@ async fn tx_network(
                     hcu.name()
                 );
 
-                if let Err(e) = hcu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = hcu.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         hcu.destination(),
                         hcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1007,13 +1007,13 @@ async fn tx_network(
                     rrp.name()
                 );
 
-                if let Err(e) = rrp.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = rrp.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         rrp.destination(),
                         rrp.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1025,13 +1025,13 @@ async fn tx_network(
                     vcu.name()
                 );
 
-                if let Err(e) = vcu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = vcu.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in setup: {}",
                         interface,
                         vcu.destination(),
                         vcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1045,79 +1045,86 @@ async fn tx_network(
         for (drv, ctx) in network.iter_mut() {
             match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    if let Err(e) = enc.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = enc.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             enc.destination(),
                             enc.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    if let Err(e) = imu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = imu.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             imu.destination(),
                             imu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    if let Err(e) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = ems.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             ems.destination(),
                             ems.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::BoschEngineManagementSystem(ems) => {
-                    if let Err(e) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = ems.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             ems.destination(),
                             ems.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    if let Err(e) = hcu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = hcu.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             hcu.destination(),
                             hcu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    if let Err(e) = rrp.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = rrp.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             rrp.destination(),
                             rrp.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::VehicleControlUnit(vcu) => {
-                    if let Err(e) = vcu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                    if let Err(error) = vcu.tick(ctx, &state, &router, runtime_state.clone()).await
+                    {
                         log::error!(
                             "[{}:0x{:X}] {}: {}",
                             interface,
                             vcu.destination(),
                             vcu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
@@ -1136,13 +1143,13 @@ async fn tx_network(
                     enc.name()
                 );
 
-                if let Err(e) = enc.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = enc.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         enc.destination(),
                         enc.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1154,13 +1161,13 @@ async fn tx_network(
                     imu.name()
                 );
 
-                if let Err(e) = imu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = imu.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         imu.destination(),
                         imu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1172,13 +1179,13 @@ async fn tx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1190,13 +1197,13 @@ async fn tx_network(
                     ems.name()
                 );
 
-                if let Err(e) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = ems.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1208,13 +1215,13 @@ async fn tx_network(
                     hcu.name()
                 );
 
-                if let Err(e) = hcu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = hcu.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         hcu.destination(),
                         hcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1226,13 +1233,13 @@ async fn tx_network(
                     rrp.name()
                 );
 
-                if let Err(e) = rrp.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = rrp.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         rrp.destination(),
                         rrp.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1244,13 +1251,13 @@ async fn tx_network(
                     vcu.name()
                 );
 
-                if let Err(e) = vcu.tick(ctx, &state, &router, runtime_state.clone()).await {
+                if let Err(error) = vcu.tick(ctx, &state, &router, runtime_state.clone()).await {
                     log::error!(
                         "[{}:0x{:X}] {} in teardown: {}",
                         interface,
                         vcu.destination(),
                         vcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1294,7 +1301,7 @@ pub async fn atx_network_1(
                     enc.name()
                 );
 
-                if let Err(e) = enc
+                if let Err(error) = enc
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1303,7 +1310,7 @@ pub async fn atx_network_1(
                         interface,
                         enc.destination(),
                         enc.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1315,7 +1322,7 @@ pub async fn atx_network_1(
                     imu.name()
                 );
 
-                if let Err(e) = imu
+                if let Err(error) = imu
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1324,7 +1331,7 @@ pub async fn atx_network_1(
                         interface,
                         imu.destination(),
                         imu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1336,7 +1343,7 @@ pub async fn atx_network_1(
                     ems.name()
                 );
 
-                if let Err(e) = ems
+                if let Err(error) = ems
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1345,7 +1352,7 @@ pub async fn atx_network_1(
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1357,7 +1364,7 @@ pub async fn atx_network_1(
                     ems.name()
                 );
 
-                if let Err(e) = ems
+                if let Err(error) = ems
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1366,7 +1373,7 @@ pub async fn atx_network_1(
                         interface,
                         ems.destination(),
                         ems.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1378,7 +1385,7 @@ pub async fn atx_network_1(
                     hcu.name()
                 );
 
-                if let Err(e) = hcu
+                if let Err(error) = hcu
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1387,7 +1394,7 @@ pub async fn atx_network_1(
                         interface,
                         hcu.destination(),
                         hcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1399,7 +1406,7 @@ pub async fn atx_network_1(
                     rrp.name()
                 );
 
-                if let Err(e) = rrp
+                if let Err(error) = rrp
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1408,7 +1415,7 @@ pub async fn atx_network_1(
                         interface,
                         rrp.destination(),
                         rrp.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1420,7 +1427,7 @@ pub async fn atx_network_1(
                     vcu.name()
                 );
 
-                if let Err(e) = vcu
+                if let Err(error) = vcu
                     .trigger(ctx, &state, &router, runtime_state.clone())
                     .await
                 {
@@ -1429,7 +1436,7 @@ pub async fn atx_network_1(
                         interface,
                         vcu.destination(),
                         vcu.name(),
-                        e.kind()
+                        error
                     );
                 }
             }
@@ -1444,7 +1451,7 @@ pub async fn atx_network_1(
         for (drv, ctx) in network.network.iter_mut() {
             match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    if let Err(e) = enc
+                    if let Err(error) = enc
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1453,12 +1460,12 @@ pub async fn atx_network_1(
                             interface,
                             enc.destination(),
                             enc.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    if let Err(e) = imu
+                    if let Err(error) = imu
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1467,12 +1474,12 @@ pub async fn atx_network_1(
                             interface,
                             imu.destination(),
                             imu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    if let Err(e) = ems
+                    if let Err(error) = ems
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1481,12 +1488,12 @@ pub async fn atx_network_1(
                             interface,
                             ems.destination(),
                             ems.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::BoschEngineManagementSystem(ems) => {
-                    if let Err(e) = ems
+                    if let Err(error) = ems
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1495,12 +1502,12 @@ pub async fn atx_network_1(
                             interface,
                             ems.destination(),
                             ems.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    if let Err(e) = hcu
+                    if let Err(error) = hcu
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1509,12 +1516,12 @@ pub async fn atx_network_1(
                             interface,
                             hcu.destination(),
                             hcu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    if let Err(e) = rrp
+                    if let Err(error) = rrp
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1523,12 +1530,12 @@ pub async fn atx_network_1(
                             interface,
                             rrp.destination(),
                             rrp.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
                 NetDriver::VehicleControlUnit(vcu) => {
-                    if let Err(e) = vcu
+                    if let Err(error) = vcu
                         .trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                     {
@@ -1537,7 +1544,7 @@ pub async fn atx_network_1(
                             interface,
                             vcu.destination(),
                             vcu.name(),
-                            e.kind()
+                            error
                         );
                     }
                 }
