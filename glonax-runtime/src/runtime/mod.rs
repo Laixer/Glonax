@@ -634,54 +634,30 @@ async fn tx_network(
 
         let state = J1939UnitOperationState::Running;
         for (drv, ctx) in network.iter_mut() {
-            match drv {
+            let result = match drv {
                 NetDriver::KueblerEncoder(enc) => {
-                    let res = enc.tick(ctx, &state, &router, runtime_state.clone()).await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x0] Kuebler encoder: {}", interface, e);
-                    }
+                    enc.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::KueblerInclinometer(imu) => {
-                    let res = imu.tick(ctx, &state, &router, runtime_state.clone()).await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x0] Kuebler inclinometer: {}", interface, e);
-                    }
+                    imu.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::VolvoD7E(ems) => {
-                    let res = ems.tick(ctx, &state, &router, runtime_state.clone()).await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x0] Volvo D7E: {}", interface, e);
-                    }
+                    ems.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::BoschEngineManagementSystem(ems) => {
-                    let res = ems.tick(ctx, &state, &router, runtime_state.clone()).await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x0] Bosch engine management system: {}", interface, e);
-                    }
+                    ems.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    let res = hcu.tick(ctx, &state, &router, runtime_state.clone()).await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x4A] Hydraulic control: {}", interface, e);
-                    }
+                    hcu.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
                 NetDriver::RequestResponder(rrp) => {
-                    let res = rrp.tick(ctx, &state, &router, runtime_state.clone()).await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x0] Request responder: {}", interface, e);
-                    }
+                    rrp.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
-            }
+            };
 
-            // if let Err(e) = result {
-            //     log::error!("Failed to tick network: {}", e);
-            // }
+            if let Err(e) = result {
+                log::error!("[{}:{}] {}: {}", interface, e.destination(), e.name(), e.kind());
+            }
         }
     }
 

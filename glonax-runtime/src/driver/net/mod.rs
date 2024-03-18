@@ -72,7 +72,7 @@ pub struct NetDriverContext {
 }
 
 #[derive(Debug)]
-pub enum J1939UnitError {
+pub enum J1939UnitErrorKind {
     /// Unit has not sent a message in a while.
     MessageTimeout,
     /// Unit has an invalid configuration.
@@ -85,29 +85,68 @@ pub enum J1939UnitError {
     IOError(std::io::Error),
 }
 
-impl std::fmt::Display for J1939UnitError {
+impl std::fmt::Display for J1939UnitErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match self {
-                J1939UnitError::MessageTimeout => "communication timeout",
-                J1939UnitError::InvalidConfiguration => "invalid configuration",
-                J1939UnitError::VersionMismatch => "version mismatch",
-                J1939UnitError::BusError => "bus error",
-                J1939UnitError::IOError(error) => return write!(f, "i/o error: {}", error),
+                J1939UnitErrorKind::MessageTimeout => "communication timeout",
+                J1939UnitErrorKind::InvalidConfiguration => "invalid configuration",
+                J1939UnitErrorKind::VersionMismatch => "version mismatch",
+                J1939UnitErrorKind::BusError => "bus error",
+                J1939UnitErrorKind::IOError(error) => return write!(f, "i/o error: {}", error),
             }
         )
     }
 }
 
-impl std::error::Error for J1939UnitError {}
-
-impl From<std::io::Error> for J1939UnitError {
+impl From<std::io::Error> for J1939UnitErrorKind {
     fn from(error: std::io::Error) -> Self {
-        J1939UnitError::IOError(error)
+        Self::IOError(error)
     }
 }
+
+#[derive(Debug)]
+pub struct J1939UnitError {
+    name: String,
+    destination: u8,
+    kind: J1939UnitErrorKind,
+}
+
+impl J1939UnitError {
+    pub fn new(name: String, destination: u8, kind: J1939UnitErrorKind) -> Self {
+        Self {
+            name,
+            destination,
+            kind,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn destination(&self) -> u8 {
+        self.destination
+    }
+
+    pub fn kind(&self) -> &J1939UnitErrorKind {
+        &self.kind
+    }
+}
+
+impl std::fmt::Display for J1939UnitError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} (destination: {}): {}",
+            self.name, self.destination, self.kind
+        )
+    }
+}
+
+impl std::error::Error for J1939UnitError {}
 
 /// Operational states for a J1939 unit.
 ///

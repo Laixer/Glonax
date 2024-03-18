@@ -19,7 +19,7 @@ pub enum VolvoEngineState {
 #[derive(Default)]
 pub struct VolvoD7E {
     /// Destination address.
-    _destination_address: u8,
+    destination_address: u8,
     /// Source address.
     source_address: u8,
     /// Engine management system.
@@ -30,7 +30,7 @@ impl VolvoD7E {
     /// Construct a new engine management system.
     pub fn new(da: u8, sa: u8) -> Self {
         Self {
-            _destination_address: da,
+            destination_address: da,
             source_address: sa,
             ems: EngineManagementSystem::new(da, sa),
         }
@@ -127,21 +127,22 @@ impl super::J1939Unit for VolvoD7E {
             let request = runtime_state.read().await.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    router.send(&self.request(request.speed)).await?;
+                    router.send(&self.request(request.speed)).await.map_err(|e| super::J1939UnitError::new("Volvo D7E".to_owned(), self.destination_address, e.into()))?;
                 }
                 crate::core::EngineState::Starting => {
-                    router.send(&self.start(request.speed)).await?;
+                    router.send(&self.start(request.speed)).await.map_err(|e| super::J1939UnitError::new("Volvo D7E".to_owned(), self.destination_address, e.into()))?;
                 }
                 crate::core::EngineState::Stopping => {
-                    router.send(&self.stop(request.speed)).await?;
+                    router.send(&self.stop(request.speed)).await.map_err(|e| super::J1939UnitError::new("Volvo D7E".to_owned(), self.destination_address, e.into()))?;
                 }
                 crate::core::EngineState::Request => {
-                    router.send(&self.request(request.speed)).await?;
+                    router.send(&self.request(request.speed)).await.map_err(|e| super::J1939UnitError::new("Volvo D7E".to_owned(), self.destination_address, e.into()))?;
                 }
             }
 
             if ctx.rx_last.elapsed().as_millis() > 500 {
-                Err(super::J1939UnitError::MessageTimeout)?;
+                // Err(super::J1939UnitError::MessageTimeout)?;
+                Err(super::J1939UnitError::new("Volvo D7E".to_owned(), self.destination_address, super::J1939UnitErrorKind::MessageTimeout))?;
             }
         }
 

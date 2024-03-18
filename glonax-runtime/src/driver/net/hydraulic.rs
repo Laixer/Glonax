@@ -308,17 +308,17 @@ impl HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         match &runtime_state.read().await.state.motion {
             crate::core::Motion::StopAll => {
-                router.send(&self.lock()).await?;
+                router.send(&self.lock()).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
             crate::core::Motion::ResumeAll => {
-                router.send(&self.unlock()).await?;
+                router.send(&self.unlock()).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
             crate::core::Motion::ResetAll => {
-                router.send(&self.motion_reset()).await?;
+                router.send(&self.motion_reset()).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
             crate::core::Motion::StraightDrive(value) => {
                 let frames = &self.drive_straight(*value);
-                router.send_vectored(frames).await?;
+                router.send_vectored(frames).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
             crate::core::Motion::Change(changes) => {
                 let frames = &self.actuator_command(
@@ -328,7 +328,7 @@ impl HydraulicControlUnit {
                         .collect(),
                 );
 
-                router.send_vectored(frames).await?;
+                router.send_vectored(frames).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
         }
 
@@ -420,15 +420,15 @@ impl super::J1939Unit for HydraulicControlUnit {
                     self.destination_address
                 );
 
-                router.send(&self.motion_reset()).await?;
-                router.send(&self.set_ident(true)).await?;
-                router.send(&self.set_ident(false)).await?;
+                router.send(&self.motion_reset()).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
+                router.send(&self.set_ident(true)).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
+                router.send(&self.set_ident(false)).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
                 router
                     .send(&protocol::request(
                         self.destination_address,
                         PGN::AddressClaimed,
                     ))
-                    .await?;
+                    .await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
             super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
@@ -443,7 +443,8 @@ impl super::J1939Unit for HydraulicControlUnit {
                                 if status.state == super::vecraft::State::FaultyGenericError
                                     || status.state == super::vecraft::State::FaultyBusError
                                 {
-                                    Err(super::J1939UnitError::BusError)?;
+                                    // Err(super::J1939UnitError::BusError)?;
+                                    Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::BusError))?;
                                 }
                             }
                         }
@@ -456,7 +457,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                     self.destination_address
                 );
 
-                router.send(&self.motion_reset()).await?;
+                router.send(&self.motion_reset()).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
             }
         }
 
@@ -483,7 +484,8 @@ impl super::J1939Unit for HydraulicControlUnit {
                 ctx.tx_last = std::time::Instant::now();
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
-                    Err(super::J1939UnitError::MessageTimeout)?;
+                    // Err(super::J1939UnitError::MessageTimeout)?;
+                    Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::MessageTimeout))?;
                 }
             }
             super::J1939UnitOperationState::Teardown => {
@@ -517,7 +519,8 @@ impl super::J1939Unit for HydraulicControlUnit {
                 ctx.tx_last = std::time::Instant::now();
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
-                    Err(super::J1939UnitError::MessageTimeout)?;
+                    // Err(super::J1939UnitError::MessageTimeout)?;
+                    Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::MessageTimeout))?;
                 }
             }
             super::J1939UnitOperationState::Teardown => {

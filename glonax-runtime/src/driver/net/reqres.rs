@@ -44,7 +44,7 @@ impl super::J1939Unit for RequestResponder {
                             self.source_address,
                             *router.name(),
                         ))
-                        .await?;
+                        .await.map_err(|e| super::J1939UnitError::new("Request responder".to_owned(), self.source_address, e.into()))?;
                 }
                 PGN::SoftwareIdentification => {
                     let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)
@@ -59,7 +59,7 @@ impl super::J1939Unit for RequestResponder {
                         .copy_from_slice(&[1, version_major, version_minor, version_patch, b'*'])
                         .build();
 
-                    router.send(&frame).await?;
+                    router.send(&frame).await.map_err(|e| super::J1939UnitError::new("Request responder".to_owned(), self.source_address, e.into()))?;
                 }
                 PGN::TimeDate => {
                     use chrono::prelude::*;
@@ -82,7 +82,7 @@ impl super::J1939Unit for RequestResponder {
                         .copy_from_slice(&timedate.to_pdu())
                         .build();
 
-                    router.send(&frame).await?;
+                    router.send(&frame).await.map_err(|e| super::J1939UnitError::new("Request responder".to_owned(), self.source_address, e.into()))?;
                 }
                 _ => (),
             }
