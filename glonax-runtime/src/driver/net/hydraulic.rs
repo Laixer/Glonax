@@ -590,14 +590,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 self.send_motion_command(router, runtime_state).await?;
 
                 ctx.tx_last = std::time::Instant::now();
-
-                if ctx.rx_last.elapsed().as_millis() > 500 {
-                    Err(super::J1939UnitError::new(
-                        "Hydraulic control unit".to_owned(),
-                        self.destination_address,
-                        super::J1939UnitErrorKind::MessageTimeout,
-                    ))?;
-                }
             }
             super::J1939UnitOperationState::Teardown => {
                 log::debug!(
