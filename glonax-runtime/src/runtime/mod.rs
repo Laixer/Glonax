@@ -625,7 +625,7 @@ async fn tx_network(
         };
 
         if let Err(e) = result {
-            log::error!("Failed to tick network: {}", e);
+            log::error!("[TX][{}:0x{:X}] {} in setup: {}", interface, e.destination(), e.name(), e.kind());
         }
     }
 
@@ -656,7 +656,7 @@ async fn tx_network(
             };
 
             if let Err(e) = result {
-                log::error!("[{}:{}] {}: {}", interface, e.destination(), e.name(), e.kind());
+                log::error!("[TX][{}:0x{:X}] {}: {}", interface, e.destination(), e.name(), e.kind());
             }
         }
     }
@@ -683,7 +683,7 @@ async fn tx_network(
         };
 
         if let Err(e) = result {
-            log::error!("Failed to tick network: {}", e);
+            log::error!("[TX][{}:0x{:X}] {} in teardown: {}", interface, e.destination(), e.name(), e.kind());
         }
     }
 
@@ -743,7 +743,7 @@ pub async fn atx_network_1(
         };
 
         if let Err(e) = result {
-            log::error!("Failed to tick network: {}", e);
+            log::error!("[ATX][{}:0x{:X}] {} in setup: {}", interface, e.destination(), e.name(), e.kind());
         }
     }
 
@@ -781,7 +781,7 @@ pub async fn atx_network_1(
             };
 
             if let Err(e) = result {
-                log::error!("Failed to tick network: {}", e);
+                log::error!("[ATX][{}:0x{:X}] {}: {}", interface, e.destination(), e.name(), e.kind());
             }
         }
     }
