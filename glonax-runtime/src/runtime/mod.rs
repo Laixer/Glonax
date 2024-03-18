@@ -473,45 +473,154 @@ async fn rx_network(
 
     let state = J1939UnitOperationState::Setup;
     for (drv, ctx) in network.iter_mut() {
-        let result = match drv {
+        match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    enc.destination(),
+                    enc.name()
+                );
+
+                if let Err(e) = enc
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        enc.destination(),
+                        enc.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    imu.destination(),
+                    imu.name()
+                );
+
+                if let Err(e) = imu
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        imu.destination(),
+                        imu.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::VolvoD7E(ems) => {
-                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    ems.destination(),
+                    ems.name()
+                );
+
+                if let Err(e) = ems
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        ems.destination(),
+                        ems.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::BoschEngineManagementSystem(ems) => {
-                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    ems.destination(),
+                    ems.name()
+                );
+
+                if let Err(e) = ems
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        ems.destination(),
+                        ems.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    hcu.destination(),
+                    hcu.name()
+                );
+
+                if let Err(e) = hcu
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        hcu.destination(),
+                        hcu.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    rrp.destination(),
+                    rrp.name()
+                );
+
+                if let Err(e) = rrp
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        rrp.destination(),
+                        rrp.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::VehicleControlUnit(vcu) => {
-                vcu.try_accept(ctx, &state, &router, runtime_state.clone())
-                    .await
-            }
-        };
+                log::debug!(
+                    "[{}:0x{:X}] Setup {}",
+                    interface,
+                    vcu.destination(),
+                    vcu.name()
+                );
 
-        if let Err(e) = result {
-            log::error!(
-                "[RX][{}:0x{:X}] {} in setup: {}",
-                interface,
-                e.destination(),
-                e.name(),
-                e.kind()
-            );
+                if let Err(e) = vcu
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in setup: {}",
+                        interface,
+                        vcu.destination(),
+                        vcu.name(),
+                        e.kind()
+                    );
+                }
+            }
         }
     }
 
@@ -567,45 +676,154 @@ async fn rx_network(
 
     let state = J1939UnitOperationState::Teardown;
     for (drv, ctx) in network.iter_mut() {
-        let result = match drv {
+        match drv {
             NetDriver::KueblerEncoder(enc) => {
-                enc.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    enc.destination(),
+                    enc.name()
+                );
+
+                if let Err(e) = enc
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        enc.destination(),
+                        enc.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::KueblerInclinometer(imu) => {
-                imu.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    imu.destination(),
+                    imu.name()
+                );
+
+                if let Err(e) = imu
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        imu.destination(),
+                        imu.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::VolvoD7E(ems) => {
-                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    ems.destination(),
+                    ems.name()
+                );
+
+                if let Err(e) = ems
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        ems.destination(),
+                        ems.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::BoschEngineManagementSystem(ems) => {
-                ems.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    ems.destination(),
+                    ems.name()
+                );
+
+                if let Err(e) = ems
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        ems.destination(),
+                        ems.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::HydraulicControlUnit(hcu) => {
-                hcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    hcu.destination(),
+                    hcu.name()
+                );
+
+                if let Err(e) = hcu
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        hcu.destination(),
+                        hcu.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::RequestResponder(rrp) => {
-                rrp.try_accept(ctx, &state, &router, runtime_state.clone())
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    rrp.destination(),
+                    rrp.name()
+                );
+
+                if let Err(e) = rrp
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        rrp.destination(),
+                        rrp.name(),
+                        e.kind()
+                    );
+                }
             }
             NetDriver::VehicleControlUnit(vcu) => {
-                vcu.try_accept(ctx, &state, &router, runtime_state.clone())
-                    .await
-            }
-        };
+                log::debug!(
+                    "[{}:0x{:X}] Teardown {}",
+                    interface,
+                    vcu.destination(),
+                    vcu.name()
+                );
 
-        if let Err(e) = result {
-            log::error!(
-                "[RX][{}:0x{:X}] {} in teardown: {}",
-                interface,
-                e.destination(),
-                e.name(),
-                e.kind()
-            );
+                if let Err(e) = vcu
+                    .try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {} in teardown: {}",
+                        interface,
+                        vcu.destination(),
+                        vcu.name(),
+                        e.kind()
+                    );
+                }
+            }
         }
     }
 

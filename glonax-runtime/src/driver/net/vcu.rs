@@ -38,6 +38,14 @@ impl Parsable<VecraftStatusMessage> for VehicleControlUnit {
 }
 
 impl super::J1939Unit for VehicleControlUnit {
+    fn name(&self) -> &str {
+        "Vehicle control unit"
+    }
+
+    fn destination(&self) -> u8 {
+        self.destination_address
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
@@ -47,10 +55,10 @@ impl super::J1939Unit for VehicleControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!(
-                    "[0x{:X}] Vehicle control unit ingress setup",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Vehicle control unit ingress setup",
+                //     self.destination_address
+                // );
 
                 Ok(())
             }
@@ -82,10 +90,10 @@ impl super::J1939Unit for VehicleControlUnit {
                 result
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!(
-                    "[0x{:X}] Vehicle control unit ingress teardown",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Vehicle control unit ingress teardown",
+                //     self.destination_address
+                // );
 
                 Ok(())
             }

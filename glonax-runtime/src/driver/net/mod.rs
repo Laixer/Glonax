@@ -170,6 +170,12 @@ pub enum J1939UnitOperationState {
 
 // FUTURE: Maybe move to runtime or a network module?
 pub trait J1939Unit {
+    /// Get the name of the unit.
+    fn name(&self) -> &str;
+
+    /// Get the destination address of the unit.
+    fn destination(&self) -> u8;
+
     /// Try to accept a message from the router.
     ///
     /// This method will try to accept a message from the router. If the router has a message

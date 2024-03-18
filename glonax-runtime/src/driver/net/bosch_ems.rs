@@ -40,6 +40,14 @@ impl Parsable<EngineMessage> for BoschEngineManagementSystem {
 }
 
 impl super::J1939Unit for BoschEngineManagementSystem {
+    fn name(&self) -> &str {
+        "Bosch ECM"
+    }
+
+    fn destination(&self) -> u8 {
+        self.ems.destination()
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,

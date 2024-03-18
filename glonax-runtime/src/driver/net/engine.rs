@@ -291,6 +291,14 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 }
 
 impl super::J1939Unit for EngineManagementSystem {
+    fn name(&self) -> &str {
+        "Engine management system"
+    }
+
+    fn destination(&self) -> u8 {
+        self.destination_address
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
@@ -300,10 +308,10 @@ impl super::J1939Unit for EngineManagementSystem {
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!(
-                    "[0x{:X}] Engine management system setup",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Engine management system setup",
+                //     self.destination_address
+                // );
             }
             super::J1939UnitOperationState::Running => {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
@@ -385,10 +393,10 @@ impl super::J1939Unit for EngineManagementSystem {
                 result?
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!(
-                    "[0x{:X}] Engine management system teardown",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Engine management system teardown",
+                //     self.destination_address
+                // );
             }
         }
 

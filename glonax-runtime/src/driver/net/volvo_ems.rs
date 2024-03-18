@@ -79,6 +79,14 @@ impl Parsable<EngineMessage> for VolvoD7E {
 }
 
 impl super::J1939Unit for VolvoD7E {
+    fn name(&self) -> &str {
+        "Volvo D7E"
+    }
+
+    fn destination(&self) -> u8 {
+        self.destination_address
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,

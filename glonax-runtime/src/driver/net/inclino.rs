@@ -85,6 +85,14 @@ impl Parsable<ProcessDataMessage> for KueblerInclinometer {
 }
 
 impl super::J1939Unit for KueblerInclinometer {
+    fn name(&self) -> &str {
+        "Kubler inclinometer"
+    }
+
+    fn destination(&self) -> u8 {
+        self.destination_address
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
@@ -94,10 +102,10 @@ impl super::J1939Unit for KueblerInclinometer {
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!(
-                    "[0x{:X}] Kubler inclinometer setup",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Kubler inclinometer setup",
+                //     self.destination_address
+                // );
             }
             super::J1939UnitOperationState::Running => {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
@@ -117,10 +125,10 @@ impl super::J1939Unit for KueblerInclinometer {
                 result?
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!(
-                    "[0x{:X}] Kubler inclinometer teardown",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Kubler inclinometer teardown",
+                //     self.destination_address
+                // );
             }
         }
 

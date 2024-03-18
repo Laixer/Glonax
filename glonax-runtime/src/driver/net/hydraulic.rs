@@ -376,9 +376,6 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
 
         match frame.id().pgn() {
             PGN::ProprietarilyConfigurableMessage3 => {
-                // if frame.id().destination_address() != Some(self.destination_address) {
-                //     return None;
-                // }
                 if frame.pdu()[0..2] != [b'Z', b'C'] {
                     return None;
                 }
@@ -395,9 +392,6 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 ))
             }
             PGN::ProprietarilyConfigurableMessage1 => {
-                // if frame.id().destination_address() != Some(self.destination_address) {
-                //     return None;
-                // }
                 if frame.pdu()[0..2] != [b'Z', b'C'] {
                     return None;
                 }
@@ -419,23 +413,23 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                     frame,
                 )))
             }
-            PGN::Other(40_960) | PGN::Other(41_216) => {
-                // if frame.id().destination_address() != Some(self.destination_address) {
-                //     return None;
-                // }
-
-                Some(HydraulicMessage::Actuator(ActuatorMessage::from_frame(
-                    self.destination_address,
-                    self.source_address,
-                    frame,
-                )))
-            }
+            PGN::Other(40_960) | PGN::Other(41_216) => Some(HydraulicMessage::Actuator(
+                ActuatorMessage::from_frame(self.destination_address, self.source_address, frame),
+            )),
             _ => None,
         }
     }
 }
 
 impl super::J1939Unit for HydraulicControlUnit {
+    fn name(&self) -> &str {
+        "Hydraulic control unit"
+    }
+
+    fn destination(&self) -> u8 {
+        self.destination_address
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
@@ -445,10 +439,10 @@ impl super::J1939Unit for HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
-                log::debug!(
-                    "[0x{:X}] Hydraulic control unit ingress setup",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Hydraulic control unit ingress setup",
+                //     self.destination_address
+                // );
 
                 router.send(&self.motion_reset()).await.map_err(|e| {
                     super::J1939UnitError::new(
@@ -506,10 +500,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                         HydraulicMessage::MotionConfig(_config) => {}
                         HydraulicMessage::VecraftConfig(_config) => {}
                         HydraulicMessage::Status(status) => {
+                            ctx.rx_last = std::time::Instant::now();
                             if status.state == super::vecraft::State::FaultyGenericError
                                 || status.state == super::vecraft::State::FaultyBusError
                             {
-                                ctx.rx_last = std::time::Instant::now();
                                 result = Err(super::J1939UnitError::new(
                                     "Hydraulic control unit".to_owned(),
                                     self.destination_address,
@@ -523,10 +517,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                 result
             }
             super::J1939UnitOperationState::Teardown => {
-                log::debug!(
-                    "[0x{:X}] Hydraulic control unit ingress teardown",
-                    self.destination_address
-                );
+                // log::debug!(
+                //     "[0x{:X}] Hydraulic control unit ingress teardown",
+                //     self.destination_address
+                // );
 
                 router.send(&self.motion_reset()).await.map_err(|e| {
                     super::J1939UnitError::new(
