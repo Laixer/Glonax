@@ -7,6 +7,7 @@ pub use crate::can::{CANSocket, SockAddrCAN};
 // TODO: Move to J1939 crate
 /// Assign address to node.
 pub fn commanded_address(node: u8, address: u8) -> Vec<Frame> {
+    // TODO: First 8 bytes are NAME, last byte is address
     let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
 
     broadcast_announce(node, PGN::CommandedAddress, &data)

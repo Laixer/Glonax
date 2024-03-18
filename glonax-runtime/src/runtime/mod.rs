@@ -512,36 +512,41 @@ async fn rx_network(
 
         let state = J1939UnitOperationState::Running;
         for (drv, ctx) in network.iter_mut() {
-            let result = match drv {
+            match drv {
                 NetDriver::KueblerEncoder(enc) => {
                     enc.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await
+                        .await;
                 }
                 NetDriver::KueblerInclinometer(imu) => {
                     imu.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await
+                        .await;
                 }
                 NetDriver::VolvoD7E(ems) => {
                     ems.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await
+                        .await;
                 }
                 NetDriver::BoschEngineManagementSystem(ems) => {
                     ems.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await
+                        .await;
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    hcu.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await
+                    let res = hcu
+                        .try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await;
+
+                    if let Err(e) = res {
+                        log::error!("[{}:0x4A] Hydraulic control: {}", interface, e);
+                    }
                 }
                 NetDriver::RequestResponder(rrp) => {
                     rrp.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await
+                        .await;
                 }
-            };
-
-            if let Err(e) = result {
-                log::error!("Failed to tick network: {}", e);
             }
+
+            // if let Err(e) = result {
+            //     log::error!("[{}:0x4A] Hydraulic control unit ingress setup: {}", e);
+            // }
         }
     }
 
