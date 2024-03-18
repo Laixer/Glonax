@@ -56,31 +56,6 @@ impl VolvoD7E {
         ])
         .build()
     }
-
-    // pub fn start(&self, rpm: u16) -> Frame {
-    //     let frame_builder = FrameBuilder::new(
-    //         IdBuilder::from_pgn(PGN::TorqueSpeedControl1)
-    //             .priority(3)
-    //             .da(self.destination_address)
-    //             .sa(self.source_address)
-    //             .build(),
-    //     );
-
-    //     // TODO: This is not correct. 'SpeedTorqueLimitControl' is not used for starting the engine.
-    //     // Change to proprietary PGN.
-    //     frame_builder
-    //         .copy_from_slice(
-    //             &spn::TorqueSpeedControl1Message {
-    //                 override_control_mode: Some(spn::OverrideControlMode::SpeedTorqueLimitControl),
-    //                 speed_control_condition: None,
-    //                 control_mode_priority: None,
-    //                 speed: Some(rpm),
-    //                 torque: None,
-    //             }
-    //             .to_pdu(),
-    //         )
-    //         .build()
-    // }
 }
 
 impl super::engine::Engine for VolvoD7E {
