@@ -190,6 +190,16 @@ impl super::J1939Unit for KueblerEncoder {
                 log::debug!("[0x{:X}] Kubler encoder setup", self.destination_address);
             }
             super::J1939UnitOperationState::Running => {
+                let mut result = Result::<(), super::J1939UnitError>::Ok(());
+
+                if ctx.rx_last.elapsed().as_millis() > 1_000 {
+                    result = Err(super::J1939UnitError::new(
+                        "Kubler encoder".to_owned(),
+                        self.destination_address,
+                        super::J1939UnitErrorKind::MessageTimeout,
+                    ));
+                }
+
                 if let Some(message) = router.try_accept(self) {
                     ctx.rx_last = std::time::Instant::now();
 
@@ -200,30 +210,12 @@ impl super::J1939Unit for KueblerEncoder {
                             .insert(message.source_address, message.position as f32);
                     }
                 }
+
+                result?
             }
             super::J1939UnitOperationState::Teardown => {
                 log::debug!("[0x{:X}] Kubler encoder teardown", self.destination_address);
             }
-        }
-
-        Ok(())
-    }
-
-    async fn tick(
-        &self,
-        ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
-        _router: &crate::net::Router,
-        _runtime_state: crate::runtime::SharedOperandState,
-    ) -> Result<(), super::J1939UnitError> {
-        if state == &super::J1939UnitOperationState::Running
-            && ctx.rx_last.elapsed().as_millis() > 1_000
-        {
-            Err(super::J1939UnitError::new(
-                "Kubler encoder".to_owned(),
-                self.destination_address,
-                super::J1939UnitErrorKind::MessageTimeout,
-            ))?;
         }
 
         Ok(())

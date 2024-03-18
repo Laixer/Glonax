@@ -308,7 +308,7 @@ impl super::J1939Unit for EngineManagementSystem {
             super::J1939UnitOperationState::Running => {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                if ctx.rx_last.elapsed().as_millis() > 1_000 {
+                if ctx.rx_last.elapsed().as_millis() > 500 {
                     result = Err(super::J1939UnitError::new(
                         "Engine management system".to_owned(),
                         self.destination_address,

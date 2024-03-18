@@ -501,8 +501,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 }
 
                 if let Some(message) = router.try_accept(self) {
-                    ctx.rx_last = std::time::Instant::now();
-
                     match message {
                         HydraulicMessage::Actuator(_actuator) => {}
                         HydraulicMessage::MotionConfig(_config) => {}
@@ -511,6 +509,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             if status.state == super::vecraft::State::FaultyGenericError
                                 || status.state == super::vecraft::State::FaultyBusError
                             {
+                                ctx.rx_last = std::time::Instant::now();
                                 result = Err(super::J1939UnitError::new(
                                     "Hydraulic control unit".to_owned(),
                                     self.destination_address,
