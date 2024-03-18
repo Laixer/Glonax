@@ -228,7 +228,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     std::thread::sleep(Duration::from_millis(50));
 
-    log::debug!("{} was shutdown gracefully", bin_name);
+    log::info!("{} was shutdown gracefully", bin_name);
 
     Ok(())
 }

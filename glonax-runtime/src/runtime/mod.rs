@@ -725,6 +725,7 @@ async fn rx_network(
     .await;
 
     while shutdown.is_empty() {
+        // TODO: Add a timeout
         if let Err(e) = router.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }
