@@ -498,6 +498,10 @@ async fn rx_network(
                 rrp.try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
             }
+            NetDriver::VehicleControlUnit(vcu) => {
+                vcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
+            }
         };
 
         if let Err(e) = result {
@@ -543,6 +547,10 @@ async fn rx_network(
                     rrp.try_accept(ctx, &state, &router, runtime_state.clone())
                         .await
                 }
+                NetDriver::VehicleControlUnit(vcu) => {
+                    vcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
+                }
             };
 
             if let Err(e) = result {
@@ -582,6 +590,10 @@ async fn rx_network(
             }
             NetDriver::RequestResponder(rrp) => {
                 rrp.try_accept(ctx, &state, &router, runtime_state.clone())
+                    .await
+            }
+            NetDriver::VehicleControlUnit(vcu) => {
+                vcu.try_accept(ctx, &state, &router, runtime_state.clone())
                     .await
             }
         };
@@ -635,6 +647,9 @@ async fn tx_network(
             NetDriver::RequestResponder(rrp) => {
                 rrp.tick(ctx, &state, &router, runtime_state.clone()).await
             }
+            NetDriver::VehicleControlUnit(vcu) => {
+                vcu.tick(ctx, &state, &router, runtime_state.clone()).await
+            }
         };
 
         if let Err(e) = result {
@@ -672,6 +687,9 @@ async fn tx_network(
                 NetDriver::RequestResponder(rrp) => {
                     rrp.tick(ctx, &state, &router, runtime_state.clone()).await
                 }
+                NetDriver::VehicleControlUnit(vcu) => {
+                    vcu.tick(ctx, &state, &router, runtime_state.clone()).await
+                }
             };
 
             if let Err(e) = result {
@@ -704,6 +722,9 @@ async fn tx_network(
             }
             NetDriver::RequestResponder(rrp) => {
                 rrp.tick(ctx, &state, &router, runtime_state.clone()).await
+            }
+            NetDriver::VehicleControlUnit(vcu) => {
+                vcu.tick(ctx, &state, &router, runtime_state.clone()).await
             }
         };
 
@@ -771,6 +792,10 @@ pub async fn atx_network_1(
                 rrp.trigger(ctx, &state, &router, runtime_state.clone())
                     .await
             }
+            NetDriver::VehicleControlUnit(vcu) => {
+                vcu.trigger(ctx, &state, &router, runtime_state.clone())
+                    .await
+            }
         };
 
         if let Err(e) = result {
@@ -813,6 +838,10 @@ pub async fn atx_network_1(
                 }
                 NetDriver::RequestResponder(rrp) => {
                     rrp.trigger(ctx, &state, &router, runtime_state.clone())
+                        .await
+                }
+                NetDriver::VehicleControlUnit(vcu) => {
+                    vcu.trigger(ctx, &state, &router, runtime_state.clone())
                         .await
                 }
             };

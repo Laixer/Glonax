@@ -6,6 +6,7 @@ pub mod hydraulic;
 pub mod inclino;
 pub mod inspector;
 pub mod reqres;
+pub mod vcu;
 pub(super) mod vecraft;
 pub mod volvo_ems;
 mod volvo_vecu;
@@ -27,6 +28,7 @@ pub enum NetDriver {
     BoschEngineManagementSystem(super::BoschEngineManagementSystem),
     HydraulicControlUnit(super::HydraulicControlUnit),
     RequestResponder(super::RequestResponder),
+    VehicleControlUnit(super::VehicleControlUnit),
 }
 
 impl NetDriver {
@@ -58,6 +60,9 @@ impl TryFrom<NetDriverConfig> for NetDriver {
             )),
             "request_responder" => Ok(NetDriver::RequestResponder(
                 crate::driver::RequestResponder::new(config.source),
+            )),
+            "vehicle_control_unit" => Ok(NetDriver::VehicleControlUnit(
+                crate::driver::VehicleControlUnit::new(config.destination, config.source),
             )),
             _ => Err(()),
         }

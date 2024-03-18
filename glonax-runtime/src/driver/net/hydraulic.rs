@@ -411,7 +411,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
-        runtime_state: crate::runtime::SharedOperandState,
+        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
@@ -423,6 +423,8 @@ impl super::J1939Unit for HydraulicControlUnit {
                 router.send(&self.motion_reset()).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
                 router.send(&self.set_ident(true)).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
                 router.send(&self.set_ident(false)).await.map_err(|e| super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, e.into()))?;
+
+                // TODO: FIX: It is possible that the request is send from 0x0.
                 router
                     .send(&protocol::request(
                         self.destination_address,
@@ -433,19 +435,16 @@ impl super::J1939Unit for HydraulicControlUnit {
             super::J1939UnitOperationState::Running => {
                 if let Some(message) = router.try_accept(self) {
                     ctx.rx_last = std::time::Instant::now();
-
-                    if let Ok(_runtime_state) = runtime_state.try_write() {
-                        match message {
-                            HydraulicMessage::Actuator(_actuator) => {}
-                            HydraulicMessage::MotionConfig(_config) => {}
-                            HydraulicMessage::VecraftConfig(_config) => {}
-                            HydraulicMessage::Status(status) => {
-                                if status.state == super::vecraft::State::FaultyGenericError
-                                    || status.state == super::vecraft::State::FaultyBusError
-                                {
-                                    // Err(super::J1939UnitError::BusError)?;
-                                    Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::BusError))?;
-                                }
+                    
+                    match message {
+                        HydraulicMessage::Actuator(_actuator) => {}
+                        HydraulicMessage::MotionConfig(_config) => {}
+                        HydraulicMessage::VecraftConfig(_config) => {}
+                        HydraulicMessage::Status(status) => {
+                            if status.state == super::vecraft::State::FaultyGenericError
+                                || status.state == super::vecraft::State::FaultyBusError
+                            {
+                                Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::BusError))?;
                             }
                         }
                     }
@@ -484,7 +483,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 ctx.tx_last = std::time::Instant::now();
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
-                    // Err(super::J1939UnitError::MessageTimeout)?;
                     Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::MessageTimeout))?;
                 }
             }
@@ -519,7 +517,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 ctx.tx_last = std::time::Instant::now();
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
-                    // Err(super::J1939UnitError::MessageTimeout)?;
                     Err(super::J1939UnitError::new("Hydraulic control unit".to_owned(), self.destination_address, super::J1939UnitErrorKind::MessageTimeout))?;
                 }
             }

@@ -10,6 +10,7 @@ pub use net::hydraulic::HydraulicControlUnit;
 pub use net::inclino::KueblerInclinometer;
 pub use net::inspector::{J1939ApplicationInspector, J1939Message};
 pub use net::reqres::RequestResponder;
+pub use net::vcu::VehicleControlUnit;
 pub use net::volvo_ems::VolvoD7E;
 pub use r#virtual::encoder::VirtualEncoder;
 pub use r#virtual::hcu::VirtualHCU;
