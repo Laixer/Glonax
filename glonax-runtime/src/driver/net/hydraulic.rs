@@ -439,11 +439,6 @@ impl super::J1939Unit for HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         match state {
             super::J1939UnitOperationState::Setup => {
-                // log::debug!(
-                //     "[0x{:X}] Hydraulic control unit ingress setup",
-                //     self.destination_address
-                // );
-
                 router.send(&self.motion_reset()).await.map_err(|e| {
                     super::J1939UnitError::new(
                         "Hydraulic control unit".to_owned(),
@@ -517,11 +512,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 result
             }
             super::J1939UnitOperationState::Teardown => {
-                // log::debug!(
-                //     "[0x{:X}] Hydraulic control unit ingress teardown",
-                //     self.destination_address
-                // );
-
                 router.send(&self.motion_reset()).await.map_err(|e| {
                     super::J1939UnitError::new(
                         "Hydraulic control unit".to_owned(),
@@ -542,24 +532,10 @@ impl super::J1939Unit for HydraulicControlUnit {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match state {
-            super::J1939UnitOperationState::Setup => {
-                log::debug!(
-                    "[0x{:X}] Hydraulic control unit egress setup",
-                    self.destination_address
-                );
-            }
-            super::J1939UnitOperationState::Running => {
-                self.send_motion_command(router, runtime_state).await?;
+        if let super::J1939UnitOperationState::Running = state {
+            self.send_motion_command(router, runtime_state).await?;
 
-                ctx.tx_last = std::time::Instant::now();
-            }
-            super::J1939UnitOperationState::Teardown => {
-                log::debug!(
-                    "[0x{:X}] Hydraulic control unit egress teardown",
-                    self.destination_address
-                );
-            }
+            ctx.tx_last = std::time::Instant::now();
         }
 
         Ok(())
@@ -572,24 +548,10 @@ impl super::J1939Unit for HydraulicControlUnit {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match state {
-            super::J1939UnitOperationState::Setup => {
-                log::debug!(
-                    "[0x{:X}] Hydraulic control unit trigger setup",
-                    self.destination_address
-                );
-            }
-            super::J1939UnitOperationState::Running => {
-                self.send_motion_command(router, runtime_state).await?;
+        if let super::J1939UnitOperationState::Running = state {
+            self.send_motion_command(router, runtime_state).await?;
 
-                ctx.tx_last = std::time::Instant::now();
-            }
-            super::J1939UnitOperationState::Teardown => {
-                log::debug!(
-                    "[0x{:X}] Hydraulic control unit trigger teardown",
-                    self.destination_address
-                );
-            }
+            ctx.tx_last = std::time::Instant::now();
         }
 
         Ok(())

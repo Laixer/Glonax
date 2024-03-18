@@ -53,50 +53,34 @@ impl super::J1939Unit for VehicleControlUnit {
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match state {
-            super::J1939UnitOperationState::Setup => {
-                // log::debug!(
-                //     "[0x{:X}] Vehicle control unit ingress setup",
-                //     self.destination_address
-                // );
+        if state == &super::J1939UnitOperationState::Running {
+            let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                Ok(())
+            if ctx.rx_last.elapsed().as_millis() > 1_000 {
+                result = Err(super::J1939UnitError::new(
+                    "Vehicle control unit".to_owned(),
+                    self.destination_address,
+                    super::J1939UnitErrorKind::MessageTimeout,
+                ));
             }
-            super::J1939UnitOperationState::Running => {
-                let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                if ctx.rx_last.elapsed().as_millis() > 1_000 {
+            if let Some(status) = router.try_accept(self) {
+                ctx.rx_last = std::time::Instant::now();
+
+                if status.state == super::vecraft::State::FaultyGenericError
+                    || status.state == super::vecraft::State::FaultyBusError
+                {
                     result = Err(super::J1939UnitError::new(
                         "Vehicle control unit".to_owned(),
                         self.destination_address,
-                        super::J1939UnitErrorKind::MessageTimeout,
+                        super::J1939UnitErrorKind::BusError,
                     ));
                 }
-
-                if let Some(status) = router.try_accept(self) {
-                    ctx.rx_last = std::time::Instant::now();
-
-                    if status.state == super::vecraft::State::FaultyGenericError
-                        || status.state == super::vecraft::State::FaultyBusError
-                    {
-                        result = Err(super::J1939UnitError::new(
-                            "Vehicle control unit".to_owned(),
-                            self.destination_address,
-                            super::J1939UnitErrorKind::BusError,
-                        ));
-                    }
-                }
-
-                result
             }
-            super::J1939UnitOperationState::Teardown => {
-                // log::debug!(
-                //     "[0x{:X}] Vehicle control unit ingress teardown",
-                //     self.destination_address
-                // );
 
-                Ok(())
-            }
+            result?;
         }
+
+        Ok(())
     }
 }

@@ -193,37 +193,29 @@ impl super::J1939Unit for KueblerEncoder {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match state {
-            super::J1939UnitOperationState::Setup => {
-                // log::debug!("[0x{:X}] Kubler encoder setup", self.destination_address);
-            }
-            super::J1939UnitOperationState::Running => {
-                let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        if state == &super::J1939UnitOperationState::Running {
+            let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                if ctx.rx_last.elapsed().as_millis() > 1_000 {
-                    result = Err(super::J1939UnitError::new(
-                        "Kubler encoder".to_owned(),
-                        self.destination_address,
-                        super::J1939UnitErrorKind::MessageTimeout,
-                    ));
+            if ctx.rx_last.elapsed().as_millis() > 1_000 {
+                result = Err(super::J1939UnitError::new(
+                    "Kubler encoder".to_owned(),
+                    self.destination_address,
+                    super::J1939UnitErrorKind::MessageTimeout,
+                ));
+            }
+
+            if let Some(message) = router.try_accept(self) {
+                ctx.rx_last = std::time::Instant::now();
+
+                if let Ok(mut runtime_state) = runtime_state.try_write() {
+                    runtime_state
+                        .state
+                        .encoders
+                        .insert(message.source_address, message.position as f32);
                 }
-
-                if let Some(message) = router.try_accept(self) {
-                    ctx.rx_last = std::time::Instant::now();
-
-                    if let Ok(mut runtime_state) = runtime_state.try_write() {
-                        runtime_state
-                            .state
-                            .encoders
-                            .insert(message.source_address, message.position as f32);
-                    }
-                }
-
-                result?
             }
-            super::J1939UnitOperationState::Teardown => {
-                // log::debug!("[0x{:X}] Kubler encoder teardown", self.destination_address);
-            }
+
+            result?
         }
 
         Ok(())

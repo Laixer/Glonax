@@ -120,6 +120,7 @@ pub struct J1939UnitError {
 }
 
 impl J1939UnitError {
+    /// Construct a new error.
     pub fn new(name: String, destination: u8, kind: J1939UnitErrorKind) -> Self {
         Self {
             name,
@@ -128,14 +129,17 @@ impl J1939UnitError {
         }
     }
 
+    /// Get the name of the unit.
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Get the destination address of the unit.
     pub fn destination(&self) -> u8 {
         self.destination
     }
 
+    /// Get the kind of the error.
     pub fn kind(&self) -> &J1939UnitErrorKind {
         &self.kind
     }
