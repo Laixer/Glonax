@@ -501,7 +501,13 @@ async fn rx_network(
         };
 
         if let Err(e) = result {
-            log::error!("Failed to setup network: {}", e);
+            log::error!(
+                "[RX][{}:0x{:X}] {} in setup: {}",
+                interface,
+                e.destination(),
+                e.name(),
+                e.kind()
+            );
         }
     }
 
@@ -512,41 +518,42 @@ async fn rx_network(
 
         let state = J1939UnitOperationState::Running;
         for (drv, ctx) in network.iter_mut() {
-            match drv {
+            let result = match drv {
                 NetDriver::KueblerEncoder(enc) => {
                     enc.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await;
+                        .await
                 }
                 NetDriver::KueblerInclinometer(imu) => {
                     imu.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await;
+                        .await
                 }
                 NetDriver::VolvoD7E(ems) => {
                     ems.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await;
+                        .await
                 }
                 NetDriver::BoschEngineManagementSystem(ems) => {
                     ems.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await;
+                        .await
                 }
                 NetDriver::HydraulicControlUnit(hcu) => {
-                    let res = hcu
-                        .try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await;
-
-                    if let Err(e) = res {
-                        log::error!("[{}:0x4A] Hydraulic control: {}", interface, e);
-                    }
+                    hcu.try_accept(ctx, &state, &router, runtime_state.clone())
+                        .await
                 }
                 NetDriver::RequestResponder(rrp) => {
                     rrp.try_accept(ctx, &state, &router, runtime_state.clone())
-                        .await;
+                        .await
                 }
-            }
+            };
 
-            // if let Err(e) = result {
-            //     log::error!("[{}:0x4A] Hydraulic control unit ingress setup: {}", e);
-            // }
+            if let Err(e) = result {
+                log::error!(
+                    "[RX][{}:0x{:X}] {}: {}",
+                    interface,
+                    e.destination(),
+                    e.name(),
+                    e.kind()
+                );
+            }
         }
     }
 
@@ -580,7 +587,13 @@ async fn rx_network(
         };
 
         if let Err(e) = result {
-            log::error!("Failed to tick network: {}", e);
+            log::error!(
+                "[RX][{}:0x{:X}] {} in teardown: {}",
+                interface,
+                e.destination(),
+                e.name(),
+                e.kind()
+            );
         }
     }
 
@@ -625,7 +638,13 @@ async fn tx_network(
         };
 
         if let Err(e) = result {
-            log::error!("[TX][{}:0x{:X}] {} in setup: {}", interface, e.destination(), e.name(), e.kind());
+            log::error!(
+                "[TX][{}:0x{:X}] {} in setup: {}",
+                interface,
+                e.destination(),
+                e.name(),
+                e.kind()
+            );
         }
     }
 
@@ -656,7 +675,13 @@ async fn tx_network(
             };
 
             if let Err(e) = result {
-                log::error!("[TX][{}:0x{:X}] {}: {}", interface, e.destination(), e.name(), e.kind());
+                log::error!(
+                    "[TX][{}:0x{:X}] {}: {}",
+                    interface,
+                    e.destination(),
+                    e.name(),
+                    e.kind()
+                );
             }
         }
     }
@@ -683,7 +708,13 @@ async fn tx_network(
         };
 
         if let Err(e) = result {
-            log::error!("[TX][{}:0x{:X}] {} in teardown: {}", interface, e.destination(), e.name(), e.kind());
+            log::error!(
+                "[TX][{}:0x{:X}] {} in teardown: {}",
+                interface,
+                e.destination(),
+                e.name(),
+                e.kind()
+            );
         }
     }
 
@@ -743,7 +774,13 @@ pub async fn atx_network_1(
         };
 
         if let Err(e) = result {
-            log::error!("[ATX][{}:0x{:X}] {} in setup: {}", interface, e.destination(), e.name(), e.kind());
+            log::error!(
+                "[ATX][{}:0x{:X}] {} in setup: {}",
+                interface,
+                e.destination(),
+                e.name(),
+                e.kind()
+            );
         }
     }
 
@@ -781,7 +818,13 @@ pub async fn atx_network_1(
             };
 
             if let Err(e) = result {
-                log::error!("[ATX][{}:0x{:X}] {}: {}", interface, e.destination(), e.name(), e.kind());
+                log::error!(
+                    "[ATX][{}:0x{:X}] {}: {}",
+                    interface,
+                    e.destination(),
+                    e.name(),
+                    e.kind()
+                );
             }
         }
     }
