@@ -129,18 +129,18 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
-    runtime.schedule_service::<service::Host, service::HostConfig>(
+    runtime.schedule_service::<service::Host, _>(
         config.host.clone(),
         Duration::from_millis(config.host.interval.clamp(10, 1_000)),
     );
 
     // TODO: Do we need a simulator?
     if config.is_simulation {
-        runtime.schedule_service::<service::EncoderSimulator, glonax::runtime::NullConfig>(
+        runtime.schedule_service::<service::EncoderSimulator, _>(
             glonax::runtime::NullConfig,
             Duration::from_millis(5),
         );
-        runtime.schedule_service::<service::EngineSimulator, glonax::runtime::NullConfig>(
+        runtime.schedule_service::<service::EngineSimulator, _>(
             glonax::runtime::NullConfig,
             Duration::from_millis(10),
         );
@@ -148,14 +148,14 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
         if let Some(gnss_config) = config.clone().gnss {
-            runtime.schedule_io_service::<service::Gnss, service::GnssConfig>(gnss_config);
+            runtime.schedule_io_service::<service::Gnss, _>(gnss_config);
         }
 
         // TODO: Check if RX,TX,ATX services should be scheduled.
         for j1939_net_config in &config.j1939 {
-            let mut net_rx =
-                glonax::runtime::ControlNetwork::with_request_responder(j1939_net_config.address);
+            use glonax::runtime::ControlNetwork;
 
+            let mut net_rx = ControlNetwork::with_request_responder(j1939_net_config.address);
             for driver in &j1939_net_config.driver {
                 let net_driver_config = glonax::driver::net::NetDriverConfig {
                     driver_type: driver.driver_type.clone(),
@@ -168,8 +168,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
             runtime.schedule_j1939_service_rx(net_rx, &j1939_net_config.interface);
 
-            let mut net_tx = glonax::runtime::ControlNetwork::new(j1939_net_config.address);
-
+            let mut net_tx = ControlNetwork::new(j1939_net_config.address);
             for driver in &j1939_net_config.driver {
                 let net_driver_config = glonax::driver::net::NetDriverConfig {
                     driver_type: driver.driver_type.clone(),
@@ -200,7 +199,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     //     config.tcp_server.clone(),
     // );
 
-    runtime.schedule_service::<service::Announcer, glonax::runtime::NullConfig>(
+    runtime.schedule_service::<service::Announcer, _>(
         glonax::runtime::NullConfig,
         Duration::from_millis(1_000),
     );

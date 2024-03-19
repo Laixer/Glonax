@@ -427,11 +427,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
                 if ctx.rx_last.elapsed().as_millis() > 500 {
-                    // result = Err(super::J1939UnitError::new(
-                    //     "Hydraulic control unit".to_owned(),
-                    //     self.destination_address,
-                    //     super::J1939UnitErrorKind::MessageTimeout,
-                    // ));
                     result = Err(super::J1939UnitError::MessageTimeout);
                 }
 
@@ -445,11 +440,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                             if status.state == super::vecraft::State::FaultyGenericError
                                 || status.state == super::vecraft::State::FaultyBusError
                             {
-                                // result = Err(super::J1939UnitError::new(
-                                //     "Hydraulic control unit".to_owned(),
-                                //     self.destination_address,
-                                //     super::J1939UnitErrorKind::BusError,
-                                // ));
                                 result = Err(super::J1939UnitError::BusError);
                             }
                         }

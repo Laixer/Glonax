@@ -84,6 +84,11 @@ impl Motion {
             value: value.into(),
         }])
     }
+
+    /// Test if the motion is movable.
+    pub fn is_movable(&self) -> bool {
+        matches!(self, Motion::StraightDrive(_) | Motion::Change(_))
+    }
 }
 
 impl FromIterator<(Actuator, MotionValueType)> for Motion {
