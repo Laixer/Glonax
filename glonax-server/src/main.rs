@@ -184,10 +184,11 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
         let j1939_index = 1;
         if j1939_index < config.j1939.len() {
-            runtime.schedule_j1939_motion_service(
-                glonax::runtime::atx_network_1,
-                &config.j1939[j1939_index].interface,
-            );
+            let mut net_atx = glonax::runtime::ControlNetwork::new(0x27);
+            let hcu0 = glonax::driver::HydraulicControlUnit::new(0x4a, 0x27);
+            net_atx.register_driver(NetDriver::HydraulicControlUnit(hcu0));
+
+            runtime.schedule_j1939_motion_service(net_atx, &config.j1939[j1939_index].interface);
         }
     }
 

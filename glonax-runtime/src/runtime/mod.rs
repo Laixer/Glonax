@@ -267,6 +267,10 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    /// Schedule a J1939 transmit service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the operand and the interface name.
     pub fn schedule_j1939_service_tx(&self, network: ControlNetwork, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
@@ -283,19 +287,13 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the operand and the interface name.
-    pub fn schedule_j1939_motion_service<Fut>(
-        &mut self,
-        service: impl FnOnce(String, SharedOperandState, MotionReceiver) -> Fut + Send + 'static,
-        interface: &str,
-    ) where
-        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
-    {
+    pub fn schedule_j1939_motion_service(&mut self, network: ControlNetwork, interface: &str) {
         let operand = self.operand.clone();
         let interface = interface.to_owned();
         let motion_rx = self.motion_rx.take().unwrap();
 
         tokio::spawn(async move {
-            if let Err(e) = service(interface, operand, motion_rx).await {
+            if let Err(e) = atx_network(network.network, interface, operand, motion_rx).await {
                 log::error!("Failed to start network service: {}", e);
             }
         });
@@ -813,7 +811,8 @@ async fn tx_network(
 }
 
 // TODO: Turn into service
-pub async fn atx_network_1(
+pub async fn atx_network(
+    mut network: Vec<(NetDriver, NetDriverContext)>,
     interface: String,
     runtime_state: SharedOperandState,
     mut motion_rx: MotionReceiver,
@@ -822,24 +821,14 @@ pub async fn atx_network_1(
 
     log::debug!("Starting J1939 ATX service on {}", interface);
 
-    /// Vehicle Management System J1939 address.
-    const J1939_ADDRESS_VMS: u8 = 0x27;
-    /// Hydraulic Control Unit 0 J1939 address.
-    const J1939_ADDRESS_HCU0: u8 = 0x4a;
-
     let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&interface))?;
     let router = crate::net::Router::new(socket);
-
-    let hcu0 = crate::driver::HydraulicControlUnit::new(J1939_ADDRESS_HCU0, J1939_ADDRESS_VMS);
-
-    let mut network = ControlNetwork::new(J1939_ADDRESS_VMS);
-    network.register_driver(NetDriver::HydraulicControlUnit(hcu0));
 
     let state = J1939UnitOperationState::Setup;
     iter_driver(
         2,
         &state,
-        &mut network.network,
+        &mut network,
         &interface,
         &router,
         runtime_state.clone(),
@@ -854,7 +843,7 @@ pub async fn atx_network_1(
         iter_driver(
             2,
             &state,
-            &mut network.network,
+            &mut network,
             &interface,
             &router,
             runtime_state.clone(),
@@ -866,7 +855,7 @@ pub async fn atx_network_1(
     iter_driver(
         2,
         &state,
-        &mut network.network,
+        &mut network,
         &interface,
         &router,
         runtime_state.clone(),
