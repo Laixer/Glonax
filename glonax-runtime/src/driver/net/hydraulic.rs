@@ -306,29 +306,31 @@ impl HydraulicControlUnit {
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match &runtime_state.read().await.state.motion {
-            crate::core::Motion::StopAll => {
-                router.send(&self.lock()).await?;
-            }
-            crate::core::Motion::ResumeAll => {
-                router.send(&self.unlock()).await?;
-            }
-            crate::core::Motion::ResetAll => {
-                router.send(&self.motion_reset()).await?;
-            }
-            crate::core::Motion::StraightDrive(value) => {
-                let frames = &self.drive_straight(*value);
-                router.send_vectored(frames).await?;
-            }
-            crate::core::Motion::Change(changes) => {
-                let frames = &self.actuator_command(
-                    changes
-                        .iter()
-                        .map(|changeset| (changeset.actuator as u8, changeset.value))
-                        .collect(),
-                );
+        if let Ok(runtime_state) = runtime_state.try_read() {
+            match &runtime_state.state.motion {
+                crate::core::Motion::StopAll => {
+                    router.send(&self.lock()).await?;
+                }
+                crate::core::Motion::ResumeAll => {
+                    router.send(&self.unlock()).await?;
+                }
+                crate::core::Motion::ResetAll => {
+                    router.send(&self.motion_reset()).await?;
+                }
+                crate::core::Motion::StraightDrive(value) => {
+                    let frames = &self.drive_straight(*value);
+                    router.send_vectored(frames).await?;
+                }
+                crate::core::Motion::Change(changes) => {
+                    let frames = &self.actuator_command(
+                        changes
+                            .iter()
+                            .map(|changeset| (changeset.actuator as u8, changeset.value))
+                            .collect(),
+                    );
 
-                router.send_vectored(frames).await?;
+                    router.send_vectored(frames).await?;
+                }
             }
         }
 

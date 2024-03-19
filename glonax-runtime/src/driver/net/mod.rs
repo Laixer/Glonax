@@ -114,51 +114,6 @@ impl From<std::io::Error> for J1939UnitError {
 
 impl std::error::Error for J1939UnitError {}
 
-// #[derive(Debug)]
-// pub struct J1939UnitError {
-//     name: String,
-//     destination: u8,
-//     kind: J1939UnitErrorKind,
-// }
-
-// impl J1939UnitError {
-//     /// Construct a new error.
-//     pub fn new(name: String, destination: u8, kind: J1939UnitErrorKind) -> Self {
-//         Self {
-//             name,
-//             destination,
-//             kind,
-//         }
-//     }
-
-//     /// Get the name of the unit.
-//     pub fn name(&self) -> &str {
-//         &self.name
-//     }
-
-//     /// Get the destination address of the unit.
-//     pub fn destination(&self) -> u8 {
-//         self.destination
-//     }
-
-//     /// Get the kind of the error.
-//     pub fn kind(&self) -> &J1939UnitErrorKind {
-//         &self.kind
-//     }
-// }
-
-// impl std::fmt::Display for J1939UnitError {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(
-//             f,
-//             "{} (destination: {}): {}",
-//             self.name, self.destination, self.kind
-//         )
-//     }
-// }
-
-// impl std::error::Error for J1939UnitError {}
-
 /// Operational states for a J1939 unit.
 ///
 /// A unit can transition between these states during its lifetime,

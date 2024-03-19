@@ -395,23 +395,25 @@ impl super::J1939Unit for EngineManagementSystem {
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         if state == &super::J1939UnitOperationState::Running {
-            let request = runtime_state.read().await.governor_mode();
-            match request.state {
-                crate::core::EngineState::NoRequest => {
-                    router.send(&self.request(request.speed)).await?;
-                    ctx.tx_last = std::time::Instant::now();
-                }
-                crate::core::EngineState::Stopping => {
-                    router.send(&self.stop(request.speed)).await?;
-                    ctx.tx_last = std::time::Instant::now();
-                }
-                crate::core::EngineState::Starting => {
-                    router.send(&self.start(request.speed)).await?;
-                    ctx.tx_last = std::time::Instant::now();
-                }
-                crate::core::EngineState::Request => {
-                    router.send(&self.request(request.speed)).await?;
-                    ctx.tx_last = std::time::Instant::now();
+            if let Ok(request) = runtime_state.try_read() {
+                let request = request.governor_mode();
+                match request.state {
+                    crate::core::EngineState::NoRequest => {
+                        router.send(&self.request(request.speed)).await?;
+                        ctx.tx_last = std::time::Instant::now();
+                    }
+                    crate::core::EngineState::Stopping => {
+                        router.send(&self.stop(request.speed)).await?;
+                        ctx.tx_last = std::time::Instant::now();
+                    }
+                    crate::core::EngineState::Starting => {
+                        router.send(&self.start(request.speed)).await?;
+                        ctx.tx_last = std::time::Instant::now();
+                    }
+                    crate::core::EngineState::Request => {
+                        router.send(&self.request(request.speed)).await?;
+                        ctx.tx_last = std::time::Instant::now();
+                    }
                 }
             }
         }
