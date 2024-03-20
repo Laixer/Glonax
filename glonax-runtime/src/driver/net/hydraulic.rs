@@ -410,18 +410,18 @@ impl super::J1939Unit for HydraulicControlUnit {
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         match state {
+            #[rustfmt::skip]
             super::J1939UnitOperationState::Setup => {
                 router.send(&self.motion_reset()).await?;
                 router.send(&self.set_ident(true)).await?;
                 router.send(&self.set_ident(false)).await?;
 
                 // TODO: FIX: It is possible that the request is send from 0x0.
-                router
-                    .send(&protocol::request(
-                        self.destination_address,
-                        PGN::AddressClaimed,
-                    ))
-                    .await?;
+                router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
+                router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
+                router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
+                router.send(&protocol::request(self.destination_address, PGN::VehicleIdentification)).await?;
+                router.send(&protocol::request(self.destination_address, PGN::TimeDate)).await?;
 
                 Ok(())
             }

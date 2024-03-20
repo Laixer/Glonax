@@ -117,6 +117,7 @@ pub trait Service<Cnf> {
     where
         Self: Sized;
 
+    /// Get the service context.
     fn ctx(&self) -> ServiceContext {
         ServiceContext {
             name: std::any::type_name::<Self>().to_string(),
@@ -132,6 +133,7 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
+    /// Tick the component on interval.
     fn tick(&mut self, _runtime_state: SharedOperandState) {}
 }
 
@@ -714,7 +716,12 @@ async fn rx_network(
     .await;
 
     while shutdown.is_empty() {
-        // TODO: Add a timeout
+        // if let Ok(Err(e)) =
+        //     tokio::time::timeout(std::time::Duration::from_millis(100), router.listen()).await
+        // {
+        //     log::error!("Failed to receive from router: {}", e);
+        // }
+
         if let Err(e) = router.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }

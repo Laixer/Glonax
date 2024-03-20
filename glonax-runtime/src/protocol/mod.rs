@@ -294,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_proto_version() {
-        assert_eq!(PROTO_VERSION, 0x02);
+        assert_eq!(PROTO_VERSION, 0x03);
     }
 
     #[test]
