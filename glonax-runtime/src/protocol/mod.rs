@@ -18,7 +18,7 @@ const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 /// is only  changed when the protocol is changed in a way that is not backwards
 /// compatible. This is done to ensure that the protocol can be changed without
 /// breaking existing implementations.
-const PROTO_VERSION: u8 = 0x02;
+const PROTO_VERSION: u8 = 0x03;
 
 /// The minimum buffer size required to read a frame.
 const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
