@@ -196,12 +196,12 @@ impl super::J1939Unit for KueblerEncoder {
         if state == &super::J1939UnitOperationState::Running {
             let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-            if ctx.rx_last.elapsed().as_millis() > 1_000 {
+            if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
                 result = Err(super::J1939UnitError::MessageTimeout);
             }
 
             if let Some(message) = router.try_accept(self) {
-                ctx.rx_last = std::time::Instant::now();
+                ctx.rx_mark();
 
                 if let Ok(mut runtime_state) = runtime_state.try_write() {
                     runtime_state

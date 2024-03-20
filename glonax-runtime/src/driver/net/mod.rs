@@ -71,9 +71,32 @@ impl TryFrom<NetDriverConfig> for NetDriver {
 
 pub struct NetDriverContext {
     /// Last time a message was sent.
-    pub tx_last: std::time::Instant,
+    tx_last: std::time::Instant,
     /// Last time a message was received.
-    pub rx_last: std::time::Instant,
+    rx_last: std::time::Instant,
+}
+
+impl NetDriverContext {
+    fn is_rx_timeout(&self, timeout: std::time::Duration) -> bool {
+        self.rx_last.elapsed() > timeout
+    }
+
+    fn tx_mark(&mut self) {
+        self.tx_last = std::time::Instant::now();
+    }
+
+    fn rx_mark(&mut self) {
+        self.rx_last = std::time::Instant::now();
+    }
+}
+
+impl Default for NetDriverContext {
+    fn default() -> Self {
+        Self {
+            tx_last: std::time::Instant::now(),
+            rx_last: std::time::Instant::now(),
+        }
+    }
 }
 
 #[derive(Debug)]

@@ -309,12 +309,12 @@ impl super::J1939Unit for EngineManagementSystem {
         if state == &super::J1939UnitOperationState::Running {
             let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-            if ctx.rx_last.elapsed().as_millis() > 500 {
+            if ctx.is_rx_timeout(std::time::Duration::from_millis(500)) {
                 result = Err(super::J1939UnitError::MessageTimeout);
             }
 
             if let Some(message) = router.try_accept(self) {
-                ctx.rx_last = std::time::Instant::now();
+                ctx.rx_mark();
 
                 if let Ok(mut runtime_state) = runtime_state.try_write() {
                     runtime_state.state.engine_state_actual_instant =
@@ -400,19 +400,19 @@ impl super::J1939Unit for EngineManagementSystem {
                 match request.state {
                     crate::core::EngineState::NoRequest => {
                         router.send(&self.request(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                     crate::core::EngineState::Stopping => {
                         router.send(&self.stop(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                     crate::core::EngineState::Starting => {
                         router.send(&self.start(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                     crate::core::EngineState::Request => {
                         router.send(&self.request(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                 }
             }

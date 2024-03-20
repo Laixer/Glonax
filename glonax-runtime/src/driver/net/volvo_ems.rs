@@ -112,19 +112,19 @@ impl super::J1939Unit for VolvoD7E {
                 match request.state {
                     crate::core::EngineState::NoRequest => {
                         router.send(&self.request(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                     crate::core::EngineState::Starting => {
                         router.send(&self.start(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                     crate::core::EngineState::Stopping => {
                         router.send(&self.stop(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                     crate::core::EngineState::Request => {
                         router.send(&self.request(request.speed)).await?;
-                        ctx.tx_last = std::time::Instant::now();
+                        ctx.tx_mark();
                     }
                 }
             }

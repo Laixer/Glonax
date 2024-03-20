@@ -38,22 +38,13 @@ impl ControlNetwork {
             default_source_address: address,
             network: vec![(
                 NetDriver::request_responder(address),
-                NetDriverContext {
-                    tx_last: std::time::Instant::now(),
-                    rx_last: std::time::Instant::now(),
-                },
+                NetDriverContext::default(),
             )],
         }
     }
 
     pub fn register_driver(&mut self, driver: NetDriver) {
-        self.network.push((
-            driver,
-            NetDriverContext {
-                tx_last: std::time::Instant::now(),
-                rx_last: std::time::Instant::now(),
-            },
-        ));
+        self.network.push((driver, NetDriverContext::default()));
     }
 }
 

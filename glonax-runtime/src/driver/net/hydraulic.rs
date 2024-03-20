@@ -428,7 +428,7 @@ impl super::J1939Unit for HydraulicControlUnit {
             super::J1939UnitOperationState::Running => {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                if ctx.rx_last.elapsed().as_millis() > 500 {
+                if ctx.is_rx_timeout(std::time::Duration::from_millis(500)) {
                     result = Err(super::J1939UnitError::MessageTimeout);
                 }
 
@@ -438,7 +438,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         HydraulicMessage::MotionConfig(_config) => {}
                         HydraulicMessage::VecraftConfig(_config) => {}
                         HydraulicMessage::Status(status) => {
-                            ctx.rx_last = std::time::Instant::now();
+                            ctx.rx_mark();
                             if status.state == super::vecraft::State::FaultyGenericError
                                 || status.state == super::vecraft::State::FaultyBusError
                             {
@@ -468,7 +468,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         if state == &super::J1939UnitOperationState::Running {
             self.send_motion_command(router, runtime_state).await?;
 
-            ctx.tx_last = std::time::Instant::now();
+            ctx.tx_mark();
         }
 
         Ok(())
@@ -484,7 +484,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         if state == &super::J1939UnitOperationState::Running {
             self.send_motion_command(router, runtime_state).await?;
 
-            ctx.tx_last = std::time::Instant::now();
+            ctx.tx_mark();
         }
 
         Ok(())
