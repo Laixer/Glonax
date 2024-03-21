@@ -7,6 +7,7 @@ pub use pipeline::Pipeline;
 pub use tcp_server::{TcpServer, TcpServerConfig, UnixServerConfig};
 
 mod announcer;
+mod authority;
 mod encoder;
 mod engine;
 mod gnss;
