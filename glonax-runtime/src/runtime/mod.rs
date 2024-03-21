@@ -20,34 +20,6 @@ pub mod builder;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
 
-pub struct ControlNetwork {
-    pub default_source_address: u8,
-    pub network: Vec<(NetDriver, NetDriverContext)>,
-}
-
-impl ControlNetwork {
-    pub fn new(default_source_address: u8) -> Self {
-        Self {
-            default_source_address,
-            network: vec![],
-        }
-    }
-
-    pub fn with_request_responder(address: u8) -> Self {
-        Self {
-            default_source_address: address,
-            network: vec![(
-                NetDriver::request_responder(address),
-                NetDriverContext::default(),
-            )],
-        }
-    }
-
-    pub fn register_driver(&mut self, driver: NetDriver) {
-        self.network.push((driver, NetDriverContext::default()));
-    }
-}
-
 pub struct ServiceContext {
     /// Service name.
     name: String,
@@ -107,6 +79,7 @@ impl std::fmt::Debug for ServiceError {
 
 impl std::error::Error for ServiceError {}
 
+// TODO: Add shutdown signal
 pub trait Service<Cnf> {
     // TODO: Add instance to new
     /// Construct a new component.
@@ -126,6 +99,10 @@ pub trait Service<Cnf> {
     }
 
     /// Wait for IO event.
+    ///
+    /// This method is always called on a separate thread and
+    /// should be used to wait for IO events. The method is optional
+    /// and does not need to be implemented.
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
@@ -134,6 +111,10 @@ pub trait Service<Cnf> {
     }
 
     /// Tick the component on interval.
+    ///
+    /// This method is called in conjunction with other services
+    /// and should therefore be non-blocking. The method is optional
+    /// and does not need to be implemented.
     fn tick(&mut self, _runtime_state: SharedOperandState) {}
 }
 
@@ -428,6 +409,8 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     }
 
     /// Enqueue a motion command.
+    ///
+    /// This method will enqueue a motion command to be sent to the network service.
     #[inline]
     pub async fn enqueue_motion(&self, motion: crate::core::Motion) {
         self.motion_tx.send(motion).await.ok();
@@ -745,6 +728,37 @@ async fn iter_driver(
                 }
             }
         }
+    }
+}
+
+pub struct ControlNetwork {
+    pub default_source_address: u8,
+    pub network: Vec<(NetDriver, NetDriverContext)>,
+}
+
+impl ControlNetwork {
+    /// Construct a new control network.
+    pub fn new(default_source_address: u8) -> Self {
+        Self {
+            default_source_address,
+            network: vec![],
+        }
+    }
+
+    /// Construct a new control network with a request responder.
+    pub fn with_request_responder(address: u8) -> Self {
+        Self {
+            default_source_address: address,
+            network: vec![(
+                NetDriver::request_responder(address),
+                NetDriverContext::default(),
+            )],
+        }
+    }
+
+    /// Register a driver with the control network.
+    pub fn register_driver(&mut self, driver: NetDriver) {
+        self.network.push((driver, NetDriverContext::default()));
     }
 }
 
