@@ -245,7 +245,7 @@ async fn main() -> anyhow::Result<()> {
                     Some("g3") => glonax::core::Control::EngineRequest(1700),
                     Some("h") => glonax::core::Control::EngineRequest(1800),
                     Some("p") => glonax::core::Control::EngineRequest(1900),
-                    Some("shutdown") => glonax::core::Control::EngineShutdown,
+                    Some("s") => glonax::core::Control::EngineShutdown,
                     _ => {
                         eprintln!("Invalid engine command");
                         continue;

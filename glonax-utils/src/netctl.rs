@@ -560,6 +560,7 @@ enum Command {
         command: EngineCommand,
     },
     /// Request data from a unit.
+    #[clap(alias("req"))]
     Request {
         /// Message interval in milliseconds.
         #[arg(short, long, default_value_t = 10)]
@@ -590,6 +591,7 @@ enum Command {
         id: String,
     },
     /// Diagnose network.
+    #[clap(alias("diag"))]
     Diagnostic,
     /// Show raw frames on screen.
     Dump {
