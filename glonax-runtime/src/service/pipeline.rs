@@ -50,6 +50,7 @@ impl<Cnf> Pipeline<Cnf> {
     }
 }
 
+// TODO: Replace with Service trait.
 impl<Cnf: Clone> Component<Cnf> for Pipeline<Cnf> {
     fn new(_config: Cnf) -> Self
     where

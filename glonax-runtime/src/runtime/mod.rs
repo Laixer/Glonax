@@ -332,7 +332,33 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     pub fn schedule_io_service<S, C>(&self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
-        C: std::clone::Clone,
+        C: Clone,
+    {
+        let mut service = S::new(config.clone());
+        let ctx = service.ctx();
+
+        let operand = self.operand.clone();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting {} service on {}", ctx.name, address,);
+        } else {
+            log::debug!("Starting {} service", ctx.name);
+        }
+
+        tokio::spawn(async move {
+            service.wait_io(operand).await;
+        });
+    }
+
+    // TODO: Services should be able to return a result
+    /// Listen for IO event service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    pub fn schedule_net_service<S, C>(&self, config: C)
+    where
+        S: Service<C> + Send + Sync + 'static,
+        C: Clone,
     {
         let mut service = S::new(config.clone());
         let ctx = service.ctx();
@@ -357,7 +383,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     pub fn schedule_service<S, C>(&self, config: C, duration: std::time::Duration)
     where
         S: Service<C> + Send + Sync + 'static,
-        C: std::clone::Clone,
+        C: Clone,
     {
         let mut interval = tokio::time::interval(duration);
 
@@ -375,7 +401,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         tokio::spawn(async move {
             loop {
                 interval.tick().await;
-
                 service.tick(operand.clone());
             }
         });

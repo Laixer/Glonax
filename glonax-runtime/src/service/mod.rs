@@ -1,4 +1,5 @@
 pub use announcer::Announcer;
+pub use authority::NetworkAuthority;
 pub use encoder::EncoderSimulator;
 pub use engine::EngineSimulator;
 pub use gnss::{Gnss, GnssConfig};
