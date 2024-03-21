@@ -448,6 +448,7 @@ async fn iter_driver(
     interface: &String,
     router: &crate::net::Router,
     runtime_state: SharedOperandState,
+    trigger_class: &crate::core::Motion,
 ) {
     async fn try_accept<J: crate::driver::net::J1939Unit>(
         state: &crate::driver::net::J1939UnitOperationState,
@@ -565,6 +566,7 @@ async fn iter_driver(
         interface: &String,
         router: &crate::net::Router,
         runtime_state: SharedOperandState,
+        trigger: &crate::core::Motion,
     ) {
         if state == &crate::driver::net::J1939UnitOperationState::Setup {
             log::debug!(
@@ -583,7 +585,7 @@ async fn iter_driver(
         }
 
         if let Err(error) = driver
-            .trigger(ctx, state, router, runtime_state.clone())
+            .trigger(ctx, state, router, runtime_state.clone(), trigger)
             .await
         {
             if state == &crate::driver::net::J1939UnitOperationState::Setup {
@@ -622,7 +624,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, enc, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, enc, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        enc,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
             NetDriver::KueblerInclinometer(imu) => {
@@ -631,7 +642,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, imu, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, imu, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        imu,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
             NetDriver::VolvoD7E(ems) => {
@@ -640,7 +660,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, ems, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, ems, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        ems,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
             NetDriver::BoschEngineManagementSystem(ems) => {
@@ -649,7 +678,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, ems, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, ems, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        ems,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
             NetDriver::HydraulicControlUnit(hcu) => {
@@ -658,7 +696,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, hcu, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, hcu, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        hcu,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
             NetDriver::RequestResponder(rrp) => {
@@ -667,7 +714,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, rrp, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, rrp, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        rrp,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
             NetDriver::VehicleControlUnit(vcu) => {
@@ -676,7 +732,16 @@ async fn iter_driver(
                 } else if operation == 1 {
                     tick(state, vcu, ctx, interface, router, runtime_state.clone()).await;
                 } else if operation == 2 {
-                    trigger(state, vcu, ctx, interface, router, runtime_state.clone()).await;
+                    trigger(
+                        state,
+                        vcu,
+                        ctx,
+                        interface,
+                        router,
+                        runtime_state.clone(),
+                        trigger_class,
+                    )
+                    .await;
                 }
             }
         }
@@ -712,6 +777,7 @@ async fn rx_network(
         &interface,
         &router,
         runtime_state.clone(),
+        &crate::core::Motion::default(),
     )
     .await;
 
@@ -734,6 +800,7 @@ async fn rx_network(
             &interface,
             &router,
             runtime_state.clone(),
+            &crate::core::Motion::default(),
         )
         .await;
     }
@@ -746,6 +813,7 @@ async fn rx_network(
         &interface,
         &router,
         runtime_state.clone(),
+        &crate::core::Motion::default(),
     )
     .await;
 
@@ -776,6 +844,7 @@ async fn tx_network(
         &interface,
         &router,
         runtime_state.clone(),
+        &crate::core::Motion::default(),
     )
     .await;
 
@@ -790,6 +859,7 @@ async fn tx_network(
             &interface,
             &router,
             runtime_state.clone(),
+            &crate::core::Motion::default(),
         )
         .await;
     }
@@ -802,6 +872,7 @@ async fn tx_network(
         &interface,
         &router,
         runtime_state.clone(),
+        &crate::core::Motion::default(),
     )
     .await;
 
@@ -830,6 +901,7 @@ pub async fn atx_network(
         &interface,
         &router,
         runtime_state.clone(),
+        &crate::core::Motion::default(),
     )
     .await;
 
@@ -845,6 +917,7 @@ pub async fn atx_network(
             &interface,
             &router,
             runtime_state.clone(),
+            &motion,
         )
         .await;
     }
@@ -857,6 +930,7 @@ pub async fn atx_network(
         &interface,
         &router,
         runtime_state.clone(),
+        &crate::core::Motion::default(),
     )
     .await;
 

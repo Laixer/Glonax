@@ -59,6 +59,7 @@ impl super::J1939Unit for RequestResponder {
                         .sa(self.source_address)
                         .build();
 
+                    // TODO: Move this to consts
                     let version_major: u8 = crate::consts::VERSION_MAJOR.parse().unwrap();
                     let version_minor: u8 = crate::consts::VERSION_MINOR.parse().unwrap();
                     let version_patch: u8 = crate::consts::VERSION_PATCH.parse().unwrap();

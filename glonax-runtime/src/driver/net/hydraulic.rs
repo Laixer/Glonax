@@ -304,33 +304,31 @@ impl HydraulicControlUnit {
     async fn send_motion_command(
         &self,
         router: &crate::net::Router,
-        runtime_state: crate::runtime::SharedOperandState,
+        motion: &crate::core::Motion,
     ) -> Result<(), super::J1939UnitError> {
-        if let Ok(runtime_state) = runtime_state.try_read() {
-            match &runtime_state.state.motion {
-                crate::core::Motion::StopAll => {
-                    router.send(&self.lock()).await?;
-                }
-                crate::core::Motion::ResumeAll => {
-                    router.send(&self.unlock()).await?;
-                }
-                crate::core::Motion::ResetAll => {
-                    router.send(&self.motion_reset()).await?;
-                }
-                crate::core::Motion::StraightDrive(value) => {
-                    let frames = &self.drive_straight(*value);
-                    router.send_vectored(frames).await?;
-                }
-                crate::core::Motion::Change(changes) => {
-                    let frames = &self.actuator_command(
-                        changes
-                            .iter()
-                            .map(|changeset| (changeset.actuator as u8, changeset.value))
-                            .collect(),
-                    );
+        match motion {
+            crate::core::Motion::StopAll => {
+                router.send(&self.lock()).await?;
+            }
+            crate::core::Motion::ResumeAll => {
+                router.send(&self.unlock()).await?;
+            }
+            crate::core::Motion::ResetAll => {
+                router.send(&self.motion_reset()).await?;
+            }
+            crate::core::Motion::StraightDrive(value) => {
+                let frames = &self.drive_straight(*value);
+                router.send_vectored(frames).await?;
+            }
+            crate::core::Motion::Change(changes) => {
+                let frames = &self.actuator_command(
+                    changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value))
+                        .collect(),
+                );
 
-                    router.send_vectored(frames).await?;
-                }
+                router.send_vectored(frames).await?;
             }
         }
 
@@ -466,7 +464,10 @@ impl super::J1939Unit for HydraulicControlUnit {
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         if state == &super::J1939UnitOperationState::Running {
-            self.send_motion_command(router, runtime_state).await?;
+            if let Ok(runtime_state) = runtime_state.try_read() {
+                self.send_motion_command(router, &runtime_state.state.motion)
+                    .await?;
+            }
 
             ctx.tx_mark();
         }
@@ -479,10 +480,11 @@ impl super::J1939Unit for HydraulicControlUnit {
         ctx: &mut super::NetDriverContext,
         state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
-        runtime_state: crate::runtime::SharedOperandState,
+        _runtime_state: crate::runtime::SharedOperandState,
+        trigger: &crate::core::Motion,
     ) -> Result<(), super::J1939UnitError> {
         if state == &super::J1939UnitOperationState::Running {
-            self.send_motion_command(router, runtime_state).await?;
+            self.send_motion_command(router, trigger).await?;
 
             ctx.tx_mark();
         }

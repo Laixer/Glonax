@@ -206,6 +206,7 @@ pub trait J1939Unit {
         _state: &J1939UnitOperationState,
         _router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
+        _trigger: &crate::core::Motion,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
         std::future::ready(Ok(()))
     }
