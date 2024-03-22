@@ -387,6 +387,8 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
+    let mut rx_last = std::time::Instant::now();
+
     loop {
         router.listen().await?;
 
@@ -399,11 +401,14 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
             };
 
             println!(
-                "{} {} {}",
+                "{} {:3}ms {} {}",
                 chrono::Utc::now().format("%T%.3f"),
+                rx_last.elapsed().as_millis(),
                 specification_part,
                 frame
             );
+
+            rx_last = std::time::Instant::now();
         };
     }
 }
