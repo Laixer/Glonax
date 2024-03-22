@@ -585,8 +585,8 @@ enum Command {
     /// Frame fuzzer.
     Fuzzer {
         /// Message interval in milliseconds.
-        #[arg(short, long, default_value_t = 10)]
-        interval: u64,
+        #[arg(short, long)]
+        interval: Option<u64>,
         /// Frame ID.
         id: String,
     },
@@ -985,13 +985,17 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Fuzzer { interval, id } => {
+            use glonax::rand::Rng;
+
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let fuz0 = glonax::driver::Fuzzer::new(glonax::j1939::Id::new(u32::from_str_radix(
                 id.as_str(),
                 16,
             )?));
 
-            let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+            let mut tick = tokio::time::interval(std::time::Duration::from_millis(
+                interval.unwrap_or_else(|| glonax::rand::thread_rng().gen_range(1..=50)),
+            ));
 
             loop {
                 tick.tick().await;
