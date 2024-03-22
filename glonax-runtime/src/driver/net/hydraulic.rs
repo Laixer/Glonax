@@ -426,7 +426,7 @@ impl super::J1939Unit for HydraulicControlUnit {
             super::J1939UnitOperationState::Running => {
                 let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-                if ctx.is_rx_timeout(std::time::Duration::from_millis(500)) {
+                if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
                     result = Err(super::J1939UnitError::MessageTimeout);
                 }
 
