@@ -1,34 +1,72 @@
 use crate::runtime::{Service, SharedOperandState};
 
-// #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-// pub struct GnssConfig {
-//     /// Path to the serial device
-//     pub device: PathBuf,
-//     /// Baud rate of the serial device
-//     pub baud_rate: usize,
-// }
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
+pub struct J1939Name {
+    /// Manufacturer code.
+    pub manufacturer_code: u16,
+    /// Function instance.
+    pub function_instance: u8,
+    /// ECU instance.
+    pub ecu_instance: u8,
+    /// Function.
+    pub function: u8,
+    /// Vehicle system.
+    pub vehicle_system: u8,
+}
+
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
+pub struct CanDriverConfig {
+    /// Driver destination.
+    pub da: u8,
+    /// Driver source.
+    pub sa: Option<u8>,
+    /// Driver type.
+    #[serde(rename = "type")]
+    pub driver_type: String,
+}
+
+#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
+pub struct NetworkConfig {
+    /// CAN network interface.
+    pub interface: String,
+    /// Address.
+    pub address: u8,
+    /// Name.
+    pub name: J1939Name,
+    /// Driver configuration.
+    pub driver: Vec<CanDriverConfig>,
+}
 
 pub struct NetworkAuthority {
+    interface: String,
     router: crate::net::Router,
     network: crate::runtime::ControlNetwork,
 }
 
-impl Service<crate::runtime::NullConfig> for NetworkAuthority {
-    fn new(_config: crate::runtime::NullConfig) -> Self
+impl Service<NetworkConfig> for NetworkAuthority {
+    fn new(config: NetworkConfig) -> Self
     where
         Self: Sized,
     {
-        let interface = "vcan0";
-        let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(interface)).unwrap();
+        let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let network = crate::runtime::ControlNetwork::new(0x27);
+        let mut network = crate::runtime::ControlNetwork::with_request_responder(config.address);
+        for driver in &config.driver {
+            let net_driver_config = crate::driver::net::NetDriverConfig {
+                driver_type: driver.driver_type.clone(),
+                destination: driver.da,
+                source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
+            };
 
-        Self { router, network }
+            network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
+        }
+
+        Self { interface: config.interface, router, network }
     }
 
     fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("authority", Some("vcan0"))
+        crate::runtime::ServiceContext::new("authority", Some(self.interface.clone()))
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
@@ -38,6 +76,12 @@ impl Service<crate::runtime::NullConfig> for NetworkAuthority {
 
         // TODO: Replace with: while shutdown.is_empty()
         loop {
+            // if let Ok(Err(e)) =
+            //     tokio::time::timeout(std::time::Duration::from_millis(100), router.listen()).await
+            // {
+            //     log::error!("Failed to receive from router: {}", e);
+            // }
+
             if let Err(e) = self.router.listen().await {
                 log::error!("Failed to receive from router: {}", e);
             }
@@ -49,37 +93,37 @@ impl Service<crate::runtime::NullConfig> for NetworkAuthority {
                 match drv {
                     crate::driver::net::NetDriver::KueblerEncoder(enc) => {
                         if let Err(error) = enc.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, enc.destination(), enc.name(), error);
                         }
                     }
                     crate::driver::net::NetDriver::KueblerInclinometer(imu) => {
                         if let Err(error) = imu.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, imu.destination(), imu.name(), error);
                         }
                     }
                     crate::driver::net::NetDriver::VolvoD7E(ems) => {
                         if let Err(error) = ems.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, ems.destination(), ems.name(), error);
                         }
                     }
                     crate::driver::net::NetDriver::BoschEngineManagementSystem(ems) => {
                         if let Err(error) = ems.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, ems.destination(), ems.name(), error);
                         }
                     }
                     crate::driver::net::NetDriver::HydraulicControlUnit(hcu) => {
                         if let Err(error) = hcu.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, hcu.destination(), hcu.name(), error);
                         }
                     }
                     crate::driver::net::NetDriver::RequestResponder(rrp) => {
                         if let Err(error) = rrp.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, rrp.destination(), rrp.name(), error);
                         }
                     }
                     crate::driver::net::NetDriver::VehicleControlUnit(vcu) => {
                         if let Err(error) = vcu.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
-                            log::error!("Failed to accept message: {}", error);
+                            log::error!("[{}:0x{:X}] {}: {}", self.interface, vcu.destination(), vcu.name(), error);
                         }
                     }
                 }

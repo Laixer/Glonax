@@ -4,6 +4,7 @@ pub struct SimulationConfig {
     pub jitter: bool,
 }
 
+// TODO: Remove this.
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct J1939Name {
     /// Manufacturer code.
@@ -18,6 +19,7 @@ pub struct J1939Name {
     pub vehicle_system: u8,
 }
 
+// TODO: Remove this.
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct J1939NetConfig {
     /// CAN network interface.
@@ -30,6 +32,7 @@ pub struct J1939NetConfig {
     pub driver: Vec<CanDriverConfig>,
 }
 
+// TODO: Remove this.
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct CanDriverConfig {
     /// Driver destination.

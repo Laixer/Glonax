@@ -86,6 +86,8 @@ impl Motion {
     }
 
     /// Test if the motion command is movable.
+    ///
+    /// A motion command is movable if it changes the position of the machine.
     #[inline]
     pub fn is_movable(&self) -> bool {
         matches!(self, Motion::StraightDrive(_) | Motion::Change(_))
