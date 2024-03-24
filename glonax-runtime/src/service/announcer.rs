@@ -16,22 +16,17 @@ impl<C> Service<C> for Announcer {
         crate::runtime::ServiceContext::new("announcer", Some("[::1]:0"))
     }
 
-    fn tick(&mut self, runtime_state: SharedOperandState) {
+    async fn tick(&mut self, runtime_state: SharedOperandState) {
         // let instance = instance.clone();
         // let payload = [instance.to_bytes(), status.to_bytes()].concat();
 
         log::trace!("Sending instance and status broadcast");
 
-        let status = if let Ok(runtime_state) = runtime_state.try_read() {
-            Some(runtime_state.status())
-        } else {
-            None
-        };
+        let runtime_state = runtime_state.read().await;
 
-        if let Some(status) = status {
-            let payload = status.to_bytes();
+        let status = runtime_state.status();
+        let payload = status.to_bytes();
 
-            self.0.send_to(&payload, "[ff02::1]:30050").unwrap();
-        }
+        self.0.send_to(&payload, "[ff02::1]:30050").unwrap();
     }
 }

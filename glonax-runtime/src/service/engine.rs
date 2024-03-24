@@ -18,11 +18,10 @@ impl<C> Service<C> for EngineSimulator {
         }
     }
 
-    fn tick(&mut self, runtime_state: SharedOperandState) {
-        if let Ok(mut runtime_state) = runtime_state.try_write() {
-            runtime_state.state.engine.driver_demand = self.rng.gen_range(18..=20);
-            runtime_state.state.engine.actual_engine = self.rng.gen_range(19..=21);
-            runtime_state.state.engine.rpm = self.rng.gen_range(1180..=1200);
-        }
+    async fn tick(&mut self, runtime_state: SharedOperandState) {
+        let mut runtime_state = runtime_state.write().await;
+        runtime_state.state.engine.driver_demand = self.rng.gen_range(18..=20);
+        runtime_state.state.engine.actual_engine = self.rng.gen_range(19..=21);
+        runtime_state.state.engine.rpm = self.rng.gen_range(1180..=1200);
     }
 }
