@@ -353,9 +353,9 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let operand = self.operand.clone();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting {} service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
         } else {
-            log::debug!("Starting {} service", ctx.name);
+            log::debug!("Starting '{}' service", ctx.name);
         }
 
         tokio::spawn(async move {
@@ -379,13 +379,61 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let operand = self.operand.clone();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting {} service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address,);
         } else {
-            log::debug!("Starting {} service", ctx.name);
+            log::debug!("Starting '{}' service", ctx.name);
         }
 
         tokio::spawn(async move {
             service.wait_io(operand).await;
+        });
+    }
+
+    pub fn schedule_net2_service<S, C>(&self, config: C, duration: std::time::Duration)
+    where
+        S: Service<C> + Send + Sync + 'static,
+        C: Clone,
+    {
+        let mut interval = tokio::time::interval(duration);
+
+        let mut service = S::new(config.clone());
+        let ctx = service.ctx();
+
+        let operand = self.operand.clone();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting '{}' service on {}", ctx.name, address,);
+        } else {
+            log::debug!("Starting '{}' service", ctx.name);
+        }
+
+        tokio::spawn(async move {
+            loop {
+                interval.tick().await;
+                service.tick(operand.clone()).await;
+            }
+        });
+    }
+
+    pub fn schedule_net3_service<S, C>(&mut self, config: C)
+    where
+        S: Service<C> + Send + Sync + 'static,
+        C: Clone,
+    {
+        let mut service = S::new(config.clone());
+        let ctx = service.ctx();
+
+        let operand = self.operand.clone();
+        let motion_rx = self.motion_rx.take().unwrap();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting '{}' service on {}", ctx.name, address,);
+        } else {
+            log::debug!("Starting '{}' service", ctx.name);
+        }
+
+        tokio::spawn(async move {
+            service.on_event(operand, motion_rx).await;
         });
     }
 
@@ -406,9 +454,9 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let operand = self.operand.clone();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting {} service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address,);
         } else {
-            log::debug!("Starting {} service", ctx.name);
+            log::debug!("Starting '{}' service", ctx.name);
         }
 
         tokio::spawn(async move {
