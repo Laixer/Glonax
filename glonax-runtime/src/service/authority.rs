@@ -55,13 +55,24 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         let mut network = crate::runtime::ControlNetwork::with_request_responder(config.address);
         for driver in &config.driver {
             // TODO: Support the 'into' trait.
-            let net_driver_config = crate::driver::net::NetDriverConfig {
-                driver_type: driver.driver_type.clone(),
-                destination: driver.da,
-                source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
-            };
-
-            network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
+            // let net_driver_config = crate::driver::net::NetDriverConfig {
+            //     driver_type: driver.driver_type.clone(),
+            //     destination: driver.da,
+            //     source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
+            // };
+            match crate::driver::net::NetDriver::factory(
+                &driver.driver_type,
+                driver.da,
+                driver.sa.unwrap_or(config.address),
+            ) {
+                Ok(driver) => {
+                    network.register_driver(driver);
+                }
+                Err(()) => {
+                    log::error!("Failed to register driver: {}", driver.driver_type);
+                }
+            }
+            // network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
         }
 
         Self { interface: config.interface, router, network }
@@ -126,13 +137,25 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
 
         let mut network = crate::runtime::ControlNetwork::new(config.address);
         for driver in &config.driver {
-            let net_driver_config = crate::driver::net::NetDriverConfig {
-                driver_type: driver.driver_type.clone(),
-                destination: driver.da,
-                source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
-            };
+            // let net_driver_config = crate::driver::net::NetDriverConfig {
+            //     driver_type: driver.driver_type.clone(),
+            //     destination: driver.da,
+            //     source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
+            // };
 
-            network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
+            // network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
+            match crate::driver::net::NetDriver::factory(
+                &driver.driver_type,
+                driver.da,
+                driver.sa.unwrap_or(config.address),
+            ) {
+                Ok(driver) => {
+                    network.register_driver(driver);
+                }
+                Err(()) => {
+                    log::error!("Failed to register driver: {}", driver.driver_type);
+                }
+            }
         }
 
         Self { interface: config.interface, router, network }

@@ -11,16 +11,6 @@ pub(super) mod vecraft;
 pub mod volvo_ems;
 mod volvo_vecu;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NetDriverConfig {
-    /// Destination address.
-    pub destination: u8,
-    /// Source address.
-    pub source: u8,
-    /// Driver type.
-    pub driver_type: String,
-}
-
 pub enum NetDriver {
     KueblerEncoder(super::KueblerEncoder),
     KueblerInclinometer(super::KueblerInclinometer),
@@ -37,32 +27,30 @@ impl NetDriver {
             address,
         ))
     }
-}
 
-impl TryFrom<NetDriverConfig> for NetDriver {
-    // type Error = crate::Error;
-    type Error = ();
-
-    fn try_from(config: NetDriverConfig) -> Result<Self, Self::Error> {
-        match config.driver_type.as_str() {
+    pub(crate) fn factory(driver_type: &str, destination: u8, source: u8) -> Result<Self, ()> {
+        match driver_type {
             "kuebler_encoder" => Ok(NetDriver::KueblerEncoder(
-                crate::driver::KueblerEncoder::new(config.destination, config.source),
+                crate::driver::KueblerEncoder::new(destination, source),
             )),
             "kuebler_inclinometer" => Ok(NetDriver::KueblerInclinometer(
-                crate::driver::KueblerInclinometer::new(config.destination, config.source),
+                crate::driver::KueblerInclinometer::new(destination, source),
             )),
             "volvo_d7e" => Ok(NetDriver::VolvoD7E(crate::driver::VolvoD7E::new(
-                config.destination,
-                config.source,
+                destination,
+                source,
             ))),
+            "bosch_ems" => Ok(NetDriver::BoschEngineManagementSystem(
+                crate::driver::BoschEngineManagementSystem::new(destination, source),
+            )),
             "hydraulic_control_unit" => Ok(NetDriver::HydraulicControlUnit(
-                crate::driver::HydraulicControlUnit::new(config.destination, config.source),
+                crate::driver::HydraulicControlUnit::new(destination, source),
             )),
             "request_responder" => Ok(NetDriver::RequestResponder(
-                crate::driver::RequestResponder::new(config.source),
+                crate::driver::RequestResponder::new(source),
             )),
             "vehicle_control_unit" => Ok(NetDriver::VehicleControlUnit(
-                crate::driver::VehicleControlUnit::new(config.destination, config.source),
+                crate::driver::VehicleControlUnit::new(destination, source),
             )),
             _ => Err(()),
         }
