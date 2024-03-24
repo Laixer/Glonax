@@ -48,6 +48,10 @@ impl super::J1939Unit for BoschEngineManagementSystem {
         self.ems.destination()
     }
 
+    fn source(&self) -> u8 {
+        self.ems.source()
+    }
+
     async fn setup(
         &self,
         ctx: &mut super::NetDriverContext,

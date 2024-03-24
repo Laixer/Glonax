@@ -57,7 +57,7 @@ pub struct KueblerInclinometer {
     /// Destination address.
     destination_address: u8,
     /// Source address.
-    _source_address: u8,
+    source_address: u8,
 }
 
 impl KueblerInclinometer {
@@ -65,7 +65,7 @@ impl KueblerInclinometer {
     pub fn new(da: u8, sa: u8) -> Self {
         Self {
             destination_address: da,
-            _source_address: sa,
+            source_address: sa,
         }
     }
 }
@@ -91,6 +91,10 @@ impl super::J1939Unit for KueblerInclinometer {
 
     fn destination(&self) -> u8 {
         self.destination_address
+    }
+
+    fn source(&self) -> u8 {
+        self.source_address
     }
 
     #[rustfmt::skip]

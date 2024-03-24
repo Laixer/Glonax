@@ -94,6 +94,18 @@ impl J1939Unit for NetDriver {
         }
     }
 
+    fn source(&self) -> u8 {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.source(),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.source(),
+            Self::VolvoD7E(volvo) => volvo.source(),
+            Self::BoschEngineManagementSystem(bosch) => bosch.source(),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.source(),
+            Self::RequestResponder(responder) => responder.source(),
+            Self::VehicleControlUnit(vcu) => vcu.source(),
+        }
+    }
+
     async fn setup(
         &self,
         ctx: &mut NetDriverContext,
@@ -296,6 +308,9 @@ pub trait J1939Unit {
 
     /// Get the destination address of the unit.
     fn destination(&self) -> u8;
+
+    /// Get the source address of the unit.
+    fn source(&self) -> u8;
 
     fn setup(
         &self,

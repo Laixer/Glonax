@@ -400,6 +400,10 @@ impl super::J1939Unit for HydraulicControlUnit {
         self.destination_address
     }
 
+    fn source(&self) -> u8 {
+        self.source_address
+    }
+
     #[rustfmt::skip]
     async fn setup(
         &self,

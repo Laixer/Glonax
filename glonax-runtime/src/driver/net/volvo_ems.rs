@@ -87,6 +87,10 @@ impl super::J1939Unit for VolvoD7E {
         self.destination_address
     }
 
+    fn source(&self) -> u8 {
+        self.source_address
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,

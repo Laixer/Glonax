@@ -37,6 +37,10 @@ impl super::J1939Unit for RequestResponder {
         self.source_address
     }
 
+    fn source(&self) -> u8 {
+        self.source_address
+    }
+
     async fn try_accept(
         &mut self,
         _ctx: &mut super::NetDriverContext,
