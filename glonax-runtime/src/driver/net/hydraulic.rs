@@ -407,17 +407,15 @@ impl super::J1939Unit for HydraulicControlUnit {
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        router.send(&self.motion_reset()).await?;
-        router.send(&self.set_ident(true)).await?;
-        router.send(&self.set_ident(false)).await?;
-        ctx.tx_mark();
-
         // TODO: FIX: It is possible that the request is send from 0x0.
         router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
         router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
         router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
-        router.send(&protocol::request(self.destination_address, PGN::VehicleIdentification)).await?;
-        router.send(&protocol::request(self.destination_address, PGN::TimeDate)).await?;
+        ctx.tx_mark();
+
+        router.send(&self.motion_reset()).await?;
+        router.send(&self.set_ident(true)).await?;
+        router.send(&self.set_ident(false)).await?;
         ctx.tx_mark();
 
         Ok(())
@@ -443,6 +441,7 @@ impl super::J1939Unit for HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
+        // TODO: Maybe move to authority service?
         if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
             result = Err(super::J1939UnitError::MessageTimeout);
         }

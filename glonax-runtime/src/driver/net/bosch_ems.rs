@@ -48,6 +48,24 @@ impl super::J1939Unit for BoschEngineManagementSystem {
         self.ems.destination()
     }
 
+    async fn setup(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        self.ems.setup(ctx, router, runtime_state).await
+    }
+
+    async fn teardown(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        self.ems.teardown(ctx, router, runtime_state).await
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,

@@ -1,4 +1,4 @@
-use j1939::{Frame, PGN};
+use j1939::{protocol, Frame, PGN};
 
 use crate::net::Parsable;
 
@@ -44,6 +44,22 @@ impl super::J1939Unit for VehicleControlUnit {
 
     fn destination(&self) -> u8 {
         self.destination_address
+    }
+
+    #[rustfmt::skip]
+    async fn setup(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        // TODO: FIX: It is possible that the request is send from 0x0.
+        router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
+        ctx.tx_mark();
+
+        Ok(())
     }
 
     async fn try_accept(

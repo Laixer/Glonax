@@ -1,4 +1,4 @@
-use j1939::{spn, Frame, FrameBuilder, IdBuilder, PGN};
+use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 
@@ -299,6 +299,22 @@ impl super::J1939Unit for EngineManagementSystem {
         self.destination_address
     }
 
+    #[rustfmt::skip]
+    async fn setup(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        // TODO: FIX: It is possible that the request is send from 0x0.
+        router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
+        ctx.tx_mark();
+
+        Ok(())
+    }
+
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
@@ -312,12 +328,12 @@ impl super::J1939Unit for EngineManagementSystem {
         }
 
         if let Some(message) = router.try_accept(self) {
-            ctx.rx_mark();
-
             if let Ok(mut runtime_state) = runtime_state.try_write() {
                 runtime_state.state.engine_state_actual_instant = Some(std::time::Instant::now());
 
                 if let EngineMessage::EngineController1(controller) = message {
+                    ctx.rx_mark();
+
                     if let Some(driver_demand) = controller.driver_demand {
                         runtime_state.state.engine.driver_demand = driver_demand;
                     }
