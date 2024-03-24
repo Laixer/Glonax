@@ -69,6 +69,140 @@ impl TryFrom<NetDriverConfig> for NetDriver {
     }
 }
 
+impl J1939Unit for NetDriver {
+    fn name(&self) -> &str {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.name(),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.name(),
+            Self::VolvoD7E(volvo) => volvo.name(),
+            Self::BoschEngineManagementSystem(bosch) => bosch.name(),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.name(),
+            Self::RequestResponder(responder) => responder.name(),
+            Self::VehicleControlUnit(vcu) => vcu.name(),
+        }
+    }
+
+    fn destination(&self) -> u8 {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.destination(),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.destination(),
+            Self::VolvoD7E(volvo) => volvo.destination(),
+            Self::BoschEngineManagementSystem(bosch) => bosch.destination(),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.destination(),
+            Self::RequestResponder(responder) => responder.destination(),
+            Self::VehicleControlUnit(vcu) => vcu.destination(),
+        }
+    }
+
+    async fn try_accept(
+        &mut self,
+        ctx: &mut NetDriverContext,
+        state: &J1939UnitOperationState,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), J1939UnitError> {
+        match self {
+            Self::KueblerEncoder(encoder) => {
+                encoder.try_accept(ctx, state, router, runtime_state).await
+            }
+            Self::KueblerInclinometer(inclinometer) => {
+                inclinometer
+                    .try_accept(ctx, state, router, runtime_state)
+                    .await
+            }
+            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, state, router, runtime_state).await,
+            Self::BoschEngineManagementSystem(bosch) => {
+                bosch.try_accept(ctx, state, router, runtime_state).await
+            }
+            Self::HydraulicControlUnit(hydraulic) => {
+                hydraulic
+                    .try_accept(ctx, state, router, runtime_state)
+                    .await
+            }
+            Self::RequestResponder(responder) => {
+                responder
+                    .try_accept(ctx, state, router, runtime_state)
+                    .await
+            }
+            Self::VehicleControlUnit(vcu) => {
+                vcu.try_accept(ctx, state, router, runtime_state).await
+            }
+        }
+    }
+
+    async fn tick(
+        &self,
+        ctx: &mut NetDriverContext,
+        state: &J1939UnitOperationState,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), J1939UnitError> {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.tick(ctx, state, router, runtime_state).await,
+            Self::KueblerInclinometer(inclinometer) => {
+                inclinometer.tick(ctx, state, router, runtime_state).await
+            }
+            Self::VolvoD7E(volvo) => volvo.tick(ctx, state, router, runtime_state).await,
+            Self::BoschEngineManagementSystem(bosch) => {
+                bosch.tick(ctx, state, router, runtime_state).await
+            }
+            Self::HydraulicControlUnit(hydraulic) => {
+                hydraulic.tick(ctx, state, router, runtime_state).await
+            }
+            Self::RequestResponder(responder) => {
+                responder.tick(ctx, state, router, runtime_state).await
+            }
+            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, state, router, runtime_state).await,
+        }
+    }
+
+    async fn trigger(
+        &self,
+        ctx: &mut NetDriverContext,
+        state: &J1939UnitOperationState,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+        trigger: &crate::core::Motion,
+    ) -> Result<(), J1939UnitError> {
+        match self {
+            Self::KueblerEncoder(encoder) => {
+                encoder
+                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+            Self::KueblerInclinometer(inclinometer) => {
+                inclinometer
+                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+            Self::VolvoD7E(volvo) => {
+                volvo
+                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+            Self::BoschEngineManagementSystem(bosch) => {
+                bosch
+                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+            Self::HydraulicControlUnit(hydraulic) => {
+                hydraulic
+                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+            Self::RequestResponder(responder) => {
+                responder
+                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+            Self::VehicleControlUnit(vcu) => {
+                vcu.trigger(ctx, state, router, runtime_state, trigger)
+                    .await
+            }
+        }
+    }
+}
+
 pub struct NetDriverContext {
     /// Last time a message was sent.
     tx_last: std::time::Instant,
