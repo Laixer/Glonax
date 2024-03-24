@@ -5,9 +5,9 @@ pub mod fuzzer;
 pub mod hydraulic;
 pub mod inclino;
 pub mod inspector;
-pub mod reqres;
 pub mod vcu;
 pub(super) mod vecraft;
+pub mod vms;
 pub mod volvo_ems;
 mod volvo_vecu;
 
@@ -17,17 +17,11 @@ pub enum NetDriver {
     VolvoD7E(super::VolvoD7E),
     BoschEngineManagementSystem(super::BoschEngineManagementSystem),
     HydraulicControlUnit(super::HydraulicControlUnit),
-    RequestResponder(super::RequestResponder),
+    VehicleManagementSystem(super::VehicleManagementSystem),
     VehicleControlUnit(super::VehicleControlUnit),
 }
 
 impl NetDriver {
-    pub fn request_responder(address: u8) -> crate::driver::net::NetDriver {
-        crate::driver::net::NetDriver::RequestResponder(crate::driver::RequestResponder::new(
-            address,
-        ))
-    }
-
     pub(crate) fn factory(driver_type: &str, destination: u8, source: u8) -> Result<Self, ()> {
         match driver_type {
             "kuebler_encoder" => Ok(NetDriver::KueblerEncoder(
@@ -46,9 +40,6 @@ impl NetDriver {
             "hydraulic_control_unit" => Ok(NetDriver::HydraulicControlUnit(
                 crate::driver::HydraulicControlUnit::new(destination, source),
             )),
-            "request_responder" => Ok(NetDriver::RequestResponder(
-                crate::driver::RequestResponder::new(source),
-            )),
             "vehicle_control_unit" => Ok(NetDriver::VehicleControlUnit(
                 crate::driver::VehicleControlUnit::new(destination, source),
             )),
@@ -65,7 +56,7 @@ impl J1939Unit for NetDriver {
             Self::VolvoD7E(volvo) => volvo.name(),
             Self::BoschEngineManagementSystem(bosch) => bosch.name(),
             Self::HydraulicControlUnit(hydraulic) => hydraulic.name(),
-            Self::RequestResponder(responder) => responder.name(),
+            Self::VehicleManagementSystem(responder) => responder.name(),
             Self::VehicleControlUnit(vcu) => vcu.name(),
         }
     }
@@ -77,7 +68,7 @@ impl J1939Unit for NetDriver {
             Self::VolvoD7E(volvo) => volvo.destination(),
             Self::BoschEngineManagementSystem(bosch) => bosch.destination(),
             Self::HydraulicControlUnit(hydraulic) => hydraulic.destination(),
-            Self::RequestResponder(responder) => responder.destination(),
+            Self::VehicleManagementSystem(responder) => responder.destination(),
             Self::VehicleControlUnit(vcu) => vcu.destination(),
         }
     }
@@ -89,7 +80,7 @@ impl J1939Unit for NetDriver {
             Self::VolvoD7E(volvo) => volvo.source(),
             Self::BoschEngineManagementSystem(bosch) => bosch.source(),
             Self::HydraulicControlUnit(hydraulic) => hydraulic.source(),
-            Self::RequestResponder(responder) => responder.source(),
+            Self::VehicleManagementSystem(responder) => responder.source(),
             Self::VehicleControlUnit(vcu) => vcu.source(),
         }
     }
@@ -112,7 +103,9 @@ impl J1939Unit for NetDriver {
             Self::HydraulicControlUnit(hydraulic) => {
                 hydraulic.setup(ctx, router, runtime_state).await
             }
-            Self::RequestResponder(responder) => responder.setup(ctx, router, runtime_state).await,
+            Self::VehicleManagementSystem(responder) => {
+                responder.setup(ctx, router, runtime_state).await
+            }
             Self::VehicleControlUnit(vcu) => vcu.setup(ctx, router, runtime_state).await,
         }
     }
@@ -135,7 +128,7 @@ impl J1939Unit for NetDriver {
             Self::HydraulicControlUnit(hydraulic) => {
                 hydraulic.teardown(ctx, router, runtime_state).await
             }
-            Self::RequestResponder(responder) => {
+            Self::VehicleManagementSystem(responder) => {
                 responder.teardown(ctx, router, runtime_state).await
             }
             Self::VehicleControlUnit(vcu) => vcu.teardown(ctx, router, runtime_state).await,
@@ -160,7 +153,7 @@ impl J1939Unit for NetDriver {
             Self::HydraulicControlUnit(hydraulic) => {
                 hydraulic.try_accept(ctx, router, runtime_state).await
             }
-            Self::RequestResponder(responder) => {
+            Self::VehicleManagementSystem(responder) => {
                 responder.try_accept(ctx, router, runtime_state).await
             }
             Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, router, runtime_state).await,
@@ -185,7 +178,9 @@ impl J1939Unit for NetDriver {
             Self::HydraulicControlUnit(hydraulic) => {
                 hydraulic.tick(ctx, router, runtime_state).await
             }
-            Self::RequestResponder(responder) => responder.tick(ctx, router, runtime_state).await,
+            Self::VehicleManagementSystem(responder) => {
+                responder.tick(ctx, router, runtime_state).await
+            }
             Self::VehicleControlUnit(vcu) => vcu.tick(ctx, router, runtime_state).await,
         }
     }
@@ -213,7 +208,7 @@ impl J1939Unit for NetDriver {
             Self::HydraulicControlUnit(hydraulic) => {
                 hydraulic.trigger(ctx, router, runtime_state, trigger).await
             }
-            Self::RequestResponder(responder) => {
+            Self::VehicleManagementSystem(responder) => {
                 responder.trigger(ctx, router, runtime_state, trigger).await
             }
             Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, router, runtime_state, trigger).await,

@@ -465,6 +465,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     }
 }
 
+// TODO: This method should be moved somewhere else
 pub struct ControlNetwork {
     pub default_source_address: u8,
     pub network: Vec<(NetDriver, NetDriverContext)>,
@@ -476,17 +477,6 @@ impl ControlNetwork {
         Self {
             default_source_address,
             network: vec![],
-        }
-    }
-
-    /// Construct a new control network with a request responder.
-    pub fn with_request_responder(address: u8) -> Self {
-        Self {
-            default_source_address: address,
-            network: vec![(
-                NetDriver::request_responder(address),
-                NetDriverContext::default(),
-            )],
         }
     }
 

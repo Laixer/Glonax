@@ -1,4 +1,4 @@
-use crate::{driver::net::J1939Unit, runtime::{Service, SharedOperandState}};
+use crate::{driver::net::{J1939Unit, NetDriver}, runtime::{Service, SharedOperandState}};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct J1939Name {
@@ -52,15 +52,12 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlNetwork::with_request_responder(config.address);
+        let mut network = crate::runtime::ControlNetwork::new(config.address);
+
+        network.register_driver(NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(config.address)));
+
         for driver in &config.driver {
-            // TODO: Support the 'into' trait.
-            // let net_driver_config = crate::driver::net::NetDriverConfig {
-            //     driver_type: driver.driver_type.clone(),
-            //     destination: driver.da,
-            //     source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
-            // };
-            match crate::driver::net::NetDriver::factory(
+            match NetDriver::factory(
                 &driver.driver_type,
                 driver.da,
                 driver.sa.unwrap_or(config.address),
@@ -72,7 +69,6 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                     log::error!("Failed to register driver: {}", driver.driver_type);
                 }
             }
-            // network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
         }
 
         Self { interface: config.interface, router, network }
@@ -83,9 +79,6 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        // FUTURE: Could move this into a virtual ECU that represents the VMS.
-        self.router.send(&j1939::protocol::address_claimed(self.router.source_address(), *self.router.name())).await.unwrap();
-
         for (drv, ctx) in self.network.network.iter_mut() {
             log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
             if let Err(error) = drv.setup(ctx, &self.router, runtime_state.clone()).await {
@@ -137,14 +130,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
 
         let mut network = crate::runtime::ControlNetwork::new(config.address);
         for driver in &config.driver {
-            // let net_driver_config = crate::driver::net::NetDriverConfig {
-            //     driver_type: driver.driver_type.clone(),
-            //     destination: driver.da,
-            //     source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
-            // };
-
-            // network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
-            match crate::driver::net::NetDriver::factory(
+            match NetDriver::factory(
                 &driver.driver_type,
                 driver.da,
                 driver.sa.unwrap_or(config.address),
@@ -189,19 +175,10 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         let router = crate::net::Router::new(socket);
 
         let mut network = crate::runtime::ControlNetwork::new(config.address);
-        // for driver in &config.driver {
-        //     let net_driver_config = crate::driver::net::NetDriverConfig {
-        //         driver_type: driver.driver_type.clone(),
-        //         destination: driver.da,
-        //         source: driver.sa.unwrap_or(config.address), // TODO: Maybe remove 'source' from config.
-        //     };
-
-        //     network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
-        // }
 
         // TODO: Get from config.
         let hcu0 = crate::driver::HydraulicControlUnit::new(0x4a, config.address);
-        network.register_driver(crate::driver::net::NetDriver::HydraulicControlUnit(hcu0));
+        network.register_driver(NetDriver::HydraulicControlUnit(hcu0));
 
         Self { interface: config.interface, router, network }
     }

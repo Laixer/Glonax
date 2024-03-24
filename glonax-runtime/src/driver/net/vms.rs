@@ -3,18 +3,18 @@ use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 use crate::net::Parsable;
 
 #[derive(Default)]
-pub struct RequestResponder {
+pub struct VehicleManagementSystem {
     /// Source address.
     source_address: u8,
 }
 
-impl RequestResponder {
+impl VehicleManagementSystem {
     pub fn new(sa: u8) -> Self {
         Self { source_address: sa }
     }
 }
 
-impl Parsable<PGN> for RequestResponder {
+impl Parsable<PGN> for VehicleManagementSystem {
     fn parse(&mut self, frame: &Frame) -> Option<PGN> {
         if frame.id().pgn() == PGN::Request {
             if frame.id().destination_address() != Some(self.source_address) {
@@ -28,9 +28,9 @@ impl Parsable<PGN> for RequestResponder {
     }
 }
 
-impl super::J1939Unit for RequestResponder {
+impl super::J1939Unit for VehicleManagementSystem {
     fn name(&self) -> &str {
-        "Request responder"
+        "Vehicle management system"
     }
 
     fn destination(&self) -> u8 {
@@ -41,6 +41,19 @@ impl super::J1939Unit for RequestResponder {
         self.source_address
     }
 
+    #[rustfmt::skip]
+    async fn setup(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        router.send(&protocol::address_claimed(self.source_address, *router.name())).await?;
+        ctx.tx_mark();
+
+        Ok(())
+    }
+
     async fn try_accept(
         &mut self,
         _ctx: &mut super::NetDriverContext,
@@ -49,13 +62,9 @@ impl super::J1939Unit for RequestResponder {
     ) -> Result<(), super::J1939UnitError> {
         if let Some(pgn) = router.try_accept(self) {
             match pgn {
+                #[rustfmt::skip]
                 PGN::AddressClaimed => {
-                    router
-                        .send(&protocol::address_claimed(
-                            self.source_address,
-                            *router.name(),
-                        ))
-                        .await?;
+                    router.send(&protocol::address_claimed(self.source_address, *router.name())).await?;
                 }
                 PGN::SoftwareIdentification => {
                     let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)
