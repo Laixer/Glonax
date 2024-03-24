@@ -191,8 +191,6 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
     // TODO: Motion should be replaced by a more generic message type.
     async fn on_event(&mut self, runtime_state: SharedOperandState, mut motion_rx: crate::runtime::MotionReceiver) {
         while let Some(motion) = motion_rx.recv().await {
-            runtime_state.write().await.state.motion = motion.clone();
-
             for (drv, ctx) in self.network.network.iter_mut() {
                 if let Err(error) = drv.trigger(ctx, &self.router, runtime_state.clone(), &motion).await {
                     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);

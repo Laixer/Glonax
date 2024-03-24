@@ -333,7 +333,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let operand = self.operand.clone();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
         } else {
             log::debug!("Starting '{}' service", ctx.name);
         }
@@ -356,7 +356,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let operand = self.operand.clone();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
         } else {
             log::debug!("Starting '{}' service", ctx.name);
         }
@@ -381,7 +381,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let motion_rx = self.motion_rx.take().unwrap();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
         } else {
             log::debug!("Starting '{}' service", ctx.name);
         }
@@ -408,7 +408,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let operand = self.operand.clone();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address,);
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
         } else {
             log::debug!("Starting '{}' service", ctx.name);
         }
@@ -423,6 +423,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
     // TODO: Component should be 'service' and not 'component'
     // TODO: Maybe copy MachineState to component state on each tick?
+    // TODO: Pipeline should be a service.
     /// Run a component in the main thread.
     ///
     /// This method will run a component in the main thread until the runtime is shutdown.

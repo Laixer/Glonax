@@ -469,16 +469,14 @@ impl super::J1939Unit for HydraulicControlUnit {
     async fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         if let Ok(runtime_state) = runtime_state.try_read() {
             self.send_motion_command(router, &runtime_state.state.motion)
                 .await?;
+            ctx.tx_mark();
         }
-
-        ctx.tx_mark();
 
         Ok(())
     }
@@ -487,11 +485,12 @@ impl super::J1939Unit for HydraulicControlUnit {
         &self,
         ctx: &mut super::NetDriverContext,
         router: &crate::net::Router,
-        _runtime_state: crate::runtime::SharedOperandState,
+        runtime_state: crate::runtime::SharedOperandState,
         trigger: &crate::core::Motion,
     ) -> Result<(), super::J1939UnitError> {
-        self.send_motion_command(router, trigger).await?;
+        runtime_state.write().await.state.motion = trigger.clone();
 
+        self.send_motion_command(router, trigger).await?;
         ctx.tx_mark();
 
         Ok(())
