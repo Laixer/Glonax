@@ -457,11 +457,8 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::VecraftConfig(_config) => {}
                 HydraulicMessage::Status(status) => {
                     ctx.rx_mark();
-                    if status.state == super::vecraft::State::FaultyGenericError
-                        || status.state == super::vecraft::State::FaultyBusError
-                    {
-                        result = Err(super::J1939UnitError::BusError);
-                    }
+
+                    status.into_error()?;
                 }
             }
         }

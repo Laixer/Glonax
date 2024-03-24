@@ -84,6 +84,17 @@ pub enum State {
     FaultyBusError,
 }
 
+impl State {
+    pub fn to_byte(self) -> u8 {
+        match self {
+            State::Nominal => 0x14,
+            State::Ident => 0x16,
+            State::FaultyGenericError => 0xfa,
+            State::FaultyBusError => 0xfb,
+        }
+    }
+}
+
 impl From<u8> for State {
     fn from(byte: u8) -> Self {
         match byte {
@@ -104,11 +115,11 @@ impl std::fmt::Display for State {
 
 // TODO: Remove the lock field.
 pub struct VecraftStatusMessage {
-    /// ECU status
+    /// ECU status.
     pub state: State,
-    /// Motion lock
+    /// Motion lock.
     pub locked: bool,
-    /// Uptime
+    /// Uptime in seconds.
     pub uptime: u32,
 }
 
@@ -118,6 +129,36 @@ impl VecraftStatusMessage {
             state: State::from(frame.pdu()[0]),
             locked: frame.pdu()[2] != PDU_NOT_AVAILABLE && frame.pdu()[2] == 0x1,
             uptime: u32::from_le_bytes(frame.pdu()[4..8].try_into().unwrap()),
+        }
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn to_frame(&self, destination_address: u8, source_address: u8) -> Frame {
+        FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2)
+                .da(destination_address)
+                .sa(source_address)
+                .build(),
+        )
+        .copy_from_slice(&[
+            self.state.to_byte(),
+            0xff,
+            if self.locked { 0x1 } else { 0x0 },
+            0xff,
+            self.uptime.to_le_bytes()[0],
+            self.uptime.to_le_bytes()[1],
+            self.uptime.to_le_bytes()[2],
+            self.uptime.to_le_bytes()[3],
+        ])
+        .build()
+    }
+
+    pub(crate) fn into_error(self) -> Result<(), super::J1939UnitError> {
+        match self.state {
+            State::Nominal => Ok(()),
+            State::Ident => Ok(()),
+            State::FaultyGenericError => Err(super::J1939UnitError::BusError),
+            State::FaultyBusError => Err(super::J1939UnitError::BusError),
         }
     }
 }
