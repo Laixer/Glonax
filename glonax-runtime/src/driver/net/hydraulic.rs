@@ -400,60 +400,70 @@ impl super::J1939Unit for HydraulicControlUnit {
         self.destination_address
     }
 
-    async fn try_accept(
-        &mut self,
+    #[rustfmt::skip]
+    async fn setup(
+        &self,
         ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        match state {
-            #[rustfmt::skip]
-            super::J1939UnitOperationState::Setup => {
-                router.send(&self.motion_reset()).await?;
-                router.send(&self.set_ident(true)).await?;
-                router.send(&self.set_ident(false)).await?;
+        router.send(&self.motion_reset()).await?;
+        router.send(&self.set_ident(true)).await?;
+        router.send(&self.set_ident(false)).await?;
+        ctx.tx_mark();
 
-                // TODO: FIX: It is possible that the request is send from 0x0.
-                router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
-                router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
-                router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
-                router.send(&protocol::request(self.destination_address, PGN::VehicleIdentification)).await?;
-                router.send(&protocol::request(self.destination_address, PGN::TimeDate)).await?;
+        // TODO: FIX: It is possible that the request is send from 0x0.
+        router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::VehicleIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, PGN::TimeDate)).await?;
+        ctx.tx_mark();
 
-                Ok(())
-            }
-            super::J1939UnitOperationState::Running => {
-                let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        Ok(())
+    }
 
-                if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
-                    result = Err(super::J1939UnitError::MessageTimeout);
-                }
+    async fn teardown(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        router.send(&self.motion_reset()).await?;
+        ctx.tx_mark();
 
-                if let Some(message) = router.try_accept(self) {
-                    match message {
-                        HydraulicMessage::Actuator(_actuator) => {}
-                        HydraulicMessage::MotionConfig(_config) => {}
-                        HydraulicMessage::VecraftConfig(_config) => {}
-                        HydraulicMessage::Status(status) => {
-                            ctx.rx_mark();
-                            if status.state == super::vecraft::State::FaultyGenericError
-                                || status.state == super::vecraft::State::FaultyBusError
-                            {
-                                result = Err(super::J1939UnitError::BusError);
-                            }
-                        }
+        Ok(())
+    }
+
+    async fn try_accept(
+        &mut self,
+        ctx: &mut super::NetDriverContext,
+        router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), super::J1939UnitError> {
+        let mut result = Result::<(), super::J1939UnitError>::Ok(());
+
+        if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
+            result = Err(super::J1939UnitError::MessageTimeout);
+        }
+
+        if let Some(message) = router.try_accept(self) {
+            match message {
+                HydraulicMessage::Actuator(_actuator) => {}
+                HydraulicMessage::MotionConfig(_config) => {}
+                HydraulicMessage::VecraftConfig(_config) => {}
+                HydraulicMessage::Status(status) => {
+                    ctx.rx_mark();
+                    if status.state == super::vecraft::State::FaultyGenericError
+                        || status.state == super::vecraft::State::FaultyBusError
+                    {
+                        result = Err(super::J1939UnitError::BusError);
                     }
                 }
-
-                result
-            }
-            super::J1939UnitOperationState::Teardown => {
-                router.send(&self.motion_reset()).await?;
-
-                Ok(())
             }
         }
+
+        result
     }
 
     async fn tick(

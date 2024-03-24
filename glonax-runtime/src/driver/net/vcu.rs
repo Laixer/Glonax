@@ -49,30 +49,25 @@ impl super::J1939Unit for VehicleControlUnit {
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if state == &super::J1939UnitOperationState::Running {
-            let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-            if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
-                result = Err(super::J1939UnitError::MessageTimeout);
-            }
-
-            if let Some(status) = router.try_accept(self) {
-                ctx.rx_mark();
-
-                if status.state == super::vecraft::State::FaultyGenericError
-                    || status.state == super::vecraft::State::FaultyBusError
-                {
-                    result = Err(super::J1939UnitError::BusError);
-                }
-            }
-
-            result?;
+        if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
+            result = Err(super::J1939UnitError::MessageTimeout);
         }
 
-        Ok(())
+        if let Some(status) = router.try_accept(self) {
+            ctx.rx_mark();
+
+            if status.state == super::vecraft::State::FaultyGenericError
+                || status.state == super::vecraft::State::FaultyBusError
+            {
+                result = Err(super::J1939UnitError::BusError);
+            }
+        }
+
+        result
     }
 }

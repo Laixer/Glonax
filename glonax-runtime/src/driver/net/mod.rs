@@ -94,39 +94,76 @@ impl J1939Unit for NetDriver {
         }
     }
 
-    async fn try_accept(
-        &mut self,
+    async fn setup(
+        &self,
         ctx: &mut NetDriverContext,
-        state: &J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => {
-                encoder.try_accept(ctx, state, router, runtime_state).await
-            }
+            Self::KueblerEncoder(encoder) => encoder.setup(ctx, router, runtime_state).await,
             Self::KueblerInclinometer(inclinometer) => {
-                inclinometer
-                    .try_accept(ctx, state, router, runtime_state)
-                    .await
+                inclinometer.setup(ctx, router, runtime_state).await
             }
-            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, state, router, runtime_state).await,
+            Self::VolvoD7E(volvo) => volvo.setup(ctx, router, runtime_state).await,
             Self::BoschEngineManagementSystem(bosch) => {
-                bosch.try_accept(ctx, state, router, runtime_state).await
+                bosch.setup(ctx, router, runtime_state).await
             }
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic
-                    .try_accept(ctx, state, router, runtime_state)
-                    .await
+                hydraulic.setup(ctx, router, runtime_state).await
+            }
+            Self::RequestResponder(responder) => responder.setup(ctx, router, runtime_state).await,
+            Self::VehicleControlUnit(vcu) => vcu.setup(ctx, router, runtime_state).await,
+        }
+    }
+
+    async fn teardown(
+        &self,
+        ctx: &mut NetDriverContext,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), J1939UnitError> {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.teardown(ctx, router, runtime_state).await,
+            Self::KueblerInclinometer(inclinometer) => {
+                inclinometer.teardown(ctx, router, runtime_state).await
+            }
+            Self::VolvoD7E(volvo) => volvo.teardown(ctx, router, runtime_state).await,
+            Self::BoschEngineManagementSystem(bosch) => {
+                bosch.teardown(ctx, router, runtime_state).await
+            }
+            Self::HydraulicControlUnit(hydraulic) => {
+                hydraulic.teardown(ctx, router, runtime_state).await
             }
             Self::RequestResponder(responder) => {
-                responder
-                    .try_accept(ctx, state, router, runtime_state)
-                    .await
+                responder.teardown(ctx, router, runtime_state).await
             }
-            Self::VehicleControlUnit(vcu) => {
-                vcu.try_accept(ctx, state, router, runtime_state).await
+            Self::VehicleControlUnit(vcu) => vcu.teardown(ctx, router, runtime_state).await,
+        }
+    }
+
+    async fn try_accept(
+        &mut self,
+        ctx: &mut NetDriverContext,
+        router: &crate::net::Router,
+        runtime_state: crate::runtime::SharedOperandState,
+    ) -> Result<(), J1939UnitError> {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.try_accept(ctx, router, runtime_state).await,
+            Self::KueblerInclinometer(inclinometer) => {
+                inclinometer.try_accept(ctx, router, runtime_state).await
             }
+            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, router, runtime_state).await,
+            Self::BoschEngineManagementSystem(bosch) => {
+                bosch.try_accept(ctx, router, runtime_state).await
+            }
+            Self::HydraulicControlUnit(hydraulic) => {
+                hydraulic.try_accept(ctx, router, runtime_state).await
+            }
+            Self::RequestResponder(responder) => {
+                responder.try_accept(ctx, router, runtime_state).await
+            }
+            Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, router, runtime_state).await,
         }
     }
 
@@ -252,21 +289,6 @@ impl From<std::io::Error> for J1939UnitError {
 
 impl std::error::Error for J1939UnitError {}
 
-/// Operational states for a J1939 unit.
-///
-/// A unit can transition between these states during its lifetime,
-/// however, the order of the states is fixed. The unit will always
-/// start in the `Setup` state and end in the `Teardown` state.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum J1939UnitOperationState {
-    /// The unit is in the setup phase.
-    Setup,
-    /// The unit is running.
-    Running,
-    /// The unit is in the teardown phase.
-    Teardown,
-}
-
 // FUTURE: Maybe move to runtime or a network module?
 pub trait J1939Unit {
     /// Get the name of the unit.
@@ -274,6 +296,24 @@ pub trait J1939Unit {
 
     /// Get the destination address of the unit.
     fn destination(&self) -> u8;
+
+    fn setup(
+        &self,
+        _ctx: &mut NetDriverContext,
+        _router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
+        std::future::ready(Ok(()))
+    }
+
+    fn teardown(
+        &self,
+        _ctx: &mut NetDriverContext,
+        _router: &crate::net::Router,
+        _runtime_state: crate::runtime::SharedOperandState,
+    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
+        std::future::ready(Ok(()))
+    }
 
     /// Try to accept a message from the router.
     ///
@@ -287,7 +327,6 @@ pub trait J1939Unit {
     fn try_accept(
         &mut self,
         ctx: &mut NetDriverContext,
-        state: &J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send;

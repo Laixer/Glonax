@@ -51,11 +51,10 @@ impl super::J1939Unit for BoschEngineManagementSystem {
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.try_accept(ctx, state, router, runtime_state).await
+        self.ems.try_accept(ctx, router, runtime_state).await
     }
 
     async fn tick(

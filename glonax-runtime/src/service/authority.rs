@@ -1,4 +1,4 @@
-use crate::runtime::{Service, SharedOperandState};
+use crate::{driver::net::J1939Unit, runtime::{Service, SharedOperandState}};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct J1939Name {
@@ -48,11 +48,13 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     where
         Self: Sized,
     {
+        // TODO: Let the router bind to a socket.
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
         let mut network = crate::runtime::ControlNetwork::with_request_responder(config.address);
         for driver in &config.driver {
+            // TODO: Support the 'into' trait.
             let net_driver_config = crate::driver::net::NetDriverConfig {
                 driver_type: driver.driver_type.clone(),
                 destination: driver.da,
@@ -70,9 +72,15 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        use crate::driver::net::J1939Unit;
-
+        // FUTURE: Could move this into a virtual ECU that represents the VMS.
         self.router.send(&j1939::protocol::address_claimed(self.router.source_address(), *self.router.name())).await.unwrap();
+
+        for (drv, ctx) in self.network.network.iter_mut() {
+            log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
+            if let Err(error) = drv.setup(ctx, &self.router, runtime_state.clone()).await {
+                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+            }
+        }
 
         // TODO: Replace with: while shutdown.is_empty()
         loop {
@@ -86,13 +94,19 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                 log::error!("Failed to receive from router: {}", e);
             }
 
-            let state = crate::driver::net::J1939UnitOperationState::Running;
             for (drv, ctx) in self.network.network.iter_mut() {
-                if let Err(error) = drv.try_accept(ctx, &state, &self.router, runtime_state.clone()).await {
+                if let Err(error) = drv.try_accept(ctx, &self.router, runtime_state.clone()).await {
                     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
                 }
             }
         }
+
+        // for (drv, ctx) in self.network.network.iter_mut() {
+        //     log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
+        //     if let Err(error) = drv.teardown(ctx, &self.router, runtime_state.clone()).await {
+        //         log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        //     }
+        // }
     }
 }
 
@@ -129,8 +143,6 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {
-        use crate::driver::net::J1939Unit;
-
         for (drv, ctx) in self.network.network.iter_mut() {
             if let Err(error) = drv.tick(ctx, &self.router, runtime_state.clone()).await {
                 log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
@@ -164,6 +176,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         //     network.register_driver(crate::driver::net::NetDriver::try_from(net_driver_config).unwrap());
         // }
 
+        // TODO: Get from config.
         let hcu0 = crate::driver::HydraulicControlUnit::new(0x4a, config.address);
         network.register_driver(crate::driver::net::NetDriver::HydraulicControlUnit(hcu0));
 
@@ -174,9 +187,9 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         crate::runtime::ServiceContext::new("authority_atx", Some(self.interface.clone()))
     }
 
+    // TODO: This hasnt been been worked out but the queue must be awaited in the runtime.
+    // TODO: Motion should be replaced by a more generic message type.
     async fn on_event(&mut self, runtime_state: SharedOperandState, mut motion_rx: crate::runtime::MotionReceiver) {
-        use crate::driver::net::J1939Unit;
-
         while let Some(motion) = motion_rx.recv().await {
             runtime_state.write().await.state.motion = motion.clone();
 

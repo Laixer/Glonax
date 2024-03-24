@@ -189,32 +189,27 @@ impl super::J1939Unit for KueblerEncoder {
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if state == &super::J1939UnitOperationState::Running {
-            let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
-            if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
-                result = Err(super::J1939UnitError::MessageTimeout);
-            }
-
-            if let Some(message) = router.try_accept(self) {
-                ctx.rx_mark();
-
-                if let Ok(mut runtime_state) = runtime_state.try_write() {
-                    runtime_state
-                        .state
-                        .encoders
-                        .insert(message.source_address, message.position as f32);
-                }
-            }
-
-            result?
+        if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
+            result = Err(super::J1939UnitError::MessageTimeout);
         }
 
-        Ok(())
+        if let Some(message) = router.try_accept(self) {
+            ctx.rx_mark();
+
+            if let Ok(mut runtime_state) = runtime_state.try_write() {
+                runtime_state
+                    .state
+                    .encoders
+                    .insert(message.source_address, message.position as f32);
+            }
+        }
+
+        result
     }
 }
 

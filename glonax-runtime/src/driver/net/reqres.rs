@@ -40,7 +40,6 @@ impl super::J1939Unit for RequestResponder {
     async fn try_accept(
         &mut self,
         _ctx: &mut super::NetDriverContext,
-        _state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
