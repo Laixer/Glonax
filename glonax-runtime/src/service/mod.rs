@@ -1,5 +1,5 @@
 pub use announcer::Announcer;
-pub use authority::{NetworkAuthority, NetworkConfig};
+pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkAuthorityTx, NetworkConfig};
 pub use encoder::EncoderSimulator;
 pub use engine::EngineSimulator;
 pub use gnss::{Gnss, GnssConfig};

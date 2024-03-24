@@ -121,6 +121,14 @@ pub trait Service<Cnf> {
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
+
+    fn on_event(
+        &mut self,
+        _runtime_state: SharedOperandState,
+        _motion_rx: MotionReceiver,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
 }
 
 pub trait Component<Cnf: Clone> {
@@ -406,7 +414,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         tokio::spawn(async move {
             loop {
                 interval.tick().await;
-                service.tick(operand.clone());
+                service.tick(operand.clone()).await;
             }
         });
     }
