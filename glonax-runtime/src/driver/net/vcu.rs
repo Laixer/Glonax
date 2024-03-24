@@ -25,14 +25,48 @@ impl VehicleControlUnit {
 
 impl Parsable<VecraftStatusMessage> for VehicleControlUnit {
     fn parse(&mut self, frame: &Frame) -> Option<VecraftStatusMessage> {
-        if frame.id().pgn() == PGN::ProprietaryB(STATUS_PGN) {
-            if frame.id().sa() != self.destination_address {
-                return None;
-            }
+        match frame.id().pgn() {
+            PGN::SoftwareIdentification => {
+                let fields = frame.pdu()[0];
 
-            Some(VecraftStatusMessage::from_frame(frame))
-        } else {
-            None
+                if fields >= 1 {
+                    if frame.pdu()[4] == b'*' {
+                        let mut major = 0;
+                        let mut minor = 0;
+                        let mut patch = 0;
+
+                        if frame.pdu()[1] != 0xff {
+                            major = frame.pdu()[1];
+                        }
+                        if frame.pdu()[2] != 0xff {
+                            minor = frame.pdu()[2];
+                        }
+                        if frame.pdu()[3] != 0xff {
+                            patch = frame.pdu()[3];
+                        }
+
+                        // Some(Self::SoftwareIndent((major, minor, patch)))
+                        log::info!("[VCU] Software version: {}.{}.{}", major, minor, patch);
+
+                        None
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            // PGN::AddressClaimed => Some(Self::AddressClaim(Name::from_bytes(
+            //     frame.pdu().try_into().unwrap(),
+            // ))),
+            PGN::ProprietaryB(STATUS_PGN) => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(VecraftStatusMessage::from_frame(frame))
+            }
+            _ => None,
         }
     }
 }
