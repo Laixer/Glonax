@@ -4,46 +4,6 @@ pub struct SimulationConfig {
     pub jitter: bool,
 }
 
-// TODO: Remove this.
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct J1939Name {
-    /// Manufacturer code.
-    pub manufacturer_code: u16,
-    /// Function instance.
-    pub function_instance: u8,
-    /// ECU instance.
-    pub ecu_instance: u8,
-    /// Function.
-    pub function: u8,
-    /// Vehicle system.
-    pub vehicle_system: u8,
-}
-
-// TODO: Remove this.
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct J1939NetConfig {
-    /// CAN network interface.
-    pub interface: String,
-    /// Address.
-    pub address: u8,
-    /// Name.
-    pub name: J1939Name,
-    /// Driver configuration.
-    pub driver: Vec<CanDriverConfig>,
-}
-
-// TODO: Remove this.
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct CanDriverConfig {
-    /// Driver destination.
-    pub da: u8,
-    /// Driver source.
-    pub sa: Option<u8>,
-    /// Driver type.
-    #[serde(rename = "type")]
-    pub driver_type: String,
-}
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
 pub enum OperationMode {
     /// Normal operation mode.
@@ -100,5 +60,5 @@ pub struct Config {
     /// Unix socket configuration.
     pub unix_server: Option<glonax::service::UnixServerConfig>,
     /// J1939 network configuration.
-    pub j1939: Vec<J1939NetConfig>,
+    pub j1939: Vec<glonax::service::NetworkConfig>,
 }

@@ -102,7 +102,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
 
         // for (drv, ctx) in self.network.network.iter_mut() {
-        //     log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
+        //     log::debug!("[{}:0x{:X}] Teardown network driver '{}'", self.interface, drv.destination(), drv.name());
         //     if let Err(error) = drv.teardown(ctx, &self.router, runtime_state.clone()).await {
         //         log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
         //     }

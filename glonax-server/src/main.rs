@@ -95,7 +95,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(config: config::Config) -> anyhow::Result<()> {
-    use glonax::driver::net::NetDriver;
     use glonax::service;
     use std::time::Duration;
 
@@ -153,42 +152,20 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
         // TODO: Check if RX,TX,ATX services should be scheduled.
         for j1939_net_config in &config.j1939 {
-            use glonax::runtime::ControlNetwork;
+            runtime
+                .schedule_net_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
 
-            let mut net_rx = ControlNetwork::with_request_responder(j1939_net_config.address);
-            for driver in &j1939_net_config.driver {
-                let net_driver_config = glonax::driver::net::NetDriverConfig {
-                    driver_type: driver.driver_type.clone(),
-                    destination: driver.da,
-                    source: driver.sa.unwrap_or(j1939_net_config.address), // TODO: Maybe remove 'source' from config.
-                };
-
-                net_rx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
-            }
-
-            runtime.schedule_j1939_service_rx(net_rx, &j1939_net_config.interface);
-
-            let mut net_tx = ControlNetwork::new(j1939_net_config.address);
-            for driver in &j1939_net_config.driver {
-                let net_driver_config = glonax::driver::net::NetDriverConfig {
-                    driver_type: driver.driver_type.clone(),
-                    destination: driver.da,
-                    source: driver.sa.unwrap_or(j1939_net_config.address),
-                };
-
-                net_tx.register_driver(NetDriver::try_from(net_driver_config).unwrap());
-            }
-
-            runtime.schedule_j1939_service_tx(net_tx, &j1939_net_config.interface);
+            runtime.schedule_net2_service::<service::NetworkAuthorityTx, _>(
+                j1939_net_config.clone(),
+                Duration::from_millis(10),
+            );
         }
 
         let j1939_index = 1;
         if j1939_index < config.j1939.len() {
-            let mut net_atx = glonax::runtime::ControlNetwork::new(0x27);
-            let hcu0 = glonax::driver::HydraulicControlUnit::new(0x4a, 0x27);
-            net_atx.register_driver(NetDriver::HydraulicControlUnit(hcu0));
-
-            runtime.schedule_j1939_motion_service(net_atx, &config.j1939[j1939_index].interface);
+            runtime.schedule_net3_service::<service::NetworkAuthorityAtx, _>(
+                config.j1939[j1939_index].clone(),
+            );
         }
     }
 
