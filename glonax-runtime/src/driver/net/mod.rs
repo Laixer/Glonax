@@ -133,72 +133,53 @@ impl J1939Unit for NetDriver {
     async fn tick(
         &self,
         ctx: &mut NetDriverContext,
-        state: &J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.tick(ctx, state, router, runtime_state).await,
+            Self::KueblerEncoder(encoder) => encoder.tick(ctx, router, runtime_state).await,
             Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.tick(ctx, state, router, runtime_state).await
+                inclinometer.tick(ctx, router, runtime_state).await
             }
-            Self::VolvoD7E(volvo) => volvo.tick(ctx, state, router, runtime_state).await,
+            Self::VolvoD7E(volvo) => volvo.tick(ctx, router, runtime_state).await,
             Self::BoschEngineManagementSystem(bosch) => {
-                bosch.tick(ctx, state, router, runtime_state).await
+                bosch.tick(ctx, router, runtime_state).await
             }
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.tick(ctx, state, router, runtime_state).await
+                hydraulic.tick(ctx, router, runtime_state).await
             }
-            Self::RequestResponder(responder) => {
-                responder.tick(ctx, state, router, runtime_state).await
-            }
-            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, state, router, runtime_state).await,
+            Self::RequestResponder(responder) => responder.tick(ctx, router, runtime_state).await,
+            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, router, runtime_state).await,
         }
     }
 
     async fn trigger(
         &self,
         ctx: &mut NetDriverContext,
-        state: &J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
         trigger: &crate::core::Motion,
     ) -> Result<(), J1939UnitError> {
         match self {
             Self::KueblerEncoder(encoder) => {
-                encoder
-                    .trigger(ctx, state, router, runtime_state, trigger)
-                    .await
+                encoder.trigger(ctx, router, runtime_state, trigger).await
             }
             Self::KueblerInclinometer(inclinometer) => {
                 inclinometer
-                    .trigger(ctx, state, router, runtime_state, trigger)
+                    .trigger(ctx, router, runtime_state, trigger)
                     .await
             }
-            Self::VolvoD7E(volvo) => {
-                volvo
-                    .trigger(ctx, state, router, runtime_state, trigger)
-                    .await
-            }
+            Self::VolvoD7E(volvo) => volvo.trigger(ctx, router, runtime_state, trigger).await,
             Self::BoschEngineManagementSystem(bosch) => {
-                bosch
-                    .trigger(ctx, state, router, runtime_state, trigger)
-                    .await
+                bosch.trigger(ctx, router, runtime_state, trigger).await
             }
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic
-                    .trigger(ctx, state, router, runtime_state, trigger)
-                    .await
+                hydraulic.trigger(ctx, router, runtime_state, trigger).await
             }
             Self::RequestResponder(responder) => {
-                responder
-                    .trigger(ctx, state, router, runtime_state, trigger)
-                    .await
+                responder.trigger(ctx, router, runtime_state, trigger).await
             }
-            Self::VehicleControlUnit(vcu) => {
-                vcu.trigger(ctx, state, router, runtime_state, trigger)
-                    .await
-            }
+            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, router, runtime_state, trigger).await,
         }
     }
 }
@@ -321,7 +302,6 @@ pub trait J1939Unit {
     fn tick(
         &self,
         _ctx: &mut NetDriverContext,
-        _state: &J1939UnitOperationState,
         _router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
@@ -337,7 +317,6 @@ pub trait J1939Unit {
     fn trigger(
         &self,
         _ctx: &mut NetDriverContext,
-        _state: &J1939UnitOperationState,
         _router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
         _trigger: &crate::core::Motion,

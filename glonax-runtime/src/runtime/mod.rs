@@ -122,6 +122,7 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
+    // TODO: Replace the motion receiver with a generic event receiver
     fn on_event(
         &mut self,
         _runtime_state: SharedOperandState,

@@ -131,15 +131,13 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     async fn tick(&mut self, runtime_state: SharedOperandState) {
         use crate::driver::net::J1939Unit;
 
-        let state = crate::driver::net::J1939UnitOperationState::Running;
         for (drv, ctx) in self.network.network.iter_mut() {
-            if let Err(error) = drv.tick(ctx, &state, &self.router, runtime_state.clone()).await {
+            if let Err(error) = drv.tick(ctx, &self.router, runtime_state.clone()).await {
                 log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
             }
         }
     }
 }
-
 
 pub struct NetworkAuthorityAtx {
     interface: String,
@@ -182,9 +180,8 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         while let Some(motion) = motion_rx.recv().await {
             runtime_state.write().await.state.motion = motion.clone();
 
-            let state = crate::driver::net::J1939UnitOperationState::Running;
             for (drv, ctx) in self.network.network.iter_mut() {
-                if let Err(error) = drv.trigger(ctx, &state, &self.router, runtime_state.clone(), &motion).await {
+                if let Err(error) = drv.trigger(ctx, &self.router, runtime_state.clone(), &motion).await {
                     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
                 }
             }

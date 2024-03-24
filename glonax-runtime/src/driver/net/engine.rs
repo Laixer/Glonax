@@ -390,30 +390,27 @@ impl super::J1939Unit for EngineManagementSystem {
     async fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if state == &super::J1939UnitOperationState::Running {
-            if let Ok(request) = runtime_state.try_read() {
-                let request = request.governor_mode();
-                match request.state {
-                    crate::core::EngineState::NoRequest => {
-                        router.send(&self.request(request.speed)).await?;
-                        ctx.tx_mark();
-                    }
-                    crate::core::EngineState::Stopping => {
-                        router.send(&self.stop(request.speed)).await?;
-                        ctx.tx_mark();
-                    }
-                    crate::core::EngineState::Starting => {
-                        router.send(&self.start(request.speed)).await?;
-                        ctx.tx_mark();
-                    }
-                    crate::core::EngineState::Request => {
-                        router.send(&self.request(request.speed)).await?;
-                        ctx.tx_mark();
-                    }
+        if let Ok(request) = runtime_state.try_read() {
+            let request = request.governor_mode();
+            match request.state {
+                crate::core::EngineState::NoRequest => {
+                    router.send(&self.request(request.speed)).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::EngineState::Stopping => {
+                    router.send(&self.stop(request.speed)).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::EngineState::Starting => {
+                    router.send(&self.start(request.speed)).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::EngineState::Request => {
+                    router.send(&self.request(request.speed)).await?;
+                    ctx.tx_mark();
                 }
             }
         }

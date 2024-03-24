@@ -61,10 +61,9 @@ impl super::J1939Unit for BoschEngineManagementSystem {
     async fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-        state: &super::J1939UnitOperationState,
         router: &crate::net::Router,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.tick(ctx, state, router, runtime_state).await
+        self.ems.tick(ctx, router, runtime_state).await
     }
 }
