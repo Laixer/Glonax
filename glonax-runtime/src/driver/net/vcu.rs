@@ -53,7 +53,7 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                 ))
             }
             PGN::SoftwareIdentification => {
-                if frame.id().sa() != self.destination_address {
+                if frame.id().source_address() != self.destination_address {
                     return None;
                 }
 
@@ -86,7 +86,7 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                 }
             }
             PGN::AddressClaimed => {
-                if frame.id().sa() != self.destination_address {
+                if frame.id().source_address() != self.destination_address {
                     return None;
                 }
 
@@ -95,7 +95,7 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                 )))
             }
             PGN::ProprietaryB(STATUS_PGN) => {
-                if frame.id().sa() != self.destination_address {
+                if frame.id().source_address() != self.destination_address {
                     return None;
                 }
 

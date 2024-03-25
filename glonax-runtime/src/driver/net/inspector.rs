@@ -14,7 +14,7 @@ pub enum J1939Message {
     /// Time and date.
     TimeDate(chrono::DateTime<chrono::Utc>),
     /// Active diagnostic trouble codes.
-    ActiveDiagnosticTroubleCodes(j1939::diagnostic::Diagnostic1Message),
+    ActiveDiagnosticTroubleCodes(j1939::diagnostic::Message1),
     /// Proprietary B.
     ProprietaryB([u8; 8]),
 }
@@ -71,7 +71,7 @@ impl J1939Message {
                 Some(Self::TimeDate(dt.single().unwrap()))
             }
             PGN::DiagnosticMessage1 => {
-                let spn = j1939::diagnostic::Diagnostic1Message::from_pdu(frame.pdu());
+                let spn = j1939::diagnostic::Message1::from_pdu(frame.pdu());
 
                 Some(Self::ActiveDiagnosticTroubleCodes(spn))
             }

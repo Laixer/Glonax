@@ -469,15 +469,15 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
         }
 
         if let Some(frame) = router.take() {
-            if !ecu_addresses.contains(&frame.id().sa()) {
-                ecu_addresses.push(frame.id().sa());
+            if !ecu_addresses.contains(&frame.id().source_address()) {
+                ecu_addresses.push(frame.id().source_address());
 
                 println!(
                     "Found source address {}",
-                    Purple.paint(format!("0x{:X?}", frame.id().sa()))
+                    Purple.paint(format!("0x{:X?}", frame.id().source_address()))
                 );
 
-                probe(&router, frame.id().sa()).await?;
+                probe(&router, frame.id().source_address()).await?;
             }
 
             if let Some(da) = frame.id().destination_address() {

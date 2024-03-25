@@ -167,7 +167,7 @@ impl Router {
     /// Return the current frame source.
     #[inline]
     pub fn frame_source(&self) -> Option<u8> {
-        self.frame.map(|f| f.id().sa())
+        self.frame.map(|f| f.id().source_address())
     }
 
     /// Take the frame from the router.
@@ -212,7 +212,8 @@ impl Router {
         } else if !self.filter_pgn.is_empty() && !self.filter_pgn.contains(&frame.id().pgn_raw()) {
             false
         } else {
-            !(!self.filter_address.is_empty() && !self.filter_address.contains(&frame.id().sa()))
+            !(!self.filter_address.is_empty()
+                && !self.filter_address.contains(&frame.id().source_address()))
         }
     }
 

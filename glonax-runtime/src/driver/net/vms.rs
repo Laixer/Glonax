@@ -48,7 +48,7 @@ impl super::J1939Unit for VehicleManagementSystem {
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        router.send(&protocol::address_claimed(self.source_address, *router.name())).await?;
+        router.send(&protocol::address_claimed(self.source_address, router.name())).await?;
         ctx.tx_mark();
 
         Ok(())
@@ -64,7 +64,7 @@ impl super::J1939Unit for VehicleManagementSystem {
             match pgn {
                 #[rustfmt::skip]
                 PGN::AddressClaimed => {
-                    router.send(&protocol::address_claimed(self.source_address, *router.name())).await?;
+                    router.send(&protocol::address_claimed(self.source_address, router.name())).await?;
                 }
                 PGN::SoftwareIdentification => {
                     let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)

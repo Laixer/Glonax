@@ -67,7 +67,7 @@ impl EncoderMessage {
     /// Construct a new encoder message from a frame.
     pub fn from_frame(frame: &Frame) -> Self {
         let mut message = Self {
-            source_address: frame.id().sa(),
+            source_address: frame.id().source_address(),
             position: 0,
             speed: 0,
             state: None,
@@ -166,7 +166,7 @@ impl KueblerEncoder {
 impl Parsable<EncoderMessage> for KueblerEncoder {
     fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
         if frame.id().pgn() == PGN::ProprietaryB(65_450) {
-            if frame.id().sa() != self.destination_address {
+            if frame.id().source_address() != self.destination_address {
                 return None;
             }
 

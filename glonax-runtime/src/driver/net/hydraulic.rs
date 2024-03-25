@@ -377,7 +377,7 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 ))
             }
             PGN::SoftwareIdentification => {
-                if frame.id().sa() != self.destination_address {
+                if frame.id().source_address() != self.destination_address {
                     return None;
                 }
 
@@ -410,7 +410,7 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 }
             }
             PGN::AddressClaimed => {
-                if frame.id().sa() != self.destination_address {
+                if frame.id().source_address() != self.destination_address {
                     return None;
                 }
 
@@ -419,7 +419,7 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                 )))
             }
             PGN::ProprietaryB(STATUS_PGN) => {
-                if frame.id().sa() != self.destination_address {
+                if frame.id().source_address() != self.destination_address {
                     return None;
                 }
 

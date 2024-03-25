@@ -19,7 +19,7 @@ impl ProcessDataMessage {
     /// Construct a new encoder message from a frame.
     pub fn from_frame(frame: &Frame) -> Self {
         let mut message = Self {
-            _source_address: frame.id().sa(),
+            _source_address: frame.id().source_address(),
             slope_long: 0,
             slope_lat: 0,
             temperature: 0,
@@ -73,7 +73,7 @@ impl KueblerInclinometer {
 impl Parsable<ProcessDataMessage> for KueblerInclinometer {
     fn parse(&mut self, frame: &Frame) -> Option<ProcessDataMessage> {
         if frame.id().pgn() == PGN::ProprietaryB(65_451) {
-            if frame.id().sa() != self.destination_address {
+            if frame.id().source_address() != self.destination_address {
                 return None;
             }
 
