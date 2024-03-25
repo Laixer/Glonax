@@ -1,4 +1,4 @@
-use j1939::{protocol, Frame, PGN};
+use j1939::{protocol, Frame, Name, PGN};
 
 use crate::net::Parsable;
 
@@ -30,8 +30,18 @@ impl VehicleControlUnit {
 
 impl Parsable<VehicleMessage> for VehicleControlUnit {
     fn parse(&mut self, frame: &Frame) -> Option<VehicleMessage> {
+        if let Some(destination_address) = frame.id().destination_address() {
+            if destination_address != self.destination_address && destination_address != 0xff {
+                return None;
+            }
+        }
+
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
                 let fields = frame.pdu()[0];
 
                 if fields >= 1 {
@@ -60,9 +70,17 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                     None
                 }
             }
-            // PGN::AddressClaimed => Some(Self::AddressClaim(Name::from_bytes(
-            //     frame.pdu().try_into().unwrap(),
-            // ))),
+            PGN::AddressClaimed => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                let name = Name::from_bytes(frame.pdu().try_into().unwrap());
+
+                log::debug!("Address claimed: {}", name);
+
+                None
+            }
             PGN::ProprietaryB(STATUS_PGN) => {
                 if frame.id().sa() != self.destination_address {
                     return None;
@@ -124,7 +142,7 @@ impl super::J1939Unit for VehicleControlUnit {
                     ctx.rx_mark();
 
                     log::debug!(
-                        "[xcan:0x{:X}] {}: Software version: {}.{}.{}",
+                        "[xcan:0x{:X}] {}: Firmware version: {}.{}.{}",
                         self.destination(),
                         self.name(),
                         version.0,
