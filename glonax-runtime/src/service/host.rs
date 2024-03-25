@@ -1,4 +1,4 @@
-use sysinfo::System;
+use sysinfo::{Components, System};
 
 use crate::runtime::{Service, SharedOperandState};
 
@@ -17,6 +17,7 @@ impl HostConfig {
 
 pub struct Host {
     system: System,
+    components: Components,
 }
 
 impl Service<HostConfig> for Host {
@@ -26,6 +27,7 @@ impl Service<HostConfig> for Host {
     {
         Self {
             system: System::new_all(),
+            components: Components::new_with_refreshed_list(),
         }
     }
 
@@ -36,6 +38,7 @@ impl Service<HostConfig> for Host {
     async fn tick(&mut self, runtime_state: SharedOperandState) {
         self.system.refresh_memory();
         self.system.refresh_cpu();
+        self.components.refresh();
 
         let load_avg = System::load_average();
 
@@ -45,5 +48,17 @@ impl Service<HostConfig> for Host {
         runtime_state.state.vms.cpu_load = (load_avg.one, load_avg.five, load_avg.fifteen);
         runtime_state.state.vms.uptime = System::uptime();
         runtime_state.state.vms.timestamp = chrono::Utc::now();
+
+        for component in &self.components {
+            if let Some(critical) = component.critical() {
+                if component.temperature() > critical {
+                    log::warn!(
+                        "{} is reaching cirital temperatures: {}°C",
+                        component.label(),
+                        component.temperature(),
+                    );
+                }
+            }
+        }
     }
 }
