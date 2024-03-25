@@ -2,11 +2,12 @@ use j1939::{protocol, Frame, Name, PGN};
 
 use crate::net::Parsable;
 
-use super::vecraft::VecraftStatusMessage;
+use super::vecraft::{VecraftConfigMessage, VecraftStatusMessage};
 
 const STATUS_PGN: u32 = 65_288;
 
 pub enum VehicleMessage {
+    VecraftConfig(VecraftConfigMessage),
     SoftwareIdentification((u8, u8, u8)),
     AddressClaim(Name),
     Status(VecraftStatusMessage),
@@ -38,6 +39,19 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
         }
 
         match frame.id().pgn() {
+            PGN::ProprietarilyConfigurableMessage1 => {
+                if frame.pdu()[0..2] != [b'Z', b'C'] {
+                    return None;
+                }
+
+                Some(VehicleMessage::VecraftConfig(
+                    VecraftConfigMessage::from_frame(
+                        self.destination_address,
+                        self.source_address,
+                        frame,
+                    ),
+                ))
+            }
             PGN::SoftwareIdentification => {
                 if frame.id().sa() != self.destination_address {
                     return None;
@@ -137,6 +151,7 @@ impl super::J1939Unit for VehicleControlUnit {
 
         if let Some(message) = router.try_accept(self) {
             match message {
+                VehicleMessage::VecraftConfig(_config) => {}
                 VehicleMessage::SoftwareIdentification(version) => {
                     ctx.rx_mark();
 
