@@ -465,6 +465,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     }
 }
 
+// TODO: Rename to 'ControlBus'
 // TODO: This method should be moved somewhere else
 pub struct ControlNetwork {
     pub default_source_address: u8,

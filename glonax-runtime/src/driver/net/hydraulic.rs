@@ -339,7 +339,7 @@ impl HydraulicControlUnit {
 impl Parsable<HydraulicMessage> for HydraulicControlUnit {
     fn parse(&mut self, frame: &Frame) -> Option<HydraulicMessage> {
         if let Some(destination_address) = frame.id().destination_address() {
-            if destination_address != self.destination_address {
+            if destination_address != self.destination_address && destination_address != 0xff {
                 return None;
             }
         }

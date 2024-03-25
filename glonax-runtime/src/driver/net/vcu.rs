@@ -6,6 +6,11 @@ use super::vecraft::VecraftStatusMessage;
 
 const STATUS_PGN: u32 = 65_288;
 
+pub enum VehicleMessage {
+    SoftwareIdentification((u8, u8, u8)),
+    Status(VecraftStatusMessage),
+}
+
 pub struct VehicleControlUnit {
     /// Destination address.
     destination_address: u8,
@@ -23,8 +28,8 @@ impl VehicleControlUnit {
     }
 }
 
-impl Parsable<VecraftStatusMessage> for VehicleControlUnit {
-    fn parse(&mut self, frame: &Frame) -> Option<VecraftStatusMessage> {
+impl Parsable<VehicleMessage> for VehicleControlUnit {
+    fn parse(&mut self, frame: &Frame) -> Option<VehicleMessage> {
         match frame.id().pgn() {
             PGN::SoftwareIdentification => {
                 let fields = frame.pdu()[0];
@@ -45,10 +50,9 @@ impl Parsable<VecraftStatusMessage> for VehicleControlUnit {
                             patch = frame.pdu()[3];
                         }
 
-                        // Some(Self::SoftwareIndent((major, minor, patch)))
-                        log::info!("[VCU] Software version: {}.{}.{}", major, minor, patch);
-
-                        None
+                        Some(VehicleMessage::SoftwareIdentification((
+                            major, minor, patch,
+                        )))
                     } else {
                         None
                     }
@@ -64,7 +68,9 @@ impl Parsable<VecraftStatusMessage> for VehicleControlUnit {
                     return None;
                 }
 
-                Some(VecraftStatusMessage::from_frame(frame))
+                Some(VehicleMessage::Status(VecraftStatusMessage::from_frame(
+                    frame,
+                )))
             }
             _ => None,
         }
@@ -112,10 +118,26 @@ impl super::J1939Unit for VehicleControlUnit {
             result = Err(super::J1939UnitError::MessageTimeout);
         }
 
-        if let Some(status) = router.try_accept(self) {
-            ctx.rx_mark();
+        if let Some(message) = router.try_accept(self) {
+            match message {
+                VehicleMessage::SoftwareIdentification(version) => {
+                    ctx.rx_mark();
 
-            status.into_error()?;
+                    log::debug!(
+                        "[xcan:0x{:X}] {}: Software version: {}.{}.{}",
+                        self.destination(),
+                        self.name(),
+                        version.0,
+                        version.1,
+                        version.2
+                    );
+                }
+                VehicleMessage::Status(status) => {
+                    ctx.rx_mark();
+
+                    status.into_error()?;
+                }
+            }
         }
 
         result
