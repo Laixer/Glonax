@@ -8,6 +8,7 @@ const STATUS_PGN: u32 = 65_288;
 
 pub enum VehicleMessage {
     SoftwareIdentification((u8, u8, u8)),
+    AddressClaim(Name),
     Status(VecraftStatusMessage),
 }
 
@@ -75,11 +76,9 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                     return None;
                 }
 
-                let name = Name::from_bytes(frame.pdu().try_into().unwrap());
-
-                log::debug!("Address claimed: {}", name);
-
-                None
+                Some(VehicleMessage::AddressClaim(Name::from_bytes(
+                    frame.pdu().try_into().unwrap(),
+                )))
             }
             PGN::ProprietaryB(STATUS_PGN) => {
                 if frame.id().sa() != self.destination_address {
@@ -148,6 +147,16 @@ impl super::J1939Unit for VehicleControlUnit {
                         version.0,
                         version.1,
                         version.2
+                    );
+                }
+                VehicleMessage::AddressClaim(name) => {
+                    ctx.rx_mark();
+
+                    log::debug!(
+                        "[xcan:0x{:X}] {}: Address claimed: {}",
+                        self.destination(),
+                        self.name(),
+                        name
                     );
                 }
                 VehicleMessage::Status(status) => {

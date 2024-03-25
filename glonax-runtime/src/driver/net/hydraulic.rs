@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
+use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PDU_NOT_AVAILABLE, PGN};
 
 use crate::net::Parsable;
 
@@ -14,6 +14,8 @@ pub enum HydraulicMessage {
     Actuator(ActuatorMessage),
     MotionConfig(MotionConfigMessage),
     VecraftConfig(VecraftConfigMessage),
+    SoftwareIdentification((u8, u8, u8)),
+    AddressClaim(Name),
     Status(VecraftStatusMessage),
 }
 
@@ -374,6 +376,48 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
                     ),
                 ))
             }
+            PGN::SoftwareIdentification => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                let fields = frame.pdu()[0];
+
+                if fields >= 1 {
+                    if frame.pdu()[4] == b'*' {
+                        let mut major = 0;
+                        let mut minor = 0;
+                        let mut patch = 0;
+
+                        if frame.pdu()[1] != 0xff {
+                            major = frame.pdu()[1];
+                        }
+                        if frame.pdu()[2] != 0xff {
+                            minor = frame.pdu()[2];
+                        }
+                        if frame.pdu()[3] != 0xff {
+                            patch = frame.pdu()[3];
+                        }
+
+                        Some(HydraulicMessage::SoftwareIdentification((
+                            major, minor, patch,
+                        )))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            PGN::AddressClaimed => {
+                if frame.id().sa() != self.destination_address {
+                    return None;
+                }
+
+                Some(HydraulicMessage::AddressClaim(Name::from_bytes(
+                    frame.pdu().try_into().unwrap(),
+                )))
+            }
             PGN::ProprietaryB(STATUS_PGN) => {
                 if frame.id().sa() != self.destination_address {
                     return None;
@@ -455,6 +499,28 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::Actuator(_actuator) => {}
                 HydraulicMessage::MotionConfig(_config) => {}
                 HydraulicMessage::VecraftConfig(_config) => {}
+                HydraulicMessage::SoftwareIdentification(version) => {
+                    ctx.rx_mark();
+
+                    log::debug!(
+                        "[xcan:0x{:X}] {}: Firmware version: {}.{}.{}",
+                        self.destination(),
+                        self.name(),
+                        version.0,
+                        version.1,
+                        version.2
+                    );
+                }
+                HydraulicMessage::AddressClaim(name) => {
+                    ctx.rx_mark();
+
+                    log::debug!(
+                        "[xcan:0x{:X}] {}: Address claimed: {}",
+                        self.destination(),
+                        self.name(),
+                        name
+                    );
+                }
                 HydraulicMessage::Status(status) => {
                     ctx.rx_mark();
 

@@ -309,6 +309,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                         status
                     );
                 }
+                _ => {}
             }
         } else if let Some(message) = router.try_accept(&mut jis0) {
             match message {
