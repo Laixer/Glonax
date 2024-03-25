@@ -40,7 +40,7 @@ pub struct NetworkConfig {
 pub struct NetworkAuthorityRx {
     interface: String,
     router: crate::net::Router,
-    network: crate::runtime::ControlNetwork,
+    network: crate::runtime::ControlBus,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityRx {
@@ -52,7 +52,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlNetwork::new(config.address);
+        let mut network = crate::runtime::ControlBus::new(config.address);
 
         network.register_driver(NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(config.address)));
 
@@ -117,7 +117,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 pub struct NetworkAuthorityTx {
     interface: String,
     router: crate::net::Router,
-    network: crate::runtime::ControlNetwork,
+    network: crate::runtime::ControlBus,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityTx {
@@ -128,7 +128,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlNetwork::new(config.address);
+        let mut network = crate::runtime::ControlBus::new(config.address);
         for driver in &config.driver {
             match NetDriver::factory(
                 &driver.driver_type,
@@ -163,7 +163,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
 pub struct NetworkAuthorityAtx {
     interface: String,
     router: crate::net::Router,
-    network: crate::runtime::ControlNetwork,
+    network: crate::runtime::ControlBus,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityAtx {
@@ -174,7 +174,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlNetwork::new(config.address);
+        let mut network = crate::runtime::ControlBus::new(config.address);
 
         // TODO: Get from config.
         let hcu0 = crate::driver::HydraulicControlUnit::new(0x4a, config.address);

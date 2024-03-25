@@ -165,6 +165,12 @@ impl KueblerEncoder {
 
 impl Parsable<EncoderMessage> for KueblerEncoder {
     fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
+        if let Some(destination_address) = frame.id().destination_address() {
+            if destination_address != self.destination_address && destination_address != 0xff {
+                return None;
+            }
+        }
+
         if frame.id().pgn() == PGN::ProprietaryB(65_450) {
             if frame.id().source_address() != self.destination_address {
                 return None;

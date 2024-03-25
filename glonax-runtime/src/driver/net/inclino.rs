@@ -72,6 +72,12 @@ impl KueblerInclinometer {
 
 impl Parsable<ProcessDataMessage> for KueblerInclinometer {
     fn parse(&mut self, frame: &Frame) -> Option<ProcessDataMessage> {
+        if let Some(destination_address) = frame.id().destination_address() {
+            if destination_address != self.destination_address && destination_address != 0xff {
+                return None;
+            }
+        }
+
         if frame.id().pgn() == PGN::ProprietaryB(65_451) {
             if frame.id().source_address() != self.destination_address {
                 return None;

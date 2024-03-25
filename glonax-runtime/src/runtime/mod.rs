@@ -465,14 +465,13 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     }
 }
 
-// TODO: Rename to 'ControlBus'
 // TODO: This method should be moved somewhere else
-pub struct ControlNetwork {
+pub struct ControlBus {
     pub default_source_address: u8,
     pub network: Vec<(NetDriver, NetDriverContext)>,
 }
 
-impl ControlNetwork {
+impl ControlBus {
     /// Construct a new control network.
     pub fn new(default_source_address: u8) -> Self {
         Self {
