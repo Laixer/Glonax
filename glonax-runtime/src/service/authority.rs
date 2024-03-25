@@ -40,7 +40,7 @@ pub struct NetworkConfig {
 pub struct NetworkAuthorityRx {
     interface: String,
     router: crate::net::Router,
-    network: crate::runtime::ControlBus,
+    network: crate::driver::net::NetDriverCollection,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityRx {
@@ -52,7 +52,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlBus::new(config.address);
+        let mut network = crate::driver::net::NetDriverCollection::default();
 
         network.register_driver(NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(config.address)));
 
@@ -79,7 +79,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        for (drv, ctx) in self.network.network.iter_mut() {
+        for (drv, ctx) in self.network.inner_mut().iter_mut() {
             log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
             if let Err(error) = drv.setup(ctx, &self.router, runtime_state.clone()).await {
                 log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
@@ -98,7 +98,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                 log::error!("Failed to receive from router: {}", e);
             }
 
-            for (drv, ctx) in self.network.network.iter_mut() {
+            for (drv, ctx) in self.network.inner_mut().iter_mut() {
                 if let Err(error) = drv.try_accept(ctx, &self.router, runtime_state.clone()).await {
                     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
                 }
@@ -117,7 +117,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 pub struct NetworkAuthorityTx {
     interface: String,
     router: crate::net::Router,
-    network: crate::runtime::ControlBus,
+    network: crate::driver::net::NetDriverCollection,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityTx {
@@ -128,7 +128,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlBus::new(config.address);
+        let mut network = crate::driver::net::NetDriverCollection::default();
         for driver in &config.driver {
             match NetDriver::factory(
                 &driver.driver_type,
@@ -152,7 +152,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {
-        for (drv, ctx) in self.network.network.iter_mut() {
+        for (drv, ctx) in self.network.inner_mut().iter_mut() {
             if let Err(error) = drv.tick(ctx, &self.router, runtime_state.clone()).await {
                 log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
             }
@@ -163,7 +163,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
 pub struct NetworkAuthorityAtx {
     interface: String,
     router: crate::net::Router,
-    network: crate::runtime::ControlBus,
+    network: crate::driver::net::NetDriverCollection,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityAtx {
@@ -174,7 +174,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
         let router = crate::net::Router::new(socket);
 
-        let mut network = crate::runtime::ControlBus::new(config.address);
+        let mut network = crate::driver::net::NetDriverCollection::default();
 
         // TODO: Get from config.
         let hcu0 = crate::driver::HydraulicControlUnit::new(0x4a, config.address);
@@ -191,7 +191,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
     // TODO: Motion should be replaced by a more generic message type.
     async fn on_event(&mut self, runtime_state: SharedOperandState, mut motion_rx: crate::runtime::MotionReceiver) {
         while let Some(motion) = motion_rx.recv().await {
-            for (drv, ctx) in self.network.network.iter_mut() {
+            for (drv, ctx) in self.network.inner_mut().iter_mut() {
                 if let Err(error) = drv.trigger(ctx, &self.router, runtime_state.clone(), &motion).await {
                     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
                 }

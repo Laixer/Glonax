@@ -246,6 +246,20 @@ impl Default for NetDriverContext {
     }
 }
 
+#[derive(Default)]
+pub struct NetDriverCollection(Vec<(NetDriver, NetDriverContext)>);
+
+impl NetDriverCollection {
+    /// Register a driver with the control network.
+    pub fn register_driver(&mut self, driver: NetDriver) {
+        self.0.push((driver, NetDriverContext::default()));
+    }
+
+    pub fn inner_mut(&mut self) -> &mut Vec<(NetDriver, NetDriverContext)> {
+        &mut self.0
+    }
+}
+
 #[derive(Debug)]
 pub enum J1939UnitError {
     /// Unit has not sent a message in a while.

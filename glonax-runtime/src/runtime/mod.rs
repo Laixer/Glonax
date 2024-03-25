@@ -2,7 +2,6 @@ mod error;
 
 use crate::{
     core::{Instance, Target},
-    driver::net::{NetDriver, NetDriverContext},
     world::World,
     MachineState,
 };
@@ -462,26 +461,5 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     /// This method will block until the runtime is shutdown.
     pub async fn wait_for_shutdown(&mut self) {
         self.shutdown.1.recv().await.ok();
-    }
-}
-
-// TODO: This method should be moved somewhere else
-pub struct ControlBus {
-    pub default_source_address: u8,
-    pub network: Vec<(NetDriver, NetDriverContext)>,
-}
-
-impl ControlBus {
-    /// Construct a new control network.
-    pub fn new(default_source_address: u8) -> Self {
-        Self {
-            default_source_address,
-            network: vec![],
-        }
-    }
-
-    /// Register a driver with the control network.
-    pub fn register_driver(&mut self, driver: NetDriver) {
-        self.network.push((driver, NetDriverContext::default()));
     }
 }
