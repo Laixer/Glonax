@@ -26,13 +26,19 @@ impl Service<HostConfig> for Host {
     where
         Self: Sized,
     {
-        log::debug!("System name: {}", System::name().unwrap_or_default());
-        log::debug!("System kernel version: {}", System::kernel_version().unwrap_or_default());
-        log::debug!("System OS version: {}", System::os_version().unwrap_or_default());
-        log::debug!("System host name: {}", System::host_name().unwrap_or_default());
+        log::trace!("System name: {}", System::name().unwrap_or_default());
+        log::trace!("System kernel version: {}", System::kernel_version().unwrap_or_default());
+        log::trace!("System OS version: {}", System::os_version().unwrap_or_default());
+        log::trace!("System host name: {}", System::host_name().unwrap_or_default());
+
+        let system = System::new_all();
+
+        if system.cpus().len() < 4 {
+            log::warn!("System has less than 4 CPU cores");
+        }
 
         Self {
-            system: System::new_all(),
+            system,
             components: Components::new_with_refreshed_list(),
         }
     }
