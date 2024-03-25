@@ -21,10 +21,16 @@ pub struct Host {
 }
 
 impl Service<HostConfig> for Host {
+    #[rustfmt::skip]
     fn new(_config: HostConfig) -> Self
     where
         Self: Sized,
     {
+        log::debug!("System name: {}", System::name().unwrap_or_default());
+        log::debug!("System kernel version: {}", System::kernel_version().unwrap_or_default());
+        log::debug!("System OS version: {}", System::os_version().unwrap_or_default());
+        log::debug!("System host name: {}", System::host_name().unwrap_or_default());
+
         Self {
             system: System::new_all(),
             components: Components::new_with_refreshed_list(),
