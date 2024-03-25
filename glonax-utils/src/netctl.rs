@@ -427,11 +427,11 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
 
         println!("Probe ECU {}", Purple.paint(format!("0x{:X?}", address)));
 
-        router.send(&protocol::request(address, PGN::AddressClaimed)).await?;
-        router.send(&protocol::request(address, PGN::SoftwareIdentification)).await?;
-        router.send(&protocol::request(address, PGN::ComponentIdentification)).await?;
-        router.send(&protocol::request(address, PGN::VehicleIdentification)).await?;
-        router.send(&protocol::request(address, PGN::TimeDate)).await?;
+        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::AddressClaimed)).await?;
+        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::SoftwareIdentification)).await?;
+        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::ComponentIdentification)).await?;
+        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::VehicleIdentification)).await?;
+        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::TimeDate)).await?;
 
         Ok(())
     }
@@ -962,7 +962,11 @@ async fn main() -> anyhow::Result<()> {
             loop {
                 tick.tick().await;
                 socket
-                    .send(&protocol::request(destination_address, pgn))
+                    .send(&protocol::request(
+                        destination_address,
+                        consts::J1939_ADDRESS_OBDL,
+                        pgn,
+                    ))
                     .await?;
             }
         }

@@ -110,10 +110,9 @@ impl super::J1939Unit for KueblerInclinometer {
         router: &crate::net::Router,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        // TODO: FIX: It is possible that the request is send from 0x0.
-        router.send(&protocol::request(self.destination_address, PGN::AddressClaimed)).await?;
-        router.send(&protocol::request(self.destination_address, PGN::SoftwareIdentification)).await?;
-        router.send(&protocol::request(self.destination_address, PGN::ComponentIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
+        router.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
+        router.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
         ctx.tx_mark();
 
         Ok(())
