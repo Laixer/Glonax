@@ -85,8 +85,36 @@ impl InputDevice for XboxController {
     }
 }
 
-#[derive(Default)]
-pub struct LogitechJoystick {}
+#[derive(PartialEq, Eq)]
+pub enum LogitechJoystickMode {
+    Left,
+    Right,
+    Solo,
+}
+
+pub struct LogitechJoystick {
+    mode: LogitechJoystickMode,
+}
+
+impl LogitechJoystick {
+    pub fn solo_mode() -> Self {
+        Self {
+            mode: LogitechJoystickMode::Solo,
+        }
+    }
+
+    pub fn left_mode() -> Self {
+        Self {
+            mode: LogitechJoystickMode::Left,
+        }
+    }
+
+    pub fn right_mode() -> Self {
+        Self {
+            mode: LogitechJoystickMode::Right,
+        }
+    }
+}
 
 impl InputDevice for LogitechJoystick {
     fn map(&mut self, event: &Event) -> Option<Scancode> {
@@ -117,7 +145,9 @@ impl InputDevice for LogitechJoystick {
                 value,
                 ..
             } => {
-                log::info!("Idle 1: {}", value);
+                if self.mode != LogitechJoystickMode::Right {
+                    log::info!("Idle 1: {}", value);
+                }
                 None
             }
             Event {
@@ -125,7 +155,9 @@ impl InputDevice for LogitechJoystick {
                 value,
                 ..
             } => {
-                log::info!("Idle 2: {}", value);
+                if self.mode != LogitechJoystickMode::Right {
+                    log::info!("Idle 2: {}", value);
+                }
                 None
             }
             Event {
@@ -133,7 +165,9 @@ impl InputDevice for LogitechJoystick {
                 value,
                 ..
             } => {
-                log::info!("Fine 1: {}", value);
+                if self.mode != LogitechJoystickMode::Right {
+                    log::info!("Fine 1: {}", value);
+                }
                 None
             }
             Event {
@@ -141,7 +175,9 @@ impl InputDevice for LogitechJoystick {
                 value,
                 ..
             } => {
-                log::info!("Fine 2: {}", value);
+                if self.mode != LogitechJoystickMode::Right {
+                    log::info!("Fine 2: {}", value);
+                }
                 None
             }
             Event {
@@ -149,7 +185,9 @@ impl InputDevice for LogitechJoystick {
                 value,
                 ..
             } => {
-                log::info!("General 1: {}", value);
+                if self.mode != LogitechJoystickMode::Right {
+                    log::info!("General 1: {}", value);
+                }
                 None
             }
             Event {
@@ -157,7 +195,9 @@ impl InputDevice for LogitechJoystick {
                 value,
                 ..
             } => {
-                log::info!("Shutdown: {}", value);
+                if self.mode != LogitechJoystickMode::Right {
+                    log::info!("Shutdown: {}", value);
+                }
                 None
             }
             _ => None,

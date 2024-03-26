@@ -96,7 +96,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
     let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
     let mut input_device = gamepad::XboxController::default();
-    // let mut input_device = gamepad::LogitechJoystick::default();
+    // let mut input_device = gamepad::LogitechJoystick::solo_mode();
 
     let mut input_state = input::InputState {
         drive_lock: false,
