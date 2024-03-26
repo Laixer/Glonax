@@ -74,7 +74,7 @@ impl InputDevice for XboxController {
                 ty: EventType::Button(1),
                 value,
                 ..
-            } => Some(Scancode::Cancel(ButtonState::from(value))),
+            } => Some(Scancode::Abort(ButtonState::from(value))),
             Event {
                 ty: EventType::Button(2),
                 value,
@@ -111,7 +111,55 @@ impl InputDevice for LogitechJoystick {
                 ty: EventType::Button(1),
                 value,
                 ..
-            } => Some(Scancode::Cancel(ButtonState::from(value))),
+            } => Some(Scancode::Abort(ButtonState::from(value))),
+            Event {
+                ty: EventType::Button(6),
+                value,
+                ..
+            } => {
+                log::info!("Idle 1: {}", value);
+                None
+            }
+            Event {
+                ty: EventType::Button(7),
+                value,
+                ..
+            } => {
+                log::info!("Idle 2: {}", value);
+                None
+            }
+            Event {
+                ty: EventType::Button(8),
+                value,
+                ..
+            } => {
+                log::info!("Fine 1: {}", value);
+                None
+            }
+            Event {
+                ty: EventType::Button(9),
+                value,
+                ..
+            } => {
+                log::info!("Fine 2: {}", value);
+                None
+            }
+            Event {
+                ty: EventType::Button(10),
+                value,
+                ..
+            } => {
+                log::info!("General 1: {}", value);
+                None
+            }
+            Event {
+                ty: EventType::Button(11),
+                value,
+                ..
+            } => {
+                log::info!("Shutdown: {}", value);
+                None
+            }
             _ => None,
         }
     }

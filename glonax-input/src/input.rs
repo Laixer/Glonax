@@ -59,8 +59,8 @@ pub(crate) enum Scancode {
     LeftTrack(i16),
     /// Right track axis.
     RightTrack(i16),
-    /// Cancel button.
-    Cancel(ButtonState),
+    /// Abort button.
+    Abort(ButtonState),
     /// Confirm button.
     Confirm(ButtonState),
     /// Drive lock button.
@@ -146,11 +146,11 @@ impl InputState {
                     Motion::new(Actuator::LimpRight, value).into()
                 }
             }
-            Scancode::Cancel(ButtonState::Pressed) => {
+            Scancode::Abort(ButtonState::Pressed) => {
                 self.motion_lock = true;
                 Motion::StopAll.into()
             }
-            Scancode::Cancel(ButtonState::Released) => {
+            Scancode::Abort(ButtonState::Released) => {
                 self.motion_lock = false;
                 Motion::ResumeAll.into()
             }
