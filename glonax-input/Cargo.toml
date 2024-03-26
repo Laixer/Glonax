@@ -7,7 +7,6 @@ repository = "https://github.com/Laixer/Glonax"
 
 [dependencies]
 glonax = { version = "3", path = "../glonax-runtime" }
-glonax-gamepad = { version = "1", path = "../glonax-gamepad" }
 
 log = "0.4"
 anyhow = "1.0"

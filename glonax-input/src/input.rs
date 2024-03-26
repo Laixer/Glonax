@@ -29,11 +29,22 @@ pub(crate) enum ButtonState {
     Released,
 }
 
+impl From<i16> for ButtonState {
+    fn from(value: i16) -> Self {
+        if value == 1 {
+            ButtonState::Pressed
+        } else {
+            ButtonState::Released
+        }
+    }
+}
+
 /// Input device scancode.
 ///
 /// Scancodes are indirectly mapped to input pheripherials. Any
 /// input device can emit these codes. Their effect is left to
 /// device implementations.
+#[allow(dead_code)]
 #[derive(PartialEq, Eq)]
 pub(crate) enum Scancode {
     /// Left stick X axis.
@@ -48,8 +59,10 @@ pub(crate) enum Scancode {
     LeftTrigger(i16),
     /// Right trigger axis.
     RightTrigger(i16),
-    /// Abort button.
-    Abort(ButtonState),
+    /// Cancel button.
+    Cancel(ButtonState),
+    /// Confirm button.
+    Confirm(ButtonState),
     /// Drive lock button.
     DriveLock(ButtonState),
 }
@@ -173,11 +186,11 @@ impl InputState {
                     Motion::new(Actuator::LimpRight, value.ramp(2_000)).into()
                 }
             }
-            Scancode::Abort(ButtonState::Pressed) => {
+            Scancode::Cancel(ButtonState::Pressed) => {
                 self.motion_lock = true;
                 Motion::StopAll.into()
             }
-            Scancode::Abort(ButtonState::Released) => {
+            Scancode::Cancel(ButtonState::Released) => {
                 self.motion_lock = false;
                 Motion::ResumeAll.into()
             }
@@ -189,6 +202,7 @@ impl InputState {
                 self.drive_lock = false;
                 Motion::StraightDrive(Motion::POWER_NEUTRAL).into()
             }
+            _ => None,
         }
     }
 }

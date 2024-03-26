@@ -8,6 +8,7 @@ use clap::{Parser, ValueHint};
 
 mod gamepad;
 mod input;
+mod joystick;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]

@@ -1,15 +1,18 @@
 use std::path::{Path, PathBuf};
 
 use glonax::driver;
-use glonax_gamepad::{Axis, Button, Event, EventType};
 use log::error;
 
-use crate::input::{ButtonState, Scancode};
+use crate::{
+    input::{ButtonState, Scancode},
+    joystick::{Event, EventType, Joystick},
+};
 
 const DEVICE_NAME: &str = "gamepad";
 
+// TODO: Maybe integrate the joystick driver into the gamepad driver.
 pub(crate) struct Gamepad {
-    driver: glonax_gamepad::AsyncGamepad,
+    driver: Joystick,
     node_path: PathBuf,
     reverse_left: bool,
     reverse_right: bool,
@@ -18,7 +21,7 @@ pub(crate) struct Gamepad {
 impl Gamepad {
     pub(crate) async fn new(path: &Path) -> std::io::Result<Self> {
         Ok(Self {
-            driver: glonax_gamepad::AsyncGamepad::new(path).await?,
+            driver: Joystick::open(path).await?,
             node_path: path.to_path_buf(),
             reverse_left: false,
             reverse_right: false,
@@ -32,36 +35,36 @@ impl Gamepad {
             match self.driver.next_event().await {
                 Ok(event) => match event {
                     Event {
-                        ty: EventType::Axis(Axis::LeftStickY),
+                        ty: EventType::Axis(1),
                         ..
                     } => break Ok(Scancode::LeftStickY(event.value)),
                     Event {
-                        ty: EventType::Axis(Axis::LeftStickX),
+                        ty: EventType::Axis(0),
                         ..
                     } => break Ok(Scancode::LeftStickX(event.value)),
 
                     Event {
-                        ty: EventType::Axis(Axis::RightStickY),
+                        ty: EventType::Axis(4),
                         ..
                     } => break Ok(Scancode::RightStickY(event.value)),
                     Event {
-                        ty: EventType::Axis(Axis::RightStickX),
+                        ty: EventType::Axis(3),
                         ..
                     } => break Ok(Scancode::RightStickX(event.value)),
                     Event {
-                        ty: EventType::Button(Button::LeftBumper),
+                        ty: EventType::Button(4),
                         ..
                     } => {
                         self.reverse_left = event.value == 1;
                     }
                     Event {
-                        ty: EventType::Button(Button::RightBumper),
+                        ty: EventType::Button(5),
                         ..
                     } => {
                         self.reverse_right = event.value == 1;
                     }
                     Event {
-                        ty: EventType::Axis(Axis::LeftTrigger),
+                        ty: EventType::Axis(2),
                         ..
                     } => {
                         break Ok(Scancode::LeftTrigger(if self.reverse_left {
@@ -71,7 +74,7 @@ impl Gamepad {
                         }))
                     }
                     Event {
-                        ty: EventType::Axis(Axis::RightTrigger),
+                        ty: EventType::Axis(5),
                         ..
                     } => {
                         break Ok(Scancode::RightTrigger(if self.reverse_right {
@@ -81,25 +84,15 @@ impl Gamepad {
                         }))
                     }
                     Event {
-                        ty: EventType::Button(Button::East),
+                        ty: EventType::Button(1),
                         value,
-                    } => {
-                        break Ok(Scancode::Abort(if value == 1 {
-                            ButtonState::Pressed
-                        } else {
-                            ButtonState::Released
-                        }))
-                    }
+                        ..
+                    } => break Ok(Scancode::Cancel(ButtonState::from(value))),
                     Event {
-                        ty: EventType::Button(Button::West),
+                        ty: EventType::Button(2),
                         value,
-                    } => {
-                        break Ok(Scancode::DriveLock(if value == 1 {
-                            ButtonState::Pressed
-                        } else {
-                            ButtonState::Released
-                        }))
-                    }
+                        ..
+                    } => break Ok(Scancode::DriveLock(ButtonState::from(value))),
                     _ => {}
                 },
                 Err(e) => {
