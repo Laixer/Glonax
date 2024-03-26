@@ -21,7 +21,7 @@ impl Level for i16 {
 }
 
 /// Button state.
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum ButtonState {
     /// Button pressed.
     Pressed,
@@ -29,9 +29,9 @@ pub(crate) enum ButtonState {
     Released,
 }
 
-impl From<i16> for ButtonState {
-    fn from(value: i16) -> Self {
-        if value == 1 {
+impl From<&i16> for ButtonState {
+    fn from(value: &i16) -> Self {
+        if value == &1 {
             ButtonState::Pressed
         } else {
             ButtonState::Released
@@ -45,20 +45,20 @@ impl From<i16> for ButtonState {
 /// input device can emit these codes. Their effect is left to
 /// device implementations.
 #[allow(dead_code)]
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Scancode {
-    /// Left stick X axis.
-    LeftStickX(i16),
-    /// Left stick Y axis.
-    LeftStickY(i16),
-    /// Right stick X axis.
-    RightStickX(i16),
-    /// Right stick Y axis.
-    RightStickY(i16),
-    /// Left trigger axis.
-    LeftTrigger(i16),
-    /// Right trigger axis.
-    RightTrigger(i16),
+    /// Slew axis.
+    Slew(i16),
+    /// Arm axis.
+    Arm(i16),
+    /// Attachment axis.
+    Attachment(i16),
+    /// Boom axis.
+    Boom(i16),
+    /// Left track axis.
+    LeftTrack(i16),
+    /// Right track axis.
+    RightTrack(i16),
     /// Cancel button.
     Cancel(ButtonState),
     /// Confirm button.
@@ -96,94 +96,54 @@ impl InputState {
     /// less sensitive based on the actuator (and input control).
     pub(super) fn try_from(&mut self, input: Scancode) -> Option<Motion> {
         match input {
-            Scancode::LeftStickX(value) => {
+            Scancode::Slew(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(
-                    Actuator::Slew,
-                    if self.limit_motion {
-                        (value / 2).ramp(1_000)
-                    } else {
-                        value.ramp(2_000)
-                    },
-                )
-                .into()
+                Motion::new(Actuator::Slew, value).into()
             }
-            Scancode::LeftStickY(value) => {
+            Scancode::Arm(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(
-                    Actuator::Arm,
-                    if self.limit_motion {
-                        (value / 2).ramp(1_500)
-                    } else {
-                        value.ramp(3_000)
-                    },
-                )
-                .into()
+                Motion::new(Actuator::Arm, value).into()
             }
-            Scancode::RightStickX(value) => {
+            Scancode::Attachment(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(
-                    Actuator::Attachment,
-                    if self.limit_motion {
-                        if value.is_negative() {
-                            (value / 2).ramp(2_000)
-                        } else {
-                            value.ramp(4_000)
-                        }
-                    } else {
-                        value.ramp(4_000)
-                    },
-                )
-                .into()
+                Motion::new(Actuator::Attachment, value).into()
             }
-            Scancode::RightStickY(value) => {
+            Scancode::Boom(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(
-                    Actuator::Boom,
-                    if self.limit_motion {
-                        if value.is_negative() {
-                            value.ramp(3_500)
-                        } else {
-                            (value / 2).ramp(1_750)
-                        }
-                    } else {
-                        value.ramp(3_500)
-                    },
-                )
-                .into()
+                Motion::new(Actuator::Boom, value).into()
             }
-            Scancode::LeftTrigger(value) => {
+            Scancode::LeftTrack(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
                 if self.drive_lock {
-                    Motion::StraightDrive(value.ramp(2_000)).into()
+                    Motion::StraightDrive(value).into()
                 } else {
-                    Motion::new(Actuator::LimpLeft, value.ramp(2_000)).into()
+                    Motion::new(Actuator::LimpLeft, value).into()
                 }
             }
-            Scancode::RightTrigger(value) => {
+            Scancode::RightTrack(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
                 if self.drive_lock {
-                    Motion::StraightDrive(value.ramp(2_000)).into()
+                    Motion::StraightDrive(value).into()
                 } else {
-                    Motion::new(Actuator::LimpRight, value.ramp(2_000)).into()
+                    Motion::new(Actuator::LimpRight, value).into()
                 }
             }
             Scancode::Cancel(ButtonState::Pressed) => {

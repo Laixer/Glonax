@@ -79,6 +79,8 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(args: Args) -> anyhow::Result<()> {
+    use crate::gamepad::InputDevice;
+
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     let mut address = args.address.clone();
@@ -92,7 +94,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
         .next()
         .unwrap();
 
-    let mut input_device = gamepad::Gamepad::new(std::path::Path::new(&args.device)).await?;
+    let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
+    let mut input_device = gamepad::XboxController::default();
+    // let mut input_device = gamepad::LogitechJoystick::default();
 
     let mut input_state = input::InputState {
         drive_lock: false,
@@ -123,13 +127,16 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
     log::info!("{}", instance);
 
-    while let Ok(input) = input_device.next().await {
-        if let Some(motion) = input_state.try_from(input) {
-            log::trace!("{}", motion);
+    loop {
+        let event = joystick.next_event().await?;
+        if let Some(code) = input_device.map(&event) {
+            if let Some(motion) = input_state.try_from(code) {
+                log::trace!("{}", motion);
 
-            if let Err(e) = client.send_packet(&motion).await {
-                log::error!("Failed to write to socket: {}", e);
-                break;
+                if let Err(e) = client.send_packet(&motion).await {
+                    log::error!("Failed to write to socket: {}", e);
+                    break;
+                }
             }
         }
     }
