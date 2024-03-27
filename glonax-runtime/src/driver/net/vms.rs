@@ -45,10 +45,10 @@ impl super::J1939Unit for VehicleManagementSystem {
     async fn setup(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        router.send(&protocol::address_claimed(self.source_address, router.name())).await?;
+        network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
         ctx.tx_mark();
 
         Ok(())
@@ -57,14 +57,14 @@ impl super::J1939Unit for VehicleManagementSystem {
     async fn try_accept(
         &mut self,
         _ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if let Some(pgn) = router.try_accept(self) {
+        if let Some(pgn) = network.try_accept(self) {
             match pgn {
                 #[rustfmt::skip]
                 PGN::AddressClaimed => {
-                    router.send(&protocol::address_claimed(self.source_address, router.name())).await?;
+                    network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
                 }
                 PGN::SoftwareIdentification => {
                     let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)
@@ -80,7 +80,7 @@ impl super::J1939Unit for VehicleManagementSystem {
                         .copy_from_slice(&[1, version_major, version_minor, version_patch, b'*'])
                         .build();
 
-                    router.send(&frame).await?;
+                    network.send(&frame).await?;
                 }
                 PGN::TimeDate => {
                     use chrono::prelude::*;
@@ -103,7 +103,7 @@ impl super::J1939Unit for VehicleManagementSystem {
                         .copy_from_slice(&timedate.to_pdu())
                         .build();
 
-                    router.send(&frame).await?;
+                    network.send(&frame).await?;
                 }
                 _ => (),
             }

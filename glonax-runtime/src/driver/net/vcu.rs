@@ -125,12 +125,12 @@ impl super::J1939Unit for VehicleControlUnit {
     async fn setup(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        router.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
-        router.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
-        router.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
+        network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
+        network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
+        network.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
         ctx.tx_mark();
 
         Ok(())
@@ -139,7 +139,7 @@ impl super::J1939Unit for VehicleControlUnit {
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
@@ -148,7 +148,7 @@ impl super::J1939Unit for VehicleControlUnit {
             result = Err(super::J1939UnitError::MessageTimeout);
         }
 
-        if let Some(message) = router.try_accept(self) {
+        if let Some(message) = network.try_accept(self) {
             match message {
                 VehicleMessage::VecraftConfig(_config) => {}
                 VehicleMessage::SoftwareIdentification(version) => {

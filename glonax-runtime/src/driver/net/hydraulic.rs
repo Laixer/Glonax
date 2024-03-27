@@ -305,22 +305,22 @@ impl HydraulicControlUnit {
 
     async fn send_motion_command(
         &self,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         motion: &crate::core::Motion,
     ) -> Result<(), super::J1939UnitError> {
         match motion {
             crate::core::Motion::StopAll => {
-                router.send(&self.lock()).await?;
+                network.send(&self.lock()).await?;
             }
             crate::core::Motion::ResumeAll => {
-                router.send(&self.unlock()).await?;
+                network.send(&self.unlock()).await?;
             }
             crate::core::Motion::ResetAll => {
-                router.send(&self.motion_reset()).await?;
+                network.send(&self.motion_reset()).await?;
             }
             crate::core::Motion::StraightDrive(value) => {
                 let frames = &self.drive_straight(*value);
-                router.send_vectored(frames).await?;
+                network.send_vectored(frames).await?;
             }
             crate::core::Motion::Change(changes) => {
                 let frames = &self.actuator_command(
@@ -330,7 +330,7 @@ impl HydraulicControlUnit {
                         .collect(),
                 );
 
-                router.send_vectored(frames).await?;
+                network.send_vectored(frames).await?;
             }
         }
 
@@ -452,17 +452,17 @@ impl super::J1939Unit for HydraulicControlUnit {
     async fn setup(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        router.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
-        router.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
-        router.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
+        network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
+        network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
+        network.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
         ctx.tx_mark();
 
-        router.send(&self.motion_reset()).await?;
-        router.send(&self.set_ident(true)).await?;
-        router.send(&self.set_ident(false)).await?;
+        network.send(&self.motion_reset()).await?;
+        network.send(&self.set_ident(true)).await?;
+        network.send(&self.set_ident(false)).await?;
         ctx.tx_mark();
 
         Ok(())
@@ -471,10 +471,10 @@ impl super::J1939Unit for HydraulicControlUnit {
     async fn teardown(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        router.send(&self.motion_reset()).await?;
+        network.send(&self.motion_reset()).await?;
         ctx.tx_mark();
 
         Ok(())
@@ -483,7 +483,7 @@ impl super::J1939Unit for HydraulicControlUnit {
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
@@ -492,7 +492,7 @@ impl super::J1939Unit for HydraulicControlUnit {
             result = Err(super::J1939UnitError::MessageTimeout);
         }
 
-        if let Some(message) = router.try_accept(self) {
+        if let Some(message) = network.try_accept(self) {
             match message {
                 HydraulicMessage::Actuator(_actuator) => {}
                 HydraulicMessage::MotionConfig(_config) => {}
@@ -533,11 +533,11 @@ impl super::J1939Unit for HydraulicControlUnit {
     async fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         if let Ok(runtime_state) = runtime_state.try_read() {
-            self.send_motion_command(router, &runtime_state.state.motion)
+            self.send_motion_command(network, &runtime_state.state.motion)
                 .await?;
             ctx.tx_mark();
         }
@@ -548,13 +548,13 @@ impl super::J1939Unit for HydraulicControlUnit {
     async fn trigger(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
         trigger: &crate::core::Motion,
     ) -> Result<(), super::J1939UnitError> {
         runtime_state.write().await.state.motion = trigger.clone();
 
-        self.send_motion_command(router, trigger).await?;
+        self.send_motion_command(network, trigger).await?;
         ctx.tx_mark();
 
         Ok(())

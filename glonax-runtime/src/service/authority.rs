@@ -1,4 +1,7 @@
-use crate::{driver::net::{J1939Unit, NetDriver}, runtime::{Service, SharedOperandState}};
+use crate::{
+    driver::net::{J1939Unit, NetDriver, NetDriverCollection},
+    runtime::{Service, SharedOperandState},
+};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct J1939Name {
@@ -39,8 +42,8 @@ pub struct NetworkConfig {
 
 pub struct NetworkAuthorityRx {
     interface: String,
-    router: crate::net::Router,
-    network: crate::driver::net::NetDriverCollection,
+    network: crate::net::ControlNetwork,
+    drivers: NetDriverCollection,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityRx {
@@ -49,21 +52,19 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         Self: Sized,
     {
         // TODO: Let the router bind to a socket.
-        let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
-        let router = crate::net::Router::new(socket);
+        let socket =
+            crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
+        let network = crate::net::ControlNetwork::new(socket);
 
-        let mut network = crate::driver::net::NetDriverCollection::default();
-
-        network.register_driver(NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(config.address)));
+        let mut drivers = NetDriverCollection::default();
+        drivers.register_driver(NetDriver::VehicleManagementSystem(
+            crate::driver::VehicleManagementSystem::new(config.address),
+        ));
 
         for driver in &config.driver {
-            match NetDriver::factory(
-                &driver.driver_type,
-                driver.da,
-                driver.sa.unwrap_or(config.address),
-            ) {
+            match NetDriver::factory(&driver.driver_type, driver.da, driver.sa.unwrap_or(config.address)) {
                 Ok(driver) => {
-                    network.register_driver(driver);
+                    drivers.register_driver(driver);
                 }
                 Err(()) => {
                     log::error!("Failed to register driver: {}", driver.driver_type);
@@ -71,7 +72,11 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             }
         }
 
-        Self { interface: config.interface, router, network }
+        Self {
+            interface: config.interface,
+            network,
+            drivers,
+        }
     }
 
     fn ctx(&self) -> crate::runtime::ServiceContext {
@@ -79,10 +84,21 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        for (drv, ctx) in self.network.inner_mut().iter_mut() {
-            log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
-            if let Err(error) = drv.setup(ctx, &self.router, runtime_state.clone()).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+            log::debug!(
+                "[{}:0x{:X}] Setup network driver '{}'",
+                self.interface,
+                drv.destination(),
+                drv.name()
+            );
+            if let Err(error) = drv.setup(ctx, &self.network, runtime_state.clone()).await {
+                log::error!(
+                    "[{}:0x{:X}] {}: {}",
+                    self.interface,
+                    drv.destination(),
+                    drv.name(),
+                    error
+                );
             }
         }
 
@@ -90,17 +106,26 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         loop {
             // if let Ok(Err(e)) =
             //     tokio::time::timeout(std::time::Duration::from_millis(100), router.listen()).await
-            // {    
+            // {
             //     log::error!("Failed to receive from router: {}", e);
             // }
 
-            if let Err(e) = self.router.listen().await {
+            if let Err(e) = self.network.listen().await {
                 log::error!("Failed to receive from router: {}", e);
             }
 
-            for (drv, ctx) in self.network.inner_mut().iter_mut() {
-                if let Err(error) = drv.try_accept(ctx, &self.router, runtime_state.clone()).await {
-                    log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+            for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+                if let Err(error) = drv
+                    .try_accept(ctx, &self.network, runtime_state.clone())
+                    .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {}: {}",
+                        self.interface,
+                        drv.destination(),
+                        drv.name(),
+                        error
+                    );
                 }
             }
         }
@@ -116,8 +141,8 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 
 pub struct NetworkAuthorityTx {
     interface: String,
-    router: crate::net::Router,
-    network: crate::driver::net::NetDriverCollection,
+    network: crate::net::ControlNetwork,
+    drivers: NetDriverCollection,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityTx {
@@ -125,10 +150,11 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     where
         Self: Sized,
     {
-        let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
-        let router = crate::net::Router::new(socket);
+        let socket =
+            crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
+        let network = crate::net::ControlNetwork::new(socket);
 
-        let mut network = crate::driver::net::NetDriverCollection::default();
+        let mut drivers = NetDriverCollection::default();
         for driver in &config.driver {
             match NetDriver::factory(
                 &driver.driver_type,
@@ -136,7 +162,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
                 driver.sa.unwrap_or(config.address),
             ) {
                 Ok(driver) => {
-                    network.register_driver(driver);
+                    drivers.register_driver(driver);
                 }
                 Err(()) => {
                     log::error!("Failed to register driver: {}", driver.driver_type);
@@ -144,7 +170,11 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
             }
         }
 
-        Self { interface: config.interface, router, network }
+        Self {
+            interface: config.interface,
+            network,
+            drivers,
+        }
     }
 
     fn ctx(&self) -> crate::runtime::ServiceContext {
@@ -152,9 +182,15 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {
-        for (drv, ctx) in self.network.inner_mut().iter_mut() {
-            if let Err(error) = drv.tick(ctx, &self.router, runtime_state.clone()).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+            if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
+                log::error!(
+                    "[{}:0x{:X}] {}: {}",
+                    self.interface,
+                    drv.destination(),
+                    drv.name(),
+                    error
+                );
             }
         }
     }
@@ -162,8 +198,8 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
 
 pub struct NetworkAuthorityAtx {
     interface: String,
-    router: crate::net::Router,
-    network: crate::driver::net::NetDriverCollection,
+    network: crate::net::ControlNetwork,
+    drivers: NetDriverCollection,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityAtx {
@@ -171,16 +207,21 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
     where
         Self: Sized,
     {
-        let socket = crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
-        let router = crate::net::Router::new(socket);
+        let socket =
+            crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
+        let network = crate::net::ControlNetwork::new(socket);
 
-        let mut network = crate::driver::net::NetDriverCollection::default();
+        let mut drivers = NetDriverCollection::default();
 
         // TODO: Get from config.
         let hcu0 = crate::driver::HydraulicControlUnit::new(0x4a, config.address);
-        network.register_driver(NetDriver::HydraulicControlUnit(hcu0));
+        drivers.register_driver(NetDriver::HydraulicControlUnit(hcu0));
 
-        Self { interface: config.interface, router, network }
+        Self {
+            interface: config.interface,
+            network,
+            drivers,
+        }
     }
 
     fn ctx(&self) -> crate::runtime::ServiceContext {
@@ -189,11 +230,24 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
 
     // TODO: This hasnt been been worked out but the queue must be awaited in the runtime.
     // TODO: Motion should be replaced by a more generic message type.
-    async fn on_event(&mut self, runtime_state: SharedOperandState, mut motion_rx: crate::runtime::MotionReceiver) {
+    async fn on_event(
+        &mut self,
+        runtime_state: SharedOperandState,
+        mut motion_rx: crate::runtime::MotionReceiver,
+    ) {
         while let Some(motion) = motion_rx.recv().await {
-            for (drv, ctx) in self.network.inner_mut().iter_mut() {
-                if let Err(error) = drv.trigger(ctx, &self.router, runtime_state.clone(), &motion).await {
-                    log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+            for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+                if let Err(error) = drv
+                    .trigger(ctx, &self.network, runtime_state.clone(), &motion)
+                    .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {}: {}",
+                        self.interface,
+                        drv.destination(),
+                        drv.name(),
+                        error
+                    );
                 }
             }
         }

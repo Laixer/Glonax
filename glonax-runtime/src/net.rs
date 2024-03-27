@@ -98,7 +98,7 @@ const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 /// equal size. If the frame size is not fixed, it is returned as is.
 /// Fixing the frame size avoids the need to check the frame size in each
 /// service.
-pub struct Router {
+pub struct ControlNetwork {
     /// The network.
     socket: CANSocket,
     /// The current frame.
@@ -117,7 +117,7 @@ pub struct Router {
     name: Name,
 }
 
-impl Router {
+impl ControlNetwork {
     /// Construct a new router.
     pub fn new(socket: CANSocket) -> Self {
         Self {

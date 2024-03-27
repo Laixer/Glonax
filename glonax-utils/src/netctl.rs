@@ -45,7 +45,7 @@ fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
 }
 
 /// Analyze incoming frames and print their contents to the screen.
-async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
+async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
     use glonax::driver::{
         HydraulicControlUnit, J1939ApplicationInspector, J1939Message, KueblerEncoder,
         KueblerInclinometer, VolvoD7E,
@@ -64,15 +64,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
     let mut jis0 = J1939ApplicationInspector;
 
     loop {
-        router.listen().await?;
+        network.listen().await?;
 
-        if let Some(message) = router.try_accept(&mut ems0) {
+        if let Some(message) = network.try_accept(&mut ems0) {
             match message {
                 glonax::driver::EngineMessage::TorqueSpeedControl(control) => {
                     info!(
                         "{} {} {} » Torque speed control: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         control
                     );
@@ -81,7 +81,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Brake controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         controller
                     );
@@ -90,7 +90,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         controller
                     );
@@ -99,7 +99,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         controller
                     );
@@ -108,7 +108,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Engine controller: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         controller
                     );
@@ -117,7 +117,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Fan drive: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         fan
                     );
@@ -126,7 +126,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Vehicle distance: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         distance
                     );
@@ -135,7 +135,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Shutdown: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         shutdown
                     );
@@ -144,7 +144,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Engine temperature: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         temperature
                     );
@@ -153,7 +153,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Engine fluid level pressure: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         fluid
                     );
@@ -162,7 +162,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Engine fluid level pressure: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         fluid
                     );
@@ -171,7 +171,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Fuel economy: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         economy
                     );
@@ -180,7 +180,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Fuel consumption: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         consumption
                     );
@@ -189,7 +189,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Ambient conditions: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         conditions
                     );
@@ -198,7 +198,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Power takeoff information: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         info
                     );
@@ -207,7 +207,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Tank information: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         info
                     );
@@ -216,7 +216,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Vehicle electrical power: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         power
                     );
@@ -225,59 +225,59 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Inlet exhaust conditions: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Engine"),
                         conditions
                     );
                 }
             }
-        } else if let Some(message) = router.try_accept(&mut enc2) {
+        } else if let Some(message) = network.try_accept(&mut enc2) {
             info!(
                 "{} {} {} » {}",
                 chrono::Utc::now().format("%T%.3f"),
-                style_address(router.frame_source().unwrap()),
+                style_address(network.frame_source().unwrap()),
                 Yellow.bold().paint("Arm"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut enc1) {
+        } else if let Some(message) = network.try_accept(&mut enc1) {
             info!(
                 "{} {} {} » {}",
                 chrono::Utc::now().format("%T%.3f"),
-                style_address(router.frame_source().unwrap()),
+                style_address(network.frame_source().unwrap()),
                 Yellow.bold().paint("Boom"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut enc0) {
+        } else if let Some(message) = network.try_accept(&mut enc0) {
             info!(
                 "{} {} {} » {}",
                 chrono::Utc::now().format("%T%.3f"),
-                style_address(router.frame_source().unwrap()),
+                style_address(network.frame_source().unwrap()),
                 Yellow.bold().paint("Frame"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut enc3) {
+        } else if let Some(message) = network.try_accept(&mut enc3) {
             info!(
                 "{} {} {} » {}",
                 chrono::Utc::now().format("%T%.3f"),
-                style_address(router.frame_source().unwrap()),
+                style_address(network.frame_source().unwrap()),
                 Yellow.bold().paint("Attachment"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut imu0) {
+        } else if let Some(message) = network.try_accept(&mut imu0) {
             info!(
                 "{} {} {} » {}",
                 chrono::Utc::now().format("%T%.3f"),
-                style_address(router.frame_source().unwrap()),
+                style_address(network.frame_source().unwrap()),
                 Yellow.bold().paint("Inclinometer"),
                 message
             );
-        } else if let Some(message) = router.try_accept(&mut hcu0) {
+        } else if let Some(message) = network.try_accept(&mut hcu0) {
             match message {
                 glonax::driver::net::hydraulic::HydraulicMessage::Actuator(actuator) => {
                     info!(
                         "{} {} {} » Actuator: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Hydraulic"),
                         actuator
                     );
@@ -286,7 +286,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Motion config: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Hydraulic"),
                         motion
                     );
@@ -295,7 +295,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Vecraft config: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Hydraulic"),
                         config
                     );
@@ -304,20 +304,20 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Status: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Hydraulic"),
                         status
                     );
                 }
                 _ => {}
             }
-        } else if let Some(message) = router.try_accept(&mut jis0) {
+        } else if let Some(message) = network.try_accept(&mut jis0) {
             match message {
                 J1939Message::SoftwareIndent((major, minor, patch)) => {
                     info!(
                         "{} {} {} » Software identification: {}.{}.{}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         major,
                         minor,
@@ -328,7 +328,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Request for PGN: {:?}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         pgn
                     );
@@ -337,7 +337,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Name: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         name
                     );
@@ -346,7 +346,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Acknowledged: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         acknowledged
                     );
@@ -355,7 +355,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Time and date: {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         time
                     );
@@ -364,7 +364,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     info!(
                         "{} {} {} » Active diagnostic trouble codes: SPN: {} FMI {}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         diagnostic.suspect_parameter_number,
                         diagnostic.failure_mode_identifier
@@ -374,7 +374,7 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
                     debug!(
                         "{} {} {} » Proprietary B: {:02X?}",
                         chrono::Utc::now().format("%T%.3f"),
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("J1939"),
                         data
                     );
@@ -385,15 +385,15 @@ async fn analyze_frames(mut router: Router) -> anyhow::Result<()> {
 }
 
 /// Print raw frames to standard output.
-async fn print_frames(mut router: Router) -> anyhow::Result<()> {
+async fn print_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut rx_last = std::time::Instant::now();
 
     loop {
-        router.listen().await?;
+        network.listen().await?;
 
-        if let Some(frame) = router.take() {
+        if let Some(frame) = network.take() {
             let specification_part = match frame.id().pgn() {
                 glonax::j1939::PGN::ProprietaryA => "PA",
                 glonax::j1939::PGN::ProprietaryB(_) => "PB",
@@ -414,7 +414,7 @@ async fn print_frames(mut router: Router) -> anyhow::Result<()> {
     }
 }
 
-async fn diagnose(mut router: Router) -> anyhow::Result<()> {
+async fn diagnose(mut network: ControlNetwork) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut ecu_addresses = vec![];
@@ -422,36 +422,36 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
     let mut jis0 = glonax::driver::J1939ApplicationInspector;
 
     #[rustfmt::skip]
-    async fn probe(router: &Router, address: u8) -> anyhow::Result<()> {
+    async fn probe(network: &ControlNetwork, address: u8) -> anyhow::Result<()> {
         use glonax::j1939::{protocol, PGN};
 
         println!("Probe ECU {}", Purple.paint(format!("0x{:X?}", address)));
 
-        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::AddressClaimed)).await?;
-        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::SoftwareIdentification)).await?;
-        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::ComponentIdentification)).await?;
-        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::VehicleIdentification)).await?;
-        router.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::TimeDate)).await?;
+        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::AddressClaimed)).await?;
+        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::SoftwareIdentification)).await?;
+        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::ComponentIdentification)).await?;
+        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::VehicleIdentification)).await?;
+        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::TimeDate)).await?;
 
         Ok(())
     }
 
     loop {
-        router.listen().await?;
+        network.listen().await?;
 
-        if let Some(message) = router.try_accept(&mut jis0) {
+        if let Some(message) = network.try_accept(&mut jis0) {
             match message {
                 glonax::driver::J1939Message::AddressClaim(name) => {
                     println!(
                         "{} Name: {}",
-                        Purple.paint(format!("[0x{:X?}]", router.frame_source().unwrap())),
+                        Purple.paint(format!("[0x{:X?}]", network.frame_source().unwrap())),
                         name
                     );
                 }
                 glonax::driver::J1939Message::SoftwareIndent((major, minor, patch)) => {
                     println!(
                         "{} Software identification: {}.{}.{}",
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         major,
                         minor,
                         patch
@@ -460,7 +460,7 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
                 glonax::driver::J1939Message::TimeDate(time) => {
                     println!(
                         "{} Time and date: {}",
-                        style_address(router.frame_source().unwrap()),
+                        style_address(network.frame_source().unwrap()),
                         time
                     );
                 }
@@ -468,7 +468,7 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
             }
         }
 
-        if let Some(frame) = router.take() {
+        if let Some(frame) = network.take() {
             if !ecu_addresses.contains(&frame.id().source_address()) {
                 ecu_addresses.push(frame.id().source_address());
 
@@ -477,7 +477,7 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
                     Purple.paint(format!("0x{:X?}", frame.id().source_address()))
                 );
 
-                probe(&router, frame.id().source_address()).await?;
+                probe(&network, frame.id().source_address()).await?;
             }
 
             if let Some(da) = frame.id().destination_address() {
@@ -493,7 +493,7 @@ async fn diagnose(mut router: Router) -> anyhow::Result<()> {
                         Purple.paint(format!("0x{:X?}", da))
                     );
 
-                    probe(&router, da).await?;
+                    probe(&network, da).await?;
                 }
             }
         };
@@ -1006,9 +1006,9 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Diagnostic => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let router = Router::new(socket);
+            let network = ControlNetwork::new(socket);
 
-            diagnose(router).await?;
+            diagnose(network).await?;
         }
         Command::Dump {
             pgn,
@@ -1016,23 +1016,23 @@ async fn main() -> anyhow::Result<()> {
             address,
         } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let mut router = Router::new(socket).set_fix_frame_size(false);
+            let mut network = ControlNetwork::new(socket).set_fix_frame_size(false);
 
             for pgn in pgn {
-                router.add_pgn_filter(pgn);
+                network.add_pgn_filter(pgn);
             }
             for priority in priority {
-                router.add_priority_filter(priority);
+                network.add_priority_filter(priority);
             }
             for addr in address
                 .iter()
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_address_filter(addr?);
+                network.add_address_filter(addr?);
             }
 
-            print_frames(router).await?;
+            print_frames(network).await?;
         }
         Command::Analyze {
             pgn,
@@ -1040,23 +1040,23 @@ async fn main() -> anyhow::Result<()> {
             address,
         } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let mut router = Router::new(socket);
+            let mut network = ControlNetwork::new(socket);
 
             for pgn in pgn {
-                router.add_pgn_filter(pgn);
+                network.add_pgn_filter(pgn);
             }
             for priority in priority {
-                router.add_priority_filter(priority);
+                network.add_priority_filter(priority);
             }
             for addr in address
                 .iter()
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                router.add_address_filter(addr?);
+                network.add_address_filter(addr?);
             }
 
-            analyze_frames(router).await?;
+            analyze_frames(network).await?;
         }
     }
 

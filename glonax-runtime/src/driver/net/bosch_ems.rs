@@ -55,36 +55,36 @@ impl super::J1939Unit for BoschEngineManagementSystem {
     async fn setup(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.setup(ctx, router, runtime_state).await
+        self.ems.setup(ctx, network, runtime_state).await
     }
 
     async fn teardown(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.teardown(ctx, router, runtime_state).await
+        self.ems.teardown(ctx, network, runtime_state).await
     }
 
     async fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.try_accept(ctx, router, runtime_state).await
+        self.ems.try_accept(ctx, network, runtime_state).await
     }
 
     async fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-        router: &crate::net::Router,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.tick(ctx, router, runtime_state).await
+        self.ems.tick(ctx, network, runtime_state).await
     }
 }
