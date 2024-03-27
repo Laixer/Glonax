@@ -14,8 +14,12 @@ mod joystick;
 enum ControlMode {
     /// Xbox controller.
     Xbox,
-    /// Logitech joystick.
-    Logitech,
+    /// Logitech joystick (solo mode).
+    LogitechSolo,
+    /// Logitech joystick (right mode).
+    LogitechRight,
+    /// Logitech joystick (left mode).
+    LogitechLeft,
 }
 
 #[derive(Parser)]
@@ -107,7 +111,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
     let mut input_device: Box<dyn crate::gamepad::InputDevice> = match args.mode {
         ControlMode::Xbox => Box::<gamepad::XboxController>::default(),
-        ControlMode::Logitech => Box::new(gamepad::LogitechJoystick::right_mode()),
+        ControlMode::LogitechSolo => Box::new(gamepad::LogitechJoystick::solo_mode()),
+        ControlMode::LogitechRight => Box::new(gamepad::LogitechJoystick::right_mode()),
+        ControlMode::LogitechLeft => Box::new(gamepad::LogitechJoystick::left_mode()),
     };
 
     let mut input_state = input::InputState {
@@ -145,13 +151,8 @@ async fn run(args: Args) -> anyhow::Result<()> {
             if let Some(motion) = input_state.try_from(code) {
                 log::trace!("{}", motion);
 
-                if let Err(e) = client.send_packet(&motion).await {
-                    log::error!("Failed to write to socket: {}", e);
-                    break;
-                }
+                client.send_packet(&motion).await?
             }
         }
     }
-
-    Ok(())
 }
