@@ -4,11 +4,19 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::{Parser, ValueHint};
+use clap::{Parser, ValueEnum, ValueHint};
 
 mod gamepad;
 mod input;
 mod joystick;
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum ControlMode {
+    /// Xbox controller.
+    Xbox,
+    /// Logitech joystick.
+    Logitech,
+}
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -27,6 +35,9 @@ struct Args {
     /// Input commands will translate to the full motion range.
     #[arg(long)]
     full_motion: bool,
+    /// Control mode.
+    #[arg(long)]
+    mode: ControlMode,
     /// Quiet output (no logging).
     #[arg(long)]
     quiet: bool,
@@ -79,8 +90,6 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(args: Args) -> anyhow::Result<()> {
-    use crate::gamepad::InputDevice;
-
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     let mut address = args.address.clone();
@@ -95,8 +104,11 @@ async fn run(args: Args) -> anyhow::Result<()> {
         .unwrap();
 
     let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
-    let mut input_device = gamepad::XboxController::default();
-    // let mut input_device = gamepad::LogitechJoystick::solo_mode();
+
+    let mut input_device: Box<dyn crate::gamepad::InputDevice> = match args.mode {
+        ControlMode::Xbox => Box::<gamepad::XboxController>::default(),
+        ControlMode::Logitech => Box::new(gamepad::LogitechJoystick::right_mode()),
+    };
 
     let mut input_state = input::InputState {
         drive_lock: false,
