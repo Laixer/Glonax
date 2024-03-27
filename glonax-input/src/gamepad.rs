@@ -122,19 +122,27 @@ impl InputDevice for LogitechJoystick {
             Event {
                 ty: EventType::Axis(1),
                 ..
-            } => Some(Scancode::Boom(if event.value.is_negative() {
-                event.value.ramp(3_500)
+            } => Some(if self.mode == LogitechJoystickMode::Right {
+                Scancode::Boom(if event.value.is_negative() {
+                    event.value.ramp(3_500)
+                } else {
+                    (event.value / 2).ramp(1_750)
+                })
             } else {
-                (event.value / 2).ramp(1_750)
-            })),
+                Scancode::Arm((event.value / 2).ramp(1_500))
+            }),
             Event {
                 ty: EventType::Axis(0),
                 ..
-            } => Some(Scancode::Attachment(if event.value.is_negative() {
-                (event.value / 2).ramp(2_000)
+            } => Some(if self.mode == LogitechJoystickMode::Right {
+                Scancode::Attachment(if event.value.is_negative() {
+                    (event.value / 2).ramp(2_000)
+                } else {
+                    event.value.ramp(4_000)
+                })
             } else {
-                event.value.ramp(4_000)
-            })),
+                Scancode::Slew((event.value / 2).ramp(1_000))
+            }),
             Event {
                 ty: EventType::Button(1),
                 value,
