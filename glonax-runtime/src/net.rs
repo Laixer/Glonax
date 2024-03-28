@@ -97,8 +97,6 @@ pub struct ControlNetwork {
     filter_address: Vec<u8>,
     /// The fixed frame size.
     fix_frame_size: bool,
-    // / Source address.
-    // source_address: u8,
     /// ECU Name.
     name: Name,
 }
@@ -113,7 +111,6 @@ impl ControlNetwork {
             filter_pgn: vec![],
             filter_address: vec![],
             fix_frame_size: true,
-            // source_address: 0x27,
             name: *name,
         }
     }
@@ -160,12 +157,6 @@ impl ControlNetwork {
     pub fn take(&mut self) -> Option<Frame> {
         self.frame.take()
     }
-
-    // / Return source address.
-    // #[inline]
-    // pub fn source_address(&self) -> u8 {
-    //     self.source_address
-    // }
 
     /// Return the name of the ECU.
     #[inline]

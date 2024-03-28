@@ -42,6 +42,12 @@ pub struct CanDriverConfig {
     pub driver_type: String,
 }
 
+impl CanDriverConfig {
+    pub fn to_net_driver(&self, default_da: u8) -> Result<NetDriver, ()> {
+        NetDriver::factory(&self.driver_type, self.da, self.sa.unwrap_or(default_da))
+    }
+}
+
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct NetworkConfig {
     /// CAN network interface.
@@ -84,18 +90,13 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             crate::driver::VehicleManagementSystem::new(config.address),
         ));
 
-        for driver in &config.driver {
-            let destination = driver.da;
-            let source = driver.sa.unwrap_or(config.address);
-            match NetDriver::factory(&driver.driver_type, destination, source) {
-                Ok(driver) => {
-                    drivers.register_driver(driver);
-                }
-                Err(()) => {
-                    log::error!("Failed to register driver: {}", driver.driver_type);
-                }
-            }
-        }
+        config.driver.iter().for_each(|driver| {
+            drivers.register_driver(
+                driver
+                    .to_net_driver(config.address)
+                    .expect("Failed to register driver"),
+            );
+        });
 
         Self {
             interface: config.interface,
@@ -178,18 +179,13 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
         let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
         let mut drivers = NetDriverCollection::default();
-        for driver in &config.driver {
-            let destination = driver.da;
-            let source = driver.sa.unwrap_or(config.address);
-            match NetDriver::factory(&driver.driver_type, destination, source) {
-                Ok(driver) => {
-                    drivers.register_driver(driver);
-                }
-                Err(()) => {
-                    log::error!("Failed to register driver: {}", driver.driver_type);
-                }
-            }
-        }
+        config.driver.iter().for_each(|driver| {
+            drivers.register_driver(
+                driver
+                    .to_net_driver(config.address)
+                    .expect("Failed to register driver"),
+            );
+        });
 
         Self {
             interface: config.interface,
@@ -231,18 +227,13 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
         let mut drivers = NetDriverCollection::default();
-        for driver in &config.driver {
-            let destination = driver.da;
-            let source = driver.sa.unwrap_or(config.address);
-            match NetDriver::factory(&driver.driver_type, destination, source) {
-                Ok(driver) => {
-                    drivers.register_driver(driver);
-                }
-                Err(()) => {
-                    log::error!("Failed to register driver: {}", driver.driver_type);
-                }
-            }
-        }
+        config.driver.iter().for_each(|driver| {
+            drivers.register_driver(
+                driver
+                    .to_net_driver(config.address)
+                    .expect("Failed to register driver"),
+            );
+        });
 
         Self {
             interface: config.interface,
