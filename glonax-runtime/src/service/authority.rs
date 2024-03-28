@@ -51,10 +51,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     where
         Self: Sized,
     {
-        // TODO: Let the router bind to a socket.
-        let socket =
-            crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
-        let network = crate::net::ControlNetwork::new(socket);
+        let network = crate::net::ControlNetwork::bind(&config.interface).unwrap();
 
         let mut drivers = NetDriverCollection::default();
         drivers.register_driver(NetDriver::VehicleManagementSystem(
@@ -150,9 +147,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     where
         Self: Sized,
     {
-        let socket =
-            crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
-        let network = crate::net::ControlNetwork::new(socket);
+        let network = crate::net::ControlNetwork::bind(&config.interface).unwrap();
 
         let mut drivers = NetDriverCollection::default();
         for driver in &config.driver {
@@ -207,9 +202,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
     where
         Self: Sized,
     {
-        let socket =
-            crate::net::CANSocket::bind(&crate::net::SockAddrCAN::new(&config.interface)).unwrap();
-        let network = crate::net::ControlNetwork::new(socket);
+        let network = crate::net::ControlNetwork::bind(&config.interface).unwrap();
 
         let mut drivers = NetDriverCollection::default();
 

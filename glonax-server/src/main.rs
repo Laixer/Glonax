@@ -154,7 +154,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         for j1939_net_config in &config.j1939 {
             runtime
                 .schedule_net_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
-
             runtime.schedule_net2_service::<service::NetworkAuthorityTx, _>(
                 j1939_net_config.clone(),
                 Duration::from_millis(10),

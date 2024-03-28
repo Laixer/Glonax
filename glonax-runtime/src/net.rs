@@ -88,7 +88,6 @@ const J1939_NAME_FUNCTION: u8 = 0x1C;
 /// J1939 name vehicle system.
 const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 
-// TODO: Merge wit ControlNetwork?
 /// The router is used to route incoming frames to compatible services.
 ///
 /// Frames are routed based on the PGN and the ECU address. The router
@@ -111,14 +110,14 @@ pub struct ControlNetwork {
     filter_address: Vec<u8>,
     /// The fixed frame size.
     fix_frame_size: bool,
-    /// Source address.
-    source_address: u8,
+    // / Source address.
+    // source_address: u8,
     /// ECU Name.
     name: Name,
 }
 
 impl ControlNetwork {
-    /// Construct a new router.
+    /// Construct a new control network.
     pub fn new(socket: CANSocket) -> Self {
         Self {
             socket,
@@ -127,7 +126,7 @@ impl ControlNetwork {
             filter_pgn: vec![],
             filter_address: vec![],
             fix_frame_size: true,
-            source_address: 0x27,
+            // source_address: 0x27,
             name: NameBuilder::default()
                 .identity_number(0x1)
                 .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
@@ -137,6 +136,12 @@ impl ControlNetwork {
                 .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
                 .build(),
         }
+    }
+
+    /// Construct a new control network and bind to an interface.
+    pub fn bind(interface: &str) -> io::Result<Self> {
+        let socket = CANSocket::bind(&SockAddrCAN::new(interface))?;
+        Ok(Self::new(socket))
     }
 
     /// Add a filter based on priority.
@@ -176,11 +181,11 @@ impl ControlNetwork {
         self.frame.take()
     }
 
-    /// Return source address.
-    #[inline]
-    pub fn source_address(&self) -> u8 {
-        self.source_address
-    }
+    // / Return source address.
+    // #[inline]
+    // pub fn source_address(&self) -> u8 {
+    //     self.source_address
+    // }
 
     /// Return the name of the ECU.
     #[inline]
