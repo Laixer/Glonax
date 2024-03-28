@@ -1,5 +1,10 @@
 [Match]
 Name=can*
+Type=can
+
+[Link]
+RequiredForOnline=carrier
+ActivationPolicy=always-up
 
 [CAN]
 BitRate=250K
