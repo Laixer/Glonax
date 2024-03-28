@@ -48,12 +48,22 @@ pub struct NetworkConfig {
     pub interface: String,
     /// Address.
     pub address: u8,
+    /// Unit update interval.
+    #[serde(default = "NetworkConfig::default_interval")]
+    pub interval: u64,
     /// Network async transmit.
+    #[serde(default)]
     pub authority_atx: bool,
     /// Name.
     pub name: J1939Name,
     /// Driver configuration.
     pub driver: Vec<CanDriverConfig>,
+}
+
+impl NetworkConfig {
+    fn default_interval() -> u64 {
+        10
+    }
 }
 
 pub struct NetworkAuthorityRx {

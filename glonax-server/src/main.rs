@@ -155,7 +155,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
                 .schedule_net_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
             runtime.schedule_net2_service::<service::NetworkAuthorityTx, _>(
                 j1939_net_config.clone(),
-                Duration::from_millis(10),
+                Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
             );
 
             if j1939_net_config.authority_atx {

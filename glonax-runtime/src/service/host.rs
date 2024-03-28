@@ -4,7 +4,7 @@ use crate::runtime::{Service, SharedOperandState};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct HostConfig {
-    // Host update interval.
+    /// Host update interval.
     #[serde(default = "HostConfig::default_interval")]
     pub interval: u64,
 }
