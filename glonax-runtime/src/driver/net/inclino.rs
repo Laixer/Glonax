@@ -2,6 +2,14 @@ use j1939::{protocol, Frame, PGN};
 
 use crate::net::Parsable;
 
+#[derive(Debug, Clone)]
+pub enum SensorOrientation {
+    YPositive,
+    YNegative,
+    XPositive,
+    XNegative,
+}
+
 // TODO: Missing a few fields.
 #[derive(Debug, Clone)]
 pub struct ProcessDataMessage {
@@ -12,7 +20,11 @@ pub struct ProcessDataMessage {
     /// Slope lat (X-axis).
     pub slope_lat: u16,
     /// Temperature.
-    pub temperature: u16,
+    pub temperature: f32,
+    /// Sensor is upside down.
+    pub upside_down: bool,
+    /// Sensor orientation.
+    pub orientation: SensorOrientation,
 }
 
 impl ProcessDataMessage {
@@ -22,7 +34,9 @@ impl ProcessDataMessage {
             _source_address: frame.id().source_address(),
             slope_long: 0,
             slope_lat: 0,
-            temperature: 0,
+            temperature: 0.0,
+            upside_down: false,
+            orientation: SensorOrientation::YPositive,
         };
 
         let slope_long_bytes = &frame.pdu()[0..2];
@@ -36,8 +50,36 @@ impl ProcessDataMessage {
 
         let temperature_bytes = &frame.pdu()[4..6];
         if temperature_bytes != [0xff; 2] {
-            message.temperature = u16::from_le_bytes(temperature_bytes.try_into().unwrap());
+            let temperature = u16::from_le_bytes(temperature_bytes.try_into().unwrap());
+            message.temperature = temperature as f32 / 10.0;
         };
+
+        // let overflow = match frame.pdu()[6] & 0b11 {
+        //     0 => false,
+        //     1 => true,
+        //     _ => unimplemented!(),
+        // }
+        message.upside_down = match frame.pdu()[6] >> 2 & 0b11 {
+            0 => false,
+            1 => true,
+            _ => unimplemented!(),
+        };
+        let error = match frame.pdu()[6] >> 4 {
+            0 => false,
+            0xE => true, // Invalid configuration
+            0xD => true, // Reading error when accessing to the internal sensor components.
+            _ => unimplemented!(),
+        };
+
+        if frame.pdu()[7] != 0xff {
+            message.orientation = match frame.pdu()[7] {
+                0 => SensorOrientation::YPositive,
+                2 => SensorOrientation::YNegative,
+                4 => SensorOrientation::XPositive,
+                6 => SensorOrientation::XNegative,
+                _ => unimplemented!(),
+            };
+        }
 
         message
     }
