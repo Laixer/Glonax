@@ -29,6 +29,17 @@ pub(crate) mod consts {
     pub const J1939_ADDRESS_ENCODER3: u8 = 0x6D;
     /// Kuebler Inclinometer 0 J1939 address.
     pub const J1939_ADDRESS_IMU0: u8 = 0x7A;
+
+    /// J1939 name manufacturer code.
+    pub const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
+    /// J1939 name function instance.
+    pub const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
+    /// J1939 name ECU instance.
+    pub const J1939_NAME_ECU_INSTANCE: u8 = 0;
+    /// J1939 name function.
+    pub const J1939_NAME_FUNCTION: u8 = 0x1C;
+    /// J1939 name vehicle system.
+    pub const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
 }
 
 fn style_address(address: u8) -> String {
@@ -1006,7 +1017,15 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Diagnostic => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let network = ControlNetwork::new(socket);
+            let name = glonax::j1939::NameBuilder::default()
+                .identity_number(0x1)
+                .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
+                .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
+                .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
+                .function(consts::J1939_NAME_FUNCTION)
+                .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
+                .build();
+            let network = ControlNetwork::new(socket, &name);
 
             diagnose(network).await?;
         }
@@ -1016,7 +1035,15 @@ async fn main() -> anyhow::Result<()> {
             address,
         } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let mut network = ControlNetwork::new(socket).set_fix_frame_size(false);
+            let name = glonax::j1939::NameBuilder::default()
+                .identity_number(0x1)
+                .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
+                .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
+                .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
+                .function(consts::J1939_NAME_FUNCTION)
+                .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
+                .build();
+            let mut network = ControlNetwork::new(socket, &name).set_fix_frame_size(false);
 
             for pgn in pgn {
                 network.add_pgn_filter(pgn);
@@ -1040,7 +1067,15 @@ async fn main() -> anyhow::Result<()> {
             address,
         } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let mut network = ControlNetwork::new(socket);
+            let name = glonax::j1939::NameBuilder::default()
+                .identity_number(0x1)
+                .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
+                .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
+                .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
+                .function(consts::J1939_NAME_FUNCTION)
+                .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
+                .build();
+            let mut network = ControlNetwork::new(socket, &name);
 
             for pgn in pgn {
                 network.add_pgn_filter(pgn);

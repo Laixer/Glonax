@@ -1,6 +1,7 @@
 use crate::{
     driver::net::{J1939Unit, NetDriver, NetDriverCollection},
-    runtime::{Service, SharedOperandState},
+    net::ControlNetwork,
+    runtime::{Service, ServiceContext, SharedOperandState},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -15,6 +16,19 @@ pub struct J1939Name {
     pub function: u8,
     /// Vehicle system.
     pub vehicle_system: u8,
+}
+
+impl From<J1939Name> for j1939::Name {
+    fn from(name: J1939Name) -> Self {
+        j1939::NameBuilder::default()
+            .identity_number(0x1)
+            .manufacturer_code(name.manufacturer_code)
+            .function_instance(name.function_instance)
+            .ecu_instance(name.ecu_instance)
+            .function(name.function)
+            .vehicle_system(name.vehicle_system)
+            .build()
+    }
 }
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -34,6 +48,8 @@ pub struct NetworkConfig {
     pub interface: String,
     /// Address.
     pub address: u8,
+    /// Network async transmit.
+    pub authority_atx: bool,
     /// Name.
     pub name: J1939Name,
     /// Driver configuration.
@@ -42,7 +58,7 @@ pub struct NetworkConfig {
 
 pub struct NetworkAuthorityRx {
     interface: String,
-    network: crate::net::ControlNetwork,
+    network: ControlNetwork,
     drivers: NetDriverCollection,
 }
 
@@ -51,7 +67,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     where
         Self: Sized,
     {
-        let network = crate::net::ControlNetwork::bind(&config.interface).unwrap();
+        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
         let mut drivers = NetDriverCollection::default();
         drivers.register_driver(NetDriver::VehicleManagementSystem(
@@ -59,7 +75,9 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ));
 
         for driver in &config.driver {
-            match NetDriver::factory(&driver.driver_type, driver.da, driver.sa.unwrap_or(config.address)) {
+            let destination = driver.da;
+            let source = driver.sa.unwrap_or(config.address);
+            match NetDriver::factory(&driver.driver_type, destination, source) {
                 Ok(driver) => {
                     drivers.register_driver(driver);
                 }
@@ -76,8 +94,8 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("authority_rx", Some(self.interface.clone()))
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("authority_rx", Some(self.interface.clone()))
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
@@ -138,7 +156,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 
 pub struct NetworkAuthorityTx {
     interface: String,
-    network: crate::net::ControlNetwork,
+    network: ControlNetwork,
     drivers: NetDriverCollection,
 }
 
@@ -147,15 +165,13 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     where
         Self: Sized,
     {
-        let network = crate::net::ControlNetwork::bind(&config.interface).unwrap();
+        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
         let mut drivers = NetDriverCollection::default();
         for driver in &config.driver {
-            match NetDriver::factory(
-                &driver.driver_type,
-                driver.da,
-                driver.sa.unwrap_or(config.address),
-            ) {
+            let destination = driver.da;
+            let source = driver.sa.unwrap_or(config.address);
+            match NetDriver::factory(&driver.driver_type, destination, source) {
                 Ok(driver) => {
                     drivers.register_driver(driver);
                 }
@@ -172,8 +188,8 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
         }
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("authority_tx", Some(self.interface.clone()))
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("authority_tx", Some(self.interface.clone()))
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {
@@ -193,7 +209,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
 
 pub struct NetworkAuthorityAtx {
     interface: String,
-    network: crate::net::ControlNetwork,
+    network: ControlNetwork,
     drivers: NetDriverCollection,
 }
 
@@ -202,13 +218,21 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
     where
         Self: Sized,
     {
-        let network = crate::net::ControlNetwork::bind(&config.interface).unwrap();
+        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
         let mut drivers = NetDriverCollection::default();
-
-        // TODO: Get from config.
-        let hcu0 = crate::driver::HydraulicControlUnit::new(0x4a, config.address);
-        drivers.register_driver(NetDriver::HydraulicControlUnit(hcu0));
+        for driver in &config.driver {
+            let destination = driver.da;
+            let source = driver.sa.unwrap_or(config.address);
+            match NetDriver::factory(&driver.driver_type, destination, source) {
+                Ok(driver) => {
+                    drivers.register_driver(driver);
+                }
+                Err(()) => {
+                    log::error!("Failed to register driver: {}", driver.driver_type);
+                }
+            }
+        }
 
         Self {
             interface: config.interface,
@@ -217,8 +241,8 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         }
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("authority_atx", Some(self.interface.clone()))
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("authority_atx", Some(self.interface.clone()))
     }
 
     // TODO: This hasnt been been worked out but the queue must be awaited in the runtime.

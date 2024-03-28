@@ -150,7 +150,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::Gnss, _>(gnss_config);
         }
 
-        // TODO: Check if RX,TX,ATX services should be scheduled.
         for j1939_net_config in &config.j1939 {
             runtime
                 .schedule_net_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
@@ -158,13 +157,12 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
                 j1939_net_config.clone(),
                 Duration::from_millis(10),
             );
-        }
 
-        let j1939_index = 1;
-        if j1939_index < config.j1939.len() {
-            runtime.schedule_net3_service::<service::NetworkAuthorityAtx, _>(
-                config.j1939[j1939_index].clone(),
-            );
+            if j1939_net_config.authority_atx {
+                runtime.schedule_net3_service::<service::NetworkAuthorityAtx, _>(
+                    j1939_net_config.clone(),
+                );
+            }
         }
     }
 

@@ -1,6 +1,6 @@
 use std::io;
 
-use j1939::{Frame, FrameBuilder, IdBuilder, Name, NameBuilder, PGN};
+use j1939::{Frame, FrameBuilder, IdBuilder, Name, PGN};
 
 pub use crate::can::{CANSocket, SockAddrCAN};
 
@@ -75,19 +75,6 @@ pub trait Parsable<T>: Send + Sync {
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 
-// TODO: Get from configuration.
-
-/// J1939 name manufacturer code.
-const J1939_NAME_MANUFACTURER_CODE: u16 = 0x717;
-/// J1939 name function instance.
-const J1939_NAME_FUNCTION_INSTANCE: u8 = 6;
-/// J1939 name ECU instance.
-const J1939_NAME_ECU_INSTANCE: u8 = 0;
-/// J1939 name function.
-const J1939_NAME_FUNCTION: u8 = 0x1C;
-/// J1939 name vehicle system.
-const J1939_NAME_VEHICLE_SYSTEM: u8 = 2;
-
 /// The router is used to route incoming frames to compatible services.
 ///
 /// Frames are routed based on the PGN and the ECU address. The router
@@ -118,7 +105,7 @@ pub struct ControlNetwork {
 
 impl ControlNetwork {
     /// Construct a new control network.
-    pub fn new(socket: CANSocket) -> Self {
+    pub fn new(socket: CANSocket, name: &Name) -> Self {
         Self {
             socket,
             frame: None,
@@ -127,21 +114,14 @@ impl ControlNetwork {
             filter_address: vec![],
             fix_frame_size: true,
             // source_address: 0x27,
-            name: NameBuilder::default()
-                .identity_number(0x1)
-                .manufacturer_code(J1939_NAME_MANUFACTURER_CODE)
-                .function_instance(J1939_NAME_FUNCTION_INSTANCE)
-                .ecu_instance(J1939_NAME_ECU_INSTANCE)
-                .function(J1939_NAME_FUNCTION)
-                .vehicle_system(J1939_NAME_VEHICLE_SYSTEM)
-                .build(),
+            name: *name,
         }
     }
 
     /// Construct a new control network and bind to an interface.
-    pub fn bind(interface: &str) -> io::Result<Self> {
+    pub fn bind(interface: &str, name: &Name) -> io::Result<Self> {
         let socket = CANSocket::bind(&SockAddrCAN::new(interface))?;
-        Ok(Self::new(socket))
+        Ok(Self::new(socket, name))
     }
 
     /// Add a filter based on priority.
