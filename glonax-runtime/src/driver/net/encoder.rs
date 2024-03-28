@@ -2,6 +2,7 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 
+// TODO: Should this be EncoderStatus?
 #[derive(Debug, Clone, PartialEq)]
 pub enum EncoderState {
     /// No error.

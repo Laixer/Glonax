@@ -2,12 +2,44 @@ use j1939::{protocol, Frame, PGN};
 
 use crate::net::Parsable;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum InclinometerStatus {
+    /// No error.
+    NoError,
+    /// Invalid configuration.
+    InvalidConfiguration,
+    /// General error in sensor.
+    GeneralSensorError,
+    /// Unknown error.
+    Other,
+}
+
+impl std::fmt::Display for InclinometerStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InclinometerStatus::NoError => write!(f, "no error"),
+            InclinometerStatus::InvalidConfiguration => write!(f, "invalid configuration"),
+            InclinometerStatus::GeneralSensorError => write!(f, "general error in sensor"),
+            InclinometerStatus::Other => write!(f, "unknown error"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Overflow {
+    ValidRange,
+    OutsidePositiveRange,
+    OutsideNegativeRange,
+    Other,
+}
+
 #[derive(Debug, Clone)]
 pub enum SensorOrientation {
     YPositive,
     YNegative,
     XPositive,
     XNegative,
+    Other,
 }
 
 // TODO: Missing a few fields.
@@ -23,8 +55,12 @@ pub struct ProcessDataMessage {
     pub temperature: f32,
     /// Sensor is upside down.
     pub upside_down: bool,
+    /// Sensor overflow.
+    pub overflow: Overflow,
     /// Sensor orientation.
     pub orientation: SensorOrientation,
+    /// Sensor status.
+    pub status: InclinometerStatus,
 }
 
 impl ProcessDataMessage {
@@ -36,7 +72,9 @@ impl ProcessDataMessage {
             slope_lat: 0,
             temperature: 0.0,
             upside_down: false,
+            overflow: Overflow::ValidRange,
             orientation: SensorOrientation::YPositive,
+            status: InclinometerStatus::NoError,
         };
 
         let slope_long_bytes = &frame.pdu()[0..2];
@@ -54,22 +92,27 @@ impl ProcessDataMessage {
             message.temperature = temperature as f32 / 10.0;
         };
 
-        // let overflow = match frame.pdu()[6] & 0b11 {
-        //     0 => false,
-        //     1 => true,
-        //     _ => unimplemented!(),
-        // }
-        message.upside_down = match frame.pdu()[6] >> 2 & 0b11 {
-            0 => false,
-            1 => true,
-            _ => unimplemented!(),
-        };
-        let error = match frame.pdu()[6] >> 4 {
-            0 => false,
-            0xE => true, // Invalid configuration
-            0xD => true, // Reading error when accessing to the internal sensor components.
-            _ => unimplemented!(),
-        };
+        if frame.pdu()[6] != 0xff {
+            message.overflow = match frame.pdu()[6] & 0b11 {
+                0 => Overflow::ValidRange,
+                1 => Overflow::OutsidePositiveRange,
+                2 => Overflow::OutsideNegativeRange,
+                _ => Overflow::Other,
+            };
+
+            message.upside_down = match frame.pdu()[6] >> 2 & 0b11 {
+                0 => false,
+                1 => true,
+                _ => false,
+            };
+
+            message.status = match frame.pdu()[6] >> 4 {
+                0x0 => InclinometerStatus::NoError,
+                0xe => InclinometerStatus::InvalidConfiguration,
+                0xed => InclinometerStatus::GeneralSensorError,
+                _ => InclinometerStatus::Other,
+            };
+        }
 
         if frame.pdu()[7] != 0xff {
             message.orientation = match frame.pdu()[7] {
@@ -77,7 +120,7 @@ impl ProcessDataMessage {
                 2 => SensorOrientation::YNegative,
                 4 => SensorOrientation::XPositive,
                 6 => SensorOrientation::XNegative,
-                _ => unimplemented!(),
+                _ => SensorOrientation::Other,
             };
         }
 
@@ -89,8 +132,8 @@ impl std::fmt::Display for ProcessDataMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Slope Long: {:>5}; Slope Lat: {:>5}; Temperature: {:>5}",
-            self.slope_long, self.slope_lat, self.temperature
+            "Slope Long: {:>5}; Slope Lat: {:>5}; Temperature: {:>5.2}°; Overflow: {:?}; Orientation: {:?}; Status: {}",
+            self.slope_long, self.slope_lat, self.temperature, self.overflow, self.orientation, self.status
         )
     }
 }
