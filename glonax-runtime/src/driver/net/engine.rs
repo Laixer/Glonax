@@ -291,8 +291,12 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
 }
 
 impl super::J1939Unit for EngineManagementSystem {
-    fn name(&self) -> &str {
-        "Engine management system"
+    fn vendor(&self) -> &str {
+        "j1939"
+    }
+
+    fn product(&self) -> &str {
+        "ecm"
     }
 
     fn destination(&self) -> u8 {

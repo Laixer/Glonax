@@ -112,17 +112,19 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             log::debug!(
-                "[{}:0x{:X}] Setup network driver '{}'",
+                "[{}:0x{:X}] Setup network driver '{}:{}'",
                 self.interface,
                 drv.destination(),
-                drv.name()
+                drv.vendor(),
+                drv.product()
             );
             if let Err(error) = drv.setup(ctx, &self.network, runtime_state.clone()).await {
                 log::error!(
-                    "[{}:0x{:X}] {}: {}",
+                    "[{}:0x{:X}] {}:{}: {}",
                     self.interface,
                     drv.destination(),
-                    drv.name(),
+                    drv.vendor(),
+                    drv.product(),
                     error
                 );
             }
@@ -146,10 +148,11 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                     .await
                 {
                     log::error!(
-                        "[{}:0x{:X}] {}: {}",
+                        "[{}:0x{:X}] {}:{}: {}",
                         self.interface,
                         drv.destination(),
-                        drv.name(),
+                        drv.vendor(),
+                        drv.product(),
                         error
                     );
                 }
@@ -202,10 +205,11 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
                 log::error!(
-                    "[{}:0x{:X}] {}: {}",
+                    "[{}:0x{:X}] {}:{}: {}",
                     self.interface,
                     drv.destination(),
-                    drv.name(),
+                    drv.vendor(),
+                    drv.product(),
                     error
                 );
             }
@@ -260,10 +264,11 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
                     .await
                 {
                     log::error!(
-                        "[{}:0x{:X}] {}: {}",
+                        "[{}:0x{:X}] {}:{}: {}",
                         self.interface,
                         drv.destination(),
-                        drv.name(),
+                        drv.vendor(),
+                        drv.product(),
                         error
                     );
                 }

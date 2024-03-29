@@ -40,8 +40,12 @@ impl Parsable<EngineMessage> for BoschEngineManagementSystem {
 }
 
 impl super::J1939Unit for BoschEngineManagementSystem {
-    fn name(&self) -> &str {
-        "Bosch ECM"
+    fn vendor(&self) -> &str {
+        "bosch"
+    }
+
+    fn product(&self) -> &str {
+        "ecm"
     }
 
     fn destination(&self) -> u8 {

@@ -185,8 +185,12 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
 }
 
 impl super::J1939Unit for KueblerEncoder {
-    fn name(&self) -> &str {
-        "Kubler encoder"
+    fn vendor(&self) -> &str {
+        "kübler"
+    }
+
+    fn product(&self) -> &str {
+        "encoder"
     }
 
     fn destination(&self) -> u8 {

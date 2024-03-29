@@ -436,8 +436,12 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
 }
 
 impl super::J1939Unit for HydraulicControlUnit {
-    fn name(&self) -> &str {
-        "Hydraulic control unit"
+    fn vendor(&self) -> &str {
+        "laixer"
+    }
+
+    fn product(&self) -> &str {
+        "hcu"
     }
 
     fn destination(&self) -> u8 {
@@ -501,9 +505,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                     ctx.rx_mark();
 
                     log::debug!(
-                        "[xcan:0x{:X}] {}: Firmware version: {}.{}.{}",
+                        "[xcan:0x{:X}] {}:{}: Firmware version: {}.{}.{}",
                         self.destination(),
-                        self.name(),
+                        self.vendor(),
+                        self.product(),
                         version.0,
                         version.1,
                         version.2
@@ -513,9 +518,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                     ctx.rx_mark();
 
                     log::debug!(
-                        "[xcan:0x{:X}] {}: Address claimed: {}",
+                        "[xcan:0x{:X}] {}:{}: Address claimed: {}",
                         self.destination(),
-                        self.name(),
+                        self.vendor(),
+                        self.product(),
                         name
                     );
                 }

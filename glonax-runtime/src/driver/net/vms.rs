@@ -29,8 +29,12 @@ impl Parsable<PGN> for VehicleManagementSystem {
 }
 
 impl super::J1939Unit for VehicleManagementSystem {
-    fn name(&self) -> &str {
-        "Vehicle management system"
+    fn vendor(&self) -> &str {
+        "laixer"
+    }
+
+    fn product(&self) -> &str {
+        "vms"
     }
 
     fn destination(&self) -> u8 {

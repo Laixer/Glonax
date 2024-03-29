@@ -49,15 +49,27 @@ impl NetDriver {
 }
 
 impl J1939Unit for NetDriver {
-    fn name(&self) -> &str {
+    fn vendor(&self) -> &str {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.name(),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.name(),
-            Self::VolvoD7E(volvo) => volvo.name(),
-            Self::BoschEngineManagementSystem(bosch) => bosch.name(),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.name(),
-            Self::VehicleManagementSystem(responder) => responder.name(),
-            Self::VehicleControlUnit(vcu) => vcu.name(),
+            Self::KueblerEncoder(encoder) => encoder.vendor(),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.vendor(),
+            Self::VolvoD7E(volvo) => volvo.vendor(),
+            Self::BoschEngineManagementSystem(bosch) => bosch.vendor(),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.vendor(),
+            Self::VehicleManagementSystem(responder) => responder.vendor(),
+            Self::VehicleControlUnit(vcu) => vcu.vendor(),
+        }
+    }
+
+    fn product(&self) -> &str {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.product(),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.product(),
+            Self::VolvoD7E(volvo) => volvo.product(),
+            Self::BoschEngineManagementSystem(bosch) => bosch.product(),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.product(),
+            Self::VehicleManagementSystem(responder) => responder.product(),
+            Self::VehicleControlUnit(vcu) => vcu.product(),
         }
     }
 
@@ -206,12 +218,18 @@ impl J1939Unit for NetDriver {
                 bosch.trigger(ctx, network, runtime_state, trigger).await
             }
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.trigger(ctx, network, runtime_state, trigger).await
+                hydraulic
+                    .trigger(ctx, network, runtime_state, trigger)
+                    .await
             }
             Self::VehicleManagementSystem(responder) => {
-                responder.trigger(ctx, network, runtime_state, trigger).await
+                responder
+                    .trigger(ctx, network, runtime_state, trigger)
+                    .await
             }
-            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, network, runtime_state, trigger).await,
+            Self::VehicleControlUnit(vcu) => {
+                vcu.trigger(ctx, network, runtime_state, trigger).await
+            }
         }
     }
 }
@@ -300,8 +318,11 @@ impl std::error::Error for J1939UnitError {}
 
 // FUTURE: Maybe move to runtime or a network module?
 pub trait J1939Unit {
-    /// Get the name of the unit.
-    fn name(&self) -> &str;
+    /// Get the vendor of the unit.
+    fn vendor(&self) -> &str;
+
+    /// Get the product of the unit.
+    fn product(&self) -> &str;
 
     /// Get the destination address of the unit.
     fn destination(&self) -> u8;

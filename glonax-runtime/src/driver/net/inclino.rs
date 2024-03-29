@@ -176,8 +176,12 @@ impl Parsable<ProcessDataMessage> for KueblerInclinometer {
 }
 
 impl super::J1939Unit for KueblerInclinometer {
-    fn name(&self) -> &str {
-        "Kubler inclinometer"
+    fn vendor(&self) -> &str {
+        "kübler"
+    }
+
+    fn product(&self) -> &str {
+        "inclinometer"
     }
 
     fn destination(&self) -> u8 {
