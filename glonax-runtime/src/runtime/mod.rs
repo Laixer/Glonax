@@ -420,6 +420,31 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         });
     }
 
+    pub fn schedule_service_default<S>(&self, duration: std::time::Duration)
+    where
+        S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
+    {
+        let mut interval = tokio::time::interval(duration);
+
+        let mut service = S::new(crate::runtime::NullConfig);
+        let ctx = service.ctx();
+
+        let operand = self.operand.clone();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Starting '{}' service", ctx.name);
+        }
+
+        tokio::spawn(async move {
+            loop {
+                interval.tick().await;
+                service.tick(operand.clone()).await;
+            }
+        });
+    }
+
     // TODO: Component should be 'service' and not 'component'
     // TODO: Maybe copy MachineState to component state on each tick?
     // TODO: Pipeline should be a service.

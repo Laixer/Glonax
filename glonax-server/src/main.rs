@@ -137,14 +137,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     // TODO: Do we need a simulator?
     if config.is_simulation {
-        runtime.schedule_service::<service::EncoderSimulator, _>(
-            glonax::runtime::NullConfig,
-            Duration::from_millis(5),
-        );
-        runtime.schedule_service::<service::EngineSimulator, _>(
-            glonax::runtime::NullConfig,
-            Duration::from_millis(10),
-        );
+        runtime.schedule_service_default::<service::EncoderSimulator>(Duration::from_millis(5));
+        runtime.schedule_service_default::<service::EngineSimulator>(Duration::from_millis(10));
 
         runtime.schedule_motion_sink(device::sink_net_actuator_sim);
     } else {
@@ -176,10 +170,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     //     config.tcp_server.clone(),
     // );
 
-    runtime.schedule_service::<service::Announcer, _>(
-        glonax::runtime::NullConfig,
-        Duration::from_millis(1_000),
-    );
+    runtime.schedule_service_default::<service::Announcer>(Duration::from_millis(1_000));
 
     let mut pipe = service::Pipeline::new(config.clone(), instance);
 
