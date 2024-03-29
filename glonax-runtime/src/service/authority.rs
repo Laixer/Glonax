@@ -252,27 +252,20 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         ServiceContext::new("authority_atx", Some(self.interface.clone()))
     }
 
-    // TODO: This hasnt been been worked out but the queue must be awaited in the runtime.
     // TODO: Motion should be replaced by a more generic message type.
-    async fn on_event(
-        &mut self,
-        runtime_state: SharedOperandState,
-        mut motion_rx: crate::runtime::MotionReceiver,
-    ) {
-        while let Some(motion) = motion_rx.recv().await {
-            for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
-                if let Err(error) = drv
-                    .trigger(ctx, &self.network, runtime_state.clone(), &motion)
-                    .await
-                {
-                    log::error!(
-                        "[{}:0x{:X}] {}: {}",
-                        self.interface,
-                        drv.destination(),
-                        drv.name(),
-                        error
-                    );
-                }
+    async fn on_event(&mut self, runtime_state: SharedOperandState, motion: &crate::core::Motion) {
+        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+            if let Err(error) = drv
+                .trigger(ctx, &self.network, runtime_state.clone(), motion)
+                .await
+            {
+                log::error!(
+                    "[{}:0x{:X}] {}: {}",
+                    self.interface,
+                    drv.destination(),
+                    drv.name(),
+                    error
+                );
             }
         }
     }

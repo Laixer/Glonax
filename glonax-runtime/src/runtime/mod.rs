@@ -125,7 +125,7 @@ pub trait Service<Cnf> {
     fn on_event(
         &mut self,
         _runtime_state: SharedOperandState,
-        _motion_rx: MotionReceiver,
+        _motion: &crate::core::Motion,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -377,7 +377,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
-        let motion_rx = self.motion_rx.take().unwrap();
+        let mut motion_rx = self.motion_rx.take().unwrap();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -386,7 +386,9 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }
 
         tokio::spawn(async move {
-            service.on_event(operand, motion_rx).await;
+            while let Some(motion) = motion_rx.recv().await {
+                service.on_event(operand.clone(), &motion).await;
+            }
         });
     }
 
