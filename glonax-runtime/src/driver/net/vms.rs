@@ -29,13 +29,8 @@ impl Parsable<PGN> for VehicleManagementSystem {
 }
 
 impl super::J1939Unit for VehicleManagementSystem {
-    fn vendor(&self) -> &str {
-        "laixer"
-    }
-
-    fn product(&self) -> &str {
-        "vms"
-    }
+    const VENDOR: &'static str = "laixer";
+    const PRODUCT: &'static str = "vms";
 
     fn destination(&self) -> u8 {
         self.source_address

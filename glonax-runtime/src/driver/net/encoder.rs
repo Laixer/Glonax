@@ -185,13 +185,8 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
 }
 
 impl super::J1939Unit for KueblerEncoder {
-    fn vendor(&self) -> &str {
-        "kübler"
-    }
-
-    fn product(&self) -> &str {
-        "encoder"
-    }
+    const VENDOR: &'static str = "kübler";
+    const PRODUCT: &'static str = "encoder";
 
     fn destination(&self) -> u8 {
         self.destination_address

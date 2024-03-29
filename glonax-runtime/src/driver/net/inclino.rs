@@ -176,13 +176,8 @@ impl Parsable<ProcessDataMessage> for KueblerInclinometer {
 }
 
 impl super::J1939Unit for KueblerInclinometer {
-    fn vendor(&self) -> &str {
-        "kübler"
-    }
-
-    fn product(&self) -> &str {
-        "inclinometer"
-    }
+    const VENDOR: &'static str = "kübler";
+    const PRODUCT: &'static str = "inclinometer";
 
     fn destination(&self) -> u8 {
         self.destination_address

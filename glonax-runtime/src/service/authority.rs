@@ -37,14 +37,20 @@ pub struct CanDriverConfig {
     pub da: u8,
     /// Driver source.
     pub sa: Option<u8>,
-    /// Driver type.
-    #[serde(rename = "type")]
-    pub driver_type: String,
+    /// Vendor.
+    pub vendor: String,
+    /// Product.
+    pub product: String,
 }
 
 impl CanDriverConfig {
     pub fn to_net_driver(&self, default_da: u8) -> Result<NetDriver, ()> {
-        NetDriver::factory(&self.driver_type, self.da, self.sa.unwrap_or(default_da))
+        NetDriver::factory(
+            &self.vendor,
+            &self.product,
+            self.da,
+            self.sa.unwrap_or(default_da),
+        )
     }
 }
 
@@ -112,19 +118,17 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             log::debug!(
-                "[{}:0x{:X}] Setup network driver '{}:{}'",
+                "[{}:0x{:X}] Setup network driver '{}'",
                 self.interface,
                 drv.destination(),
-                drv.vendor(),
-                drv.product()
+                drv.name()
             );
             if let Err(error) = drv.setup(ctx, &self.network, runtime_state.clone()).await {
                 log::error!(
-                    "[{}:0x{:X}] {}:{}: {}",
+                    "[{}:0x{:X}] {}: {}",
                     self.interface,
                     drv.destination(),
-                    drv.vendor(),
-                    drv.product(),
+                    drv.name(),
                     error
                 );
             }
@@ -148,11 +152,10 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                     .await
                 {
                     log::error!(
-                        "[{}:0x{:X}] {}:{}: {}",
+                        "[{}:0x{:X}] {}: {}",
                         self.interface,
                         drv.destination(),
-                        drv.vendor(),
-                        drv.product(),
+                        drv.name(),
                         error
                     );
                 }
@@ -205,11 +208,10 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
                 log::error!(
-                    "[{}:0x{:X}] {}:{}: {}",
+                    "[{}:0x{:X}] {}: {}",
                     self.interface,
                     drv.destination(),
-                    drv.vendor(),
-                    drv.product(),
+                    drv.name(),
                     error
                 );
             }
@@ -264,11 +266,10 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
                     .await
                 {
                     log::error!(
-                        "[{}:0x{:X}] {}:{}: {}",
+                        "[{}:0x{:X}] {}: {}",
                         self.interface,
                         drv.destination(),
-                        drv.vendor(),
-                        drv.product(),
+                        drv.name(),
                         error
                     );
                 }

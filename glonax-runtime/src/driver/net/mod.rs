@@ -22,54 +22,80 @@ pub enum NetDriver {
 }
 
 impl NetDriver {
-    pub(crate) fn factory(driver_type: &str, destination: u8, source: u8) -> Result<Self, ()> {
-        match driver_type {
-            "kuebler_encoder" => Ok(NetDriver::KueblerEncoder(
-                crate::driver::KueblerEncoder::new(destination, source),
-            )),
-            "kuebler_inclinometer" => Ok(NetDriver::KueblerInclinometer(
-                crate::driver::KueblerInclinometer::new(destination, source),
-            )),
-            "volvo_d7e" => Ok(NetDriver::VolvoD7E(crate::driver::VolvoD7E::new(
-                destination,
-                source,
-            ))),
-            "bosch_ems" => Ok(NetDriver::BoschEngineManagementSystem(
-                crate::driver::BoschEngineManagementSystem::new(destination, source),
-            )),
-            "hydraulic_control_unit" => Ok(NetDriver::HydraulicControlUnit(
-                crate::driver::HydraulicControlUnit::new(destination, source),
-            )),
-            "vehicle_control_unit" => Ok(NetDriver::VehicleControlUnit(
-                crate::driver::VehicleControlUnit::new(destination, source),
-            )),
+    pub(crate) fn factory(
+        vendor: &str,
+        product: &str,
+        destination: u8,
+        source: u8,
+    ) -> Result<Self, ()> {
+        match (vendor, product) {
+            (v, p)
+                if v == crate::driver::KueblerEncoder::VENDOR
+                    && p == crate::driver::KueblerEncoder::PRODUCT =>
+            {
+                Ok(NetDriver::KueblerEncoder(
+                    crate::driver::KueblerEncoder::new(destination, source),
+                ))
+            }
+            (v, p)
+                if v == crate::driver::KueblerInclinometer::VENDOR
+                    && p == crate::driver::KueblerInclinometer::PRODUCT =>
+            {
+                Ok(NetDriver::KueblerInclinometer(
+                    crate::driver::KueblerInclinometer::new(destination, source),
+                ))
+            }
+            (v, p)
+                if v == crate::driver::VolvoD7E::VENDOR
+                    && p == crate::driver::VolvoD7E::PRODUCT =>
+            {
+                Ok(NetDriver::VolvoD7E(crate::driver::VolvoD7E::new(
+                    destination,
+                    source,
+                )))
+            }
+            (v, p)
+                if v == crate::driver::BoschEngineManagementSystem::VENDOR
+                    && p == crate::driver::BoschEngineManagementSystem::PRODUCT =>
+            {
+                Ok(NetDriver::BoschEngineManagementSystem(
+                    crate::driver::BoschEngineManagementSystem::new(destination, source),
+                ))
+            }
+            (v, p)
+                if v == crate::driver::HydraulicControlUnit::VENDOR
+                    && p == crate::driver::HydraulicControlUnit::PRODUCT =>
+            {
+                Ok(NetDriver::HydraulicControlUnit(
+                    crate::driver::HydraulicControlUnit::new(destination, source),
+                ))
+            }
+            (v, p)
+                if v == crate::driver::VehicleControlUnit::VENDOR
+                    && p == crate::driver::VehicleControlUnit::PRODUCT =>
+            {
+                Ok(NetDriver::VehicleControlUnit(
+                    crate::driver::VehicleControlUnit::new(destination, source),
+                ))
+            }
             _ => Err(()),
         }
     }
 }
 
 impl J1939Unit for NetDriver {
-    fn vendor(&self) -> &str {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.vendor(),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.vendor(),
-            Self::VolvoD7E(volvo) => volvo.vendor(),
-            Self::BoschEngineManagementSystem(bosch) => bosch.vendor(),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.vendor(),
-            Self::VehicleManagementSystem(responder) => responder.vendor(),
-            Self::VehicleControlUnit(vcu) => vcu.vendor(),
-        }
-    }
+    const VENDOR: &'static str = "";
+    const PRODUCT: &'static str = "";
 
-    fn product(&self) -> &str {
+    fn name(&self) -> String {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.product(),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.product(),
-            Self::VolvoD7E(volvo) => volvo.product(),
-            Self::BoschEngineManagementSystem(bosch) => bosch.product(),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.product(),
-            Self::VehicleManagementSystem(responder) => responder.product(),
-            Self::VehicleControlUnit(vcu) => vcu.product(),
+            Self::KueblerEncoder(encoder) => encoder.name(),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.name(),
+            Self::VolvoD7E(volvo) => volvo.name(),
+            Self::BoschEngineManagementSystem(bosch) => bosch.name(),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.name(),
+            Self::VehicleManagementSystem(responder) => responder.name(),
+            Self::VehicleControlUnit(vcu) => vcu.name(),
         }
     }
 
@@ -318,11 +344,13 @@ impl std::error::Error for J1939UnitError {}
 
 // FUTURE: Maybe move to runtime or a network module?
 pub trait J1939Unit {
-    /// Get the vendor of the unit.
-    fn vendor(&self) -> &str;
+    const VENDOR: &'static str;
+    const PRODUCT: &'static str;
 
-    /// Get the product of the unit.
-    fn product(&self) -> &str;
+    /// Get the name of the unit.
+    fn name(&self) -> String {
+        format!("{}:{}", Self::VENDOR, Self::PRODUCT)
+    }
 
     /// Get the destination address of the unit.
     fn destination(&self) -> u8;

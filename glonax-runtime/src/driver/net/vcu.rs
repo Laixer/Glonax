@@ -109,13 +109,8 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
 }
 
 impl super::J1939Unit for VehicleControlUnit {
-    fn vendor(&self) -> &str {
-        "laixer"
-    }
-
-    fn product(&self) -> &str {
-        "vcu"
-    }
+    const VENDOR: &'static str = "laixer";
+    const PRODUCT: &'static str = "vcu";
 
     fn destination(&self) -> u8 {
         self.destination_address
@@ -159,10 +154,9 @@ impl super::J1939Unit for VehicleControlUnit {
                     ctx.rx_mark();
 
                     log::debug!(
-                        "[xcan:0x{:X}] {}:{}: Firmware version: {}.{}.{}",
+                        "[xcan:0x{:X}] {}: Firmware version: {}.{}.{}",
                         self.destination(),
-                        self.vendor(),
-                        self.product(),
+                        self.name(),
                         version.0,
                         version.1,
                         version.2
@@ -172,10 +166,9 @@ impl super::J1939Unit for VehicleControlUnit {
                     ctx.rx_mark();
 
                     log::debug!(
-                        "[xcan:0x{:X}] {}:{}: Address claimed: {}",
+                        "[xcan:0x{:X}] {}: Address claimed: {}",
                         self.destination(),
-                        self.vendor(),
-                        self.product(),
+                        self.name(),
                         name
                     );
                 }

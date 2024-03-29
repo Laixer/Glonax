@@ -79,13 +79,8 @@ impl Parsable<EngineMessage> for VolvoD7E {
 }
 
 impl super::J1939Unit for VolvoD7E {
-    fn vendor(&self) -> &str {
-        "volvo"
-    }
-
-    fn product(&self) -> &str {
-        "d7e"
-    }
+    const VENDOR: &'static str = "volvo";
+    const PRODUCT: &'static str = "d7e";
 
     fn destination(&self) -> u8 {
         self.destination_address
