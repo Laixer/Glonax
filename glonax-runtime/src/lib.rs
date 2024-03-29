@@ -75,6 +75,28 @@ pub mod consts {
     pub const NETWORK_MAX_CLIENTS: usize = 16;
 }
 
+/// Log system information.
+///
+/// This function logs system information including the system name, kernel version,
+/// OS version, and host name.
+pub fn log_system() {
+    use sysinfo::System;
+
+    log::debug!("System name: {}", System::name().unwrap_or_default());
+    log::debug!(
+        "System kernel version: {}",
+        System::kernel_version().unwrap_or_default()
+    );
+    log::debug!(
+        "System OS version: {}",
+        System::os_version().unwrap_or_default()
+    );
+    log::debug!(
+        "System host name: {}",
+        System::host_name().unwrap_or_default()
+    );
+}
+
 // TODO: Return the machine state in its entirety over the network
 // TODO: Integrate into the operand
 /// Represents the state of a machine.

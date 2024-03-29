@@ -342,7 +342,6 @@ impl From<std::io::Error> for J1939UnitError {
 
 impl std::error::Error for J1939UnitError {}
 
-// FUTURE: Maybe move to runtime or a network module?
 pub trait J1939Unit {
     const VENDOR: &'static str;
     const PRODUCT: &'static str;

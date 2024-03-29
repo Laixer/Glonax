@@ -21,16 +21,10 @@ pub struct Host {
 }
 
 impl Service<HostConfig> for Host {
-    #[rustfmt::skip]
     fn new(_config: HostConfig) -> Self
     where
         Self: Sized,
     {
-        log::trace!("System name: {}", System::name().unwrap_or_default());
-        log::trace!("System kernel version: {}", System::kernel_version().unwrap_or_default());
-        log::trace!("System OS version: {}", System::os_version().unwrap_or_default());
-        log::trace!("System host name: {}", System::host_name().unwrap_or_default());
-
         let system = System::new_all();
 
         if system.cpus().len() < 4 {

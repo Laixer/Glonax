@@ -111,6 +111,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         (version_major, version_minor, version_patch),
     );
 
+    glonax::log_system();
+
     log::info!("Starting {}", bin_name);
     log::info!("Runtime version: {}", glonax::consts::VERSION);
     log::info!("Running in operation mode: {}", config.mode);
