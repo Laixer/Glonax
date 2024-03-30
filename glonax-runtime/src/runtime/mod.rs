@@ -105,6 +105,7 @@ pub trait Service<Cnf> {
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
+        _shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -215,17 +216,19 @@ pub fn builder<Cnf: Clone>(
 
 pub struct Runtime<Conf> {
     /// Runtime configuration.
-    pub config: Conf,
+    config: Conf,
     /// Instance.
-    pub instance: crate::core::Instance,
+    instance: crate::core::Instance,
     /// Glonax operand.
-    pub operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
+    operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
     /// Motion command sender.
-    pub motion_tx: MotionSender,
+    motion_tx: MotionSender,
     /// Motion command receiver.
-    pub motion_rx: Option<MotionReceiver>,
+    motion_rx: Option<MotionReceiver>,
+    /// Runtime tasks.
+    tasks: Vec<tokio::task::JoinHandle<()>>,
     /// Runtime event bus.
-    pub shutdown: (
+    shutdown: (
         tokio::sync::broadcast::Sender<()>,
         tokio::sync::broadcast::Receiver<()>,
     ),
@@ -290,7 +293,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         });
     }
 
-    // TODO: Services should be able to return a result
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
@@ -304,6 +306,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
+        let shutdown = self.shutdown.0.subscribe();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -311,17 +314,17 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
+        // TODO: It would be desirable to control the loop from the service side
         tokio::spawn(async move {
-            service.wait_io(operand).await;
+            service.wait_io(operand, shutdown).await;
         });
     }
 
-    // TODO: Services should be able to return a result
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_net_service<S, C>(&self, config: C)
+    pub fn schedule_net_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone,
@@ -330,6 +333,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
+        let shutdown = self.shutdown.0.subscribe();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -337,12 +341,13 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        tokio::spawn(async move {
-            service.wait_io(operand).await;
-        });
+        // TODO: It would be desirable to control the loop from the service side
+        self.tasks.push(tokio::spawn(async move {
+            service.wait_io(operand, shutdown).await;
+        }));
     }
 
-    pub fn schedule_net2_service<S, C>(&self, config: C, duration: std::time::Duration)
+    pub fn schedule_net2_service<S, C>(&mut self, config: C, duration: std::time::Duration)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone,
@@ -353,6 +358,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
+        let shutdown = self.shutdown.0.subscribe();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -360,12 +366,12 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        tokio::spawn(async move {
-            loop {
+        self.tasks.push(tokio::spawn(async move {
+            while shutdown.is_empty() {
                 interval.tick().await;
                 service.tick(operand.clone()).await;
             }
-        });
+        }));
     }
 
     pub fn schedule_net3_service<S, C>(&mut self, config: C)
@@ -377,6 +383,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
+        let _shutdown = self.shutdown.0.subscribe();
         let mut motion_rx = self.motion_rx.take().unwrap();
 
         if let Some(address) = ctx.address.clone() {
@@ -385,8 +392,14 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
+        // TODO: Break from task on shutdown
         tokio::spawn(async move {
             while let Some(motion) = motion_rx.recv().await {
+                // TODO: This only works when the queue is not blocking
+                // if !shutdown.is_empty() {
+                //     break;
+                // }
+
                 service.on_event(operand.clone(), &motion).await;
             }
         });
@@ -396,7 +409,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will schedule a component to run in the background. On each tick, the component
     /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_service<S, C>(&self, config: C, duration: std::time::Duration)
+    pub fn schedule_service<S, C>(&mut self, config: C, duration: std::time::Duration)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone,
@@ -407,6 +420,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
+        let shutdown = self.shutdown.0.subscribe();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -414,15 +428,15 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        tokio::spawn(async move {
-            loop {
+        self.tasks.push(tokio::spawn(async move {
+            while shutdown.is_empty() {
                 interval.tick().await;
                 service.tick(operand.clone()).await;
             }
-        });
+        }));
     }
 
-    pub fn schedule_service_default<S>(&self, duration: std::time::Duration)
+    pub fn schedule_service_default<S>(&mut self, duration: std::time::Duration)
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
@@ -432,6 +446,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
+        let shutdown = self.shutdown.0.subscribe();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -439,12 +454,12 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        tokio::spawn(async move {
-            loop {
+        self.tasks.push(tokio::spawn(async move {
+            while shutdown.is_empty() {
                 interval.tick().await;
                 service.tick(operand.clone()).await;
             }
-        });
+        }));
     }
 
     // TODO: Component should be 'service' and not 'component'
@@ -488,5 +503,14 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     /// This method will block until the runtime is shutdown.
     pub async fn wait_for_shutdown(&mut self) {
         self.shutdown.1.recv().await.ok();
+    }
+
+    /// Wait for all tasks to complete.
+    ///
+    /// This method will block until all tasks are completed.    
+    pub async fn wait_for_tasks(&mut self) {
+        for task in self.tasks.drain(..) {
+            task.await.ok();
+        }
     }
 }

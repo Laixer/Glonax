@@ -37,10 +37,19 @@ impl Service<GnssConfig> for Gnss {
         crate::runtime::ServiceContext::new("gnss", Some(self.path.display().to_string()))
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+    async fn wait_io(
+        &mut self,
+        runtime_state: SharedOperandState,
+        shutdown: tokio::sync::broadcast::Receiver<()>,
+    ) {
         let driver = crate::driver::Nmea;
 
         while let Ok(Some(line)) = self.line_reader.next_line().await {
+            // TODO: This only works when the line reader is not blocking
+            if !shutdown.is_empty() {
+                break;
+            }
+
             if let Some(message) = driver.decode(line) {
                 let mut runtime_state = runtime_state.write().await;
 

@@ -243,12 +243,16 @@ impl Service<TcpServerConfig> for TcpServer {
         crate::runtime::ServiceContext::new("tcp_server", Some(self.config.listen.clone()))
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+    async fn wait_io(
+        &mut self,
+        runtime_state: SharedOperandState,
+        shutdown: tokio::sync::broadcast::Receiver<()>,
+    ) {
         let semaphore = Arc::new(Semaphore::new(self.config.max_connections));
 
         let listener = TcpListener::bind(self.config.listen.clone()).await.unwrap();
 
-        loop {
+        while shutdown.is_empty() {
             log::debug!("Waiting for connection");
 
             let (stream, addr) = listener.accept().await.unwrap();

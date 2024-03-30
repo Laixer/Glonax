@@ -26,6 +26,7 @@ impl<Cnf: Clone> Builder<Cnf> {
             })),
             motion_tx,
             motion_rx: Some(motion_rx),
+            tasks: Vec::new(),
             shutdown: tokio::sync::broadcast::channel(1),
         }))
     }

@@ -115,7 +115,11 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ServiceContext::new("authority_rx", Some(self.interface.clone()))
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+    async fn wait_io(
+        &mut self,
+        runtime_state: SharedOperandState,
+        shutdown: tokio::sync::broadcast::Receiver<()>,
+    ) {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             log::debug!(
                 "[{}:0x{:X}] Setup network driver '{}'",
@@ -134,15 +138,11 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             }
         }
 
-        // TODO: Replace with: while shutdown.is_empty()
-        loop {
-            // if let Ok(Err(e)) =
-            //     tokio::time::timeout(std::time::Duration::from_millis(100), router.listen()).await
-            // {
-            //     log::error!("Failed to receive from router: {}", e);
-            // }
-
-            if let Err(e) = self.network.listen().await {
+        while shutdown.is_empty() {
+            if let Ok(Err(e)) =
+                tokio::time::timeout(std::time::Duration::from_millis(100), self.network.listen())
+                    .await
+            {
                 log::error!("Failed to receive from router: {}", e);
             }
 
@@ -162,12 +162,26 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             }
         }
 
-        // for (drv, ctx) in self.network.network.iter_mut() {
-        //     log::debug!("[{}:0x{:X}] Teardown network driver '{}'", self.interface, drv.destination(), drv.name());
-        //     if let Err(error) = drv.teardown(ctx, &self.router, runtime_state.clone()).await {
-        //         log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
-        //     }
-        // }
+        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+            log::debug!(
+                "[{}:0x{:X}] Teardown network driver '{}'",
+                self.interface,
+                drv.destination(),
+                drv.name()
+            );
+            if let Err(error) = drv
+                .teardown(ctx, &self.network, runtime_state.clone())
+                .await
+            {
+                log::error!(
+                    "[{}:0x{:X}] {}: {}",
+                    self.interface,
+                    drv.destination(),
+                    drv.name(),
+                    error
+                );
+            }
+        }
     }
 }
 

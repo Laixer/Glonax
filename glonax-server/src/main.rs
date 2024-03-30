@@ -189,11 +189,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.wait_for_shutdown().await;
     }
 
-    log::debug!("Waiting for shutdown");
+    log::info!("Waiting for shutdown");
 
-    // TODO: Shutdown all services and drivers.
-
-    std::thread::sleep(Duration::from_millis(50));
+    runtime.wait_for_tasks().await;
 
     log::info!("{} was shutdown gracefully", bin_name);
 
