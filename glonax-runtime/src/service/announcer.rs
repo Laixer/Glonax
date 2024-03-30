@@ -1,6 +1,6 @@
 use std::net::UdpSocket;
 
-use crate::runtime::{Service, SharedOperandState};
+use crate::runtime::{Service, ServiceContext, SharedOperandState};
 
 pub struct Announcer(UdpSocket);
 
@@ -12,8 +12,8 @@ impl<C> Service<C> for Announcer {
         Self(UdpSocket::bind("[::1]:0").unwrap())
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("announcer", Some("[::1]:0"))
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("announcer", Some("[::1]:0"))
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {
@@ -27,6 +27,8 @@ impl<C> Service<C> for Announcer {
         let status = runtime_state.status();
         let payload = status.to_bytes();
 
-        self.0.send_to(&payload, "[ff02::1]:30050").unwrap();
+        if let Err(e) = self.0.send_to(&payload, "[ff02::1]:30050") {
+            log::error!("Failed to send broadcast: {}", e);
+        }
     }
 }

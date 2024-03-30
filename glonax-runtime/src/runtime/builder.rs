@@ -33,23 +33,25 @@ impl<Cnf: Clone> Builder<Cnf> {
 
     /// Listen for termination signal.
     ///
-    /// This method will spawn a task that will listen for a termination signal.
-    /// When the signal is received, the runtime will be shutdown.
+    /// This method will spawn a task that will listen for the interrupt signal
+    /// (SIGINT) and the termination signal (SIGTERM). The runtime will be
+    /// gracefully terminated when either signal is received.
     pub fn with_shutdown(self) -> Self {
+        use tokio::signal::unix;
+
         debug!("Enable shutdown signal");
 
         let sender = self.0.shutdown.0.clone();
 
         tokio::spawn(async move {
-            let t1 = tokio::signal::ctrl_c(); //.await.unwrap();
+            let sigint = tokio::signal::ctrl_c();
 
-            let mut binding =
-                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
-            let t2 = binding.recv();
+            let mut binding = unix::signal(unix::SignalKind::terminate()).unwrap();
+            let sigterm = binding.recv();
 
             tokio::select! {
-                _ = t1 => log::debug!("Received SIGINT"),
-                _ = t2 => log::debug!("Received SIGTERM"),
+                _ = sigint => log::debug!("Received SIGINT"),
+                _ = sigterm => log::debug!("Received SIGTERM"),
             }
 
             info!("Termination requested");

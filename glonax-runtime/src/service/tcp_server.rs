@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
-use crate::runtime::{Service, SharedOperandState};
+use crate::runtime::{Service, ServiceContext, SharedOperandState};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct TcpServerConfig {
@@ -41,6 +41,8 @@ impl UnixServerConfig {
 
 pub struct TcpServer {
     config: TcpServerConfig,
+    semaphore: Arc<Semaphore>,
+    listener: TcpListener,
 }
 
 impl TcpServer {
@@ -236,11 +238,20 @@ impl Service<TcpServerConfig> for TcpServer {
     {
         log::debug!("Listening on: {}", config.listen);
 
-        Self { config }
+        let semaphore = Arc::new(Semaphore::new(config.max_connections));
+
+        let core_listener = std::net::TcpListener::bind(config.listen.clone()).unwrap();
+        let listener = tokio::net::TcpListener::from_std(core_listener).unwrap();
+
+        Self {
+            config,
+            semaphore,
+            listener,
+        }
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("tcp_server", Some(self.config.listen.clone()))
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("tcp_server", Some(self.config.listen.clone()))
     }
 
     async fn wait_io(
@@ -248,19 +259,15 @@ impl Service<TcpServerConfig> for TcpServer {
         runtime_state: SharedOperandState,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) {
-        let semaphore = Arc::new(Semaphore::new(self.config.max_connections));
-
-        let listener = TcpListener::bind(self.config.listen.clone()).await.unwrap();
-
         while shutdown.is_empty() {
             log::debug!("Waiting for connection");
 
-            let (stream, addr) = listener.accept().await.unwrap();
+            let (stream, addr) = self.listener.accept().await.unwrap();
             stream.set_nodelay(true).unwrap();
 
             log::debug!("Accepted connection from: {}", addr);
 
-            let permit = match semaphore.clone().try_acquire_owned() {
+            let permit = match self.semaphore.clone().try_acquire_owned() {
                 Ok(permit) => permit,
                 Err(_) => {
                     log::warn!("Too many connections");
@@ -268,7 +275,8 @@ impl Service<TcpServerConfig> for TcpServer {
                 }
             };
 
-            let active_client_count = self.config.max_connections - semaphore.available_permits();
+            let active_client_count =
+                self.config.max_connections - self.semaphore.available_permits();
 
             log::trace!(
                 "Connections: {}/{}",

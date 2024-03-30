@@ -78,7 +78,6 @@ impl std::fmt::Debug for ServiceError {
 
 impl std::error::Error for ServiceError {}
 
-// TODO: Add shutdown signal
 pub trait Service<Cnf> {
     // TODO: Add instance to new
     /// Construct a new component.

@@ -16,6 +16,7 @@ pub struct GnssConfig {
 pub struct Gnss {
     line_reader: Lines<BufReader<Uart>>,
     path: PathBuf,
+    driver: crate::driver::Nmea,
 }
 
 impl Service<GnssConfig> for Gnss {
@@ -30,6 +31,7 @@ impl Service<GnssConfig> for Gnss {
         Self {
             line_reader: BufReader::new(serial).lines(),
             path: config.device,
+            driver: crate::driver::Nmea,
         }
     }
 
@@ -42,15 +44,13 @@ impl Service<GnssConfig> for Gnss {
         runtime_state: SharedOperandState,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) {
-        let driver = crate::driver::Nmea;
-
         while let Ok(Some(line)) = self.line_reader.next_line().await {
             // TODO: This only works when the line reader is not blocking
             if !shutdown.is_empty() {
                 break;
             }
 
-            if let Some(message) = driver.decode(line) {
+            if let Some(message) = self.driver.decode(line) {
                 let mut runtime_state = runtime_state.write().await;
 
                 if let Some((lat, long)) = message.coordinates {

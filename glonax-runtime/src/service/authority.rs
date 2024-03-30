@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     driver::net::{J1939Unit, NetDriver, NetDriverCollection},
     net::ControlNetwork,
@@ -139,9 +141,9 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
 
         while shutdown.is_empty() {
+            // TODO: Move timeout to ControlNetwork.
             if let Ok(Err(e)) =
-                tokio::time::timeout(std::time::Duration::from_millis(100), self.network.listen())
-                    .await
+                tokio::time::timeout(Duration::from_millis(100), self.network.listen()).await
             {
                 log::error!("Failed to receive from router: {}", e);
             }
