@@ -9,7 +9,7 @@
 # the ExecStart line below. In production mode, at least one can 
 # network interface must be configured.
 #
-# Example: /usr/local/bin/glonaxd --bind 0:30051 --daemon can0 can1
+# Example: /usr/local/bin/glonaxd --config /etc/glonax/glonaxd.conf
 
 [Unit]
 Description=Glonax Server
@@ -20,7 +20,8 @@ StartLimitBurst=5
 
 [Service]
 Restart=always
-RestartSec=2
+TimeoutStopSec=5
+RestartSec=1
 Nice=-15
 IOSchedulingPriority=2
 DynamicUser=true

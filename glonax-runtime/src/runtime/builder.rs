@@ -41,7 +41,16 @@ impl<Cnf: Clone> Builder<Cnf> {
         let sender = self.0.shutdown.0.clone();
 
         tokio::spawn(async move {
-            tokio::signal::ctrl_c().await.unwrap();
+            let t1 = tokio::signal::ctrl_c(); //.await.unwrap();
+
+            let mut binding =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()).unwrap();
+            let t2 = binding.recv();
+
+            tokio::select! {
+                _ = t1 => log::debug!("Received SIGINT"),
+                _ = t2 => log::debug!("Received SIGTERM"),
+            }
 
             info!("Termination requested");
 
