@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, time::Duration};
 
 use j1939::{Frame, FrameBuilder, IdBuilder, Name, PGN};
 
@@ -213,6 +213,17 @@ impl ControlNetwork {
         }
 
         Ok(())
+    }
+
+    /// Listen for incoming packets.
+    pub async fn listen_timeout(&mut self, timeout: Duration) -> io::Result<()> {
+        if let Ok(result) = tokio::time::timeout(timeout, self.listen()).await {
+            result
+        } else {
+            // TODO: We just ignore the timeout for now.
+            // Err(io::Error::new(io::ErrorKind::TimedOut, "Timeout"))
+            Ok(())
+        }
     }
 
     /// Try to accept a frame and parse it.

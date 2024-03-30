@@ -161,9 +161,10 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        // TODO: Move timeout to ControlNetwork.
-        if let Ok(Err(e)) =
-            tokio::time::timeout(Duration::from_millis(100), self.network.listen()).await
+        if let Err(e) = self
+            .network
+            .listen_timeout(Duration::from_millis(100))
+            .await
         {
             log::error!("Failed to receive from router: {}", e);
         }

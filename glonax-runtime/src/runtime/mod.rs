@@ -321,7 +321,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        // TODO: It would be desirable to control the loop from the service side
         self.tasks.push(tokio::spawn(async move {
             service.setup(operand.clone()).await;
             while shutdown.is_empty() {
@@ -352,7 +351,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        // TODO: It would be desirable to control the loop from the service side
         self.tasks.push(tokio::spawn(async move {
             service.setup(operand.clone()).await;
             while shutdown.is_empty() {
