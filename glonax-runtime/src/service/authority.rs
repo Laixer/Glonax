@@ -117,11 +117,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ServiceContext::new("authority_rx", Some(self.interface.clone()))
     }
 
-    async fn wait_io(
-        &mut self,
-        runtime_state: SharedOperandState,
-        shutdown: tokio::sync::broadcast::Receiver<()>,
-    ) {
+    async fn setup(&mut self, runtime_state: SharedOperandState) {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             log::debug!(
                 "[{}:0x{:X}] Setup network driver '{}'",
@@ -139,31 +135,9 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                 );
             }
         }
+    }
 
-        while shutdown.is_empty() {
-            // TODO: Move timeout to ControlNetwork.
-            if let Ok(Err(e)) =
-                tokio::time::timeout(Duration::from_millis(100), self.network.listen()).await
-            {
-                log::error!("Failed to receive from router: {}", e);
-            }
-
-            for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
-                if let Err(error) = drv
-                    .try_accept(ctx, &self.network, runtime_state.clone())
-                    .await
-                {
-                    log::error!(
-                        "[{}:0x{:X}] {}: {}",
-                        self.interface,
-                        drv.destination(),
-                        drv.name(),
-                        error
-                    );
-                }
-            }
-        }
-
+    async fn teardown(&mut self, runtime_state: SharedOperandState) {
         for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
             log::debug!(
                 "[{}:0x{:X}] Teardown network driver '{}'",
@@ -173,6 +147,30 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             );
             if let Err(error) = drv
                 .teardown(ctx, &self.network, runtime_state.clone())
+                .await
+            {
+                log::error!(
+                    "[{}:0x{:X}] {}: {}",
+                    self.interface,
+                    drv.destination(),
+                    drv.name(),
+                    error
+                );
+            }
+        }
+    }
+
+    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+        // TODO: Move timeout to ControlNetwork.
+        if let Ok(Err(e)) =
+            tokio::time::timeout(Duration::from_millis(100), self.network.listen()).await
+        {
+            log::error!("Failed to receive from router: {}", e);
+        }
+
+        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+            if let Err(error) = drv
+                .try_accept(ctx, &self.network, runtime_state.clone())
                 .await
             {
                 log::error!(

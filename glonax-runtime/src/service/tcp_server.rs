@@ -254,41 +254,34 @@ impl Service<TcpServerConfig> for TcpServer {
         ServiceContext::new("tcp_server", Some(self.config.listen.clone()))
     }
 
-    async fn wait_io(
-        &mut self,
-        runtime_state: SharedOperandState,
-        shutdown: tokio::sync::broadcast::Receiver<()>,
-    ) {
-        while shutdown.is_empty() {
-            log::debug!("Waiting for connection");
+    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+        log::debug!("Waiting for connection");
 
-            let (stream, addr) = self.listener.accept().await.unwrap();
-            stream.set_nodelay(true).unwrap();
+        let (stream, addr) = self.listener.accept().await.unwrap();
+        stream.set_nodelay(true).unwrap();
 
-            log::debug!("Accepted connection from: {}", addr);
+        log::debug!("Accepted connection from: {}", addr);
 
-            let permit = match self.semaphore.clone().try_acquire_owned() {
-                Ok(permit) => permit,
-                Err(_) => {
-                    log::warn!("Too many connections");
-                    continue;
-                }
-            };
+        let permit = match self.semaphore.clone().try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+                log::warn!("Too many connections");
+                return;
+            }
+        };
 
-            let active_client_count =
-                self.config.max_connections - self.semaphore.available_permits();
+        let active_client_count = self.config.max_connections - self.semaphore.available_permits();
 
-            log::trace!(
-                "Connections: {}/{}",
-                active_client_count,
-                self.config.max_connections
-            );
+        log::trace!(
+            "Connections: {}/{}",
+            active_client_count,
+            self.config.max_connections
+        );
 
-            tokio::spawn(Self::spawn_client_session(
-                stream,
-                runtime_state.clone(),
-                permit,
-            ));
-        }
+        tokio::spawn(Self::spawn_client_session(
+            stream,
+            runtime_state.clone(),
+            permit,
+        ));
     }
 }

@@ -96,6 +96,20 @@ pub trait Service<Cnf> {
         }
     }
 
+    fn setup(
+        &mut self,
+        _runtime_state: SharedOperandState,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
+
+    fn teardown(
+        &mut self,
+        _runtime_state: SharedOperandState,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
+
     /// Wait for IO event.
     ///
     /// This method is always called on a separate thread and
@@ -104,7 +118,6 @@ pub trait Service<Cnf> {
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
-        _shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -240,8 +253,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         self.shutdown.0.subscribe()
     }
 
-    // TODO: Remove this method
-    /// Spawn a motion sink in the background.
+    #[deprecated]
     pub fn schedule_motion_sink<Fut>(
         &mut self,
         service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionReceiver) -> Fut + Send + 'static,
@@ -264,11 +276,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     // Services
     //
 
-    // TODO: Remove this method
-    /// Listen for IO event service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    #[deprecated]
     pub fn schedule_io_func<Fut>(
         &self,
         service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
@@ -296,7 +304,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<S, C>(&self, config: C)
+    pub fn schedule_io_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone,
@@ -314,9 +322,13 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }
 
         // TODO: It would be desirable to control the loop from the service side
-        tokio::spawn(async move {
-            service.wait_io(operand, shutdown).await;
-        });
+        self.tasks.push(tokio::spawn(async move {
+            service.setup(operand.clone()).await;
+            while shutdown.is_empty() {
+                service.wait_io(operand.clone()).await;
+            }
+            service.teardown(operand.clone()).await;
+        }));
     }
 
     /// Listen for IO event service in the background.
@@ -342,7 +354,11 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         // TODO: It would be desirable to control the loop from the service side
         self.tasks.push(tokio::spawn(async move {
-            service.wait_io(operand, shutdown).await;
+            service.setup(operand.clone()).await;
+            while shutdown.is_empty() {
+                service.wait_io(operand.clone()).await;
+            }
+            service.teardown(operand.clone()).await;
         }));
     }
 
@@ -366,10 +382,12 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }
 
         self.tasks.push(tokio::spawn(async move {
+            service.setup(operand.clone()).await;
             while shutdown.is_empty() {
                 interval.tick().await;
                 service.tick(operand.clone()).await;
             }
+            service.teardown(operand.clone()).await;
         }));
     }
 
@@ -428,10 +446,12 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }
 
         self.tasks.push(tokio::spawn(async move {
+            service.setup(operand.clone()).await;
             while shutdown.is_empty() {
                 interval.tick().await;
                 service.tick(operand.clone()).await;
             }
+            service.teardown(operand.clone()).await;
         }));
     }
 
@@ -454,13 +474,16 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }
 
         self.tasks.push(tokio::spawn(async move {
+            service.setup(operand.clone()).await;
             while shutdown.is_empty() {
                 interval.tick().await;
                 service.tick(operand.clone()).await;
             }
+            service.teardown(operand.clone()).await;
         }));
     }
 
+    // TODO: Call setup and teardown
     // TODO: Component should be 'service' and not 'component'
     // TODO: Maybe copy MachineState to component state on each tick?
     // TODO: Pipeline should be a service.
