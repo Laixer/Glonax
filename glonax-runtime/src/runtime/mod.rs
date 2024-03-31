@@ -96,6 +96,7 @@ pub trait Service<Cnf> {
         }
     }
 
+    /// Setup the service.
     fn setup(
         &mut self,
         _runtime_state: SharedOperandState,
@@ -103,6 +104,7 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
+    /// Teardown the service.
     fn teardown(
         &mut self,
         _runtime_state: SharedOperandState,
@@ -453,6 +455,10 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }));
     }
 
+    /// Schedule a component to run in the background with default configuration.
+    ///
+    /// This method will schedule a component to run in the background. On each tick, the component
+    /// will be provided with a component context and a mutable reference to the runtime state.
     pub fn schedule_service_default<S>(&mut self, duration: std::time::Duration)
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,

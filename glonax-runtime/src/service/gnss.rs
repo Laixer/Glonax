@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    io::{Error, ErrorKind},
+    path::PathBuf,
+};
 
 use glonax_serial::{BaudRate, Uart};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
@@ -25,7 +28,7 @@ impl Service<GnssConfig> for Gnss {
         Self: Sized,
     {
         let serial = Uart::open(&config.device, BaudRate::from_speed(config.baud_rate))
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+            .map_err(|e| Error::new(ErrorKind::Other, e))
             .unwrap();
 
         Self {

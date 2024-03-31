@@ -1,6 +1,6 @@
 use std::{io, time::Duration};
 
-use j1939::{Frame, FrameBuilder, IdBuilder, Name, PGN};
+use j1939::{Frame, FrameBuilder, Id, IdBuilder, Name, PGN};
 
 pub use crate::can::{CANSocket, SockAddrCAN};
 
@@ -193,6 +193,8 @@ impl ControlNetwork {
         }
     }
 
+    // TODO: This is a mess, split logic.
+    // TODO: Rename to `recv` and `recv_timeout`
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
@@ -232,5 +234,47 @@ impl ControlNetwork {
     /// `Some` with the resulting message.
     pub fn try_accept<T>(&self, service: &mut impl Parsable<T>) -> Option<T> {
         self.frame.and_then(|frame| service.parse(&frame))
+    }
+}
+
+enum FilterItem {
+    Priority(u8),
+    PGN(u32),
+    SourceAddress(u8),
+    DestinationAddress(u8),
+}
+
+impl FilterItem {
+    fn matches(&self, id: &Id) -> bool {
+        match self {
+            FilterItem::Priority(priority) => *priority == id.priority(),
+            FilterItem::PGN(pgn) => *pgn == id.pgn_raw(),
+            FilterItem::SourceAddress(address) => *address == id.source_address(),
+            FilterItem::DestinationAddress(address) => Some(*address) == id.destination_address(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_item_matches() {
+        let id = IdBuilder::from_pgn(PGN::Request)
+            .priority(0x05)
+            .sa(0x01)
+            .da(0x02)
+            .build();
+
+        let priority = FilterItem::Priority(0x05);
+        let pgn = FilterItem::PGN(59_904);
+        let source_address = FilterItem::SourceAddress(0x01);
+        let destination_address = FilterItem::DestinationAddress(0x02);
+
+        assert!(priority.matches(&id));
+        assert!(pgn.matches(&id));
+        assert!(source_address.matches(&id));
+        assert!(destination_address.matches(&id));
     }
 }

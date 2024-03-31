@@ -255,8 +255,6 @@ impl Service<TcpServerConfig> for TcpServer {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        log::debug!("Waiting for connection");
-
         let (stream, addr) = self.listener.accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
