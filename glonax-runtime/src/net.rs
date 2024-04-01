@@ -75,7 +75,7 @@ pub trait Parsable<T>: Send + Sync {
     fn parse(&mut self, frame: &Frame) -> Option<T>;
 }
 
-/// The router is used to route incoming frames to compatible services.
+/// The control network is used to accept and store incoming frames.
 ///
 /// Frames are routed based on the PGN and the ECU address. The router
 /// supports filtering based on PGN and addresses.
@@ -83,7 +83,8 @@ pub trait Parsable<T>: Send + Sync {
 /// If the frame size is fixed, the router will always return a frame of
 /// equal size. If the frame size is not fixed, it is returned as is.
 /// Fixing the frame size avoids the need to check the frame size in each
-/// service.
+/// service that uses the control network. This is both a performance
+/// optimization and a safety feature.
 pub struct ControlNetwork {
     /// The network.
     socket: CANSocket,
@@ -98,6 +99,7 @@ pub struct ControlNetwork {
 }
 
 impl ControlNetwork {
+    // TODO: Rename to `from_socket`.
     /// Construct a new control network.
     pub fn new(socket: CANSocket, name: &Name) -> Self {
         Self {
@@ -115,6 +117,7 @@ impl ControlNetwork {
         Ok(Self::new(socket, name))
     }
 
+    /// Set the global filter.
     #[inline]
     pub fn set_filter(mut self, filter: Filter) -> Self {
         self.filter = filter;
@@ -135,12 +138,13 @@ impl ControlNetwork {
     }
 
     /// Take the frame from the router.
+    #[deprecated]
     #[inline]
     pub fn take(&mut self) -> Option<Frame> {
         self.frame.take()
     }
 
-    /// Return the name of the ECU.
+    /// Return the name of the control network.
     #[inline]
     pub fn name(&self) -> &Name {
         &self.name
@@ -159,22 +163,22 @@ impl ControlNetwork {
     }
 
     // TODO: This is a mess, split logic.
-    // TODO: Rename to `recv` and `recv_timeout`
+    // TODO: Rename to `recv`
     /// Listen for incoming packets.
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
             let frame = self.socket.recv().await?;
             if self.filter.matches(frame.id()) {
-                if self.fix_frame_size {
-                    self.frame = Some(
+                self.frame = if self.fix_frame_size {
+                    Some(
                         FrameBuilder::new(*frame.id())
                             .copy_from_slice(frame.as_ref())
                             .set_len(8)
                             .build(),
-                    );
+                    )
                 } else {
-                    self.frame = Some(frame);
-                }
+                    Some(frame)
+                };
                 break;
             }
         }
@@ -182,6 +186,7 @@ impl ControlNetwork {
         Ok(())
     }
 
+    // TODO: Rename to `recv_timeout`
     /// Listen for incoming packets.
     pub async fn listen_timeout(&mut self, timeout: Duration) -> io::Result<()> {
         if let Ok(result) = tokio::time::timeout(timeout, self.listen()).await {
@@ -246,7 +251,7 @@ impl Filter {
         self.items.push(item);
     }
 
-    fn matches(&self, id: &Id) -> bool {
+    pub fn matches(&self, id: &Id) -> bool {
         let match_items = self.items.iter().any(|item| item.matches(id));
         if self.accept {
             if !self.items.is_empty() {

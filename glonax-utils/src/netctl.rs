@@ -396,15 +396,14 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
 }
 
 /// Print raw frames to standard output.
-async fn print_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
+async fn print_frames(socket: CANSocket, filter: Filter) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
     let mut rx_last = std::time::Instant::now();
 
     loop {
-        network.listen().await?;
-
-        if let Some(frame) = network.take() {
+        let frame = socket.recv().await?;
+        if filter.matches(frame.id()) {
             let specification_part = match frame.id().pgn() {
                 glonax::j1939::PGN::ProprietaryA => "PA",
                 glonax::j1939::PGN::ProprietaryB(_) => "PB",
@@ -1042,14 +1041,6 @@ async fn main() -> anyhow::Result<()> {
             address,
         } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let name = glonax::j1939::NameBuilder::default()
-                .identity_number(0x1)
-                .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
-                .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
-                .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
-                .function(consts::J1939_NAME_FUNCTION)
-                .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
-                .build();
 
             let mut filter = if exclude {
                 Filter::reject()
@@ -1071,11 +1062,7 @@ async fn main() -> anyhow::Result<()> {
                 filter.push(FilterItem::SourceAddress(addr?));
             }
 
-            let network = ControlNetwork::new(socket, &name)
-                .set_fix_frame_size(false)
-                .set_filter(filter);
-
-            print_frames(network).await?;
+            print_frames(socket, filter).await?;
         }
         Command::Analyze {
             exclude,
