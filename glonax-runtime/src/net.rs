@@ -95,6 +95,8 @@ pub struct ControlNetwork {
     filter_pgn: Vec<u32>,
     /// The address filter.
     filter_address: Vec<u8>,
+    /// Network filter.
+    filter: Filter,
     /// The fixed frame size.
     fix_frame_size: bool,
     /// ECU Name.
@@ -110,6 +112,7 @@ impl ControlNetwork {
             filter_priority: vec![],
             filter_pgn: vec![],
             filter_address: vec![],
+            filter: Filter::default(),
             fix_frame_size: true,
             name: *name,
         }
@@ -124,19 +127,22 @@ impl ControlNetwork {
     /// Add a filter based on priority.
     #[inline]
     pub fn add_priority_filter(&mut self, priority: u8) {
-        self.filter_priority.push(priority);
+        // self.filter_priority.push(priority);
+        self.filter.items.push(FilterItem::Priority(priority));
     }
 
     /// Add a filter based on PGN.
     #[inline]
     pub fn add_pgn_filter(&mut self, pgn: u32) {
-        self.filter_pgn.push(pgn);
+        // self.filter_pgn.push(pgn);
+        self.filter.items.push(FilterItem::Pgn(pgn));
     }
 
     /// Add a filter based on ECU address.
     #[inline]
     pub fn add_address_filter(&mut self, address: u8) {
-        self.filter_address.push(address);
+        // self.filter_address.push(address);
+        self.filter.items.push(FilterItem::SourceAddress(address));
     }
 
     /// Set the fixed frame size.
@@ -199,7 +205,7 @@ impl ControlNetwork {
     pub async fn listen(&mut self) -> io::Result<()> {
         loop {
             let frame = self.socket.recv().await?;
-            if self.filter(&frame) {
+            if self.filter.matches(frame.id()) {
                 if self.fix_frame_size {
                     self.frame = Some(
                         FrameBuilder::new(*frame.id())
@@ -212,6 +218,19 @@ impl ControlNetwork {
                 }
                 break;
             }
+            // if self.filter(&frame) {
+            //     if self.fix_frame_size {
+            //         self.frame = Some(
+            //             FrameBuilder::new(*frame.id())
+            //                 .copy_from_slice(frame.as_ref())
+            //                 .set_len(8)
+            //                 .build(),
+            //         );
+            //     } else {
+            //         self.frame = Some(frame);
+            //     }
+            //     break;
+            // }
         }
 
         Ok(())
@@ -239,7 +258,7 @@ impl ControlNetwork {
 
 enum FilterItem {
     Priority(u8),
-    PGN(u32),
+    Pgn(u32),
     SourceAddress(u8),
     DestinationAddress(u8),
 }
@@ -248,9 +267,42 @@ impl FilterItem {
     fn matches(&self, id: &Id) -> bool {
         match self {
             FilterItem::Priority(priority) => *priority == id.priority(),
-            FilterItem::PGN(pgn) => *pgn == id.pgn_raw(),
+            FilterItem::Pgn(pgn) => *pgn == id.pgn_raw(),
             FilterItem::SourceAddress(address) => *address == id.source_address(),
             FilterItem::DestinationAddress(address) => Some(*address) == id.destination_address(),
+        }
+    }
+}
+
+struct Filter {
+    /// Filter items.
+    items: Vec<FilterItem>,
+    /// Filter policy.
+    accept: bool,
+}
+
+impl Filter {
+    fn matches(&self, id: &Id) -> bool {
+        let match_items = self.items.iter().any(|item| item.matches(id));
+        if self.accept {
+            if !self.items.is_empty() {
+                match_items
+            } else {
+                true
+            }
+        } else if !self.items.is_empty() {
+            !match_items
+        } else {
+            false
+        }
+    }
+}
+
+impl Default for Filter {
+    fn default() -> Self {
+        Self {
+            items: vec![],
+            accept: true,
         }
     }
 }
@@ -268,7 +320,7 @@ mod tests {
             .build();
 
         let priority = FilterItem::Priority(5);
-        let pgn = FilterItem::PGN(59_904);
+        let pgn = FilterItem::Pgn(59_904);
         let source_address = FilterItem::SourceAddress(0x01);
         let destination_address = FilterItem::DestinationAddress(0x02);
 
@@ -287,7 +339,7 @@ mod tests {
             .build();
 
         let priority = FilterItem::Priority(3);
-        let pgn = FilterItem::PGN(65_276);
+        let pgn = FilterItem::Pgn(65_276);
         let source_address = FilterItem::SourceAddress(0x7E);
         let destination_address = FilterItem::DestinationAddress(0xDA);
 
