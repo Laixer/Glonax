@@ -260,14 +260,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_filter_item_matches() {
+    fn test_filter_item_matches_1() {
         let id = IdBuilder::from_pgn(PGN::Request)
-            .priority(0x05)
+            .priority(5)
             .sa(0x01)
             .da(0x02)
             .build();
 
-        let priority = FilterItem::Priority(0x05);
+        let priority = FilterItem::Priority(5);
         let pgn = FilterItem::PGN(59_904);
         let source_address = FilterItem::SourceAddress(0x01);
         let destination_address = FilterItem::DestinationAddress(0x02);
@@ -276,5 +276,24 @@ mod tests {
         assert!(pgn.matches(&id));
         assert!(source_address.matches(&id));
         assert!(destination_address.matches(&id));
+    }
+
+    #[test]
+    fn test_filter_item_matches_2() {
+        let id = IdBuilder::from_pgn(PGN::DashDisplay)
+            .priority(3)
+            .sa(0x7E)
+            .da(0xDA)
+            .build();
+
+        let priority = FilterItem::Priority(3);
+        let pgn = FilterItem::PGN(65_276);
+        let source_address = FilterItem::SourceAddress(0x7E);
+        let destination_address = FilterItem::DestinationAddress(0xDA);
+
+        assert!(priority.matches(&id));
+        assert!(pgn.matches(&id));
+        assert!(source_address.matches(&id));
+        assert!(!destination_address.matches(&id));
     }
 }
