@@ -103,7 +103,7 @@ impl ControlNetwork {
         Self {
             socket,
             frame: None,
-            filter: Filter::default(),
+            filter: Filter::accept(),
             fix_frame_size: true,
             name: *name,
         }
@@ -115,41 +115,9 @@ impl ControlNetwork {
         Ok(Self::new(socket, name))
     }
 
-    /// Add a filter based on priority.
     #[inline]
-    pub fn add_priority_filter(&mut self, priority: u8) {
-        self.filter.items.push(FilterItem::Priority(priority));
-    }
-
-    /// Add a filter based on PGN.
-    #[inline]
-    pub fn add_pgn_filter(&mut self, pgn: u32) {
-        self.filter.items.push(FilterItem::Pgn(pgn));
-    }
-
-    /// Add a filter based on ECU address.
-    #[inline]
-    pub fn add_source_address_filter(&mut self, address: u8) {
-        self.filter.items.push(FilterItem::SourceAddress(address));
-    }
-
-    /// Add a filter based on destination address.
-    #[inline]
-    pub fn add_destination_address_filter(&mut self, address: u8) {
-        self.filter
-            .items
-            .push(FilterItem::DestinationAddress(address));
-    }
-
-    #[inline]
-    pub fn set_filter_accept(mut self) -> Self {
-        self.filter.accept = true;
-        self
-    }
-
-    #[inline]
-    pub fn set_filter_reject(mut self) -> Self {
-        self.filter.accept = false;
+    pub fn set_filter(mut self, filter: Filter) -> Self {
+        self.filter = filter;
         self
     }
 
@@ -234,7 +202,7 @@ impl ControlNetwork {
     }
 }
 
-enum FilterItem {
+pub enum FilterItem {
     Priority(u8),
     Pgn(u32),
     SourceAddress(u8),
@@ -252,7 +220,7 @@ impl FilterItem {
     }
 }
 
-struct Filter {
+pub struct Filter {
     /// Filter items.
     items: Vec<FilterItem>,
     /// Default policy.
@@ -260,19 +228,22 @@ struct Filter {
 }
 
 impl Filter {
-    fn accept() -> Self {
+    pub fn accept() -> Self {
         Self {
             items: vec![],
             accept: true,
         }
     }
 
-    #[allow(dead_code)]
-    fn reject() -> Self {
+    pub fn reject() -> Self {
         Self {
             items: vec![],
             accept: false,
         }
+    }
+
+    pub fn push(&mut self, item: FilterItem) {
+        self.items.push(item);
     }
 
     fn matches(&self, id: &Id) -> bool {

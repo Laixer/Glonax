@@ -1050,25 +1050,30 @@ async fn main() -> anyhow::Result<()> {
                 .function(consts::J1939_NAME_FUNCTION)
                 .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
                 .build();
-            let mut network = ControlNetwork::new(socket, &name).set_fix_frame_size(false);
 
-            if exclude {
-                network = network.set_filter_reject();
-            }
+            let mut filter = if exclude {
+                Filter::reject()
+            } else {
+                Filter::accept()
+            };
 
             for pgn in pgn {
-                network.add_pgn_filter(pgn);
+                filter.push(FilterItem::Pgn(pgn));
             }
             for priority in priority {
-                network.add_priority_filter(priority);
+                filter.push(FilterItem::Priority(priority));
             }
             for addr in address
                 .iter()
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                network.add_source_address_filter(addr?);
+                filter.push(FilterItem::SourceAddress(addr?));
             }
+
+            let network = ControlNetwork::new(socket, &name)
+                .set_fix_frame_size(false)
+                .set_filter(filter);
 
             print_frames(network).await?;
         }
@@ -1087,25 +1092,28 @@ async fn main() -> anyhow::Result<()> {
                 .function(consts::J1939_NAME_FUNCTION)
                 .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
                 .build();
-            let mut network = ControlNetwork::new(socket, &name);
 
-            if exclude {
-                network = network.set_filter_reject();
-            }
+            let mut filter = if exclude {
+                Filter::reject()
+            } else {
+                Filter::accept()
+            };
 
             for pgn in pgn {
-                network.add_pgn_filter(pgn);
+                filter.push(FilterItem::Pgn(pgn));
             }
             for priority in priority {
-                network.add_priority_filter(priority);
+                filter.push(FilterItem::Priority(priority));
             }
             for addr in address
                 .iter()
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                network.add_source_address_filter(addr?);
+                filter.push(FilterItem::SourceAddress(addr?));
             }
+
+            let network = ControlNetwork::new(socket, &name).set_filter(filter);
 
             analyze_frames(network).await?;
         }
