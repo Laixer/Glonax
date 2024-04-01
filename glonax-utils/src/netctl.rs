@@ -604,6 +604,9 @@ enum Command {
     Diagnostic,
     /// Show raw frames on screen.
     Dump {
+        /// Exclude matched frames.
+        #[arg(short, long)]
+        exclude: bool,
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
@@ -616,6 +619,9 @@ enum Command {
     },
     /// Analyze network frames.
     Analyze {
+        /// Exclude matched frames.
+        #[arg(short, long)]
+        exclude: bool,
         /// Filter on PGN.
         #[arg(long)]
         pgn: Vec<u32>,
@@ -1030,6 +1036,7 @@ async fn main() -> anyhow::Result<()> {
             diagnose(network).await?;
         }
         Command::Dump {
+            exclude,
             pgn,
             priority,
             address,
@@ -1045,6 +1052,10 @@ async fn main() -> anyhow::Result<()> {
                 .build();
             let mut network = ControlNetwork::new(socket, &name).set_fix_frame_size(false);
 
+            if exclude {
+                network = network.set_filter_reject();
+            }
+
             for pgn in pgn {
                 network.add_pgn_filter(pgn);
             }
@@ -1056,12 +1067,13 @@ async fn main() -> anyhow::Result<()> {
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                network.add_address_filter(addr?);
+                network.add_source_address_filter(addr?);
             }
 
             print_frames(network).await?;
         }
         Command::Analyze {
+            exclude,
             pgn,
             priority,
             address,
@@ -1077,6 +1089,10 @@ async fn main() -> anyhow::Result<()> {
                 .build();
             let mut network = ControlNetwork::new(socket, &name);
 
+            if exclude {
+                network = network.set_filter_reject();
+            }
+
             for pgn in pgn {
                 network.add_pgn_filter(pgn);
             }
@@ -1088,7 +1104,7 @@ async fn main() -> anyhow::Result<()> {
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                network.add_address_filter(addr?);
+                network.add_source_address_filter(addr?);
             }
 
             analyze_frames(network).await?;

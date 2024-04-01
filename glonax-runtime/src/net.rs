@@ -89,12 +89,6 @@ pub struct ControlNetwork {
     socket: CANSocket,
     /// The current frame.
     frame: Option<Frame>,
-    /// The priority filter.
-    filter_priority: Vec<u8>,
-    /// The PGN filter.
-    filter_pgn: Vec<u32>,
-    /// The address filter.
-    filter_address: Vec<u8>,
     /// Network filter.
     filter: Filter,
     /// The fixed frame size.
@@ -109,9 +103,6 @@ impl ControlNetwork {
         Self {
             socket,
             frame: None,
-            filter_priority: vec![],
-            filter_pgn: vec![],
-            filter_address: vec![],
             filter: Filter::default(),
             fix_frame_size: true,
             name: *name,
@@ -127,22 +118,39 @@ impl ControlNetwork {
     /// Add a filter based on priority.
     #[inline]
     pub fn add_priority_filter(&mut self, priority: u8) {
-        // self.filter_priority.push(priority);
         self.filter.items.push(FilterItem::Priority(priority));
     }
 
     /// Add a filter based on PGN.
     #[inline]
     pub fn add_pgn_filter(&mut self, pgn: u32) {
-        // self.filter_pgn.push(pgn);
         self.filter.items.push(FilterItem::Pgn(pgn));
     }
 
     /// Add a filter based on ECU address.
     #[inline]
-    pub fn add_address_filter(&mut self, address: u8) {
-        // self.filter_address.push(address);
+    pub fn add_source_address_filter(&mut self, address: u8) {
         self.filter.items.push(FilterItem::SourceAddress(address));
+    }
+
+    /// Add a filter based on destination address.
+    #[inline]
+    pub fn add_destination_address_filter(&mut self, address: u8) {
+        self.filter
+            .items
+            .push(FilterItem::DestinationAddress(address));
+    }
+
+    #[inline]
+    pub fn set_filter_accept(mut self) -> Self {
+        self.filter.accept = true;
+        self
+    }
+
+    #[inline]
+    pub fn set_filter_reject(mut self) -> Self {
+        self.filter.accept = false;
+        self
     }
 
     /// Set the fixed frame size.
@@ -182,23 +190,6 @@ impl ControlNetwork {
         self.socket.send_vectored(frames).await
     }
 
-    /// Filter the frame based on PGN and address.
-    ///
-    /// Returns `true` if the frame is accepted. Returns `false` if the frame is not accepted.
-    /// If no filters are set, all frames are accepted.
-    fn filter(&self, frame: &Frame) -> bool {
-        if !self.filter_priority.is_empty()
-            && !self.filter_priority.contains(&frame.id().priority())
-        {
-            false
-        } else if !self.filter_pgn.is_empty() && !self.filter_pgn.contains(&frame.id().pgn_raw()) {
-            false
-        } else {
-            !(!self.filter_address.is_empty()
-                && !self.filter_address.contains(&frame.id().source_address()))
-        }
-    }
-
     // TODO: This is a mess, split logic.
     // TODO: Rename to `recv` and `recv_timeout`
     /// Listen for incoming packets.
@@ -218,19 +209,6 @@ impl ControlNetwork {
                 }
                 break;
             }
-            // if self.filter(&frame) {
-            //     if self.fix_frame_size {
-            //         self.frame = Some(
-            //             FrameBuilder::new(*frame.id())
-            //                 .copy_from_slice(frame.as_ref())
-            //                 .set_len(8)
-            //                 .build(),
-            //         );
-            //     } else {
-            //         self.frame = Some(frame);
-            //     }
-            //     break;
-            // }
         }
 
         Ok(())
@@ -277,11 +255,26 @@ impl FilterItem {
 struct Filter {
     /// Filter items.
     items: Vec<FilterItem>,
-    /// Filter policy.
+    /// Default policy.
     accept: bool,
 }
 
 impl Filter {
+    fn accept() -> Self {
+        Self {
+            items: vec![],
+            accept: true,
+        }
+    }
+
+    #[allow(dead_code)]
+    fn reject() -> Self {
+        Self {
+            items: vec![],
+            accept: false,
+        }
+    }
+
     fn matches(&self, id: &Id) -> bool {
         let match_items = self.items.iter().any(|item| item.matches(id));
         if self.accept {
@@ -293,17 +286,14 @@ impl Filter {
         } else if !self.items.is_empty() {
             !match_items
         } else {
-            false
+            true
         }
     }
 }
 
 impl Default for Filter {
     fn default() -> Self {
-        Self {
-            items: vec![],
-            accept: true,
-        }
+        Self::accept()
     }
 }
 
