@@ -14,7 +14,7 @@ pub(crate) mod consts {
     /// On-Board Data Logger J1939 address.
     pub const J1939_ADDRESS_OBDL: u8 = 0xFB;
     /// Volvo VECU J1939 address.
-    pub const _J1939_ADDRESS_VOLVO_VECU: u8 = 0x11;
+    pub const J1939_ADDRESS_VOLVO_VECU: u8 = 0x11;
     /// Engine J1939 address.
     pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
     /// Hydraulic Control Unit J1939 address.
@@ -551,6 +551,9 @@ enum Command {
     },
     /// Engine control unit commands.
     Engine {
+        /// Engine driver.
+        #[arg(short, long, default_value = "j1939")]
+        driver: String,
         /// Message interval in milliseconds.
         #[arg(short, long, default_value_t = 10)]
         interval: u64,
@@ -781,8 +784,8 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        // TODO: Add driver options for engine control.
         Command::Engine {
+            driver,
             interval,
             address,
             command,
@@ -791,14 +794,18 @@ async fn main() -> anyhow::Result<()> {
 
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            // let ems0 = glonax::driver::VolvoD7E::new(
-            //     destination_address,
-            //     consts::J1939_ADDRESS_VOLVO_VECU,
-            // );
-            let ems0 = glonax::driver::net::engine::EngineManagementSystem::new(
-                destination_address,
-                consts::J1939_ADDRESS_OBDL,
-            );
+
+            let ems = if driver == "volvo" {
+                Box::new(glonax::driver::VolvoD7E::new(
+                    destination_address,
+                    consts::J1939_ADDRESS_VOLVO_VECU,
+                )) as Box<dyn Engine>
+            } else {
+                Box::new(glonax::driver::net::engine::EngineManagementSystem::new(
+                    destination_address,
+                    consts::J1939_ADDRESS_OBDL,
+                )) as Box<dyn Engine>
+            };
 
             match command {
                 EngineCommand::Rpm { rpm } => {
@@ -809,7 +816,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.request(rpm)).await?;
+                        socket.send(&ems.request(rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
@@ -818,14 +825,9 @@ async fn main() -> anyhow::Result<()> {
                     let mut tick =
                         tokio::time::interval(std::time::Duration::from_millis(interval));
 
-                    //     &ems0.speed_control(
-                    //     // glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
-                    //     700,
-                    // )
-
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.start(700)).await?;
+                        socket.send(&ems.start(700)).await?;
                     }
                 }
                 EngineCommand::Stop => {
@@ -836,7 +838,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket.send(&ems0.stop(700)).await?;
+                        socket.send(&ems.stop(700)).await?;
                     }
                 }
             }
