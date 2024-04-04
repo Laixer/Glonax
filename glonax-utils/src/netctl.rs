@@ -533,9 +533,6 @@ struct Args {
 enum Command {
     /// Hydraulics control unit commands.
     Hcu {
-        /// Message interval in milliseconds.
-        #[arg(short, long, default_value_t = 10)]
-        interval: u64,
         /// Target address.
         #[arg(short, long, default_value = "0x4A")]
         address: String,
@@ -545,9 +542,6 @@ enum Command {
     },
     /// Vehicle control unit commands.
     Vcu {
-        /// Message interval in milliseconds.
-        #[arg(short, long, default_value_t = 10)]
-        interval: u64,
         /// Target address.
         #[arg(short, long, default_value = "0x11")]
         address: String,
@@ -694,11 +688,7 @@ async fn main() -> anyhow::Result<()> {
     debug!("Bind to interface {}", args.interface);
 
     match args.command {
-        Command::Hcu {
-            interval,
-            address,
-            command,
-        } => {
+        Command::Hcu { address, command } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let hcu0 = glonax::driver::HydraulicControlUnit::new(
@@ -718,37 +708,19 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket
-                            .send(&hcu0.set_ident(toggle.parse::<bool>()?))
-                            .await?;
-                    }
+                    socket
+                        .send(&hcu0.set_ident(toggle.parse::<bool>()?))
+                        .await?;
                 }
                 HCUCommand::Reboot => {
                     info!("{} Reboot", style_address(destination_address));
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket.send(&hcu0.reboot()).await?;
-                    }
+                    socket.send(&hcu0.reboot()).await?;
                 }
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_address(destination_address));
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket.send(&hcu0.motion_reset()).await?;
-                    }
+                    socket.send(&hcu0.motion_reset()).await?;
                 }
                 HCUCommand::Lock { toggle } => {
                     info!(
@@ -767,13 +739,7 @@ async fn main() -> anyhow::Result<()> {
                         hcu0.unlock()
                     };
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket.send(&frames).await?;
-                    }
+                    socket.send(&frames).await?;
                 }
                 HCUCommand::Actuator { actuator, value } => {
                     info!(
@@ -787,15 +753,9 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket
-                            .send_vectored(&hcu0.actuator_command([(actuator, value)].into()))
-                            .await?;
-                    }
+                    socket
+                        .send_vectored(&hcu0.actuator_command([(actuator, value)].into()))
+                        .await?;
                 }
                 HCUCommand::Assign { address_new } => {
                     let destination_address_new = j1939_address(address_new)?;
@@ -806,30 +766,18 @@ async fn main() -> anyhow::Result<()> {
                         destination_address_new
                     );
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket
-                            .send_vectored(&commanded_address(
-                                destination_address,
-                                destination_address_new,
-                            ))
-                            .await?;
-                    }
+                    socket
+                        .send_vectored(&commanded_address(
+                            destination_address,
+                            destination_address_new,
+                        ))
+                        .await?;
                 }
             }
         }
-        Command::Vcu {
-            interval,
-            address,
-            command,
-        } => {
+        Command::Vcu { address, command } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            // let ems0 =
-            //     glonax::driver::VolvoD7E::new(destination_address, consts::J1939_ADDRESS_OBDL);
 
             match command {
                 VCUCommand::Ident { .. } => {
@@ -847,18 +795,12 @@ async fn main() -> anyhow::Result<()> {
                         destination_address_new
                     );
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
-                    loop {
-                        tick.tick().await;
-                        socket
-                            .send_vectored(&commanded_address(
-                                destination_address,
-                                destination_address_new,
-                            ))
-                            .await?;
-                    }
+                    socket
+                        .send_vectored(&commanded_address(
+                            destination_address,
+                            destination_address_new,
+                        ))
+                        .await?;
                 }
             }
         }
