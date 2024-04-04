@@ -304,7 +304,7 @@ async fn main() -> anyhow::Result<()> {
 
                 println!("Echo response time: {} ms", time_elapsed.as_millis());
 
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             },
             "test" => {
                 let target = glonax::core::Target::from_point(300.0, 400.0, 330.0);
