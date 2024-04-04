@@ -795,10 +795,16 @@ async fn main() -> anyhow::Result<()> {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
+            // TODO: Replace string with enum
             let ems = if driver == "volvo" {
                 Box::new(glonax::driver::VolvoD7E::new(
                     destination_address,
                     consts::J1939_ADDRESS_VOLVO_VECU,
+                )) as Box<dyn Engine>
+            } else if driver == "bosch" {
+                Box::new(glonax::driver::BoschEngineManagementSystem::new(
+                    destination_address,
+                    consts::J1939_ADDRESS_OBDL,
                 )) as Box<dyn Engine>
             } else {
                 Box::new(glonax::driver::net::engine::EngineManagementSystem::new(
