@@ -635,12 +635,6 @@ enum EngineCommand {
 
 #[derive(clap::Subcommand)]
 enum HCUCommand {
-    /// Enable or disable identification mode.
-    Ident { toggle: String },
-    /// Assign the unit a new address.
-    Assign { address_new: String },
-    /// Reboot the unit.
-    Reboot,
     /// Motion reset.
     MotionReset,
     /// Enable or disable motion lock.
@@ -697,26 +691,6 @@ async fn main() -> anyhow::Result<()> {
             );
 
             match command {
-                HCUCommand::Ident { toggle } => {
-                    info!(
-                        "{} Turn identification mode {}",
-                        style_address(destination_address),
-                        if toggle.parse::<bool>()? {
-                            Green.paint("on")
-                        } else {
-                            Red.paint("off")
-                        },
-                    );
-
-                    socket
-                        .send(&hcu0.set_ident(toggle.parse::<bool>()?))
-                        .await?;
-                }
-                HCUCommand::Reboot => {
-                    info!("{} Reboot", style_address(destination_address));
-
-                    socket.send(&hcu0.reboot()).await?;
-                }
                 HCUCommand::MotionReset => {
                     info!("{} Motion reset", style_address(destination_address));
 
@@ -755,22 +729,6 @@ async fn main() -> anyhow::Result<()> {
 
                     socket
                         .send_vectored(&hcu0.actuator_command([(actuator, value)].into()))
-                        .await?;
-                }
-                HCUCommand::Assign { address_new } => {
-                    let destination_address_new = j1939_address(address_new)?;
-
-                    info!(
-                        "{} Assign 0x{:X?}",
-                        style_address(destination_address),
-                        destination_address_new
-                    );
-
-                    socket
-                        .send_vectored(&commanded_address(
-                            destination_address,
-                            destination_address_new,
-                        ))
                         .await?;
                 }
             }
