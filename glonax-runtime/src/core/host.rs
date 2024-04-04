@@ -59,7 +59,14 @@ impl std::fmt::Display for Host {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut s = String::new();
 
-        s.push_str(&format!("Uptime: {} seconds; ", self.uptime));
+        let seconds = self.uptime % 60;
+        let minutes = (self.uptime / 60) % 60;
+        let hours = (self.uptime / 60) / 60;
+
+        s.push_str(&format!(
+            "Uptime: {:02}:{:02}:{:02}; ",
+            hours, minutes, seconds
+        ));
         s.push_str(&format!(
             "Memory usage: {:.2}GB / {:.2}GB; ",
             self.memory.0 as f64 / 1024.0 / 1024.0 / 1024.0,
