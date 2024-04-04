@@ -208,9 +208,13 @@ impl ControlNetwork {
 }
 
 pub enum FilterItem {
+    /// Filter by priority.
     Priority(u8),
+    /// Filter by PGN.
     Pgn(u32),
+    /// Filter by source address.
     SourceAddress(u8),
+    /// Filter by destination address.
     DestinationAddress(u8),
 }
 

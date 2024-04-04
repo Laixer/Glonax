@@ -781,11 +781,14 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
+        // TODO: Add driver options for engine control.
         Command::Engine {
             interval,
             address,
             command,
         } => {
+            use glonax::driver::net::engine::Engine;
+
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             // let ems0 = glonax::driver::VolvoD7E::new(
@@ -806,12 +809,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket
-                            .send(&ems0.speed_control(
-                                // glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
-                                rpm,
-                            ))
-                            .await?;
+                        socket.send(&ems0.request(rpm)).await?;
                     }
                 }
                 EngineCommand::Start => {
@@ -820,14 +818,14 @@ async fn main() -> anyhow::Result<()> {
                     let mut tick =
                         tokio::time::interval(std::time::Duration::from_millis(interval));
 
+                    //     &ems0.speed_control(
+                    //     // glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
+                    //     700,
+                    // )
+
                     loop {
                         tick.tick().await;
-                        socket
-                            .send(&ems0.speed_control(
-                                // glonax::driver::net::volvo_ems::VolvoEngineState::Nominal,
-                                700,
-                            ))
-                            .await?;
+                        socket.send(&ems0.start(700)).await?;
                     }
                 }
                 EngineCommand::Stop => {
@@ -838,12 +836,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         tick.tick().await;
-                        socket
-                            .send(&ems0.speed_control(
-                                // glonax::driver::net::volvo_ems::VolvoEngineState::Shutdown,
-                                700,
-                            ))
-                            .await?;
+                        socket.send(&ems0.stop(700)).await?;
                     }
                 }
             }
