@@ -570,15 +570,11 @@ enum Command {
     /// Request data from a unit.
     #[clap(alias("req"))]
     Request {
-        /// Message interval in milliseconds.
-        #[arg(short, long, default_value_t = 10)]
-        interval: u64,
         /// Target address.
         #[arg(short, long)]
         address: String,
-        /// Request commands.
-        #[command(subcommand)]
-        command: RequestCommand,
+        /// PGN to request.
+        pgn: u32,
     },
     /// Send raw frames.
     Send {
@@ -631,24 +627,6 @@ enum Command {
         #[arg(short, long)]
         address: Vec<String>,
     },
-}
-
-#[derive(clap::Subcommand, PartialEq, Eq)]
-enum RequestCommand {
-    /// Request unit name.
-    Name,
-    /// Request unit software version.
-    Software,
-    /// Request unit component identification.
-    Component,
-    /// Request unit vehicle identification.
-    Vehicle,
-    /// Request unit time and date.
-    Time,
-    /// Request previous diagnostic trouble codes.
-    PreviousDiagnostic,
-    /// Clear diagnostic trouble codes.
-    ClearDiagnostic,
 }
 
 #[derive(clap::Subcommand)]
@@ -951,40 +929,23 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Request {
-            interval,
-            address,
-            command,
-        } => {
+        Command::Request { address, pgn } => {
             use glonax::j1939::{protocol, PGN};
 
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
-            let pgn = match command {
-                RequestCommand::Name => PGN::AddressClaimed,
-                RequestCommand::Software => PGN::SoftwareIdentification,
-                RequestCommand::Component => PGN::ComponentIdentification,
-                RequestCommand::Vehicle => PGN::VehicleIdentification,
-                RequestCommand::Time => PGN::TimeDate,
-                RequestCommand::PreviousDiagnostic => PGN::DiagnosticMessage2,
-                RequestCommand::ClearDiagnostic => PGN::DiagnosticMessage3,
-            };
+            let pgn = PGN::from(pgn);
 
             info!("{} Request {:?}", style_address(destination_address), pgn);
 
-            let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
-
-            loop {
-                tick.tick().await;
-                socket
-                    .send(&protocol::request(
-                        destination_address,
-                        consts::J1939_ADDRESS_OBDL,
-                        pgn,
-                    ))
-                    .await?;
-            }
+            socket
+                .send(&protocol::request(
+                    destination_address,
+                    consts::J1939_ADDRESS_OBDL,
+                    pgn,
+                ))
+                .await?;
         }
         Command::Send { interval, id, data } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
