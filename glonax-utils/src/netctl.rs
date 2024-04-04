@@ -540,8 +540,8 @@ enum Command {
         #[command(subcommand)]
         command: HCUCommand,
     },
-    /// Vehicle control unit commands.
-    Vcu {
+    /// Vecraft control unit commands.
+    Vecraft {
         /// Target address.
         #[arg(short, long, default_value = "0x11")]
         address: String,
@@ -775,16 +775,35 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         }
-        Command::Vcu { address, command } => {
+        Command::Vecraft { address, command } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+            // TODO: Using HCU as Vecraft for now. Need to implement Vecraft driver.
+            let hcu0 = glonax::driver::HydraulicControlUnit::new(
+                destination_address,
+                consts::J1939_ADDRESS_OBDL,
+            );
 
             match command {
-                VCUCommand::Ident { .. } => {
-                    unimplemented!()
+                VCUCommand::Ident { toggle } => {
+                    info!(
+                        "{} Turn identification mode {}",
+                        style_address(destination_address),
+                        if toggle.parse::<bool>()? {
+                            Green.paint("on")
+                        } else {
+                            Red.paint("off")
+                        },
+                    );
+
+                    socket
+                        .send(&hcu0.set_ident(toggle.parse::<bool>()?))
+                        .await?;
                 }
                 VCUCommand::Reboot => {
-                    unimplemented!()
+                    info!("{} Reboot", style_address(destination_address));
+
+                    socket.send(&hcu0.reboot()).await?;
                 }
                 VCUCommand::Assign { address_new } => {
                     let destination_address_new = j1939_address(address_new)?;
