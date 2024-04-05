@@ -18,6 +18,10 @@ pub struct J1939Name {
     pub function: u8,
     /// Vehicle system.
     pub vehicle_system: u8,
+    /// Vehicle system instance.
+    pub vehicle_system_instance: u8,
+    /// Industry group.
+    pub industry_group: u8,
 }
 
 impl From<J1939Name> for j1939::Name {
@@ -29,6 +33,8 @@ impl From<J1939Name> for j1939::Name {
             .ecu_instance(name.ecu_instance)
             .function(name.function)
             .vehicle_system(name.vehicle_system)
+            .vehicle_system_instance(name.vehicle_system_instance)
+            .industry_group(name.industry_group)
             .build()
     }
 }

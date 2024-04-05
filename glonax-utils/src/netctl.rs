@@ -912,7 +912,6 @@ async fn main() -> anyhow::Result<()> {
         //     );
         //
         //     for frame in frames {
-        //         info!("Send frame: {}", frame);
         //         socket.send(&frame).await?;
         //         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
         //     }
