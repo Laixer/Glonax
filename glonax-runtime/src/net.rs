@@ -6,17 +6,46 @@ pub use crate::can::{CANSocket, SockAddrCAN};
 
 // TODO: Move to J1939 crate
 /// Assign address to node.
-pub fn commanded_address(node: u8, address: u8) -> Vec<Frame> {
-    // TODO: First 8 bytes are NAME, last byte is address
-    let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
+pub fn commanded_address(sa: u8, name: &Name, address: u8) -> Vec<Frame> {
+    let data = name
+        .to_bytes()
+        .into_iter()
+        .chain(std::iter::once(address))
+        .collect::<Vec<u8>>();
 
-    broadcast_announce_message(node, PGN::CommandedAddress, &data)
+    broadcast_announce_message(sa, PGN::CommandedAddress, &data)
 }
 
+struct BroadcastBuilder {
+    node: u8,
+    pgn: PGN,
+    data: Vec<u8>,
+}
+
+impl BroadcastBuilder {
+    fn new(node: u8, pgn: PGN) -> Self {
+        Self {
+            node,
+            pgn,
+            data: vec![],
+        }
+    }
+
+    fn with_data(mut self, data: Vec<u8>) -> Self {
+        self.data = data;
+        self
+    }
+
+    fn build(self) -> Vec<Frame> {
+        broadcast_announce_message(self.node, self.pgn, &self.data)
+    }
+}
+
+// NOTE: Send with 50ms interval, timeout after 750ms
 // TODO: This could be invalid, check priority and destination address.
 // TODO: Move to J1939 crate
 /// Broadcast Announce Message.
-pub fn broadcast_announce_message(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
+pub fn broadcast_announce_message(sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
     let data_length = (data.len() as u16).to_le_bytes();
     let packets = (data.len() as f32 / 7.0).ceil() as u8;
     let byte_array = pgn.to_le_bytes();
@@ -26,7 +55,8 @@ pub fn broadcast_announce_message(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
     let connection_frame = FrameBuilder::new(
         IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
             .priority(7)
-            .da(node)
+            .sa(sa)
+            .da(0xff)
             .build(),
     )
     .copy_from_slice(&[
@@ -49,7 +79,8 @@ pub fn broadcast_announce_message(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
                 .priority(7)
-                .da(node)
+                .sa(sa)
+                .da(0xff)
                 .build(),
         );
 

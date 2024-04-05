@@ -769,6 +769,15 @@ async fn main() -> anyhow::Result<()> {
                 VCUCommand::Assign { address_new } => {
                     let destination_address_new = j1939_address(address_new)?;
 
+                    let name = glonax::j1939::NameBuilder::default()
+                        .identity_number(0x1)
+                        .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
+                        .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
+                        .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
+                        .function(consts::J1939_NAME_FUNCTION)
+                        .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
+                        .build();
+
                     info!(
                         "{} Assign 0x{:X?}",
                         style_address(destination_address),
@@ -777,7 +786,8 @@ async fn main() -> anyhow::Result<()> {
 
                     socket
                         .send_vectored(&commanded_address(
-                            destination_address,
+                            consts::J1939_ADDRESS_OBDL,
+                            &name,
                             destination_address_new,
                         ))
                         .await?;
