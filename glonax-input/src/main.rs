@@ -40,7 +40,7 @@ struct Args {
     #[arg(long)]
     full_motion: bool,
     /// Control mode.
-    #[arg(long)]
+    #[arg(short, long)]
     mode: ControlMode,
     /// Quiet output (no logging).
     #[arg(long)]

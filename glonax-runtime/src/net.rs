@@ -10,14 +10,14 @@ pub fn commanded_address(node: u8, address: u8) -> Vec<Frame> {
     // TODO: First 8 bytes are NAME, last byte is address
     let data = vec![0x18, 0xA4, 0x49, 0x24, 0x11, 0x05, 0x06, 0x85, address];
 
-    broadcast_announce(node, PGN::CommandedAddress, &data)
+    broadcast_announce_message(node, PGN::CommandedAddress, &data)
 }
 
 // TODO: Move to J1939 crate
 /// Broadcast Announce Message.
-fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
+pub fn broadcast_announce_message(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
     let data_length = (data.len() as u16).to_le_bytes();
-    let packets = (data.len() as f32 / 8.0).ceil() as u8;
+    let packets = (data.len() as f32 / 7.0).ceil() as u8;
     let byte_array = pgn.to_le_bytes();
 
     let mut frames = vec![];
@@ -49,6 +49,60 @@ fn broadcast_announce(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
             IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
                 .priority(7)
                 .da(node)
+                .build(),
+        );
+
+        let payload = frame_builder.as_mut();
+        payload[0] = packet;
+
+        if data_chunk.len() == 7 {
+            payload[1..8].copy_from_slice(data_chunk);
+        } else {
+            payload[1..(data_chunk.len() + 1)].copy_from_slice(data_chunk);
+        }
+
+        frames.push(frame_builder.set_len(8).build());
+    }
+
+    frames
+}
+
+pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
+    let data_length = (data.len() as u16).to_le_bytes();
+    let packets = (data.len() as f32 / 7.0).ceil() as u8;
+    let byte_array = pgn.to_le_bytes();
+
+    let mut frames = vec![];
+
+    let connection_frame = FrameBuilder::new(
+        IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+            .priority(7)
+            .sa(sa)
+            .da(da)
+            .build(),
+    )
+    .copy_from_slice(&[
+        0x10,
+        data_length[0],
+        data_length[1],
+        packets,
+        0xff, // TODO
+        byte_array[0],
+        byte_array[1],
+        byte_array[2],
+    ])
+    .build();
+
+    frames.push(connection_frame);
+
+    for (packet, data_chunk) in data.chunks(7).enumerate() {
+        let packet = packet as u8 + 1;
+
+        let mut frame_builder = FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                .priority(7)
+                .sa(sa)
+                .da(da)
                 .build(),
         );
 
