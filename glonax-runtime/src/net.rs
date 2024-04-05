@@ -16,6 +16,14 @@ pub fn commanded_address(sa: u8, name: &Name, address: u8) -> Vec<Frame> {
     broadcast_announce_message(sa, PGN::CommandedAddress, &data)
 }
 
+pub enum ConnectionManagement {
+    RequestToSend = 0x10,
+    ClearToSend = 0x11,
+    EndOfMessageAcknowledgment = 0x13,
+    BroadcastAnnounceMessage = 0x20,
+    Abort = 0xff,
+}
+
 pub enum BroadcastTransportState {
     ConnectionManagement,
     DataTransfer(u8),
@@ -65,7 +73,7 @@ impl BroadcastTransport {
                         .build(),
                 )
                 .copy_from_slice(&[
-                    0x20,
+                    ConnectionManagement::BroadcastAnnounceMessage as u8,
                     data_length[0],
                     data_length[1],
                     packets,
@@ -82,7 +90,7 @@ impl BroadcastTransport {
             }
             // TODO: Return error frame if packet is out of bounds.
             BroadcastTransportState::DataTransfer(packet) => {
-                let packet_idx = packet + 1;
+                let sequence = packet + 1;
 
                 let mut frame_builder = FrameBuilder::new(
                     IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
@@ -93,7 +101,7 @@ impl BroadcastTransport {
                 );
 
                 let payload = frame_builder.as_mut();
-                payload[0] = packet_idx;
+                payload[0] = sequence;
 
                 let data_chunk = &self.data[packet as usize * 7..(packet as usize + 1) * 7];
 
@@ -105,7 +113,7 @@ impl BroadcastTransport {
 
                 let frame = frame_builder.set_len(8).build();
 
-                self.state = BroadcastTransportState::DataTransfer(packet_idx);
+                self.state = BroadcastTransportState::DataTransfer(packet + 1);
 
                 frame
             }
@@ -117,6 +125,7 @@ impl BroadcastTransport {
 // TODO: This could be invalid, check priority and destination address.
 // TODO: Move to J1939 crate
 /// Broadcast Announce Message.
+#[deprecated]
 pub fn broadcast_announce_message(sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
     let data_length = (data.len() as u16).to_le_bytes();
     let packets = (data.len() as f32 / 7.0).ceil() as u8;
@@ -187,18 +196,82 @@ pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
 
     let mut frames = vec![];
 
-    let connection_frame = FrameBuilder::new(
+    let _cm_cts = FrameBuilder::new(
         IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+            .priority(7)
             .sa(sa)
             .da(da)
             .build(),
     )
     .copy_from_slice(&[
-        0x10,
+        ConnectionManagement::ClearToSend as u8,
+        data_length[0], // TODO: Total number of packets allowed to be sent
+        data_length[1], // TODO: Next sequence number expected
+        0xff,
+        0xff,
+        byte_array[0],
+        byte_array[1],
+        byte_array[2],
+    ])
+    .build();
+
+    let _cm_ack = FrameBuilder::new(
+        IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+            .priority(7)
+            .sa(sa)
+            .da(da)
+            .build(),
+    )
+    .copy_from_slice(&[
+        ConnectionManagement::EndOfMessageAcknowledgment as u8,
         data_length[0],
         data_length[1],
         packets,
-        0xff, // TODO
+        0xff,
+        byte_array[0],
+        byte_array[1],
+        byte_array[2],
+    ])
+    .build();
+
+    //     The Connection Abort Reasons can be:
+    // 1 – Node is already engaged in another session and cannot maintain another connection.
+    // 2 – Node is lacking the necessary resources.
+    // 3 – A timeout occurred.
+    // 4...255 - Reserved.
+
+    let _cm_abort = FrameBuilder::new(
+        IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+            .priority(7)
+            .sa(sa)
+            .da(da)
+            .build(),
+    )
+    .copy_from_slice(&[
+        ConnectionManagement::Abort as u8,
+        data_length[0], // TOOD: Reason for abort
+        data_length[1],
+        packets,
+        0xff,
+        byte_array[0],
+        byte_array[1],
+        byte_array[2],
+    ])
+    .build();
+
+    let connection_frame = FrameBuilder::new(
+        IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+            .priority(7)
+            .sa(sa)
+            .da(da)
+            .build(),
+    )
+    .copy_from_slice(&[
+        ConnectionManagement::RequestToSend as u8,
+        data_length[0],
+        data_length[1],
+        packets,
+        0xff, // TODO: Maximum number of packets
         byte_array[0],
         byte_array[1],
         byte_array[2],
@@ -212,6 +285,7 @@ pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
 
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                .priority(7)
                 .sa(sa)
                 .da(da)
                 .build(),
