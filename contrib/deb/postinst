@@ -30,5 +30,5 @@ if [ -d /run/systemd/system ]; then
   systemctl daemon-reload
   echo "..done"
 
-  systemd_start_service glonax.service
+  # systemd_start_service glonax.service
 fi

@@ -2,7 +2,7 @@ use j1939::{protocol, Frame, PGN};
 
 use crate::net::Parsable;
 
-const CONFIG_PGN: PGN = PGN::ProprietaryA;
+const _CONFIG_PGN: PGN = PGN::ProprietaryA;
 const INCLINOMETER_PGN: PGN = PGN::ProprietaryB(65_451);
 
 // TODO: Add configuration message.

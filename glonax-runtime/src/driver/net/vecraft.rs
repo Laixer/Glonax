@@ -1,5 +1,10 @@
 use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 
+// TODO: Remove the header field.
+// TODO: Add J1939 node address
+// TODO: Add CAN termination
+// TODO: Add CAN bitrate
+// TODO: Add factory reset
 pub struct VecraftConfigMessage {
     /// Destination address
     pub(crate) destination_address: u8,
@@ -16,7 +21,7 @@ impl VecraftConfigMessage {
         let mut ident_on = None;
         let mut reboot = false;
 
-        if frame.pdu()[2] != 0xff {
+        if frame.pdu()[2] != PDU_NOT_AVAILABLE {
             if frame.pdu()[2] == 0x0 {
                 ident_on = Some(false);
             } else if frame.pdu()[2] == 0x1 {
@@ -24,7 +29,7 @@ impl VecraftConfigMessage {
             }
         }
 
-        if frame.pdu()[3] != 0xff && frame.pdu()[3] == 0x69 {
+        if frame.pdu()[3] != PDU_NOT_AVAILABLE && frame.pdu()[3] == 0x69 {
             reboot = true
         }
 
@@ -43,7 +48,7 @@ impl VecraftConfigMessage {
                 .sa(self.source_address)
                 .build(),
         )
-        .copy_from_slice(&[b'Z', b'C', 0xff, 0xff]);
+        .copy_from_slice(&[b'Z', b'C', PDU_NOT_AVAILABLE, PDU_NOT_AVAILABLE]);
 
         if let Some(led_on) = self.ident_on {
             frame_builder.as_mut()[2] = u8::from(led_on);
