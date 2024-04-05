@@ -883,6 +883,30 @@ async fn main() -> anyhow::Result<()> {
                 socket.send(&frame).await?;
             }
         }
+        // Command::Broadcast { address, pgn, data } => {
+        //     use glonax::j1939::PGN;
+        //
+        //     let destination_address = j1939_address(address)?;
+        //     let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+        //
+        //     let pgn = PGN::from(pgn);
+        //
+        //     let frames = destination_specific(
+        //         destination_address,
+        //         consts::J1939_ADDRESS_OBDL,
+        //         pgn,
+        //         &[
+        //             0x64, 0x00, 0x02, 0x01, 0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x32, 0x00, 0x20,
+        //             0x00, 0x01, 0x06,
+        //         ],
+        //     );
+        //
+        //     for frame in frames {
+        //         info!("Send frame: {}", frame);
+        //         socket.send(&frame).await?;
+        //         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
+        //     }
+        // }
         Command::Fuzzer { interval, id } => {
             use glonax::rand::Rng;
 

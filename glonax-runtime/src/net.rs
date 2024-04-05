@@ -13,6 +13,7 @@ pub fn commanded_address(node: u8, address: u8) -> Vec<Frame> {
     broadcast_announce_message(node, PGN::CommandedAddress, &data)
 }
 
+// TODO: This could be invalid, check priority and destination address.
 // TODO: Move to J1939 crate
 /// Broadcast Announce Message.
 pub fn broadcast_announce_message(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
@@ -85,7 +86,6 @@ pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
 
     let connection_frame = FrameBuilder::new(
         IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
-            .priority(7)
             .sa(sa)
             .da(da)
             .build(),
@@ -109,7 +109,6 @@ pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
 
         let mut frame_builder = FrameBuilder::new(
             IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
-                .priority(7)
                 .sa(sa)
                 .da(da)
                 .build(),
