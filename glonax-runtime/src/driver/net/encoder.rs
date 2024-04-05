@@ -2,6 +2,11 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 
+const CONFIG_PGN: PGN = PGN::ProprietaryA;
+const ENCODER_PGN: PGN = PGN::ProprietaryB(65_450);
+
+// TODO: Add configuration message.
+
 // TODO: Should this be EncoderStatus?
 #[derive(Debug, Clone, PartialEq)]
 pub enum EncoderState {
@@ -172,7 +177,7 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
             }
         }
 
-        if frame.id().pgn() == PGN::ProprietaryB(65_450) {
+        if frame.id().pgn() == ENCODER_PGN {
             if frame.id().source_address() != self.destination_address {
                 return None;
             }
@@ -204,8 +209,6 @@ impl super::J1939Unit for KueblerEncoder {
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
-        network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
-        network.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
         ctx.tx_mark();
 
         Ok(())

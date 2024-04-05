@@ -2,6 +2,11 @@ use j1939::{protocol, Frame, PGN};
 
 use crate::net::Parsable;
 
+const CONFIG_PGN: PGN = PGN::ProprietaryA;
+const INCLINOMETER_PGN: PGN = PGN::ProprietaryB(65_451);
+
+// TODO: Add configuration message.
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum InclinometerStatus {
     /// No error.
@@ -163,7 +168,7 @@ impl Parsable<ProcessDataMessage> for KueblerInclinometer {
             }
         }
 
-        if frame.id().pgn() == PGN::ProprietaryB(65_451) {
+        if frame.id().pgn() == INCLINOMETER_PGN {
             if frame.id().source_address() != self.destination_address {
                 return None;
             }
@@ -195,8 +200,6 @@ impl super::J1939Unit for KueblerInclinometer {
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
-        network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
-        network.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
         ctx.tx_mark();
 
         Ok(())

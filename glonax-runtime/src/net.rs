@@ -16,28 +16,96 @@ pub fn commanded_address(sa: u8, name: &Name, address: u8) -> Vec<Frame> {
     broadcast_announce_message(sa, PGN::CommandedAddress, &data)
 }
 
-struct BroadcastBuilder {
-    node: u8,
-    pgn: PGN,
-    data: Vec<u8>,
+pub enum BroadcastTransportState {
+    ConnectionManagement,
+    DataTransfer(u8),
 }
 
-impl BroadcastBuilder {
-    fn new(node: u8, pgn: PGN) -> Self {
+pub struct BroadcastTransport {
+    sa: u8,
+    pgn: PGN,
+    data: [u8; 1785],
+    length: usize,
+    state: BroadcastTransportState,
+}
+
+impl BroadcastTransport {
+    pub fn new(sa: u8, pgn: PGN) -> Self {
         Self {
-            node,
+            sa,
             pgn,
-            data: vec![],
+            data: [0xFF; 1785],
+            length: 0,
+            state: BroadcastTransportState::ConnectionManagement,
         }
     }
 
-    fn with_data(mut self, data: Vec<u8>) -> Self {
-        self.data = data;
+    pub fn with_data(mut self, data: &[u8]) -> Self {
+        self.data[..data.len()].copy_from_slice(data);
+        self.length = data.len();
         self
     }
 
-    fn build(self) -> Vec<Frame> {
-        broadcast_announce_message(self.node, self.pgn, &self.data)
+    pub fn next_frame(&mut self) -> Frame {
+        match self.state {
+            BroadcastTransportState::ConnectionManagement => {
+                let data_length = (self.length as u16).to_le_bytes();
+                let packets = (self.length as f32 / 7.0).ceil() as u8;
+                let byte_array = self.pgn.to_le_bytes();
+
+                let frame = FrameBuilder::new(
+                    IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)
+                        .priority(7)
+                        .sa(self.sa)
+                        .da(0xff)
+                        .build(),
+                )
+                .copy_from_slice(&[
+                    0x20,
+                    data_length[0],
+                    data_length[1],
+                    packets,
+                    0xff,
+                    byte_array[0],
+                    byte_array[1],
+                    byte_array[2],
+                ])
+                .build();
+
+                self.state = BroadcastTransportState::DataTransfer(0);
+
+                frame
+            }
+            // TODO: Return error frame if packet is out of bounds.
+            BroadcastTransportState::DataTransfer(packet) => {
+                let packet_idx = packet + 1;
+
+                let mut frame_builder = FrameBuilder::new(
+                    IdBuilder::from_pgn(PGN::TransportProtocolDataTransfer)
+                        .priority(7)
+                        .sa(self.sa)
+                        .da(0xff)
+                        .build(),
+                );
+
+                let payload = frame_builder.as_mut();
+                payload[0] = packet_idx;
+
+                let data_chunk = &self.data[packet as usize * 7..(packet as usize + 1) * 7];
+
+                if data_chunk.len() == 7 {
+                    payload[1..8].copy_from_slice(data_chunk);
+                } else {
+                    payload[1..(data_chunk.len() + 1)].copy_from_slice(data_chunk);
+                }
+
+                let frame = frame_builder.set_len(8).build();
+
+                self.state = BroadcastTransportState::DataTransfer(packet_idx);
+
+                frame
+            }
+        }
     }
 }
 
