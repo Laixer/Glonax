@@ -165,12 +165,18 @@ impl VecraftStatusMessage {
 
 impl std::fmt::Display for VecraftStatusMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let seconds = self.uptime % 60;
+        let minutes = (self.uptime / 60) % 60;
+        let hours = self.uptime / 3600;
+
         write!(
             f,
-            "Status: {} Motion: {} Uptime: {}",
+            "Status: {} Motion: {} Uptime: {:02}:{:02}:{:02}",
             self.state,
             if self.locked { "Locked" } else { "Unlocked" },
-            self.uptime
+            hours,
+            minutes,
+            seconds
         )
     }
 }

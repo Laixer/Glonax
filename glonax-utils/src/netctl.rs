@@ -19,6 +19,8 @@ pub(crate) mod consts {
     pub const J1939_ADDRESS_ENGINE0: u8 = 0x0;
     /// Hydraulic Control Unit J1939 address.
     pub const J1939_ADDRESS_HCU0: u8 = 0x4A;
+    /// Vehicle Control Unit J1939 address.
+    pub const J1939_ADDRESS_VCU0: u8 = 0x12;
     /// Kuebler Encoder 0 J1939 address.
     pub const J1939_ADDRESS_ENCODER0: u8 = 0x6A;
     /// Kuebler Encoder 1 J1939 address.
@@ -59,7 +61,7 @@ fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
 async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
     use glonax::driver::{
         HydraulicControlUnit, J1939ApplicationInspector, J1939Message, KueblerEncoder,
-        KueblerInclinometer, VolvoD7E,
+        KueblerInclinometer, VehicleControlUnit, VolvoD7E,
     };
 
     debug!("Print incoming frames to screen");
@@ -72,6 +74,7 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
     let mut imu0 = KueblerInclinometer::new(consts::J1939_ADDRESS_IMU0, consts::J1939_ADDRESS_OBDL);
     let mut hcu0 =
         HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
+    let mut vcu0 = VehicleControlUnit::new(consts::J1939_ADDRESS_VCU0, consts::J1939_ADDRESS_OBDL);
     let mut jis0 = J1939ApplicationInspector;
 
     loop {
@@ -317,6 +320,28 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
                         chrono::Utc::now().format("%T%.3f"),
                         style_address(network.frame_source().unwrap()),
                         Yellow.bold().paint("Hydraulic"),
+                        status
+                    );
+                }
+                _ => {}
+            }
+        } else if let Some(message) = network.try_accept(&mut vcu0) {
+            match message {
+                glonax::driver::net::vcu::VehicleMessage::VecraftConfig(config) => {
+                    info!(
+                        "{} {} {} » Vecraft config: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(network.frame_source().unwrap()),
+                        Yellow.bold().paint("Vehicle"),
+                        config
+                    );
+                }
+                glonax::driver::net::vcu::VehicleMessage::Status(status) => {
+                    info!(
+                        "{} {} {} » Status: {}",
+                        chrono::Utc::now().format("%T%.3f"),
+                        style_address(network.frame_source().unwrap()),
+                        Yellow.bold().paint("Vehicle"),
                         status
                     );
                 }
