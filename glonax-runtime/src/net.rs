@@ -46,12 +46,16 @@ impl BroadcastTransport {
         self
     }
 
+    pub fn packets(&self) -> usize {
+        (self.length as f32 / 7.0).ceil() as usize
+    }
+
     pub fn next_frame(&mut self) -> Frame {
         match self.state {
             BroadcastTransportState::ConnectionManagement => {
                 let data_length = (self.length as u16).to_le_bytes();
-                let packets = (self.length as f32 / 7.0).ceil() as u8;
-                let byte_array = self.pgn.to_le_bytes();
+                let packets = self.packets() as u8;
+                let byte_array = self.pgn.to_le_bytes(); // TODO: Move to J1939 crate
 
                 let frame = FrameBuilder::new(
                     IdBuilder::from_pgn(PGN::TransportProtocolConnectionManagement)

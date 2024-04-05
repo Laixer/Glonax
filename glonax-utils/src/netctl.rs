@@ -583,6 +583,13 @@ enum Command {
         /// Raw data to send.
         data: String,
     },
+    /// Broadcast raw frames.
+    Broadcast {
+        /// PGN to broadcast.
+        pgn: u32,
+        /// Raw data to send.
+        data: String,
+    },
     /// Frame fuzzer.
     Fuzzer {
         /// Message interval in milliseconds.
@@ -893,29 +900,31 @@ async fn main() -> anyhow::Result<()> {
                 socket.send(&frame).await?;
             }
         }
-        // Command::Broadcast { address, pgn, data } => {
-        //     use glonax::j1939::PGN;
-        //
-        //     let destination_address = j1939_address(address)?;
-        //     let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-        //
-        //     let pgn = PGN::from(pgn);
-        //
-        //     let frames = destination_specific(
-        //         destination_address,
-        //         consts::J1939_ADDRESS_OBDL,
-        //         pgn,
-        //         &[
-        //             0x64, 0x00, 0x02, 0x01, 0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x32, 0x00, 0x20,
-        //             0x00, 0x01, 0x06,
-        //         ],
-        //     );
-        //
-        //     for frame in frames {
-        //         socket.send(&frame).await?;
-        //         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
-        //     }
-        // }
+        Command::Broadcast { pgn, data } => {
+            use glonax::j1939::PGN;
+
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+
+            let pgn = PGN::from(pgn);
+
+            let mut bam = BroadcastTransport::new(consts::J1939_ADDRESS_OBDL, pgn)
+                .with_data(&hex::decode(data)?);
+
+            // let frames = destination_specific(
+            //     destination_address,
+            //     consts::J1939_ADDRESS_OBDL,
+            //     pgn,
+            //     &[
+            //         0x64, 0x00, 0x02, 0x01, 0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x32, 0x00, 0x20,
+            //         0x00, 0x01, 0x06,
+            //     ],
+            // );
+
+            for _ in 0..bam.packets() + 1 {
+                socket.send(&bam.next_frame()).await?;
+                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            }
+        }
         Command::Fuzzer { interval, id } => {
             use glonax::rand::Rng;
 
