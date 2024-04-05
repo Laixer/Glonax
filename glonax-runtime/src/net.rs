@@ -67,6 +67,15 @@ pub fn broadcast_announce_message(node: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
     frames
 }
 
+// >[1CEC20FB] Prio: 7 PGN: 60416 DA: 0x20    [10, 10, 00, 03, FF, 00, EF, 00]
+// <[18ECFB20] Prio: 6 PGN: 60416 DA: 0xFB    [11, 03, 01, FF, FF, 00, EF, 00]
+// >[1CEB20FB] Prio: 7 PGN: 60160 DA: 0x20    [01, 64, 00, 02, 01, 00, 00, 02]
+// >[1CEB20FB] Prio: 7 PGN: 60160 DA: 0x20    [02, 01, 00, 00, 32, 00, 7A, 00]
+// >[1CEB20FB] Prio: 7 PGN: 60160 DA: 0x20    [03, 00, 06, FF, FF, FF, FF, FF]
+// <[18ECFB20] Prio: 6 PGN: 60416 DA: 0xFB    [13, 10, 00, 03, FF, 00, EF, 00]
+
+// TODO: Move to J1939 crate
+/// Destination specific transport protocol.
 pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame> {
     let data_length = (data.len() as u16).to_le_bytes();
     let packets = (data.len() as f32 / 7.0).ceil() as u8;
