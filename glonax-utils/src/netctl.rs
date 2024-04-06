@@ -579,9 +579,6 @@ enum Command {
         /// Engine driver.
         #[arg(short, long, default_value = "j1939")]
         driver: String,
-        /// Message interval in milliseconds.
-        #[arg(short, long, default_value_t = 10)]
-        interval: u64,
         /// Target address.
         #[arg(short, long, default_value = "0x0")]
         address: String,
@@ -828,7 +825,6 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::Engine {
             driver,
-            interval,
             address,
             command,
         } => {
@@ -859,34 +855,25 @@ async fn main() -> anyhow::Result<()> {
                 EngineCommand::Rpm { rpm } => {
                     info!("{} Set RPM to {}", style_address(destination_address), rpm);
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
                     loop {
-                        tick.tick().await;
                         socket.send(&ems.request(rpm)).await?;
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     }
                 }
                 EngineCommand::Start => {
                     info!("{} Start engine", style_address(destination_address));
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
                     loop {
-                        tick.tick().await;
                         socket.send(&ems.start(700)).await?;
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     }
                 }
                 EngineCommand::Stop => {
                     info!("{} Stop engine", style_address(destination_address));
 
-                    let mut tick =
-                        tokio::time::interval(std::time::Duration::from_millis(interval));
-
                     loop {
-                        tick.tick().await;
                         socket.send(&ems.stop(700)).await?;
+                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     }
                 }
             }

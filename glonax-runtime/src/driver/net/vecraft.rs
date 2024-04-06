@@ -147,9 +147,9 @@ impl VecraftStatusMessage {
         )
         .copy_from_slice(&[
             self.state.to_byte(),
-            0xff,
+            PDU_NOT_AVAILABLE,
             if self.locked { 0x1 } else { 0x0 },
-            0xff,
+            PDU_NOT_AVAILABLE,
             self.uptime.to_le_bytes()[0],
             self.uptime.to_le_bytes()[1],
             self.uptime.to_le_bytes()[2],
