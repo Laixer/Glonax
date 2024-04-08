@@ -86,6 +86,7 @@ async fn main() -> anyhow::Result<()> {
         println!("  r  | request <class>");
         println!("  w  | watch <class>");
         println!("  e  | engine <command");
+        println!("  p  | ping");
         println!("  qd | quick disconnect <on|off>");
         println!("  l  | lights <on|off>");
         println!("  h  | horn <on|off>");
@@ -299,7 +300,7 @@ async fn main() -> anyhow::Result<()> {
 
                 client.send_packet(&control).await?;
             }
-            "ping" => loop {
+            "p" | "ping" => loop {
                 let time_elapsed = client.probe().await?;
 
                 println!("Echo response time: {} ms", time_elapsed.as_millis());
