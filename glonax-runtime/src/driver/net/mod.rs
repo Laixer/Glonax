@@ -5,6 +5,7 @@ pub mod fuzzer;
 pub mod hydraulic;
 pub mod inclino;
 pub mod inspector;
+pub mod probe;
 pub mod vcu;
 pub(super) mod vecraft;
 pub mod vms;
@@ -268,14 +269,17 @@ pub struct NetDriverContext {
 }
 
 impl NetDriverContext {
+    /// Check if the last message was sent within a timeout.
     fn is_rx_timeout(&self, timeout: std::time::Duration) -> bool {
         self.rx_last.elapsed() > timeout
     }
 
+    /// Mark the last time a message was sent.
     fn tx_mark(&mut self) {
         self.tx_last = std::time::Instant::now();
     }
 
+    /// Mark the last time a message was received.
     fn rx_mark(&mut self) {
         self.rx_last = std::time::Instant::now();
     }
@@ -312,7 +316,7 @@ pub enum J1939UnitError {
     InvalidConfiguration,
     /// Version mismatch.
     VersionMismatch,
-    /// Bus error.
+    /// Unit communication error.
     BusError,
     /// Unit has an i/o error.
     IOError(std::io::Error),
@@ -357,6 +361,10 @@ pub trait J1939Unit {
     /// Get the source address of the unit.
     fn source(&self) -> u8;
 
+    /// Setup the unit.
+    ///
+    /// This method will be called to setup the unit. This method should be non-blocking and should
+    /// only perform asynchronous I/O operations. This method is optional and may be a no-op.
     fn setup(
         &self,
         _ctx: &mut NetDriverContext,
@@ -366,6 +374,10 @@ pub trait J1939Unit {
         std::future::ready(Ok(()))
     }
 
+    /// Teardown the unit.
+    ///
+    /// This method will be called to teardown the unit. This method should be non-blocking and should
+    /// only perform asynchronous I/O operations. This method is optional and may be a no-op.
     fn teardown(
         &self,
         _ctx: &mut NetDriverContext,

@@ -429,6 +429,7 @@ async fn print_frames(socket: CANSocket, filter: Filter) -> anyhow::Result<()> {
     loop {
         let frame = socket.recv().await?;
         if filter.matches(frame.id()) {
+            // TODO: Move to j1939 crate
             let specification_part = match frame.id().pgn() {
                 glonax::j1939::PGN::ProprietaryA => "PA",
                 glonax::j1939::PGN::ProprietaryB(_) => "PB",
@@ -452,24 +453,8 @@ async fn print_frames(socket: CANSocket, filter: Filter) -> anyhow::Result<()> {
 async fn diagnose(mut network: ControlNetwork) -> anyhow::Result<()> {
     debug!("Print incoming frames to screen");
 
-    let mut ecu_addresses = vec![];
-
     let mut jis0 = glonax::driver::J1939ApplicationInspector;
-
-    #[rustfmt::skip]
-    async fn probe(network: &ControlNetwork, address: u8) -> anyhow::Result<()> {
-        use glonax::j1939::{protocol, PGN};
-
-        println!("Probe ECU {}", Purple.paint(format!("0x{:X?}", address)));
-
-        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::AddressClaimed)).await?;
-        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::SoftwareIdentification)).await?;
-        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::ComponentIdentification)).await?;
-        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::VehicleIdentification)).await?;
-        network.send(&protocol::request(address, consts::J1939_ADDRESS_OBDL, PGN::TimeDate)).await?;
-
-        Ok(())
-    }
+    let mut prb0 = glonax::driver::net::probe::Probe::default();
 
     loop {
         network.listen().await?;
@@ -501,37 +486,30 @@ async fn diagnose(mut network: ControlNetwork) -> anyhow::Result<()> {
                 }
                 _ => {}
             }
-        }
-
-        if let Some(frame) = network.take() {
-            if !ecu_addresses.contains(&frame.id().source_address()) {
-                ecu_addresses.push(frame.id().source_address());
-
-                println!(
-                    "Found source address {}",
-                    Purple.paint(format!("0x{:X?}", frame.id().source_address()))
+        } else if let Some(message) = network.try_accept(&mut prb0) {
+            if let Some(address) = message.destination_address {
+                info!(
+                    "{} {} Destination address: {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    style_address(address),
                 );
 
-                probe(&network, frame.id().source_address()).await?;
+                prb0.send_probe(address, consts::J1939_ADDRESS_OBDL, &mut network)
+                    .await?;
             }
+            if let Some(address) = message.source_address {
+                info!(
+                    "{} {} Source address: {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    style_address(address),
+                );
 
-            if let Some(da) = frame.id().destination_address() {
-                if da == 0xff {
-                    continue;
-                }
-
-                if !ecu_addresses.contains(&da) {
-                    ecu_addresses.push(da);
-
-                    println!(
-                        "Found destination address {}",
-                        Purple.paint(format!("0x{:X?}", da))
-                    );
-
-                    probe(&network, da).await?;
-                }
+                prb0.send_probe(address, consts::J1939_ADDRESS_OBDL, &mut network)
+                    .await?;
             }
-        };
+        }
     }
 }
 
@@ -956,7 +934,6 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Command::Diagnostic => {
-            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
             let name = glonax::j1939::NameBuilder::default()
                 .identity_number(0x1)
                 .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
@@ -965,7 +942,7 @@ async fn main() -> anyhow::Result<()> {
                 .function(consts::J1939_NAME_FUNCTION)
                 .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
                 .build();
-            let network = ControlNetwork::new(socket, &name);
+            let network = ControlNetwork::bind(&args.interface, &name)?;
 
             diagnose(network).await?;
         }
@@ -975,8 +952,6 @@ async fn main() -> anyhow::Result<()> {
             priority,
             address,
         } => {
-            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-
             let mut filter = if exclude {
                 Filter::reject()
             } else {
@@ -996,6 +971,8 @@ async fn main() -> anyhow::Result<()> {
             {
                 filter.push(FilterItem::SourceAddress(addr?));
             }
+
+            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
             print_frames(socket, filter).await?;
         }
@@ -1005,16 +982,6 @@ async fn main() -> anyhow::Result<()> {
             priority,
             address,
         } => {
-            let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
-            let name = glonax::j1939::NameBuilder::default()
-                .identity_number(0x1)
-                .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
-                .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
-                .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
-                .function(consts::J1939_NAME_FUNCTION)
-                .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
-                .build();
-
             let mut filter = if exclude {
                 Filter::reject()
             } else {
@@ -1035,7 +1002,15 @@ async fn main() -> anyhow::Result<()> {
                 filter.push(FilterItem::SourceAddress(addr?));
             }
 
-            let network = ControlNetwork::new(socket, &name).set_filter(filter);
+            let name = glonax::j1939::NameBuilder::default()
+                .identity_number(0x1)
+                .manufacturer_code(consts::J1939_NAME_MANUFACTURER_CODE)
+                .function_instance(consts::J1939_NAME_FUNCTION_INSTANCE)
+                .ecu_instance(consts::J1939_NAME_ECU_INSTANCE)
+                .function(consts::J1939_NAME_FUNCTION)
+                .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
+                .build();
+            let network = ControlNetwork::bind(&args.interface, &name)?;
 
             analyze_frames(network).await?;
         }

@@ -306,6 +306,10 @@ pub fn destination_specific(da: u8, sa: u8, pgn: PGN, data: &[u8]) -> Vec<Frame>
     frames
 }
 
+/// A trait for parsing frames.
+///
+/// This trait is used to accept and parse incoming frames and return a message if the frame is
+/// parsable. The trait is used to implement a parser for a specific message type.
 pub trait Parsable<T>: Send + Sync {
     /// Parse a frame.
     ///
@@ -338,9 +342,8 @@ pub struct ControlNetwork {
 }
 
 impl ControlNetwork {
-    // TODO: Rename to `from_socket`.
     /// Construct a new control network.
-    pub fn new(socket: CANSocket, name: &Name) -> Self {
+    pub fn from_socket(socket: CANSocket, name: &Name) -> Self {
         Self {
             socket,
             frame: None,
@@ -353,7 +356,7 @@ impl ControlNetwork {
     /// Construct a new control network and bind to an interface.
     pub fn bind(interface: &str, name: &Name) -> io::Result<Self> {
         let socket = CANSocket::bind(&SockAddrCAN::new(interface))?;
-        Ok(Self::new(socket, name))
+        Ok(Self::from_socket(socket, name))
     }
 
     /// Set the global filter.
@@ -374,13 +377,6 @@ impl ControlNetwork {
     #[inline]
     pub fn frame_source(&self) -> Option<u8> {
         self.frame.map(|f| f.id().source_address())
-    }
-
-    /// Take the frame from the router.
-    #[deprecated]
-    #[inline]
-    pub fn take(&mut self) -> Option<Frame> {
-        self.frame.take()
     }
 
     /// Return the name of the control network.
