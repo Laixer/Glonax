@@ -857,7 +857,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         socket.send(&ems.request(rpm)).await?;
-                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                     }
                 }
                 EngineCommand::Start => {
@@ -865,7 +865,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         socket.send(&ems.start(700)).await?;
-                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                     }
                 }
                 EngineCommand::Stop => {
@@ -873,7 +873,7 @@ async fn main() -> anyhow::Result<()> {
 
                     loop {
                         socket.send(&ems.stop(700)).await?;
-                        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                     }
                 }
             }
