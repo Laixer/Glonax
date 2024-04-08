@@ -1010,7 +1010,7 @@ async fn main() -> anyhow::Result<()> {
                 .function(consts::J1939_NAME_FUNCTION)
                 .vehicle_system(consts::J1939_NAME_VEHICLE_SYSTEM)
                 .build();
-            let network = ControlNetwork::bind(&args.interface, &name)?;
+            let network = ControlNetwork::bind(&args.interface, &name)?.with_filter(filter);
 
             analyze_frames(network).await?;
         }

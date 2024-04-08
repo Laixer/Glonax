@@ -358,7 +358,7 @@ impl ControlNetwork {
 
     /// Set the global filter.
     #[inline]
-    pub fn set_filter(mut self, filter: Filter) -> Self {
+    pub fn with_filter(mut self, filter: Filter) -> Self {
         self.filter = filter;
         self
     }
