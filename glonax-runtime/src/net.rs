@@ -335,8 +335,6 @@ pub struct ControlNetwork {
     frame: Option<Frame>,
     /// Network filter.
     filter: Filter,
-    /// The fixed frame size.
-    fix_frame_size: bool,
     /// ECU Name.
     name: Name,
 }
@@ -348,7 +346,6 @@ impl ControlNetwork {
             socket,
             frame: None,
             filter: Filter::accept(),
-            fix_frame_size: true,
             name: *name,
         }
     }
@@ -363,13 +360,6 @@ impl ControlNetwork {
     #[inline]
     pub fn set_filter(mut self, filter: Filter) -> Self {
         self.filter = filter;
-        self
-    }
-
-    /// Set the fixed frame size.
-    #[inline]
-    pub fn set_fix_frame_size(mut self, fix_frame_size: bool) -> Self {
-        self.fix_frame_size = fix_frame_size;
         self
     }
 
@@ -397,6 +387,7 @@ impl ControlNetwork {
         self.socket.send_vectored(frames).await
     }
 
+    // TODO: Refactor into a single expression.
     // TODO: This is a mess, split logic.
     // TODO: Rename to `recv`
     /// Listen for incoming packets.
@@ -404,16 +395,12 @@ impl ControlNetwork {
         loop {
             let frame = self.socket.recv().await?;
             if self.filter.matches(frame.id()) {
-                self.frame = if self.fix_frame_size {
-                    Some(
-                        FrameBuilder::new(*frame.id())
-                            .copy_from_slice(frame.as_ref())
-                            .set_len(8)
-                            .build(),
-                    )
-                } else {
-                    Some(frame)
-                };
+                self.frame = Some(
+                    FrameBuilder::new(*frame.id())
+                        .copy_from_slice(frame.as_ref())
+                        .set_len(8)
+                        .build(),
+                );
                 break;
             }
         }
