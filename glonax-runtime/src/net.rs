@@ -429,6 +429,7 @@ impl ControlNetwork {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub enum FilterItem {
     /// Filter by priority.
     Priority(u8),
@@ -478,7 +479,7 @@ impl Filter {
     }
 
     pub fn matches(&self, id: &Id) -> bool {
-        let match_items = self.items.iter().any(|item| item.matches(id));
+        let match_items = self.items.iter().all(|item| item.matches(id));
         if self.accept {
             if !self.items.is_empty() {
                 match_items
@@ -539,5 +540,31 @@ mod tests {
         assert!(pgn.matches(&id));
         assert!(source_address.matches(&id));
         assert!(!destination_address.matches(&id));
+    }
+
+    #[test]
+    fn test_filter_item_matches_3() {
+        let id = IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
+            .sa(0x29)
+            .build();
+
+        let mut filter = Filter::accept();
+        filter.push(FilterItem::Pgn(65_282));
+        filter.push(FilterItem::SourceAddress(0x29));
+
+        assert!(filter.matches(&id));
+    }
+
+    #[test]
+    fn test_filter_item_matches_4() {
+        let id = IdBuilder::from_pgn(PGN::CruiseControlVehicleSpeed)
+            .sa(0x30)
+            .build();
+
+        let mut filter = Filter::accept();
+        filter.push(FilterItem::Pgn(PGN::CruiseControlVehicleSpeed.into()));
+        filter.push(FilterItem::SourceAddress(0x81));
+
+        assert!(!filter.matches(&id));
     }
 }
