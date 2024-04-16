@@ -737,9 +737,12 @@ async fn main() -> anyhow::Result<()> {
                         },
                     );
 
-                    socket
-                        .send_vectored(&hcu0.actuator_command([(actuator, value)].into()))
-                        .await?;
+                    loop {
+                        socket
+                            .send_vectored(&hcu0.actuator_command([(actuator, value)].into()))
+                            .await?;
+                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                    }
                 }
             }
         }
