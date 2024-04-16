@@ -661,6 +661,8 @@ enum VCUCommand {
     Assign { address_new: String },
     /// Reboot the unit.
     Reboot,
+    /// Factory reset the unit.
+    FactoryReset,
 }
 
 #[tokio::main]
@@ -801,6 +803,11 @@ async fn main() -> anyhow::Result<()> {
                             destination_address_new,
                         ))
                         .await?;
+                }
+                VCUCommand::FactoryReset => {
+                    info!("{} Factory reset", style_address(destination_address));
+
+                    socket.send(&hcu0.factory_reset()).await?;
                 }
             }
         }

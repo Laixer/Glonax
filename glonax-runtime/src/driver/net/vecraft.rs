@@ -77,6 +77,32 @@ impl std::fmt::Display for VecraftConfigMessage {
     }
 }
 
+pub struct VecraftConfigMessage2 {
+    /// Destination address
+    pub(crate) destination_address: u8,
+    /// Source address
+    pub(crate) source_address: u8,
+}
+
+impl VecraftConfigMessage2 {
+    pub(crate) fn to_frame(&self) -> Frame {
+        FrameBuilder::new(
+            IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2)
+                .da(self.destination_address)
+                .sa(self.source_address)
+                .build(),
+        )
+        .copy_from_slice(&[0x1; 8])
+        .build()
+    }
+}
+
+impl std::fmt::Display for VecraftConfigMessage2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Factory reset")
+    }
+}
+
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum State {
     /// ECU is in nominal state.

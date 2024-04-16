@@ -37,6 +37,9 @@ impl std::fmt::Display for EncoderState {
     }
 }
 
+// TODO: Every message should implement a trait that allows it to be converted to and from a frame.
+// TODO: Implement from_frame and to_frame for EncoderMessage.
+// TODO: Implement Display for message traits.
 #[derive(Debug, Clone)]
 pub struct EncoderMessage {
     /// Source address.
@@ -136,6 +139,18 @@ impl EncoderMessage {
     }
 }
 
+impl From<Frame> for EncoderMessage {
+    fn from(frame: Frame) -> Self {
+        Self::from_frame(&frame)
+    }
+}
+
+impl From<&Frame> for EncoderMessage {
+    fn from(frame: &Frame) -> Self {
+        Self::from_frame(frame)
+    }
+}
+
 impl std::fmt::Display for EncoderMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -182,7 +197,7 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
                 return None;
             }
 
-            Some(EncoderMessage::from_frame(frame))
+            Some(frame.into())
         } else {
             None
         }
