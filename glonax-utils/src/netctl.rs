@@ -438,7 +438,7 @@ async fn print_frames(socket: CANSocket, filter: Filter) -> anyhow::Result<()> {
             };
 
             println!(
-                "{} {:3}ms {} {}",
+                "{} {:4}ms {} {}",
                 chrono::Utc::now().format("%T%.3f"),
                 rx_last.elapsed().as_millis(),
                 specification_part,
