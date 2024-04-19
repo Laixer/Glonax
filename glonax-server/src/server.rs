@@ -184,7 +184,9 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     log::warn!("Client is not authorized to control the machine");
                 }
             }
-            _ => {}
+            _ => {
+                log::debug!("Unknown message type: {}", frame.message);
+            }
         }
     }
 
