@@ -129,6 +129,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
+    // TODO: Why is the interval configurable?
     runtime.schedule_service::<service::Host, _>(
         config.host.clone(),
         Duration::from_millis(config.host.interval.clamp(10, 1_000)),

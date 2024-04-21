@@ -167,6 +167,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+        // TODO: Remove timeout
         if let Err(e) = self
             .network
             .listen_timeout(Duration::from_millis(100))
