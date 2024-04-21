@@ -274,29 +274,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     }
 
     #[deprecated]
-    pub fn schedule_motion_sink<Fut>(
-        &mut self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionReceiver) -> Fut + Send + 'static,
-    ) where
-        Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
-    {
-        let config = self.config.clone();
-        let instance = self.instance.clone();
-        let operand = self.operand.clone();
-        let motion_rx = self.motion_rx.take().unwrap();
-
-        tokio::spawn(async move {
-            if let Err(e) = service(config, instance, operand, motion_rx).await {
-                log::error!("Failed to start motion service: {}", e);
-            }
-        });
-    }
-
-    //
-    // Services
-    //
-
-    #[deprecated]
     pub fn schedule_io_func<Fut>(
         &self,
         service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
@@ -471,14 +448,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             service.tick(operand.clone()).await;
         }
         service.teardown(operand.clone()).await;
-    }
-
-    /// Enqueue a motion command.
-    ///
-    /// This method will enqueue a motion command to be sent to the network service.
-    #[inline]
-    pub async fn enqueue_motion(&self, motion: crate::core::Motion) {
-        self.motion_tx.send(motion).await.ok();
     }
 
     /// Wait for the runtime to shutdown.
