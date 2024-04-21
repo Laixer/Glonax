@@ -167,7 +167,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
     runtime.schedule_io_func(server::unix_listen);
     // runtime.schedule_io_service::<service::TcpServer, service::TcpServerConfig>(
-    //     config.tcp_server.clone(),
+    //     config.tcp_server.clone().unwrap(),
     // );
 
     runtime.schedule_service_default::<service::Announcer>(Duration::from_millis(1_000));

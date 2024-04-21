@@ -292,7 +292,21 @@ impl Service<TcpServerConfig> for TcpServer {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        let (stream, addr) = self.listener.accept().await.unwrap();
+        let rs =
+            tokio::time::timeout(std::time::Duration::from_secs(1), self.listener.accept()).await;
+
+        let (stream, addr) = match rs {
+            Ok(Ok((stream, addr))) => (stream, addr),
+            Ok(Err(e)) => {
+                log::error!("Failed to accept connection: {}", e);
+                return;
+            }
+            Err(_) => {
+                return;
+            }
+        };
+
+        // let (stream, addr) = self.listener.accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
         log::debug!("Accepted connection from: {}", addr);

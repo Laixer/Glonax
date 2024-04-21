@@ -328,6 +328,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
+        // TODO: Replace loop with tokio::select
         self.tasks.push(tokio::spawn(async move {
             service.setup(operand.clone()).await;
             while shutdown.is_empty() {
