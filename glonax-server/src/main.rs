@@ -140,7 +140,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_service_default::<service::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_service_default::<service::EngineSimulator>(Duration::from_millis(10));
 
-        runtime.schedule_motion_sink(device::sink_net_actuator_sim);
+        runtime
+            .schedule_net3_service::<service::ActuatorSimulator, _>(glonax::runtime::NullConfig {});
     } else {
         if let Some(gnss_config) = config.clone().gnss {
             runtime.schedule_io_service::<service::Gnss, _>(gnss_config);

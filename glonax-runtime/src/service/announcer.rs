@@ -5,7 +5,7 @@ use crate::runtime::{Service, ServiceContext, SharedOperandState};
 pub struct Announcer(UdpSocket);
 
 impl<C> Service<C> for Announcer {
-    fn new(_config: C) -> Self
+    fn new(_: C) -> Self
     where
         Self: Sized,
     {

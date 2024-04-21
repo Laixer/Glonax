@@ -66,6 +66,8 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     }
 
     async fn teardown(&mut self, _runtime_state: SharedOperandState) {
+        // TODO: Call teardown on each component
+
         self.ctx.post_tick();
     }
 
