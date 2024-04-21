@@ -139,8 +139,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_service_default::<service::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_service_default::<service::EngineSimulator>(Duration::from_millis(10));
 
-        runtime
-            .schedule_net3_service::<service::ActuatorSimulator, _>(glonax::runtime::NullConfig {});
+        runtime.schedule_signal_service::<service::ActuatorSimulator, _>(
+            glonax::runtime::NullConfig {},
+        );
     } else {
         if let Some(gnss_config) = config.clone().gnss {
             runtime.schedule_io_service::<service::Gnss, _>(gnss_config);
@@ -149,13 +150,13 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         for j1939_net_config in &config.j1939 {
             runtime
                 .schedule_net_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
-            runtime.schedule_net2_service::<service::NetworkAuthorityTx, _>(
+            runtime.schedule_service::<service::NetworkAuthorityTx, _>(
                 j1939_net_config.clone(),
                 Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
             );
 
             if j1939_net_config.authority_atx {
-                runtime.schedule_net3_service::<service::NetworkAuthorityAtx, _>(
+                runtime.schedule_signal_service::<service::NetworkAuthorityAtx, _>(
                     j1939_net_config.clone(),
                 );
             }

@@ -381,36 +381,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }));
     }
 
-    pub fn schedule_net2_service<S, C>(&mut self, config: C, duration: std::time::Duration)
-    where
-        S: Service<C> + Send + Sync + 'static,
-        C: Clone,
-    {
-        let mut interval = tokio::time::interval(duration);
-
-        let mut service = S::new(config.clone());
-        let ctx = service.ctx();
-
-        let operand = self.operand.clone();
-        let shutdown = self.shutdown.0.subscribe();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
-
-        self.tasks.push(tokio::spawn(async move {
-            service.setup(operand.clone()).await;
-            while shutdown.is_empty() {
-                interval.tick().await;
-                service.tick(operand.clone()).await;
-            }
-            service.teardown(operand.clone()).await;
-        }));
-    }
-
-    pub fn schedule_net3_service<S, C>(&mut self, config: C)
+    pub fn schedule_signal_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone,
