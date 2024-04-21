@@ -4,7 +4,7 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PDU_NOT_AVAILABLE, P
 
 use crate::net::Parsable;
 
-use super::vecraft::{VecraftConfigMessage, VecraftConfigMessage2, VecraftStatusMessage};
+use super::vecraft::{VecraftConfigMessage, VecraftFactoryResetMessage, VecraftStatusMessage};
 
 const STATUS_PGN: u32 = 65_288;
 const BANK_PGN_LIST: [PGN; 2] = [PGN::Other(40_960), PGN::Other(41_216)];
@@ -281,7 +281,7 @@ impl HydraulicControlUnit {
 
     /// Factory reset
     pub fn factory_reset(&self) -> Frame {
-        VecraftConfigMessage2 {
+        VecraftFactoryResetMessage {
             destination_address: self.destination_address,
             source_address: self.source_address,
         }

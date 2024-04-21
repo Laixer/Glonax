@@ -4,7 +4,6 @@ use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 // TODO: Add J1939 node address
 // TODO: Add CAN termination
 // TODO: Add CAN bitrate
-// TODO: Add factory reset
 pub struct VecraftConfigMessage {
     /// Destination address
     pub(crate) destination_address: u8,
@@ -77,14 +76,14 @@ impl std::fmt::Display for VecraftConfigMessage {
     }
 }
 
-pub struct VecraftConfigMessage2 {
+pub struct VecraftFactoryResetMessage {
     /// Destination address
     pub(crate) destination_address: u8,
     /// Source address
     pub(crate) source_address: u8,
 }
 
-impl VecraftConfigMessage2 {
+impl VecraftFactoryResetMessage {
     pub(crate) fn to_frame(&self) -> Frame {
         FrameBuilder::new(
             IdBuilder::from_pgn(PGN::ProprietarilyConfigurableMessage2)
@@ -97,7 +96,7 @@ impl VecraftConfigMessage2 {
     }
 }
 
-impl std::fmt::Display for VecraftConfigMessage2 {
+impl std::fmt::Display for VecraftFactoryResetMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Factory reset")
     }
@@ -144,7 +143,7 @@ impl std::fmt::Display for State {
     }
 }
 
-// TODO: Remove the lock field.
+// TODO: Remove the lock field. Not all Vecrafts have a lock.
 pub struct VecraftStatusMessage {
     /// ECU status.
     pub state: State,
