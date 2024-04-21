@@ -59,7 +59,6 @@ impl TcpServer {
         log::info!("Client session started");
 
         let mut client = Stream::new(stream);
-
         let mut session = Session::new(0, String::new());
 
         let mut session_shutdown = false;
@@ -72,6 +71,7 @@ impl TcpServer {
                         .recv_packet::<Request>(frame.payload_length)
                         .await
                         .unwrap();
+
                     // FUTURE: Pack into a single packet
                     match request.message() {
                         crate::core::Instance::MESSAGE_TYPE => {
@@ -152,15 +152,42 @@ impl TcpServer {
                     session_shutdown = true;
                     break;
                 }
-                crate::core::Motion::MESSAGE_TYPE => {
-                    // let motion = client
-                    //     .recv_packet::<crate::core::Motion>(frame.payload_length)
-                    //     .await
-                    //     .unwrap();
+                crate::core::Engine::MESSAGE_TYPE => {
+                    let engine = client
+                        .recv_packet::<crate::core::Engine>(frame.payload_length)
+                        .await
+                        .unwrap();
 
                     if session.is_control() {
+                        let state = &mut runtime_state.write().await.state;
+                        state.engine_state_request = Some(crate::core::EngineRequest {
+                            speed: engine.rpm,
+                            state: crate::core::EngineState::Request,
+                        });
+                        state.engine_state_request_instant = Some(std::time::Instant::now());
+
+                        log::debug!("Engine request RPM: {}", engine.rpm);
+                    } else {
+                        log::warn!("Client is not authorized to send engine data");
+                    }
+                }
+                crate::core::Motion::MESSAGE_TYPE => {
+                    let motion = client
+                        .recv_packet::<crate::core::Motion>(frame.payload_length)
+                        .await
+                        .unwrap();
+
+                    if session.is_control() {
+                        // TODO: Move this further into the runtime
+                        if motion.is_movable() {
+                            if let Ok(mut runtime_state) = runtime_state.try_write() {
+                                runtime_state.state.motion_instant =
+                                    Some(std::time::Instant::now());
+                            }
+                        }
+
                         // if let Err(e) = motion_sender.send(motion).await {
-                        //     log::error!("Failed to send motion: {}", e);
+                        //     log::error!("Failed to queue motion: {}", e);
                         //     break;
                         // }
                     } else {
@@ -173,7 +200,11 @@ impl TcpServer {
                         .await
                         .unwrap();
 
-                    runtime_state.write().await.state.program.push_back(target);
+                    if session.is_control() {
+                        runtime_state.write().await.state.program.push_back(target);
+                    } else {
+                        log::warn!("Client is not authorized to queue targets");
+                    }
                 }
                 crate::core::Control::MESSAGE_TYPE => {
                     let control = client
@@ -186,12 +217,9 @@ impl TcpServer {
                             let rpm = rpm.clamp(0, 2100);
 
                             log::info!("Engine request RPM: {}", rpm);
-
-                            // runtime_state.write().await.state.engine_request = Some(rpm);
                         }
                         crate::core::Control::EngineShutdown => {
                             log::info!("Engine shutdown");
-                            // runtime_state.write().await.state.engine_request = Some(0);
                         }
                         crate::core::Control::HydraulicQuickDisconnect(on) => {
                             log::info!("Hydraulic quick disconnect: {}", on);
@@ -204,8 +232,6 @@ impl TcpServer {
                         }
                         crate::core::Control::MachineShutdown => {
                             log::info!("Machine shutdown");
-                            // runtime_state.write().await.state.engine_request = Some(0);
-                            // runtime_state.write().await.state.engine.shutdown();
                         }
                         crate::core::Control::MachineIllumination(on) => {
                             log::info!("Machine illumination: {}", on);
@@ -224,7 +250,9 @@ impl TcpServer {
                         }
                     }
                 }
-                _ => {}
+                _ => {
+                    log::debug!("Unknown message type: {}", frame.message);
+                }
             }
         }
 

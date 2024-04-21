@@ -14,8 +14,10 @@ const CONTROL_TYPE_MACHINE_TRAVEL_ALARM: u8 = 0x20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Control {
+    // TODO: Remove this.
     /// Engine RPM request.
     EngineRequest(u16),
+    // TODO: Remove this.
     /// Engine shutdown.
     EngineShutdown,
     /// Hydraulic quick disconnect.
