@@ -328,6 +328,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }));
     }
 
+    // TODO: Consider calling setup and teardown on the service
     pub fn schedule_signal_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
@@ -337,7 +338,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
-        let _shutdown = self.shutdown.0.subscribe();
+        let mut shutdown = self.shutdown.0.subscribe();
         let mut motion_rx = self.motion_rx.take().unwrap();
 
         if let Some(address) = ctx.address.clone() {
@@ -348,14 +349,26 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         // TODO: Break from task on shutdown
         tokio::spawn(async move {
-            while let Some(motion) = motion_rx.recv().await {
-                // TODO: This only works when the queue is not blocking
-                // if !shutdown.is_empty() {
-                //     break;
-                // }
-
-                service.on_event(operand.clone(), &motion).await;
+            tokio::select! {
+                _ = async {
+                    // service.setup(operand.clone()).await;
+                    log::debug!("Waiting for motion");
+                    while let Some(motion) = motion_rx.recv().await {
+                        service.on_event(operand.clone(), &motion).await;
+                    }
+                    // service.teardown(operand.clone()).await;
+                } => {}
+                _ = shutdown.recv() => {}
             }
+
+            // while let Some(motion) = motion_rx.recv().await {
+            //     // TODO: This only works when the queue is not blocking
+            //     // if !shutdown.is_empty() {
+            //     //     break;
+            //     // }
+
+            //     service.on_event(operand.clone(), &motion).await;
+            // }
         });
     }
 
