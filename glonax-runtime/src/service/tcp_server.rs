@@ -199,6 +199,9 @@ impl TcpServer {
                         crate::core::Control::HydraulicLock(on) => {
                             log::info!("Hydraulic lock: {}", on);
                         }
+                        crate::core::Control::HydraulicBoost(on) => {
+                            log::info!("Hydraulic boost: {}", on);
+                        }
                         crate::core::Control::MachineShutdown => {
                             log::info!("Machine shutdown");
                             // runtime_state.write().await.state.engine_request = Some(0);
@@ -212,6 +215,12 @@ impl TcpServer {
                         }
                         crate::core::Control::MachineHorn(on) => {
                             log::info!("Machine horn: {}", on);
+                        }
+                        crate::core::Control::MachineStrobeLight(on) => {
+                            log::info!("Machine strobe light: {}", on);
+                        }
+                        crate::core::Control::MachineTravelAlarm(on) => {
+                            log::info!("Machine travel light: {}", on);
                         }
                     }
                 }

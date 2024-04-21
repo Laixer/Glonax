@@ -108,6 +108,8 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         state: glonax::core::EngineState::Request,
                     });
                     state.engine_state_request_instant = Some(std::time::Instant::now());
+
+                    log::debug!("Engine request RPM: {}", engine.rpm);
                 } else {
                     log::warn!("Client is not authorized to send engine data");
                 }
@@ -165,6 +167,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                             });
                             state.engine_state_request_instant = Some(std::time::Instant::now());
                         }
+                        // TODO: Remove this
                         glonax::core::Control::EngineShutdown => {
                             log::info!("Engine shutdown");
 
@@ -184,6 +187,9 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                             log::info!("Hydraulic lock: {}", on);
                             runtime_state.write().await.state.hydraulic_lock = on;
                         }
+                        glonax::core::Control::HydraulicBoost(on) => {
+                            log::info!("Hydraulic boost: {}", on);
+                        }
 
                         glonax::core::Control::MachineShutdown => {
                             log::info!("Machine shutdown");
@@ -196,6 +202,12 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         }
                         glonax::core::Control::MachineHorn(on) => {
                             log::info!("Machine horn: {}", on);
+                        }
+                        glonax::core::Control::MachineStrobeLight(on) => {
+                            log::info!("Machine strobe light: {}", on);
+                        }
+                        glonax::core::Control::MachineTravelAlarm(on) => {
+                            log::info!("Machine travel light: {}", on);
                         }
                     }
                 } else {

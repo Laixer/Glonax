@@ -4,10 +4,13 @@ const CONTROL_TYPE_ENGINE_REQUEST: u8 = 0x01;
 const CONTROL_TYPE_ENGINE_SHUTDOWN: u8 = 0x02;
 const CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT: u8 = 0x5;
 const CONTROL_TYPE_HYDRAULIC_LOCK: u8 = 0x6;
+const CONTROL_TYPE_HYDRAULIC_BOOST: u8 = 0x7;
 const CONTROL_TYPE_MACHINE_SHUTDOWN: u8 = 0x1B;
 const CONTROL_TYPE_MACHINE_ILLUMINATION: u8 = 0x1C;
 const CONTROL_TYPE_MACHINE_LIGHTS: u8 = 0x2D;
 const CONTROL_TYPE_MACHINE_HORN: u8 = 0x1E;
+const CONTROL_TYPE_MACHINE_STROBE_LIGHT: u8 = 0x1F;
+const CONTROL_TYPE_MACHINE_TRAVEL_ALARM: u8 = 0x20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Control {
@@ -19,6 +22,8 @@ pub enum Control {
     HydraulicQuickDisconnect(bool),
     /// Hydraulic lock.
     HydraulicLock(bool),
+    /// Hydraulic boost.
+    HydraulicBoost(bool),
     /// Machine shutdown.
     MachineShutdown,
     /// Machine illumination.
@@ -27,6 +32,10 @@ pub enum Control {
     MachineLights(bool),
     /// Machine horn.
     MachineHorn(bool),
+    /// Machine strobe light.
+    MachineStrobeLight(bool),
+    /// Machine travel alarm.
+    MachineTravelAlarm(bool),
 }
 
 impl std::fmt::Display for Control {
@@ -38,10 +47,13 @@ impl std::fmt::Display for Control {
                 write!(f, "Hydraulic quick disconnect: {}", on)
             }
             Control::HydraulicLock(on) => write!(f, "Hydraulic lock: {}", on),
+            Control::HydraulicBoost(on) => write!(f, "Hydraulic boost: {}", on),
             Control::MachineShutdown => write!(f, "Robot shutdown"),
             Control::MachineIllumination(on) => write!(f, "Machine illumination: {}", on),
             Control::MachineLights(on) => write!(f, "Machine lights: {}", on),
             Control::MachineHorn(on) => write!(f, "Machine horn: {}", on),
+            Control::MachineStrobeLight(on) => write!(f, "Machine strobe light: {}", on),
+            Control::MachineTravelAlarm(on) => write!(f, "Machine travel alarm: {}", on),
         }
     }
 }
@@ -59,12 +71,15 @@ impl TryFrom<Vec<u8>> for Control {
                 Ok(Control::HydraulicQuickDisconnect(buf.get_u8() != 0))
             }
             CONTROL_TYPE_HYDRAULIC_LOCK => Ok(Control::HydraulicLock(buf.get_u8() != 0)),
+            CONTROL_TYPE_HYDRAULIC_BOOST => Ok(Control::HydraulicBoost(buf.get_u8() != 0)),
             CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::MachineShutdown),
             CONTROL_TYPE_MACHINE_ILLUMINATION => {
                 Ok(Control::MachineIllumination(buf.get_u8() != 0))
             }
             CONTROL_TYPE_MACHINE_LIGHTS => Ok(Control::MachineLights(buf.get_u8() != 0)),
             CONTROL_TYPE_MACHINE_HORN => Ok(Control::MachineHorn(buf.get_u8() != 0)),
+            CONTROL_TYPE_MACHINE_STROBE_LIGHT => Ok(Control::MachineStrobeLight(buf.get_u8() != 0)),
+            CONTROL_TYPE_MACHINE_TRAVEL_ALARM => Ok(Control::MachineTravelAlarm(buf.get_u8() != 0)),
             _ => Err(()),
         }
     }
@@ -92,6 +107,10 @@ impl crate::protocol::Packetize for Control {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_LOCK);
                 buf.put_u8(if *on { 1 } else { 0 });
             }
+            Control::HydraulicBoost(on) => {
+                buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOST);
+                buf.put_u8(if *on { 1 } else { 0 });
+            }
             Control::MachineShutdown => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_SHUTDOWN);
             }
@@ -105,6 +124,14 @@ impl crate::protocol::Packetize for Control {
             }
             Control::MachineHorn(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_HORN);
+                buf.put_u8(if *on { 1 } else { 0 });
+            }
+            Control::MachineStrobeLight(on) => {
+                buf.put_u8(CONTROL_TYPE_MACHINE_STROBE_LIGHT);
+                buf.put_u8(if *on { 1 } else { 0 });
+            }
+            Control::MachineTravelAlarm(on) => {
+                buf.put_u8(CONTROL_TYPE_MACHINE_TRAVEL_ALARM);
                 buf.put_u8(if *on { 1 } else { 0 });
             }
         }
