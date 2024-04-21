@@ -1,21 +1,16 @@
 use std::collections::BTreeMap;
 
-use crate::{
-    runtime::{Component, ComponentContext},
-    MachineState,
-};
+use crate::runtime::{Component, ComponentContext, Service, ServiceContext, SharedOperandState};
 
-pub struct Pipeline<Cnf> {
-    config: Cnf,
-    _instance: crate::core::Instance,
-    map: BTreeMap<i32, Box<dyn Component<Cnf>>>,
+pub struct Pipeline {
+    ctx: ComponentContext,
+    map: BTreeMap<i32, Box<dyn Component<crate::runtime::NullConfig> + Send + Sync>>,
 }
 
-impl<Cnf> Pipeline<Cnf> {
-    pub fn new(config: Cnf, instance: crate::core::Instance) -> Self {
+impl Pipeline {
+    pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
         Self {
-            config,
-            _instance: instance,
+            ctx: ComponentContext::new(motion_tx.clone()),
             map: BTreeMap::new(),
         }
     }
@@ -27,11 +22,10 @@ impl<Cnf> Pipeline<Cnf> {
     /// provided with a copy of the runtime configuration.
     pub fn insert_component<C>(&mut self, order: i32)
     where
-        C: Component<Cnf> + Send + Sync + 'static,
-        Cnf: Clone,
+        C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
         self.map
-            .insert(order, Box::new(C::new(self.config.clone())));
+            .insert(order, Box::new(C::new(crate::runtime::NullConfig {})));
     }
 
     // TODO: Add instance to new
@@ -41,8 +35,7 @@ impl<Cnf> Pipeline<Cnf> {
     /// of the runtime configuration.
     pub fn add_component<C>(&mut self, component: C)
     where
-        C: Component<Cnf> + Send + Sync + 'static,
-        Cnf: Clone,
+        C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
         let last_order = self.map.keys().last().unwrap_or(&0);
 
@@ -50,24 +43,39 @@ impl<Cnf> Pipeline<Cnf> {
     }
 }
 
-// TODO: Replace with Service trait.
-impl<Cnf: Clone> Component<Cnf> for Pipeline<Cnf> {
-    fn new(_config: Cnf) -> Self
+impl Service<crate::runtime::NullConfig> for Pipeline {
+    fn new(_: crate::runtime::NullConfig) -> Self
     where
         Self: Sized,
     {
         unimplemented!()
     }
 
-    fn once(&mut self, ctx: &mut ComponentContext, _runtime_state: &mut MachineState) {
-        for service in self.map.values_mut() {
-            service.once(ctx, _runtime_state);
-        }
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("pipeline", Option::<String>::None)
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, runtime_state: &mut MachineState) {
+    async fn setup(&mut self, runtime_state: SharedOperandState) {
+        let machine_state = &mut runtime_state.write().await.state;
+
         for service in self.map.values_mut() {
-            service.tick(ctx, runtime_state);
+            service.once(&mut self.ctx, machine_state);
         }
+
+        self.ctx.post_tick();
+    }
+
+    async fn teardown(&mut self, _runtime_state: SharedOperandState) {
+        self.ctx.post_tick();
+    }
+
+    async fn tick(&mut self, runtime_state: SharedOperandState) {
+        let machine_state = &mut runtime_state.write().await.state;
+
+        for service in self.map.values_mut() {
+            service.tick(&mut self.ctx, machine_state);
+        }
+
+        self.ctx.post_tick();
     }
 }

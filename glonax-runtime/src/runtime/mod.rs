@@ -211,7 +211,7 @@ impl ComponentContext {
     }
 
     /// Called after all components are ticked.
-    fn post_tick(&mut self) {
+    pub(crate) fn post_tick(&mut self) {
         self.actuators.clear();
         self.last_tick = std::time::Instant::now();
     }
@@ -253,6 +253,11 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     #[inline]
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
         self.shutdown.0.subscribe()
+    }
+
+    // TODO: This is temporary
+    pub fn motion_sender(&self) -> MotionSender {
+        self.motion_tx.clone()
     }
 
     #[deprecated]
@@ -487,33 +492,30 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }));
     }
 
-    // TODO: Call setup and teardown
-    // TODO: Component should be 'service' and not 'component'
-    // TODO: Maybe copy MachineState to component state on each tick?
-    // TODO: Pipeline should be a service.
-    /// Run a component in the main thread.
-    ///
-    /// This method will run a component in the main thread until the runtime is shutdown.
-    /// On each tick, the component will be provided with a component context and a mutable
-    /// reference to the runtime state.
-    pub async fn run_interval<C>(&self, mut component: C, duration: std::time::Duration)
+    pub async fn run_interval<S>(&mut self, mut service: S, duration: std::time::Duration)
     where
-        C: Component<Cnf>,
-        Cnf: Clone,
+        S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
         let mut interval = tokio::time::interval(duration);
 
-        let mut ctx = ComponentContext::new(self.motion_tx.clone());
+        let ctx = service.ctx();
 
-        component.once(&mut ctx, &mut self.operand.write().await.state);
-        ctx.post_tick();
+        let operand = self.operand.clone();
+        let shutdown = self.shutdown.0.subscribe();
+        // let motion_tx = self.motion_tx.clone();
 
-        while self.shutdown.1.is_empty() {
-            interval.tick().await;
-
-            component.tick(&mut ctx, &mut self.operand.write().await.state);
-            ctx.post_tick();
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Starting '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Starting '{}' service", ctx.name);
         }
+
+        service.setup(operand.clone()).await;
+        while shutdown.is_empty() {
+            interval.tick().await;
+            service.tick(operand.clone()).await;
+        }
+        service.teardown(operand.clone()).await;
     }
 
     /// Enqueue a motion command.
