@@ -120,7 +120,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("authority_rx", Some(self.interface.clone()))
+        ServiceContext::with_address("authority_rx", self.interface.clone())
     }
 
     async fn setup(&mut self, runtime_state: SharedOperandState) {
@@ -222,7 +222,7 @@ impl Service<NetworkConfig> for NetworkAuthorityTx {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("authority_tx", Some(self.interface.clone()))
+        ServiceContext::with_address("authority_tx", self.interface.clone())
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {
@@ -270,7 +270,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("authority_atx", Some(self.interface.clone()))
+        ServiceContext::with_address("authority_atx", self.interface.clone())
     }
 
     // TODO: Motion should be replaced by a more generic message type.

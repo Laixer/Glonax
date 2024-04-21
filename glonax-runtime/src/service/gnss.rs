@@ -39,9 +39,10 @@ impl Service<GnssConfig> for Gnss {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("gnss", Some(self.path.display().to_string()))
+        ServiceContext::with_address("gnss", self.path.display().to_string())
     }
 
+    // TODO: If the `next_line` method blocks, the service will not be able to shutdown gracefully.
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
         if let Ok(Some(line)) = self.line_reader.next_line().await {
             if let Some(message) = self.driver.decode(line) {

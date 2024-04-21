@@ -7,12 +7,10 @@ pub struct EngineSimulator {
 }
 
 impl<C> Service<C> for EngineSimulator {
-    fn new(_config: C) -> Self
+    fn new(_: C) -> Self
     where
         Self: Sized,
     {
-        log::debug!("Starting EMS component");
-
         Self {
             rng: rand::rngs::OsRng,
         }

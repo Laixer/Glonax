@@ -1,6 +1,6 @@
 use crate::{
     driver::VirtualEncoder,
-    runtime::{Service, SharedOperandState},
+    runtime::{Service, ServiceContext, SharedOperandState},
 };
 
 pub struct EncoderSimulator {
@@ -12,8 +12,6 @@ impl<C> Service<C> for EncoderSimulator {
     where
         Self: Sized,
     {
-        log::debug!("Starting encoder component");
-
         let encoder_frame = VirtualEncoder::new(2_500, (0, 6_280), true, false);
         let encoder_boom = VirtualEncoder::new(5_000, (0, 1_832), false, false);
         let encoder_arm = VirtualEncoder::new(5_000, (685, 2_760), false, true);
@@ -29,8 +27,8 @@ impl<C> Service<C> for EncoderSimulator {
         Self { encoder_list }
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("encoder simulator", Option::<String>::None)
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("encoder simulator")
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {

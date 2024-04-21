@@ -13,7 +13,7 @@ impl<C> Service<C> for Announcer {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("announcer", Some("[::1]:0"))
+        ServiceContext::with_address("announcer", "[::1]:0")
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {

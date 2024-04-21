@@ -288,7 +288,7 @@ impl Service<TcpServerConfig> for TcpServer {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("tcp_server", Some(self.config.listen.clone()))
+        ServiceContext::with_address("tcp_server", self.config.listen.clone())
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {

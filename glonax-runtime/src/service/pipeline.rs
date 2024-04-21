@@ -52,7 +52,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("pipeline", Option::<String>::None)
+        ServiceContext::new("pipeline")
     }
 
     async fn setup(&mut self, runtime_state: SharedOperandState) {

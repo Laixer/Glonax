@@ -1,6 +1,6 @@
 use sysinfo::{Components, System};
 
-use crate::runtime::{Service, SharedOperandState};
+use crate::runtime::{Service, ServiceContext, SharedOperandState};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct HostConfig {
@@ -21,7 +21,7 @@ pub struct Host {
 }
 
 impl Service<HostConfig> for Host {
-    fn new(_config: HostConfig) -> Self
+    fn new(_: HostConfig) -> Self
     where
         Self: Sized,
     {
@@ -37,8 +37,8 @@ impl Service<HostConfig> for Host {
         }
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("host", Option::<String>::None)
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("host")
     }
 
     async fn tick(&mut self, runtime_state: SharedOperandState) {

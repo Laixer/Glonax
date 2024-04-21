@@ -1,6 +1,6 @@
 use crate::{
     core::Motion,
-    runtime::{Service, SharedOperandState},
+    runtime::{Service, ServiceContext, SharedOperandState},
 };
 
 pub struct ActuatorSimulator {}
@@ -13,8 +13,8 @@ impl<C> Service<C> for ActuatorSimulator {
         Self {}
     }
 
-    fn ctx(&self) -> crate::runtime::ServiceContext {
-        crate::runtime::ServiceContext::new("actuator simulator", Option::<String>::None)
+    fn ctx(&self) -> ServiceContext {
+        ServiceContext::new("actuator simulator")
     }
 
     async fn on_event(&mut self, runtime_state: SharedOperandState, motion: &crate::core::Motion) {

@@ -27,10 +27,19 @@ pub struct ServiceContext {
 }
 
 impl ServiceContext {
-    pub fn new(name: impl ToString, address: Option<impl ToString>) -> Self {
+    /// Construct a new service context.
+    pub fn new(name: impl ToString) -> Self {
         Self {
             name: name.to_string(),
-            address: address.map(|a| a.to_string()),
+            address: None,
+        }
+    }
+
+    /// Construct a new service context with address.
+    pub fn with_address(name: impl ToString, address: impl ToString) -> Self {
+        Self {
+            name: name.to_string(),
+            address: Some(address.to_string()),
         }
     }
 }
@@ -97,6 +106,8 @@ pub trait Service<Cnf> {
     }
 
     /// Setup the service.
+    ///
+    /// This method is called once on startup and should be used to initialize the service.
     fn setup(
         &mut self,
         _runtime_state: SharedOperandState,
@@ -105,6 +116,8 @@ pub trait Service<Cnf> {
     }
 
     /// Teardown the service.
+    ///
+    /// This method is called once on shutdown and should be used to cleanup the service.
     fn teardown(
         &mut self,
         _runtime_state: SharedOperandState,
