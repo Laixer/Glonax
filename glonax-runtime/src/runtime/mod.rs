@@ -351,36 +351,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }));
     }
 
-    /// Listen for IO event service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_net_service<S, C>(&mut self, config: C)
-    where
-        S: Service<C> + Send + Sync + 'static,
-        C: Clone,
-    {
-        let mut service = S::new(config.clone());
-        let ctx = service.ctx();
-
-        let operand = self.operand.clone();
-        let shutdown = self.shutdown.0.subscribe();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
-
-        self.tasks.push(tokio::spawn(async move {
-            service.setup(operand.clone()).await;
-            while shutdown.is_empty() {
-                service.wait_io(operand.clone()).await;
-            }
-            service.teardown(operand.clone()).await;
-        }));
-    }
-
     pub fn schedule_signal_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
