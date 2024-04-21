@@ -8,7 +8,6 @@ use clap::{Parser, ValueHint};
 
 mod components;
 mod config;
-mod device;
 mod server;
 
 #[derive(Parser)]
