@@ -95,6 +95,23 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                 session_shutdown = true;
                 break;
             }
+            glonax::core::Engine::MESSAGE_TYPE => {
+                let engine = client
+                    .recv_packet::<glonax::core::Engine>(frame.payload_length)
+                    .await
+                    .unwrap();
+
+                if session.is_control() {
+                    let state = &mut runtime_state.write().await.state;
+                    state.engine_state_request = Some(glonax::core::EngineRequest {
+                        speed: engine.rpm,
+                        state: glonax::core::EngineState::Request,
+                    });
+                    state.engine_state_request_instant = Some(std::time::Instant::now());
+                } else {
+                    log::warn!("Client is not authorized to send engine data");
+                }
+            }
             glonax::core::Motion::MESSAGE_TYPE => {
                 let motion = client
                     .recv_packet::<glonax::core::Motion>(frame.payload_length)
@@ -137,6 +154,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
                 if session.is_control() {
                     match control {
+                        // TODO: Remove this
                         glonax::core::Control::EngineRequest(rpm) => {
                             log::info!("Engine request RPM: {}", rpm);
 

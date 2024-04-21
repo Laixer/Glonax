@@ -1,6 +1,6 @@
 use bytes::{BufMut, BytesMut};
 
-// TODO: Remove this.
+// TODO: Remove this. We're doing this differently now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EngineStatus {
     /// Engine is disabled.
