@@ -130,6 +130,7 @@ pub struct Session {
 
 impl Session {
     pub const MODE_CONTROL: u8 = 0b0000_0010;
+    pub const MODE_COMMAND: u8 = 0b0000_0100;
     pub const MODE_FAILSAFE: u8 = 0b0001_0000;
 
     // TODO: Convert mode to enum
@@ -143,6 +144,11 @@ impl Session {
     #[inline]
     pub fn is_control(&self) -> bool {
         self.flags & Self::MODE_CONTROL != 0
+    }
+
+    #[inline]
+    pub fn is_command(&self) -> bool {
+        self.flags & Self::MODE_COMMAND != 0
     }
 
     #[inline]

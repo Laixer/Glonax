@@ -1,5 +1,6 @@
 use serde_derive::Deserialize;
 
+// TODO: Add all subsystem statusess
 /// Robot status.
 ///
 /// This message is sent by the robot to the host to indicate the current status of the robot.

@@ -29,10 +29,11 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     .await
                     .unwrap();
 
-                // FUTURE: Pack into a single packet
                 match request.message() {
                     glonax::core::Instance::MESSAGE_TYPE => {
-                        client.send_packet(&instance).await.unwrap();
+                        if let Err(e) = client.send_packet(&instance).await {
+                            log::error!("Failed to send instance: {}", e);
+                        }
                     }
                     glonax::core::Status::MESSAGE_TYPE => {
                         client
