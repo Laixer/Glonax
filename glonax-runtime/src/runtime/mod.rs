@@ -349,26 +349,16 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         // TODO: Break from task on shutdown
         tokio::spawn(async move {
-            // service.setup(operand.clone()).await;
+            service.setup(operand.clone()).await;
             tokio::select! {
                 _ = async {
-                    log::debug!("Waiting for motion");
                     while let Some(motion) = motion_rx.recv().await {
                         service.on_event(operand.clone(), &motion).await;
                     }
                 } => {}
                 _ = shutdown.recv() => {}
             }
-            // service.teardown(operand.clone()).await;
-
-            // while let Some(motion) = motion_rx.recv().await {
-            //     // TODO: This only works when the queue is not blocking
-            //     // if !shutdown.is_empty() {
-            //     //     break;
-            //     // }
-
-            //     service.on_event(operand.clone(), &motion).await;
-            // }
+            service.teardown(operand.clone()).await;
         });
     }
 
