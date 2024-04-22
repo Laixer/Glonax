@@ -142,9 +142,22 @@ impl TryFrom<Vec<u8>> for Motion {
             MOTION_TYPE_STOP_ALL => Ok(Motion::StopAll),
             MOTION_TYPE_RESUME_ALL => Ok(Motion::ResumeAll),
             MOTION_TYPE_RESET_ALL => Ok(Motion::ResetAll),
-            MOTION_TYPE_STRAIGHT_DRIVE => Ok(Motion::StraightDrive(buf.get_i16())),
+            MOTION_TYPE_STRAIGHT_DRIVE => {
+                if buf.len() != std::mem::size_of::<i16>() {
+                    return Err(());
+                }
+
+                Ok(Motion::StraightDrive(buf.get_i16()))
+            }
             MOTION_TYPE_CHANGE => {
+                use std::mem::size_of;
+                const CHANGESET_SIZE: usize = size_of::<u16>() + size_of::<i16>();
+
                 let count = buf.get_u8();
+                if buf.len() != count as usize * CHANGESET_SIZE {
+                    return Err(());
+                }
+
                 let mut changes = Vec::with_capacity(count as usize);
                 for _ in 0..count {
                     changes.push(ChangeSet {
