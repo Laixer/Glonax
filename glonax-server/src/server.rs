@@ -97,12 +97,12 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                 break;
             }
             glonax::core::Engine::MESSAGE_TYPE => {
-                let engine = client
-                    .recv_packet::<glonax::core::Engine>(frame.payload_length)
-                    .await
-                    .unwrap();
-
                 if session.is_control() {
+                    let engine = client
+                        .recv_packet::<glonax::core::Engine>(frame.payload_length)
+                        .await
+                        .unwrap();
+
                     let state = &mut runtime_state.write().await.state;
                     state.engine_state_request = Some(glonax::core::EngineRequest {
                         speed: engine.rpm,
@@ -116,18 +116,20 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                 }
             }
             glonax::core::Motion::MESSAGE_TYPE => {
-                let motion = client
-                    .recv_packet::<glonax::core::Motion>(frame.payload_length)
-                    .await
-                    .unwrap();
-
                 if session.is_control() {
+                    let motion = client
+                        .recv_packet::<glonax::core::Motion>(frame.payload_length)
+                        .await
+                        .unwrap();
+
                     // TODO: Move this further into the runtime
                     if motion.is_movable() {
                         if let Ok(mut runtime_state) = runtime_state.try_write() {
                             runtime_state.state.motion_instant = Some(std::time::Instant::now());
                         }
                     }
+
+                    log::debug!("Motion: {:?}", motion);
 
                     if let Err(e) = motion_sender.send(motion).await {
                         log::error!("Failed to queue motion: {}", e);
@@ -138,24 +140,24 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                 }
             }
             glonax::core::Target::MESSAGE_TYPE => {
-                let target = client
-                    .recv_packet::<glonax::core::Target>(frame.payload_length)
-                    .await
-                    .unwrap();
+                if session.is_command() {
+                    let target = client
+                        .recv_packet::<glonax::core::Target>(frame.payload_length)
+                        .await
+                        .unwrap();
 
-                if session.is_control() {
                     runtime_state.write().await.state.program.push_back(target);
                 } else {
                     log::warn!("Client is not authorized to queue targets");
                 }
             }
             glonax::core::Control::MESSAGE_TYPE => {
-                let control = client
-                    .recv_packet::<glonax::core::Control>(frame.payload_length)
-                    .await
-                    .unwrap();
-
                 if session.is_control() {
+                    let control = client
+                        .recv_packet::<glonax::core::Control>(frame.payload_length)
+                        .await
+                        .unwrap();
+
                     match control {
                         // TODO: Remove this
                         glonax::core::Control::EngineRequest(rpm) => {
