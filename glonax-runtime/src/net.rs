@@ -408,18 +408,6 @@ impl ControlNetwork {
         Ok(())
     }
 
-    // TODO: Rename to `recv_timeout`
-    /// Listen for incoming packets.
-    pub async fn listen_timeout(&mut self, timeout: Duration) -> io::Result<()> {
-        if let Ok(result) = tokio::time::timeout(timeout, self.listen()).await {
-            result
-        } else {
-            // TODO: We just ignore the timeout for now.
-            // Err(io::Error::new(io::ErrorKind::TimedOut, "Timeout"))
-            Ok(())
-        }
-    }
-
     /// Try to accept a frame and parse it.
     ///
     /// This method will return `None` if the frame is not accepted. Otherwise, it will return

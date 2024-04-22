@@ -21,6 +21,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
     let mut session_shutdown = false;
 
     // TODO: If possible, move to glonax-runtime
+    // TODO: Handle all unwraps, most just need to be logged
     while let Ok(frame) = client.read_frame().await {
         match frame.message {
             glonax::protocol::frame::Request::MESSAGE_TYPE => {

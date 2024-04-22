@@ -310,7 +310,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
-        let shutdown = self.shutdown.0.subscribe();
+        let mut shutdown = self.shutdown.0.subscribe();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -318,11 +318,11 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             log::debug!("Starting '{}' service", ctx.name);
         }
 
-        // TODO: Replace loop with tokio::select
         self.tasks.push(tokio::spawn(async move {
             service.setup(operand.clone()).await;
-            while shutdown.is_empty() {
-                service.wait_io(operand.clone()).await;
+            tokio::select! {
+                _ = service.wait_io(operand.clone()) => {}
+                _ = shutdown.recv() => {}
             }
             service.teardown(operand.clone()).await;
         }));
