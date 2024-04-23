@@ -1,4 +1,4 @@
-use std::{io, time::Duration};
+use std::io;
 
 use j1939::{Frame, FrameBuilder, Id, IdBuilder, Name, PGN};
 

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{
     driver::net::{J1939Unit, NetDriver, NetDriverCollection},
     net::ControlNetwork,

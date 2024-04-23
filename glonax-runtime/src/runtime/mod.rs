@@ -262,13 +262,6 @@ pub struct Runtime<Conf> {
 }
 
 impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
-    // FUTURE: Maybe remove?
-    /// Listen for shutdown signal.
-    #[inline]
-    pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
-        self.shutdown.0.subscribe()
-    }
-
     // TODO: This is temporary
     pub fn motion_sender(&self) -> MotionSender {
         self.motion_tx.clone()
@@ -377,8 +370,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         S: Service<C> + Send + Sync + 'static,
         C: Clone,
     {
-        let mut interval = tokio::time::interval(duration);
-
         let mut service = S::new(config.clone());
         let ctx = service.ctx();
 
@@ -395,7 +386,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         self.tasks.push(tokio::spawn(async move {
             service.setup(operand.clone()).await;
             while shutdown.is_empty() {
-                interval.tick().await;
+                tokio::time::sleep(duration).await;
                 service.tick(operand.clone()).await;
             }
             service.teardown(operand.clone()).await;
@@ -410,8 +401,6 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let mut interval = tokio::time::interval(duration);
-
         let mut service = S::new(crate::runtime::NullConfig);
         let ctx = service.ctx();
 
@@ -428,19 +417,21 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         self.tasks.push(tokio::spawn(async move {
             service.setup(operand.clone()).await;
             while shutdown.is_empty() {
-                interval.tick().await;
+                tokio::time::sleep(duration).await;
                 service.tick(operand.clone()).await;
             }
             service.teardown(operand.clone()).await;
         }));
     }
 
+    /// Run a service in the background.
+    ///
+    /// This method will run a service in the background. The service will be provided with a copy of
+    /// the runtime configuration and a reference to the runtime.
     pub async fn run_interval<S>(&mut self, mut service: S, duration: std::time::Duration)
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let mut interval = tokio::time::interval(duration);
-
         let ctx = service.ctx();
 
         let operand = self.operand.clone();
@@ -455,7 +446,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         service.setup(operand.clone()).await;
         while shutdown.is_empty() {
-            interval.tick().await;
+            tokio::time::sleep(duration).await;
             service.tick(operand.clone()).await;
         }
         service.teardown(operand.clone()).await;
