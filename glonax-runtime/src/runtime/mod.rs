@@ -262,6 +262,7 @@ pub struct Runtime<Conf> {
 }
 
 impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
+    // FUTURE: Maybe remove?
     /// Listen for shutdown signal.
     #[inline]
     pub fn shutdown_signal(&self) -> tokio::sync::broadcast::Receiver<()> {
@@ -311,6 +312,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         let operand = self.operand.clone();
         let mut shutdown = self.shutdown.0.subscribe();
+        // let motion_tx = self.motion_tx.clone();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -328,7 +330,10 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         }));
     }
 
-    // TODO: Consider calling setup and teardown on the service
+    /// Listen for signal event service in the background.
+    ///
+    /// This method will spawn a service in the background and return immediately. The service
+    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
     pub fn schedule_signal_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
@@ -339,6 +344,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         let operand = self.operand.clone();
         let mut shutdown = self.shutdown.0.subscribe();
+        // let motion_tx = self.motion_tx.clone();
         let mut motion_rx = self.motion_rx.take().unwrap();
 
         if let Some(address) = ctx.address.clone() {
@@ -378,6 +384,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         let operand = self.operand.clone();
         let shutdown = self.shutdown.0.subscribe();
+        // let motion_tx = self.motion_tx.clone();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
@@ -410,6 +417,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         let operand = self.operand.clone();
         let shutdown = self.shutdown.0.subscribe();
+        // let motion_tx = self.motion_tx.clone();
 
         if let Some(address) = ctx.address.clone() {
             log::debug!("Starting '{}' service on {}", ctx.name, address);
