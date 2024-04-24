@@ -182,6 +182,133 @@ pub trait Component<Cnf: Clone> {
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState);
 }
 
+struct ServiceDescriptor<S, C>
+where
+    S: Service<C> + Send + Sync + 'static,
+    C: Clone + Send + 'static,
+{
+    service: S,
+    _config: C,
+    operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
+    motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+    shutdown: tokio::sync::broadcast::Receiver<()>,
+}
+
+impl<S> ServiceDescriptor<S, crate::runtime::NullConfig>
+where
+    S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
+{
+    fn new(
+        service: S,
+        operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
+        motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+        shutdown: tokio::sync::broadcast::Receiver<()>,
+    ) -> Self {
+        Self {
+            service,
+            _config: crate::runtime::NullConfig,
+            operand,
+            motion_tx,
+            shutdown,
+        }
+    }
+}
+
+impl<S, C> ServiceDescriptor<S, C>
+where
+    S: Service<C> + Send + Sync + 'static,
+    C: Clone + Send + 'static,
+{
+    fn with_config(
+        service: S,
+        config: C,
+        operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
+        motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+        shutdown: tokio::sync::broadcast::Receiver<()>,
+    ) -> Self {
+        Self {
+            service,
+            _config: config,
+            operand,
+            motion_tx,
+            shutdown,
+        }
+    }
+
+    async fn setup(&mut self) {
+        let ctx = self.service.ctx();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Setup '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Setup '{}' service", ctx.name);
+        }
+
+        self.service.setup(self.operand.clone()).await;
+    }
+
+    async fn teardown(&mut self) {
+        let ctx = self.service.ctx();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Teardown '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Teardown '{}' service", ctx.name);
+        }
+
+        self.service.teardown(self.operand.clone()).await;
+    }
+
+    async fn wait_io(&mut self) {
+        let ctx = self.service.ctx();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Wait IO '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Wait IO '{}' service", ctx.name);
+        }
+
+        tokio::select! {
+            _ = self.service.wait_io(self.operand.clone()) => {}
+            _ = self.shutdown.recv() => {}
+        }
+    }
+
+    async fn tick(&mut self, duration: std::time::Duration) {
+        let ctx = self.service.ctx();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Tick '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Tick '{}' service", ctx.name);
+        }
+
+        while self.shutdown.is_empty() {
+            tokio::time::sleep(duration).await;
+            self.service.tick(self.operand.clone()).await;
+        }
+    }
+
+    async fn recv(&mut self, mut motion_rx: tokio::sync::mpsc::Receiver<crate::core::Motion>) {
+        let ctx = self.service.ctx();
+
+        if let Some(address) = ctx.address.clone() {
+            log::debug!("Recv '{}' service on {}", ctx.name, address);
+        } else {
+            log::debug!("Recv '{}' service", ctx.name);
+        }
+
+        tokio::select! {
+            _ = async {
+                while let Some(motion) = motion_rx.recv().await {
+                    self.service.on_event(self.operand.clone(), &motion).await;
+                }
+            } => {}
+            _ = self.shutdown.recv() => {}
+        }
+    }
+}
+
 /// Component context.
 ///
 /// The component context is provided to each component on each tick. The
@@ -298,28 +425,44 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     pub fn schedule_io_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
-        C: Clone,
+        C: Clone + Send + 'static,
     {
-        let mut service = S::new(config.clone());
-        let ctx = service.ctx();
+        // let mut service = S::new(config.clone());
+        // let ctx = service.ctx();
 
-        let operand = self.operand.clone();
-        let mut shutdown = self.shutdown.0.subscribe();
+        // let operand = self.operand.clone();
+        // let mut shutdown = self.shutdown.0.subscribe();
         // let motion_tx = self.motion_tx.clone();
 
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
+        // if let Some(address) = ctx.address.clone() {
+        //     log::debug!("Starting '{}' service on {}", ctx.name, address);
+        // } else {
+        //     log::debug!("Starting '{}' service", ctx.name);
+        // }
+
+        // self.tasks.push(tokio::spawn(async move {
+        //     service.setup(operand.clone()).await;
+        //     tokio::select! {
+        //         _ = service.wait_io(operand.clone()) => {}
+        //         _ = shutdown.recv() => {}
+        //     }
+        //     service.teardown(operand.clone()).await;
+        // }));
+
+        /////////////////////////
+
+        let mut sd = ServiceDescriptor::with_config(
+            S::new(config.clone()),
+            config,
+            self.operand.clone(),
+            self.motion_tx.clone(),
+            self.shutdown.0.subscribe(),
+        );
 
         self.tasks.push(tokio::spawn(async move {
-            service.setup(operand.clone()).await;
-            tokio::select! {
-                _ = service.wait_io(operand.clone()) => {}
-                _ = shutdown.recv() => {}
-            }
-            service.teardown(operand.clone()).await;
+            sd.setup().await;
+            sd.wait_io().await;
+            sd.teardown().await;
         }));
     }
 
@@ -330,35 +473,50 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     pub fn schedule_signal_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
-        C: Clone,
+        C: Clone + Send + 'static,
     {
-        let mut service = S::new(config.clone());
-        let ctx = service.ctx();
+        // let mut service = S::new(config.clone());
+        // let ctx = service.ctx();
 
-        let operand = self.operand.clone();
-        let mut shutdown = self.shutdown.0.subscribe();
-        // let motion_tx = self.motion_tx.clone();
-        let mut motion_rx = self.motion_rx.take().unwrap();
+        // let operand = self.operand.clone();
+        // let mut shutdown = self.shutdown.0.subscribe();
+        // // let motion_tx = self.motion_tx.clone();
+        let motion_rx = self.motion_rx.take().unwrap();
 
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
+        // if let Some(address) = ctx.address.clone() {
+        //     log::debug!("Starting '{}' service on {}", ctx.name, address);
+        // } else {
+        //     log::debug!("Starting '{}' service", ctx.name);
+        // }
 
-        // TODO: Break from task on shutdown
-        tokio::spawn(async move {
-            service.setup(operand.clone()).await;
-            tokio::select! {
-                _ = async {
-                    while let Some(motion) = motion_rx.recv().await {
-                        service.on_event(operand.clone(), &motion).await;
-                    }
-                } => {}
-                _ = shutdown.recv() => {}
-            }
-            service.teardown(operand.clone()).await;
-        });
+        // self.tasks.push(tokio::spawn(async move {
+        //     service.setup(operand.clone()).await;
+        //     tokio::select! {
+        //         _ = async {
+        //             while let Some(motion) = motion_rx.recv().await {
+        //                 service.on_event(operand.clone(), &motion).await;
+        //             }
+        //         } => {}
+        //         _ = shutdown.recv() => {}
+        //     }
+        //     service.teardown(operand.clone()).await;
+        // }));
+
+        /////////////////////////
+
+        let mut sd = ServiceDescriptor::with_config(
+            S::new(config.clone()),
+            config,
+            self.operand.clone(),
+            self.motion_tx.clone(),
+            self.shutdown.0.subscribe(),
+        );
+
+        self.tasks.push(tokio::spawn(async move {
+            sd.setup().await;
+            sd.recv(motion_rx).await;
+            sd.teardown().await;
+        }));
     }
 
     /// Schedule a component to run in the background.
@@ -368,28 +526,44 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     pub fn schedule_service<S, C>(&mut self, config: C, duration: std::time::Duration)
     where
         S: Service<C> + Send + Sync + 'static,
-        C: Clone,
+        C: Clone + Send + 'static,
     {
-        let mut service = S::new(config.clone());
-        let ctx = service.ctx();
+        // let mut service = S::new(config.clone());
+        // let ctx = service.ctx();
 
-        let operand = self.operand.clone();
-        let shutdown = self.shutdown.0.subscribe();
-        // let motion_tx = self.motion_tx.clone();
+        // let operand = self.operand.clone();
+        // let shutdown = self.shutdown.0.subscribe();
+        // // let motion_tx = self.motion_tx.clone();
 
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
+        // if let Some(address) = ctx.address.clone() {
+        //     log::debug!("Starting '{}' service on {}", ctx.name, address);
+        // } else {
+        //     log::debug!("Starting '{}' service", ctx.name);
+        // }
+
+        // self.tasks.push(tokio::spawn(async move {
+        //     service.setup(operand.clone()).await;
+        //     while shutdown.is_empty() {
+        //         tokio::time::sleep(duration).await;
+        //         service.tick(operand.clone()).await;
+        //     }
+        //     service.teardown(operand.clone()).await;
+        // }));
+
+        /////////////////////////
+
+        let mut sd = ServiceDescriptor::with_config(
+            S::new(config.clone()),
+            config,
+            self.operand.clone(),
+            self.motion_tx.clone(),
+            self.shutdown.0.subscribe(),
+        );
 
         self.tasks.push(tokio::spawn(async move {
-            service.setup(operand.clone()).await;
-            while shutdown.is_empty() {
-                tokio::time::sleep(duration).await;
-                service.tick(operand.clone()).await;
-            }
-            service.teardown(operand.clone()).await;
+            sd.setup().await;
+            sd.tick(duration).await;
+            sd.teardown().await;
         }));
     }
 
@@ -401,55 +575,48 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let mut service = S::new(crate::runtime::NullConfig);
-        let ctx = service.ctx();
-
-        let operand = self.operand.clone();
-        let shutdown = self.shutdown.0.subscribe();
-        // let motion_tx = self.motion_tx.clone();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
-
-        self.tasks.push(tokio::spawn(async move {
-            service.setup(operand.clone()).await;
-            while shutdown.is_empty() {
-                tokio::time::sleep(duration).await;
-                service.tick(operand.clone()).await;
-            }
-            service.teardown(operand.clone()).await;
-        }));
+        self.schedule_service::<S, _>(crate::runtime::NullConfig, duration)
     }
 
     /// Run a service in the background.
     ///
     /// This method will run a service in the background. The service will be provided with a copy of
     /// the runtime configuration and a reference to the runtime.
-    pub async fn run_interval<S>(&mut self, mut service: S, duration: std::time::Duration)
+    pub async fn run_interval<S>(&mut self, service: S, duration: std::time::Duration)
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let ctx = service.ctx();
+        // let ctx = service.ctx();
 
-        let operand = self.operand.clone();
-        let shutdown = self.shutdown.0.subscribe();
-        // let motion_tx = self.motion_tx.clone();
+        // let operand = self.operand.clone();
+        // let shutdown = self.shutdown.0.subscribe();
+        // // let motion_tx = self.motion_tx.clone();
 
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Starting '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Starting '{}' service", ctx.name);
-        }
+        // if let Some(address) = ctx.address.clone() {
+        //     log::debug!("Starting '{}' service on {}", ctx.name, address);
+        // } else {
+        //     log::debug!("Starting '{}' service", ctx.name);
+        // }
 
-        service.setup(operand.clone()).await;
-        while shutdown.is_empty() {
-            tokio::time::sleep(duration).await;
-            service.tick(operand.clone()).await;
-        }
-        service.teardown(operand.clone()).await;
+        // service.setup(operand.clone()).await;
+        // while shutdown.is_empty() {
+        //     tokio::time::sleep(duration).await;
+        //     service.tick(operand.clone()).await;
+        // }
+        // service.teardown(operand.clone()).await;
+
+        /////////////////////////
+
+        let mut sd = ServiceDescriptor::new(
+            service,
+            self.operand.clone(),
+            self.motion_tx.clone(),
+            self.shutdown.0.subscribe(),
+        );
+
+        sd.setup().await;
+        sd.tick(duration).await;
+        sd.teardown().await;
     }
 
     /// Wait for the runtime to shutdown.
