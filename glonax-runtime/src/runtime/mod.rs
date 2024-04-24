@@ -182,7 +182,7 @@ pub trait Component<Cnf: Clone> {
     fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState);
 }
 
-struct ServiceDescriptor<S, C>
+struct ServiceDescriptor<S, C = crate::runtime::NullConfig>
 where
     S: Service<C> + Send + Sync + 'static,
     C: Clone + Send + 'static,
@@ -393,7 +393,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         self.motion_tx.clone()
     }
 
-    fn push_spawn<F: std::future::Future<Output = ()> + Send + 'static>(&mut self, f: F) {
+    fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(&mut self, f: F) {
         self.tasks.push(tokio::spawn(f));
     }
 
@@ -437,7 +437,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.shutdown.0.subscribe(),
         );
 
-        self.push_spawn(async move {
+        self.spawn(async move {
             service_descriptor.setup().await;
             service_descriptor.wait_io().await;
             service_descriptor.teardown().await;
@@ -462,7 +462,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.shutdown.0.subscribe(),
         );
 
-        self.push_spawn(async move {
+        self.spawn(async move {
             service_descriptor.setup().await;
             service_descriptor.recv(motion_rx).await;
             service_descriptor.teardown().await;
@@ -485,7 +485,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.shutdown.0.subscribe(),
         );
 
-        self.push_spawn(async move {
+        self.spawn(async move {
             service_descriptor.setup().await;
             service_descriptor.tick(duration).await;
             service_descriptor.teardown().await;
@@ -500,7 +500,18 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        self.schedule_service::<S, _>(crate::runtime::NullConfig, duration)
+        let mut service_descriptor = ServiceDescriptor::<S, _>::new(
+            S::new(crate::runtime::NullConfig),
+            self.operand.clone(),
+            self.motion_tx.clone(),
+            self.shutdown.0.subscribe(),
+        );
+
+        self.spawn(async move {
+            service_descriptor.setup().await;
+            service_descriptor.tick(duration).await;
+            service_descriptor.teardown().await;
+        });
     }
 
     /// Run a service in the background.
