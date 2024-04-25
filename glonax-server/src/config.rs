@@ -60,5 +60,6 @@ pub struct Config {
     /// Unix socket configuration.
     pub unix_server: Option<glonax::service::UnixServerConfig>,
     /// J1939 network configuration.
+    #[serde(default)]
     pub j1939: Vec<glonax::service::NetworkConfig>,
 }
