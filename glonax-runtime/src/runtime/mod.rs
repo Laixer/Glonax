@@ -10,8 +10,8 @@ pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Motion>;
-pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Motion>;
+pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Object>;
+pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
 
 pub mod builder;
@@ -149,11 +149,10 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
-    // TODO: Replace the motion receiver with a generic event receiver
     fn on_event(
         &mut self,
         _runtime_state: SharedOperandState,
-        _motion: &crate::core::Motion,
+        _object: &crate::core::Object,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -190,7 +189,7 @@ where
     service: S,
     _config: C,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-    motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+    _signal_tx: MotionSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 }
 
@@ -201,14 +200,14 @@ where
     fn new(
         service: S,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+        signal_tx: MotionSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service,
             _config: crate::runtime::NullConfig,
             operand,
-            motion_tx,
+            _signal_tx: signal_tx,
             shutdown,
         }
     }
@@ -222,14 +221,14 @@ where
     fn with_config(
         config: C,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+        signal_tx: MotionSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service: S::new(config.clone()),
             _config: config,
             operand,
-            motion_tx,
+            _signal_tx: signal_tx,
             shutdown,
         }
     }
@@ -288,7 +287,7 @@ where
         }
     }
 
-    async fn recv(&mut self, mut motion_rx: tokio::sync::mpsc::Receiver<crate::core::Motion>) {
+    async fn recv(&mut self, mut signal_rx: MotionReceiver) {
         let ctx = self.service.ctx();
 
         if let Some(address) = ctx.address.clone() {
@@ -299,8 +298,8 @@ where
 
         tokio::select! {
             _ = async {
-                while let Some(motion) = motion_rx.recv().await {
-                    self.service.on_event(self.operand.clone(), &motion).await;
+                while let Some(signal) = signal_rx.recv().await {
+                    self.service.on_event(self.operand.clone(), &signal).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -314,7 +313,7 @@ where
 /// component context is used to communicate within the component pipeline.
 pub struct ComponentContext {
     /// Motion command sender.
-    motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>,
+    signal_tx: MotionSender,
     /// World.
     pub world: World,
     /// Current target.
@@ -327,9 +326,9 @@ pub struct ComponentContext {
 
 impl ComponentContext {
     /// Construct a new component context.
-    pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
+    pub fn new(signal_tx: MotionSender) -> Self {
         Self {
-            motion_tx,
+            signal_tx,
             world: World::default(),
             target: None,
             actuators: std::collections::HashMap::new(),
@@ -337,9 +336,10 @@ impl ComponentContext {
         }
     }
 
+    // TODO: Rename to `send_motion`
     /// Commit a motion command.
     pub fn commit(&mut self, motion: crate::core::Motion) {
-        if let Err(e) = self.motion_tx.try_send(motion) {
+        if let Err(e) = self.signal_tx.try_send(crate::core::Object::Motion(motion)) {
             log::error!("Failed to send motion command: {}", e);
         }
     }

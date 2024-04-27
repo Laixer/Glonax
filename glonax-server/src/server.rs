@@ -132,7 +132,10 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
 
                     log::debug!("Motion: {:?}", motion);
 
-                    if let Err(e) = motion_sender.send(motion).await {
+                    if let Err(e) = motion_sender
+                        .send(glonax::core::Object::Motion(motion))
+                        .await
+                    {
                         log::error!("Failed to queue motion: {}", e);
                         break;
                     }
@@ -227,7 +230,10 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
     if !session_shutdown && session.is_control() && session.is_failsafe() {
         log::warn!("Enacting failsafe for: {}", session.name());
 
-        if let Err(e) = motion_sender.send(glonax::core::Motion::StopAll).await {
+        if let Err(e) = motion_sender
+            .send(glonax::core::Object::Motion(glonax::core::Motion::StopAll))
+            .await
+        {
             log::error!("Failed to send motion: {}", e);
         }
     }

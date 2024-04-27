@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::runtime::{Component, ComponentContext, Service, ServiceContext, SharedOperandState};
+use crate::runtime::{
+    Component, ComponentContext, MotionSender, Service, ServiceContext, SharedOperandState,
+};
 
 pub struct Pipeline {
     ctx: ComponentContext,
@@ -8,9 +10,10 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    pub fn new(motion_tx: tokio::sync::mpsc::Sender<crate::core::Motion>) -> Self {
+    /// Create a new pipeline.
+    pub fn new(signal_tx: MotionSender) -> Self {
         Self {
-            ctx: ComponentContext::new(motion_tx.clone()),
+            ctx: ComponentContext::new(signal_tx.clone()),
             map: BTreeMap::new(),
         }
     }

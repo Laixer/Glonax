@@ -267,20 +267,21 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         ServiceContext::with_address("authority_atx", self.interface.clone())
     }
 
-    // TODO: Motion should be replaced by a more generic message type.
-    async fn on_event(&mut self, runtime_state: SharedOperandState, motion: &crate::core::Motion) {
-        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
-            if let Err(error) = drv
-                .trigger(ctx, &self.network, runtime_state.clone(), motion)
-                .await
-            {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
+    async fn on_event(&mut self, runtime_state: SharedOperandState, object: &crate::core::Object) {
+        if let crate::core::Object::Motion(motion) = object {
+            for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+                if let Err(error) = drv
+                    .trigger(ctx, &self.network, runtime_state.clone(), motion)
+                    .await
+                {
+                    log::error!(
+                        "[{}:0x{:X}] {}: {}",
+                        self.interface,
+                        drv.destination(),
+                        drv.name(),
+                        error
+                    );
+                }
             }
         }
     }
