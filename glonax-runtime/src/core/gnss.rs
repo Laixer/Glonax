@@ -23,7 +23,7 @@ impl TryFrom<u8> for GnssStatus {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Gnss {
     /// GNSS Latitude and Longitude.
     pub location: (f32, f32),
