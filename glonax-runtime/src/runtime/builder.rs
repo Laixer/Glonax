@@ -62,15 +62,6 @@ impl<Cnf: Clone> Builder<Cnf> {
         self
     }
 
-    /// Enqueue a motion command to be processed by the runtime on startup.
-    ///
-    /// This method will enqueue a motion command to be processed by the runtime.
-    /// The motion command will be processed in the order it was received.
-    pub fn enqueue_startup_motion(self, motion: crate::core::Motion) -> Self {
-        self.0.motion_tx.try_send(motion).unwrap();
-        self
-    }
-
     /// Build the runtime.
     #[inline]
     pub fn build(self) -> Runtime<Cnf> {
