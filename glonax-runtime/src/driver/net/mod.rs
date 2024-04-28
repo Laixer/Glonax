@@ -1,3 +1,5 @@
+use std::time::{Duration, Instant};
+
 pub mod bosch_ems;
 pub mod encoder;
 pub mod engine;
@@ -257,37 +259,38 @@ impl J1939Unit for NetDriver {
 
 pub struct NetDriverContext {
     /// Last time a message was sent.
-    tx_last: std::time::Instant,
+    tx_last: Instant,
     /// Last time a message was received.
-    rx_last: std::time::Instant,
+    rx_last: Instant,
 }
 
 impl NetDriverContext {
     /// Check if the last message was sent within a timeout.
-    fn is_rx_timeout(&self, timeout: std::time::Duration) -> bool {
+    fn is_rx_timeout(&self, timeout: Duration) -> bool {
         self.rx_last.elapsed() > timeout
     }
 
     /// Mark the last time a message was sent.
     fn tx_mark(&mut self) {
-        self.tx_last = std::time::Instant::now();
+        self.tx_last = Instant::now();
     }
 
     /// Mark the last time a message was received.
     fn rx_mark(&mut self) {
-        self.rx_last = std::time::Instant::now();
+        self.rx_last = Instant::now();
     }
 }
 
 impl Default for NetDriverContext {
     fn default() -> Self {
         Self {
-            tx_last: std::time::Instant::now(),
-            rx_last: std::time::Instant::now(),
+            tx_last: Instant::now(),
+            rx_last: Instant::now(),
         }
     }
 }
 
+// TODO: NetDriverCollection should be named type of Vec<(NetDriver, NetDriverContext)>
 #[derive(Default)]
 pub struct NetDriverCollection(Vec<(NetDriver, NetDriverContext)>);
 

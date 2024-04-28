@@ -288,6 +288,7 @@ where
     }
 }
 
+// TODO: Move
 /// Component context.
 ///
 /// The component context is provided to each component on each tick. The
