@@ -45,6 +45,16 @@ impl ServiceContext {
     }
 }
 
+impl std::fmt::Display for ServiceContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(address) = &self.address {
+            write!(f, "{} on {}", self.name, address)
+        } else {
+            write!(f, "{}", self.name)
+        }
+    }
+}
+
 // TODO: Change to ServiceContext
 pub struct ServiceErrorBuilder {
     name: String,
@@ -235,37 +245,19 @@ where
     }
 
     async fn setup(&mut self) {
-        let ctx = self.service.ctx();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Setup '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Setup '{}' service", ctx.name);
-        }
+        log::debug!("Setup '{}'", self.service.ctx());
 
         self.service.setup(self.operand.clone()).await;
     }
 
     async fn teardown(&mut self) {
-        let ctx = self.service.ctx();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Teardown '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Teardown '{}' service", ctx.name);
-        }
+        log::debug!("Teardown '{}'", self.service.ctx());
 
         self.service.teardown(self.operand.clone()).await;
     }
 
     async fn wait_io(&mut self) {
-        let ctx = self.service.ctx();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Wait IO '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Wait IO '{}' service", ctx.name);
-        }
+        log::debug!("Wait IO '{}'", self.service.ctx());
 
         tokio::select! {
             _ = self.service.wait_io(self.operand.clone()) => {}
@@ -274,13 +266,7 @@ where
     }
 
     async fn tick(&mut self, duration: std::time::Duration) {
-        let ctx = self.service.ctx();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Tick '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Tick '{}' service", ctx.name);
-        }
+        log::debug!("Tick '{}'", self.service.ctx());
 
         while self.shutdown.is_empty() {
             tokio::time::sleep(duration).await;
@@ -289,13 +275,7 @@ where
     }
 
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
-        let ctx = self.service.ctx();
-
-        if let Some(address) = ctx.address.clone() {
-            log::debug!("Command '{}' service on {}", ctx.name, address);
-        } else {
-            log::debug!("Command '{}' service", ctx.name);
-        }
+        log::debug!("On command '{}'", self.service.ctx());
 
         tokio::select! {
             _ = async {

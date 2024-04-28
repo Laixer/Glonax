@@ -560,10 +560,10 @@ impl super::J1939Unit for HydraulicControlUnit {
         runtime_state: crate::runtime::SharedOperandState,
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
-        if let crate::core::Object::Motion(trigger) = object {
-            runtime_state.write().await.state.motion = trigger.clone();
+        if let crate::core::Object::Motion(motion) = object {
+            runtime_state.write().await.state.motion = motion.clone();
 
-            self.send_motion_command(network, trigger).await?;
+            self.send_motion_command(network, motion).await?;
             ctx.tx_mark();
         }
 
