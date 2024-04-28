@@ -190,10 +190,10 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         // }
 
         if !motion.is_empty() {
-            ctx.commit(Motion::from_iter(motion));
+            ctx.send_motion(Motion::from_iter(motion));
             self.stopall = false;
         } else if !self.stopall {
-            ctx.commit(Motion::StopAll);
+            ctx.send_motion(Motion::StopAll);
             self.stopall = true;
         }
     }

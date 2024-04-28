@@ -5,6 +5,7 @@ use crate::{
 
 pub struct ActuatorSimulator {}
 
+// TODO: Maybe we can integrate the ActuatorSimulator with the NetworkAuthorityAtx
 impl<C> Service<C> for ActuatorSimulator {
     fn new(_: C) -> Self
     where
@@ -17,7 +18,11 @@ impl<C> Service<C> for ActuatorSimulator {
         ServiceContext::new("actuator simulator")
     }
 
-    async fn on_event(&mut self, runtime_state: SharedOperandState, object: &crate::core::Object) {
+    async fn on_command(
+        &mut self,
+        runtime_state: SharedOperandState,
+        object: &crate::core::Object,
+    ) {
         if let crate::core::Object::Motion(motion) = object {
             match motion {
                 Motion::StopAll => {

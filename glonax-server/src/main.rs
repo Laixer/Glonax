@@ -173,8 +173,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     runtime.schedule_service_default::<service::Announcer>(Duration::from_millis(1_000));
 
-    let signal_tx = runtime.motion_sender();
-    let mut pipe = service::Pipeline::new(signal_tx);
+    let command_tx = runtime.motion_sender();
+    let mut pipe = service::Pipeline::new(command_tx);
 
     pipe.insert_component::<components::WorldBuilder>(0);
     pipe.insert_component::<components::SensorFusion>(2);

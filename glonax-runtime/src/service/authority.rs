@@ -267,7 +267,11 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         ServiceContext::with_address("authority_atx", self.interface.clone())
     }
 
-    async fn on_event(&mut self, runtime_state: SharedOperandState, object: &crate::core::Object) {
+    async fn on_command(
+        &mut self,
+        runtime_state: SharedOperandState,
+        object: &crate::core::Object,
+    ) {
         if let crate::core::Object::Motion(motion) = object {
             for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
                 if let Err(error) = drv

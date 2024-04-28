@@ -10,10 +10,10 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    /// Create a new pipeline.
-    pub fn new(signal_tx: MotionSender) -> Self {
+    /// Construct a new pipeline.
+    pub fn new(command_tx: MotionSender) -> Self {
         Self {
-            ctx: ComponentContext::new(signal_tx.clone()),
+            ctx: ComponentContext::new(command_tx),
             map: BTreeMap::new(),
         }
     }

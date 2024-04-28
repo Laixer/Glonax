@@ -10,8 +10,9 @@ pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
+// TODO: Rename to CommandSender
 pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Object>;
-pub type MotionReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
+pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
 
 pub mod builder;
@@ -149,7 +150,7 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
-    fn on_event(
+    fn on_command(
         &mut self,
         _runtime_state: SharedOperandState,
         _object: &crate::core::Object,
@@ -189,7 +190,7 @@ where
     service: S,
     _config: C,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-    _signal_tx: MotionSender,
+    _command_tx: MotionSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 }
 
@@ -200,14 +201,14 @@ where
     fn new(
         service: S,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        signal_tx: MotionSender,
+        command_tx: MotionSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service,
             _config: crate::runtime::NullConfig,
             operand,
-            _signal_tx: signal_tx,
+            _command_tx: command_tx,
             shutdown,
         }
     }
@@ -221,14 +222,14 @@ where
     fn with_config(
         config: C,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        signal_tx: MotionSender,
+        command_tx: MotionSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service: S::new(config.clone()),
             _config: config,
             operand,
-            _signal_tx: signal_tx,
+            _command_tx: command_tx,
             shutdown,
         }
     }
@@ -287,19 +288,19 @@ where
         }
     }
 
-    async fn recv(&mut self, mut signal_rx: MotionReceiver) {
+    async fn recv(&mut self, mut command_rx: CommandReceiver) {
         let ctx = self.service.ctx();
 
         if let Some(address) = ctx.address.clone() {
-            log::debug!("Recv '{}' service on {}", ctx.name, address);
+            log::debug!("Command '{}' service on {}", ctx.name, address);
         } else {
-            log::debug!("Recv '{}' service", ctx.name);
+            log::debug!("Command '{}' service", ctx.name);
         }
 
         tokio::select! {
             _ = async {
-                while let Some(signal) = signal_rx.recv().await {
-                    self.service.on_event(self.operand.clone(), &signal).await;
+                while let Some(signal) = command_rx.recv().await {
+                    self.service.on_command(self.operand.clone(), &signal).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -336,9 +337,8 @@ impl ComponentContext {
         }
     }
 
-    // TODO: Rename to `send_motion`
     /// Commit a motion command.
-    pub fn commit(&mut self, motion: crate::core::Motion) {
+    pub fn send_motion(&mut self, motion: crate::core::Motion) {
         if let Err(e) = self.signal_tx.try_send(crate::core::Object::Motion(motion)) {
             log::error!("Failed to send motion command: {}", e);
         }
@@ -377,7 +377,7 @@ pub struct Runtime<Conf> {
     /// Motion command sender.
     motion_tx: MotionSender,
     /// Motion command receiver.
-    motion_rx: Option<MotionReceiver>,
+    motion_rx: Option<CommandReceiver>,
     /// Runtime tasks.
     tasks: Vec<tokio::task::JoinHandle<()>>,
     /// Runtime event bus.
