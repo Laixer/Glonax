@@ -288,7 +288,7 @@ where
         }
     }
 
-    async fn recv(&mut self, mut command_rx: CommandReceiver) {
+    async fn on_command(&mut self, mut command_rx: CommandReceiver) {
         let ctx = self.service.ctx();
 
         if let Some(address) = ctx.address.clone() {
@@ -453,7 +453,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         S: Service<C> + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
-        let motion_rx = self.motion_rx.take().unwrap();
+        let command_rx = self.motion_rx.take().unwrap();
 
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
@@ -464,7 +464,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
 
         self.spawn(async move {
             service_descriptor.setup().await;
-            service_descriptor.recv(motion_rx).await;
+            service_descriptor.on_command(command_rx).await;
             service_descriptor.teardown().await;
         });
     }

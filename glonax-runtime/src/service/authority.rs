@@ -272,20 +272,18 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         runtime_state: SharedOperandState,
         object: &crate::core::Object,
     ) {
-        if let crate::core::Object::Motion(motion) = object {
-            for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
-                if let Err(error) = drv
-                    .trigger(ctx, &self.network, runtime_state.clone(), motion)
-                    .await
-                {
-                    log::error!(
-                        "[{}:0x{:X}] {}: {}",
-                        self.interface,
-                        drv.destination(),
-                        drv.name(),
-                        error
-                    );
-                }
+        for (drv, ctx) in self.drivers.inner_mut().iter_mut() {
+            if let Err(error) = drv
+                .trigger(ctx, &self.network, runtime_state.clone(), object)
+                .await
+            {
+                log::error!(
+                    "[{}:0x{:X}] {}: {}",
+                    self.interface,
+                    drv.destination(),
+                    drv.name(),
+                    error
+                );
             }
         }
     }

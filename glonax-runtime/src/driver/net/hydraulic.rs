@@ -558,12 +558,14 @@ impl super::J1939Unit for HydraulicControlUnit {
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
-        trigger: &crate::core::Motion,
+        object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
-        runtime_state.write().await.state.motion = trigger.clone();
+        if let crate::core::Object::Motion(trigger) = object {
+            runtime_state.write().await.state.motion = trigger.clone();
 
-        self.send_motion_command(network, trigger).await?;
-        ctx.tx_mark();
+            self.send_motion_command(network, trigger).await?;
+            ctx.tx_mark();
+        }
 
         Ok(())
     }

@@ -229,34 +229,28 @@ impl J1939Unit for NetDriver {
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
-        trigger: &crate::core::Motion,
+        object: &crate::core::Object,
     ) -> Result<(), J1939UnitError> {
         match self {
             Self::KueblerEncoder(encoder) => {
-                encoder.trigger(ctx, network, runtime_state, trigger).await
+                encoder.trigger(ctx, network, runtime_state, object).await
             }
             Self::KueblerInclinometer(inclinometer) => {
                 inclinometer
-                    .trigger(ctx, network, runtime_state, trigger)
+                    .trigger(ctx, network, runtime_state, object)
                     .await
             }
-            Self::VolvoD7E(volvo) => volvo.trigger(ctx, network, runtime_state, trigger).await,
+            Self::VolvoD7E(volvo) => volvo.trigger(ctx, network, runtime_state, object).await,
             Self::BoschEngineManagementSystem(bosch) => {
-                bosch.trigger(ctx, network, runtime_state, trigger).await
+                bosch.trigger(ctx, network, runtime_state, object).await
             }
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic
-                    .trigger(ctx, network, runtime_state, trigger)
-                    .await
+                hydraulic.trigger(ctx, network, runtime_state, object).await
             }
             Self::VehicleManagementSystem(responder) => {
-                responder
-                    .trigger(ctx, network, runtime_state, trigger)
-                    .await
+                responder.trigger(ctx, network, runtime_state, object).await
             }
-            Self::VehicleControlUnit(vcu) => {
-                vcu.trigger(ctx, network, runtime_state, trigger).await
-            }
+            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, network, runtime_state, object).await,
         }
     }
 }
@@ -430,7 +424,7 @@ pub trait J1939Unit {
         _ctx: &mut NetDriverContext,
         _network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
-        _trigger: &crate::core::Motion,
+        _object: &crate::core::Object,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
         std::future::ready(Ok(()))
     }
