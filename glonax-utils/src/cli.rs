@@ -242,25 +242,25 @@ async fn main() -> anyhow::Result<()> {
                 let mut parts = s.split_whitespace();
                 parts.next();
 
-                let control = match parts.next() {
-                    Some("i1") => glonax::core::Control::EngineRequest(800),
-                    Some("i2") => glonax::core::Control::EngineRequest(1000),
-                    Some("f1") => glonax::core::Control::EngineRequest(1200),
-                    Some("f2") => glonax::core::Control::EngineRequest(1300),
-                    Some("f3") => glonax::core::Control::EngineRequest(1400),
-                    Some("g1") => glonax::core::Control::EngineRequest(1500),
-                    Some("g2") => glonax::core::Control::EngineRequest(1600),
-                    Some("g3") => glonax::core::Control::EngineRequest(1700),
-                    Some("h") => glonax::core::Control::EngineRequest(1800),
-                    Some("p") => glonax::core::Control::EngineRequest(1900),
-                    Some("s") => glonax::core::Control::EngineShutdown,
+                let engine = match parts.next() {
+                    Some("i1") => glonax::core::Engine::from_rpm(800),
+                    Some("i2") => glonax::core::Engine::from_rpm(1000),
+                    Some("f1") => glonax::core::Engine::from_rpm(1200),
+                    Some("f2") => glonax::core::Engine::from_rpm(1300),
+                    Some("f3") => glonax::core::Engine::from_rpm(1400),
+                    Some("g1") => glonax::core::Engine::from_rpm(1500),
+                    Some("g2") => glonax::core::Engine::from_rpm(1600),
+                    Some("g3") => glonax::core::Engine::from_rpm(1700),
+                    Some("h") => glonax::core::Engine::from_rpm(1800),
+                    Some("p") => glonax::core::Engine::from_rpm(1900),
+                    Some("s") => glonax::core::Engine::from_rpm(0),
                     _ => {
                         eprintln!("Invalid engine command");
                         continue;
                     }
                 };
 
-                client.send_packet(&control).await?;
+                client.send_packet(&engine).await?;
             }
             s if s.starts_with("quick disconnect ") || s.starts_with("qd ") => {
                 let mut parts = s.split_whitespace();

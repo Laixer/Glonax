@@ -69,6 +69,15 @@ pub struct Engine {
     pub status: EngineStatus,
 }
 
+impl Engine {
+    pub fn from_rpm(rpm: u16) -> Self {
+        Self {
+            rpm,
+            ..Default::default()
+        }
+    }
+}
+
 impl Default for Engine {
     fn default() -> Self {
         Self {

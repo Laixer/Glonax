@@ -213,14 +213,6 @@ impl TcpServer {
                         .unwrap();
 
                     match control {
-                        crate::core::Control::EngineRequest(rpm) => {
-                            let rpm = rpm.clamp(0, 2100);
-
-                            log::info!("Engine request RPM: {}", rpm);
-                        }
-                        crate::core::Control::EngineShutdown => {
-                            log::info!("Engine shutdown");
-                        }
                         crate::core::Control::HydraulicQuickDisconnect(on) => {
                             log::info!("Hydraulic quick disconnect: {}", on);
                         }

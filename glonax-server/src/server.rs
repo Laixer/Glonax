@@ -104,10 +104,17 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         .await
                         .unwrap();
 
+                    log::debug!("Engine request RPM: {}", engine.rpm);
+
+                    // TODO: Handle most of the engine state further down
                     let state = &mut runtime_state.write().await.state;
                     state.engine_state_request = Some(glonax::core::EngineRequest {
                         speed: engine.rpm,
-                        state: glonax::core::EngineState::Request,
+                        state: if engine.rpm > 0 {
+                            glonax::core::EngineState::Request
+                        } else {
+                            glonax::core::EngineState::NoRequest
+                        },
                     });
                     state.engine_state_request_instant = Some(std::time::Instant::now());
 
@@ -130,7 +137,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         }
                     }
 
-                    log::debug!("Motion: {:?}", motion);
+                    // log::debug!("Motion: {:?}", motion);
 
                     if let Err(e) = motion_sender
                         .send(glonax::core::Object::Motion(motion))
@@ -163,29 +170,6 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         .unwrap();
 
                     match control {
-                        // TODO: Remove this
-                        glonax::core::Control::EngineRequest(rpm) => {
-                            log::info!("Engine request RPM: {}", rpm);
-
-                            let state = &mut runtime_state.write().await.state;
-                            state.engine_state_request = Some(glonax::core::EngineRequest {
-                                speed: rpm,
-                                state: glonax::core::EngineState::Request,
-                            });
-                            state.engine_state_request_instant = Some(std::time::Instant::now());
-                        }
-                        // TODO: Remove this
-                        glonax::core::Control::EngineShutdown => {
-                            log::info!("Engine shutdown");
-
-                            let state = &mut runtime_state.write().await.state;
-                            state.engine_state_request = Some(glonax::core::EngineRequest {
-                                speed: 0,
-                                state: glonax::core::EngineState::NoRequest,
-                            });
-                            state.engine_state_request_instant = Some(std::time::Instant::now());
-                        }
-
                         glonax::core::Control::HydraulicQuickDisconnect(on) => {
                             log::info!("Hydraulic quick disconnect: {}", on);
                             runtime_state.write().await.state.hydraulic_quick_disconnect = on;

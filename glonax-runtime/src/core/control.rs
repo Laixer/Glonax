@@ -1,7 +1,5 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-const CONTROL_TYPE_ENGINE_REQUEST: u8 = 0x01;
-const CONTROL_TYPE_ENGINE_SHUTDOWN: u8 = 0x02;
 const CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT: u8 = 0x5;
 const CONTROL_TYPE_HYDRAULIC_LOCK: u8 = 0x6;
 const CONTROL_TYPE_HYDRAULIC_BOOST: u8 = 0x7;
@@ -14,12 +12,6 @@ const CONTROL_TYPE_MACHINE_TRAVEL_ALARM: u8 = 0x20;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Control {
-    // TODO: Remove this.
-    /// Engine RPM request.
-    EngineRequest(u16),
-    // TODO: Remove this.
-    /// Engine shutdown.
-    EngineShutdown,
     /// Hydraulic quick disconnect.
     HydraulicQuickDisconnect(bool),
     /// Hydraulic lock.
@@ -43,8 +35,6 @@ pub enum Control {
 impl std::fmt::Display for Control {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Control::EngineRequest(rpm) => write!(f, "Engine request: {}", rpm),
-            Control::EngineShutdown => write!(f, "Engine shutdown"),
             Control::HydraulicQuickDisconnect(on) => {
                 write!(f, "Hydraulic quick disconnect: {}", on)
             }
@@ -67,8 +57,6 @@ impl TryFrom<Vec<u8>> for Control {
         let mut buf = Bytes::copy_from_slice(&value);
 
         match buf.get_u8() {
-            CONTROL_TYPE_ENGINE_REQUEST => Ok(Control::EngineRequest(buf.get_u16())),
-            CONTROL_TYPE_ENGINE_SHUTDOWN => Ok(Control::EngineShutdown),
             CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT => {
                 Ok(Control::HydraulicQuickDisconnect(buf.get_u8() != 0))
             }
@@ -94,13 +82,6 @@ impl crate::protocol::Packetize for Control {
         let mut buf = BytesMut::with_capacity(2);
 
         match self {
-            Control::EngineRequest(rpm) => {
-                buf.put_u8(CONTROL_TYPE_ENGINE_REQUEST);
-                buf.put_u16(*rpm);
-            }
-            Control::EngineShutdown => {
-                buf.put_u8(CONTROL_TYPE_ENGINE_SHUTDOWN);
-            }
             Control::HydraulicQuickDisconnect(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT);
                 buf.put_u8(if *on { 1 } else { 0 });
