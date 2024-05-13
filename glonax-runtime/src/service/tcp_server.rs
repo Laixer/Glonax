@@ -104,7 +104,7 @@ impl TcpServer {
                         }
                         crate::core::Engine::MESSAGE_TYPE => {
                             client
-                                .send_packet(&runtime_state.read().await.state.engine)
+                                .send_packet(&runtime_state.read().await.state.engine_signal)
                                 .await
                                 .unwrap();
                         }
@@ -160,10 +160,7 @@ impl TcpServer {
 
                     if session.is_control() {
                         let state = &mut runtime_state.write().await.state;
-                        state.engine_state_request = Some(crate::core::EngineRequest {
-                            speed: engine.rpm,
-                            state: crate::core::EngineState::Request,
-                        });
+                        state.engine_command = Some(engine);
                         state.engine_state_request_instant = Some(std::time::Instant::now());
 
                         log::debug!("Engine request RPM: {}", engine.rpm);

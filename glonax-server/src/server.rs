@@ -56,7 +56,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     }
                     glonax::core::Engine::MESSAGE_TYPE => {
                         client
-                            .send_packet(&runtime_state.read().await.state.engine)
+                            .send_packet(&runtime_state.read().await.state.engine_signal)
                             .await
                             .unwrap();
                     }
@@ -104,14 +104,8 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                         .await
                         .unwrap();
 
-                    log::debug!("Engine request RPM: {}", engine.rpm);
-
-                    // TODO: Handle most of the engine state further down
                     let state = &mut runtime_state.write().await.state;
-                    state.engine_state_request = Some(glonax::core::EngineRequest {
-                        speed: engine.rpm,
-                        state: glonax::core::EngineState::Request,
-                    });
+                    state.engine_command = Some(engine);
                     state.engine_state_request_instant = Some(std::time::Instant::now());
 
                     log::debug!("Engine request RPM: {}", engine.rpm);

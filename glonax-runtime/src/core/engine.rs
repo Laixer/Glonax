@@ -26,24 +26,6 @@ impl TryFrom<u8> for EngineState {
     }
 }
 
-// TODO: If possible, replace with 'Engine';
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct EngineRequest {
-    /// Engine speed request.
-    pub speed: u16,
-    /// Engine state.
-    pub state: EngineState,
-}
-
-impl Default for EngineRequest {
-    fn default() -> Self {
-        Self {
-            speed: Default::default(),
-            state: EngineState::NoRequest,
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Engine {
     /// Engine Driver Demand in percent.
@@ -81,8 +63,8 @@ impl std::fmt::Display for Engine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Driver Demand: {}% Actual Engine: {}% RPM: {}",
-            self.driver_demand, self.actual_engine, self.rpm
+            "Driver Demand: {}% Actual Engine: {}% RPM: {} State: {:?}",
+            self.driver_demand, self.actual_engine, self.rpm, self.state
         )
     }
 }

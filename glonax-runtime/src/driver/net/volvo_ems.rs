@@ -111,19 +111,19 @@ impl super::J1939Unit for VolvoD7E {
             let request = request.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    network.send(&self.request(request.speed)).await?;
+                    network.send(&self.request(request.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Starting => {
-                    network.send(&self.start(request.speed)).await?;
+                    network.send(&self.start(request.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Stopping => {
-                    network.send(&self.stop(request.speed)).await?;
+                    network.send(&self.stop(request.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Request => {
-                    network.send(&self.request(request.speed)).await?;
+                    network.send(&self.request(request.rpm)).await?;
                     ctx.tx_mark();
                 }
             }

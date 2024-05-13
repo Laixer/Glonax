@@ -337,27 +337,26 @@ impl super::J1939Unit for EngineManagementSystem {
                     ctx.rx_mark();
 
                     if let Some(driver_demand) = controller.driver_demand {
-                        runtime_state.state.engine.driver_demand = driver_demand;
+                        runtime_state.state.engine_signal.driver_demand = driver_demand;
                     }
                     if let Some(actual_engine) = controller.actual_engine {
-                        runtime_state.state.engine.actual_engine = actual_engine;
+                        runtime_state.state.engine_signal.actual_engine = actual_engine;
                     }
                     if let Some(rpm) = controller.rpm {
-                        runtime_state.state.engine.rpm = rpm;
-                        runtime_state.state.engine_state_actual.speed = rpm;
+                        runtime_state.state.engine_signal.rpm = rpm;
                     }
 
                     if let Some(starter_mode) = controller.starter_mode {
                         match starter_mode {
                             spn::EngineStarterMode::StarterActiveGearNotEngaged
                             | spn::EngineStarterMode::StarterActiveGearEngaged => {
-                                runtime_state.state.engine_state_actual.state =
-                                    crate::core::EngineState::Starting
+                                runtime_state.state.engine_signal.state =
+                                    crate::core::EngineState::Starting;
                             }
                             spn::EngineStarterMode::StartFinished => {
                                 if let Some(rpm) = controller.rpm {
                                     if rpm > 0 {
-                                        runtime_state.state.engine_state_actual.state =
+                                        runtime_state.state.engine_signal.state =
                                             crate::core::EngineState::Request;
                                     }
                                 }
@@ -369,30 +368,31 @@ impl super::J1939Unit for EngineManagementSystem {
                             | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
                             | spn::EngineStarterMode::StarterInhibitedOverHeat
                             | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
-                                runtime_state.state.engine_state_actual.state =
+                                runtime_state.state.engine_signal.state =
                                     crate::core::EngineState::NoRequest;
                             }
                             _ => {}
                         }
                     } else if let Some(rpm) = controller.rpm {
                         if rpm == 0 {
-                            runtime_state.state.engine_state_actual.state =
+                            runtime_state.state.engine_signal.state =
                                 crate::core::EngineState::NoRequest;
                         } else if rpm < 500 {
-                            runtime_state.state.engine_state_actual.state =
+                            runtime_state.state.engine_signal.state =
                                 crate::core::EngineState::Starting;
                         } else {
-                            runtime_state.state.engine_state_actual.state =
+                            runtime_state.state.engine_signal.state =
                                 crate::core::EngineState::Request;
                         }
                     } else if controller.rpm.is_none()
                         || controller.actual_engine.is_none()
                         || controller.engine_torque_mode.is_none()
                     {
-                        runtime_state.state.engine_state_actual.state =
+                        runtime_state.state.engine_signal.state =
                             crate::core::EngineState::NoRequest;
                     }
                 }
+                // TODO: Handle shutdown message, set state to stopping
             }
         }
 
@@ -409,19 +409,19 @@ impl super::J1939Unit for EngineManagementSystem {
             let request = request.governor_mode();
             match request.state {
                 crate::core::EngineState::NoRequest => {
-                    network.send(&self.request(request.speed)).await?;
+                    network.send(&self.request(request.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Stopping => {
-                    network.send(&self.stop(request.speed)).await?;
+                    network.send(&self.stop(request.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Starting => {
-                    network.send(&self.start(request.speed)).await?;
+                    network.send(&self.start(request.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Request => {
-                    network.send(&self.request(request.speed)).await?;
+                    network.send(&self.request(request.rpm)).await?;
                     ctx.tx_mark();
                 }
             }

@@ -113,14 +113,12 @@ pub struct MachineState {
     /// GNSS actual instant.
     pub gnss_actual_instant: Option<std::time::Instant>,
 
-    /// Engine data.
-    pub engine: core::Engine,
-    /// Engine state actual.
-    pub engine_state_actual: core::EngineRequest,
+    /// Engine signal.
+    pub engine_signal: core::Engine,
     /// Engine state actual instant.
     pub engine_state_actual_instant: Option<std::time::Instant>,
-    /// Engine state request.
-    pub engine_state_request: Option<core::EngineRequest>,
+    /// Engine command.
+    pub engine_command: Option<core::Engine>,
     /// Engine state request instant.
     pub engine_state_request_instant: Option<std::time::Instant>,
 
@@ -170,58 +168,63 @@ impl Governor {
     ///
     /// This method determines the next engine state based on the actual and requested
     /// engine states. It returns the next engine state as an `EngineRequest`.
-    fn next_state(
-        &self,
-        actual: &core::EngineRequest,
-        request: &core::EngineRequest,
-    ) -> crate::core::EngineRequest {
+    fn next_state(&self, signal: &core::Engine, command: &core::Engine) -> crate::core::Engine {
         use crate::core::EngineState;
 
-        match (actual.state, request.state) {
-            (EngineState::NoRequest, EngineState::Starting) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+        match (signal.state, command.state) {
+            (EngineState::NoRequest, EngineState::Starting) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Starting,
+                ..Default::default()
             },
-            (EngineState::NoRequest, EngineState::Request) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+            (EngineState::NoRequest, EngineState::Request) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Starting,
+                ..Default::default()
             },
-            (EngineState::NoRequest, _) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+            (EngineState::NoRequest, _) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::NoRequest,
+                ..Default::default()
             },
 
-            (EngineState::Starting, _) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+            (EngineState::Starting, _) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Starting,
+                ..Default::default()
             },
-            (EngineState::Stopping, _) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+            (EngineState::Stopping, _) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Stopping,
+                ..Default::default()
             },
 
-            (EngineState::Request, EngineState::NoRequest) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+            (EngineState::Request, EngineState::NoRequest) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Stopping,
+                ..Default::default()
             },
-            (EngineState::Request, EngineState::Starting) => core::EngineRequest {
-                speed: self.reshape(actual.speed),
+            (EngineState::Request, EngineState::Starting) => core::Engine {
+                rpm: self.reshape(command.rpm),
                 state: EngineState::Request,
+                ..Default::default()
             },
-            (EngineState::Request, EngineState::Stopping) => core::EngineRequest {
-                speed: self.reshape(self.rpm_idle),
+            (EngineState::Request, EngineState::Stopping) => core::Engine {
+                rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Stopping,
+                ..Default::default()
             },
-            (EngineState::Request, EngineState::Request) => core::EngineRequest {
-                speed: self.reshape(request.speed),
+            (EngineState::Request, EngineState::Request) => core::Engine {
+                rpm: self.reshape(command.rpm),
                 state: EngineState::Request,
+                ..Default::default()
             },
         }
     }
 }
 
-const ENGINE_MOTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
-const ENGINE_AUTO_REV: bool = false;
+// const ENGINE_MOTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+// const ENGINE_AUTO_REV: bool = false;
 
 /// The operand is the current state of the machine.
 ///
@@ -242,28 +245,40 @@ impl Operand {
     ///
     /// If no engine state request is present, the governor will use the
     /// actual engine state, essentially maintaining the current state.
-    pub fn governor_mode(&self) -> crate::core::EngineRequest {
-        let mut request = self.state.engine_state_actual;
+    pub fn governor_mode(&self) -> crate::core::Engine {
+        let mut engine_command = self
+            .state
+            .engine_command
+            .unwrap_or(self.state.engine_signal);
+        engine_command.actual_engine = 0;
+        engine_command.state = match engine_command.state {
+            core::EngineState::NoRequest => core::EngineState::NoRequest,
+            core::EngineState::Request => core::EngineState::Request,
+            _ => self.state.engine_signal.state,
+        };
 
-        if let Some(last_update) = self.state.motion_instant {
-            if last_update.elapsed() < ENGINE_MOTION_TIMEOUT && ENGINE_AUTO_REV {
-                request = core::EngineRequest {
-                    speed: request.speed.max(1_500),
-                    state: core::EngineState::Request,
-                };
+        engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
+
+        // if let Some(last_update) = self.state.motion_instant {
+        //     if last_update.elapsed() < ENGINE_MOTION_TIMEOUT && ENGINE_AUTO_REV {
+        //         request = core::EngineRequest {
+        //             speed: request.speed.max(1_500),
+        //             state: core::EngineState::Request,
+        //         };
+        //     }
+        // }
+
+        if engine_command.rpm == 0 {
+            if engine_command.driver_demand == 0 {
+                engine_command.state = core::EngineState::NoRequest;
+            } else {
+                engine_command.rpm = (engine_command.driver_demand as f32 / 100.0
+                    * self.governor.rpm_max as f32) as u16;
             }
         }
 
-        if let Some(engine_state_request) = self.state.engine_state_request {
-            request = engine_state_request;
-        }
-
-        if request.speed == 0 {
-            request.state = core::EngineState::NoRequest;
-        }
-
         self.governor
-            .next_state(&self.state.engine_state_actual, &request)
+            .next_state(&self.state.engine_signal, &engine_command)
     }
 
     /// Get the status of the machine.
