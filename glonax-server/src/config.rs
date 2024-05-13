@@ -51,8 +51,6 @@ pub struct Config {
     pub machine: MachineConfig,
     /// NMEA configuration.
     pub gnss: Option<glonax::service::GnssConfig>,
-    /// Host configuration.
-    pub host: glonax::service::HostConfig,
     /// Simulation configuration.
     pub simulation: Option<SimulationConfig>,
     /// TCP Server configuration.

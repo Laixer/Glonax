@@ -4,7 +4,7 @@ pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkAuthorityTx,
 pub use encoder::EncoderSimulator;
 pub use engine::EngineSimulator;
 pub use gnss::{Gnss, GnssConfig};
-pub use host::{Host, HostConfig};
+pub use host::Host;
 pub use pipeline::Pipeline;
 pub use tcp_server::{TcpServer, TcpServerConfig, UnixServerConfig};
 

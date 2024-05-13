@@ -129,11 +129,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
-    // TODO: Why is the interval configurable?
-    runtime.schedule_service::<service::Host, _>(
-        config.host.clone(),
-        Duration::from_millis(config.host.interval.clamp(10, 1_000)),
-    );
+    runtime.schedule_service_default::<service::Host>(Duration::from_millis(200));
 
     // TODO: Do we need a simulator?
     if config.is_simulation {
