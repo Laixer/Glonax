@@ -290,20 +290,7 @@ impl Default for NetDriverContext {
     }
 }
 
-// TODO: NetDriverCollection should be named type of Vec<(NetDriver, NetDriverContext)>
-#[derive(Default)]
-pub struct NetDriverCollection(Vec<(NetDriver, NetDriverContext)>);
-
-impl NetDriverCollection {
-    /// Register a driver with the control network.
-    pub fn register_driver(&mut self, driver: NetDriver) {
-        self.0.push((driver, NetDriverContext::default()));
-    }
-
-    pub fn inner_mut(&mut self) -> &mut Vec<(NetDriver, NetDriverContext)> {
-        &mut self.0
-    }
-}
+pub type NetDriverCollection = Vec<(NetDriver, NetDriverContext)>;
 
 #[derive(Debug)]
 pub enum J1939UnitError {
