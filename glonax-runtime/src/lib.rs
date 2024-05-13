@@ -281,12 +281,12 @@ impl Operand {
             .next_state(&self.state.engine_signal, &engine_command)
     }
 
+    // TODO: Report all statuses, not just a single one
     /// Get the status of the machine.
     ///
-    /// This method returns the status of the machine based on the
-    /// current machine state. It takes into account the status of
-    /// the vehicle management system, global navigation satellite
-    /// system, engine, and other factors.
+    /// This method returns the status of the machine based on the current machine state. It takes into account
+    /// the status of the vehicle management system, global navigation satellite system, engine,
+    /// and other factors.
     pub fn status(&self) -> core::Status {
         use crate::core::{GnssStatus, HostStatus, Status};
 

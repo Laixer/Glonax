@@ -45,6 +45,7 @@ impl<C> Service<C> for Host {
         for component in &self.components {
             if let Some(critical) = component.critical() {
                 if component.temperature() > critical {
+                    // TODO: Set system state to critical
                     log::warn!(
                         "{} is reaching cirital temperatures: {}°C",
                         component.label(),
