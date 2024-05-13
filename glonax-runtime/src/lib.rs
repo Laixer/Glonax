@@ -258,6 +258,10 @@ impl Operand {
             request = engine_state_request;
         }
 
+        if request.speed == 0 {
+            request.state = core::EngineState::NoRequest;
+        }
+
         self.governor
             .next_state(&self.state.engine_state_actual, &request)
     }

@@ -110,11 +110,7 @@ async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + 
                     let state = &mut runtime_state.write().await.state;
                     state.engine_state_request = Some(glonax::core::EngineRequest {
                         speed: engine.rpm,
-                        state: if engine.rpm > 0 {
-                            glonax::core::EngineState::Request
-                        } else {
-                            glonax::core::EngineState::NoRequest
-                        },
+                        state: glonax::core::EngineState::Request,
                     });
                     state.engine_state_request_instant = Some(std::time::Instant::now());
 

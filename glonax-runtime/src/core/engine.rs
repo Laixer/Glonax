@@ -40,6 +40,7 @@ pub enum EngineState {
     Request,
 }
 
+// TODO: If possible, replace with 'Engine';
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct EngineRequest {
     /// Engine speed request.
