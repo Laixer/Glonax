@@ -370,10 +370,17 @@ pub struct Runtime<Conf> {
 
 impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     // TODO: This is temporary
+    /// Returns a clone of the motion sender.
+    ///
+    /// This method returns a clone of the motion sender, allowing other components to send motion commands.
     pub fn motion_sender(&self) -> MotionSender {
         self.motion_tx.clone()
     }
 
+    /// Spawns a future onto the runtime's executor.
+    ///
+    /// This method spawns a future onto the runtime's executor, allowing it to run in the background.
+    /// The future must implement the `Future` trait with an output type of `()`, and it must also be `Send` and `'static`.
     fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(&mut self, f: F) {
         self.tasks.push(tokio::spawn(f));
     }
