@@ -92,6 +92,10 @@ pub fn log_system() {
         System::os_version().unwrap_or_default()
     );
     log::debug!(
+        "System architecture: {}",
+        System::cpu_arch().unwrap_or_default()
+    );
+    log::debug!(
         "System host name: {}",
         System::host_name().unwrap_or_default()
     );
@@ -284,9 +288,9 @@ impl Operand {
     // TODO: Report all statuses, not just a single one
     /// Get the status of the machine.
     ///
-    /// This method returns the status of the machine based on the current machine state. It takes into account
-    /// the status of the vehicle management system, global navigation satellite system, engine,
-    /// and other factors.
+    /// This method returns the status of the machine based on the current machine state. It takes
+    /// into account the status of the vehicle management system, global navigation satellite system,
+    /// engine, and other factors.
     pub fn status(&self) -> core::Status {
         use crate::core::{GnssStatus, HostStatus, Status};
 
