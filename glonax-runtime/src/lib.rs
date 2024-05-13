@@ -110,15 +110,15 @@ pub fn log_system() {
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.
-    pub vms: core::Host, // SIGNAL
+    pub vms: core::Host, // SIGNAL, EMIT
 
     /// Global navigation satellite system data.
-    pub gnss: core::Gnss, // SIGNAL
+    pub gnss: core::Gnss, // SIGNAL, EMIT
     /// GNSS actual instant.
     pub gnss_actual_instant: Option<std::time::Instant>,
 
     /// Engine signal.
-    pub engine_signal: core::Engine, // SIGNAL
+    pub engine_signal: core::Engine, // SIGNAL, STATE
     /// Engine state actual instant.
     pub engine_state_actual_instant: Option<std::time::Instant>,
     /// Engine command.
@@ -129,7 +129,7 @@ pub struct MachineState {
     /// Hydraulic quick disconnect.
     pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct // COMMAND
     /// Hydraulic lock.
-    pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct // COMMAND
+    pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct // STATE
     /// Hydraulic actual instant.
     pub hydraulic_actual_instant: Option<std::time::Instant>,
 
@@ -141,13 +141,13 @@ pub struct MachineState {
     pub motion_instant: Option<std::time::Instant>,
 
     /// Encoder data.
-    pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL
+    pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL, STATE
     /// Robot as an actor.
-    pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL
+    pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL, EMIT
     /// Current program queue.
     pub program: std::collections::VecDeque<core::Target>, // COMMAND
     /// Electronic control unit data.
-    pub ecu_state: driver::VirtualHCU, // CROSS SERVICE
+    pub ecu_state: driver::VirtualHCU, // CROSS SERVICE (Sim actuator, sim encoder)
 }
 
 struct Governor {
