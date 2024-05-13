@@ -221,6 +221,7 @@ impl Governor {
 }
 
 const ENGINE_MOTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+const ENGINE_AUTO_REV: bool = false;
 
 /// The operand is the current state of the machine.
 ///
@@ -245,7 +246,7 @@ impl Operand {
         let mut request = self.state.engine_state_actual;
 
         if let Some(last_update) = self.state.motion_instant {
-            if last_update.elapsed() < ENGINE_MOTION_TIMEOUT {
+            if last_update.elapsed() < ENGINE_MOTION_TIMEOUT && ENGINE_AUTO_REV {
                 request = core::EngineRequest {
                     speed: request.speed.max(1_500),
                     state: core::EngineState::Request,

@@ -70,6 +70,7 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Create a new engine with the given RPM.
     pub fn from_rpm(rpm: u16) -> Self {
         Self {
             rpm,
