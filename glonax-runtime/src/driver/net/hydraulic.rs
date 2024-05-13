@@ -492,7 +492,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
+        runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
@@ -529,6 +529,8 @@ impl super::J1939Unit for HydraulicControlUnit {
                 }
                 HydraulicMessage::Status(status) => {
                     ctx.rx_mark();
+
+                    runtime_state.write().await.state.motion_locked = status.locked;
 
                     status.into_error()?;
                 }
