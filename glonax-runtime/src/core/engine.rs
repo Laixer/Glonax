@@ -1,43 +1,29 @@
 use bytes::{BufMut, BytesMut};
 
-// TODO: Remove this. We're doing this differently now.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EngineStatus {
-    /// Engine is disabled.
-    Disabled = 0xFF,
-    /// Controller Area Network is down.
-    NetworkDown = 0x00,
-    /// Engine message timeout.
-    MessageTimeout = 0x01,
-    /// Engine is nominal.
-    Nominal = 0x02,
+pub enum EngineState {
+    /// Engine is shut down, ready to start.
+    NoRequest = 0x00,
+    /// Engine is starting up.
+    Starting = 0x01,
+    /// Engine is shutting down.
+    Stopping = 0x02,
+    /// Engine is running.
+    Request = 0x10,
 }
 
-// TODO: Remove this.
-impl TryFrom<u8> for EngineStatus {
+impl TryFrom<u8> for EngineState {
     type Error = ();
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0xFF => Ok(EngineStatus::Disabled),
-            0x00 => Ok(EngineStatus::NetworkDown),
-            0x01 => Ok(EngineStatus::MessageTimeout),
-            0x02 => Ok(EngineStatus::Nominal),
+            0x00 => Ok(EngineState::NoRequest),
+            0x01 => Ok(EngineState::Starting),
+            0x02 => Ok(EngineState::Stopping),
+            0x10 => Ok(EngineState::Request),
             _ => Err(()),
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum EngineState {
-    /// Engine is shut down, ready to start.
-    NoRequest,
-    /// Engine is starting up.
-    Starting,
-    /// Engine is shutting down.
-    Stopping,
-    /// Engine is running.
-    Request,
 }
 
 // TODO: If possible, replace with 'Engine';
@@ -66,8 +52,8 @@ pub struct Engine {
     pub actual_engine: u8,
     /// Engine RPM.
     pub rpm: u16,
-    /// Engine status.
-    pub status: EngineStatus,
+    /// Engine state.
+    pub state: EngineState,
 }
 
 impl Engine {
@@ -86,7 +72,7 @@ impl Default for Engine {
             driver_demand: Default::default(),
             actual_engine: Default::default(),
             rpm: Default::default(),
-            status: EngineStatus::Disabled,
+            state: EngineState::NoRequest,
         }
     }
 }
@@ -109,13 +95,13 @@ impl TryFrom<Vec<u8>> for Engine {
         let actual_engine = buffer[1];
         let rpm = u16::from_be_bytes([buffer[2], buffer[3]]);
 
-        let status = EngineStatus::try_from(buffer[4])?;
+        let state = EngineState::try_from(buffer[4])?;
 
         Ok(Self {
             driver_demand,
             actual_engine,
             rpm,
-            status,
+            state,
         })
     }
 }
@@ -130,8 +116,7 @@ impl crate::protocol::Packetize for Engine {
         buf.put_u8(self.driver_demand);
         buf.put_u8(self.actual_engine);
         buf.put_u16(self.rpm);
-
-        buf.put_u8(self.status as u8);
+        buf.put_u8(self.state as u8);
 
         buf.to_vec()
     }
@@ -143,21 +128,12 @@ mod tests {
     use crate::protocol::Packetize;
 
     #[test]
-    fn test_engine_status() {
-        assert_eq!(
-            EngineStatus::try_from(0xFF).unwrap(),
-            EngineStatus::Disabled
-        );
-        assert_eq!(
-            EngineStatus::try_from(0x00).unwrap(),
-            EngineStatus::NetworkDown
-        );
-        assert_eq!(
-            EngineStatus::try_from(0x01).unwrap(),
-            EngineStatus::MessageTimeout
-        );
-        assert_eq!(EngineStatus::try_from(0x02).unwrap(), EngineStatus::Nominal);
-        assert!(EngineStatus::try_from(0x03).is_err());
+    fn test_engine_state() {
+        assert_eq!(EngineState::try_from(0x00).unwrap(), EngineState::NoRequest);
+        assert_eq!(EngineState::try_from(0x01).unwrap(), EngineState::Starting);
+        assert_eq!(EngineState::try_from(0x02).unwrap(), EngineState::Stopping);
+        assert_eq!(EngineState::try_from(0x10).unwrap(), EngineState::Request);
+        assert!(EngineState::try_from(0x03).is_err());
     }
 
     #[test]
@@ -166,7 +142,7 @@ mod tests {
             driver_demand: 0x01,
             actual_engine: 0x02,
             rpm: 0x03,
-            status: EngineStatus::Nominal,
+            state: EngineState::Request,
         };
 
         let bytes = engine.to_bytes();
@@ -176,13 +152,13 @@ mod tests {
         assert_eq!(bytes[1], 0x02);
         assert_eq!(bytes[2], 0x00);
         assert_eq!(bytes[3], 0x03);
-        assert_eq!(bytes[4], 0x02);
+        assert_eq!(bytes[4], 0x10);
 
         let engine = Engine::try_from(bytes).unwrap();
 
         assert_eq!(engine.driver_demand, 0x01);
         assert_eq!(engine.actual_engine, 0x02);
         assert_eq!(engine.rpm, 0x03);
-        assert_eq!(engine.status, EngineStatus::Nominal);
+        assert_eq!(engine.state, EngineState::Request);
     }
 }

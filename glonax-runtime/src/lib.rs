@@ -273,7 +273,7 @@ impl Operand {
     /// the vehicle management system, global navigation satellite
     /// system, engine, and other factors.
     pub fn status(&self) -> core::Status {
-        use crate::core::{EngineStatus, GnssStatus, HostStatus, Status};
+        use crate::core::{GnssStatus, HostStatus, Status};
 
         let mut status = Status::Healthy;
 
@@ -291,15 +291,15 @@ impl Operand {
             status = Status::Faulty;
         }
 
-        match self.state.engine.status {
-            EngineStatus::NetworkDown => {
-                status = Status::Faulty;
-            }
-            EngineStatus::MessageTimeout => {
-                status = Status::Degraded;
-            }
-            _ => {}
-        }
+        // match self.state.engine.status {
+        //     EngineStatus::NetworkDown => {
+        //         status = Status::Faulty;
+        //     }
+        //     EngineStatus::MessageTimeout => {
+        //         status = Status::Degraded;
+        //     }
+        //     _ => {}
+        // }
 
         status
     }
