@@ -245,19 +245,19 @@ where
     }
 
     async fn setup(&mut self) {
-        log::debug!("Setup '{}'", self.service.ctx());
+        log::debug!("Setup runtime service '{}'", self.service.ctx());
 
         self.service.setup(self.operand.clone()).await;
     }
 
     async fn teardown(&mut self) {
-        log::debug!("Teardown '{}'", self.service.ctx());
+        log::debug!("Teardown runtime service '{}'", self.service.ctx());
 
         self.service.teardown(self.operand.clone()).await;
     }
 
     async fn wait_io(&mut self) {
-        log::debug!("Wait IO '{}'", self.service.ctx());
+        log::debug!("Wait on IO runtime service '{}'", self.service.ctx());
 
         tokio::select! {
             _ = self.service.wait_io(self.operand.clone()) => {}
@@ -266,7 +266,7 @@ where
     }
 
     async fn tick(&mut self, duration: std::time::Duration) {
-        log::debug!("Tick '{}'", self.service.ctx());
+        log::debug!("Tick runtime service '{}'", self.service.ctx());
 
         while self.shutdown.is_empty() {
             tokio::time::sleep(duration).await;
@@ -275,7 +275,7 @@ where
     }
 
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
-        log::debug!("On command '{}'", self.service.ctx());
+        log::debug!("Wait on command runtime service '{}'", self.service.ctx());
 
         tokio::select! {
             _ = async {
