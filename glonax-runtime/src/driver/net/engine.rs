@@ -331,7 +331,7 @@ impl super::J1939Unit for EngineManagementSystem {
 
         if let Some(message) = network.try_accept(self) {
             if let Ok(mut runtime_state) = runtime_state.try_write() {
-                runtime_state.state.engine_state_actual_instant = Some(std::time::Instant::now());
+                runtime_state.state.engine_signal_instant = Some(std::time::Instant::now());
 
                 if let EngineMessage::EngineController1(controller) = message {
                     ctx.rx_mark();

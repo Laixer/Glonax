@@ -110,21 +110,23 @@ pub fn log_system() {
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.
-    pub vms: core::Host, // SIGNAL, EMIT
+    pub vms_signal: core::Host, // SIGNAL, EMIT
+    /// Vehicle management system update.
+    pub vms_signal_instant: Option<std::time::Instant>,
 
     /// Global navigation satellite system data.
-    pub gnss: core::Gnss, // SIGNAL, EMIT
-    /// GNSS actual instant.
-    pub gnss_actual_instant: Option<std::time::Instant>,
+    pub gnss_signal: core::Gnss, // SIGNAL, EMIT
+    /// GNSS signal update.
+    pub gnss_signal_instant: Option<std::time::Instant>,
 
     /// Engine signal.
     pub engine_signal: core::Engine, // SIGNAL, STATE
     /// Engine state actual instant.
-    pub engine_state_actual_instant: Option<std::time::Instant>,
+    pub engine_signal_instant: Option<std::time::Instant>,
     /// Engine command.
     pub engine_command: Option<core::Engine>, // COMMAND
     /// Engine state request instant.
-    pub engine_state_request_instant: Option<std::time::Instant>,
+    pub engine_command_instant: Option<std::time::Instant>,
 
     /// Hydraulic quick disconnect.
     pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct // COMMAND
@@ -142,6 +144,9 @@ pub struct MachineState {
 
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL, STATE
+    /// Encoder instant.
+    pub encoders_instant: Option<std::time::Instant>,
+
     /// Robot as an actor.
     pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL, EMIT
     /// Current program queue.
@@ -324,7 +329,7 @@ impl Operand {
         let engine_state = self.governor.next_state(
             &self.state.engine_signal,
             &engine_command,
-            self.state.engine_state_request_instant,
+            self.state.engine_command_instant,
         );
 
         log::trace!("Engine governor: {:?}", engine_state);
@@ -343,7 +348,7 @@ impl Operand {
 
         let mut status = Status::Healthy;
 
-        match self.state.vms.status {
+        match self.state.vms_signal.status {
             HostStatus::MemoryLow => {
                 status = Status::Degraded;
             }
@@ -353,7 +358,7 @@ impl Operand {
             _ => {}
         }
 
-        if let GnssStatus::DeviceNotFound = self.state.gnss.status {
+        if let GnssStatus::DeviceNotFound = self.state.gnss_signal.status {
             status = Status::Faulty;
         }
 

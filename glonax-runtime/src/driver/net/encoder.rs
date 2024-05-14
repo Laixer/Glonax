@@ -245,6 +245,7 @@ impl super::J1939Unit for KueblerEncoder {
             ctx.rx_mark();
 
             if let Ok(mut runtime_state) = runtime_state.try_write() {
+                runtime_state.state.encoders_instant = Some(std::time::Instant::now());
                 runtime_state
                     .state
                     .encoders

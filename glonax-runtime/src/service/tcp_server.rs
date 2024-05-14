@@ -92,13 +92,13 @@ impl TcpServer {
                         }
                         crate::core::Host::MESSAGE_TYPE => {
                             client
-                                .send_packet(&runtime_state.read().await.state.vms)
+                                .send_packet(&runtime_state.read().await.state.vms_signal)
                                 .await
                                 .unwrap();
                         }
                         crate::core::Gnss::MESSAGE_TYPE => {
                             client
-                                .send_packet(&runtime_state.read().await.state.gnss)
+                                .send_packet(&runtime_state.read().await.state.gnss_signal)
                                 .await
                                 .unwrap();
                         }
@@ -161,7 +161,7 @@ impl TcpServer {
 
                         let state = &mut runtime_state.write().await.state;
                         state.engine_command = Some(engine);
-                        state.engine_state_request_instant = Some(std::time::Instant::now());
+                        state.engine_command_instant = Some(std::time::Instant::now());
 
                         log::debug!("Engine request RPM: {}", engine.rpm);
                     } else {

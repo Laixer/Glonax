@@ -36,11 +36,13 @@ impl<C> Service<C> for Host {
         let load_avg = System::load_average();
 
         let mut runtime_state = runtime_state.write().await;
-        runtime_state.state.vms.memory = (self.system.used_memory(), self.system.total_memory());
-        runtime_state.state.vms.swap = (self.system.used_swap(), self.system.total_swap());
-        runtime_state.state.vms.cpu_load = (load_avg.one, load_avg.five, load_avg.fifteen);
-        runtime_state.state.vms.uptime = System::uptime();
-        runtime_state.state.vms.timestamp = chrono::Utc::now();
+        runtime_state.state.vms_signal_instant = Some(std::time::Instant::now());
+        runtime_state.state.vms_signal.memory =
+            (self.system.used_memory(), self.system.total_memory());
+        runtime_state.state.vms_signal.swap = (self.system.used_swap(), self.system.total_swap());
+        runtime_state.state.vms_signal.cpu_load = (load_avg.one, load_avg.five, load_avg.fifteen);
+        runtime_state.state.vms_signal.uptime = System::uptime();
+        runtime_state.state.vms_signal.timestamp = chrono::Utc::now();
 
         for component in &self.components {
             if let Some(critical) = component.critical() {

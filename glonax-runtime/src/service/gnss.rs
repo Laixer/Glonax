@@ -48,21 +48,21 @@ impl Service<GnssConfig> for Gnss {
                 let mut runtime_state = runtime_state.write().await;
 
                 if let Some((lat, long)) = message.coordinates {
-                    runtime_state.state.gnss.location = (lat, long)
+                    runtime_state.state.gnss_signal.location = (lat, long)
                 }
                 if let Some(altitude) = message.altitude {
-                    runtime_state.state.gnss.altitude = altitude;
+                    runtime_state.state.gnss_signal.altitude = altitude;
                 }
                 if let Some(speed) = message.speed {
                     const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
 
-                    runtime_state.state.gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
+                    runtime_state.state.gnss_signal.speed = speed * KNOT_TO_METER_PER_SECOND;
                 }
                 if let Some(heading) = message.heading {
-                    runtime_state.state.gnss.heading = heading;
+                    runtime_state.state.gnss_signal.heading = heading;
                 }
                 if let Some(satellites) = message.satellites {
-                    runtime_state.state.gnss.satellites = satellites;
+                    runtime_state.state.gnss_signal.satellites = satellites;
                 }
             }
         }
