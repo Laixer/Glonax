@@ -194,7 +194,7 @@ impl Governor {
                 if let Some(instant) = command_instant {
                     if instant.elapsed() > self.state_transition_timeout {
                         return core::Engine {
-                            rpm: self.reshape(command.rpm),
+                            rpm: self.reshape(self.rpm_idle),
                             state: EngineState::NoRequest,
                             ..Default::default()
                         };
@@ -211,7 +211,7 @@ impl Governor {
                 if let Some(instant) = command_instant {
                     if instant.elapsed() > self.state_transition_timeout {
                         return core::Engine {
-                            rpm: self.reshape(command.rpm),
+                            rpm: self.reshape(self.rpm_idle),
                             state: EngineState::NoRequest,
                             ..Default::default()
                         };
@@ -234,7 +234,7 @@ impl Governor {
                 if let Some(instant) = command_instant {
                     if instant.elapsed() > self.state_transition_timeout {
                         return core::Engine {
-                            rpm: self.reshape(command.rpm),
+                            rpm: self.reshape(self.rpm_idle),
                             state: EngineState::NoRequest,
                             ..Default::default()
                         };
@@ -327,7 +327,7 @@ impl Operand {
             self.state.engine_state_request_instant,
         );
 
-        log::trace!("Governor engine : {:?}", engine_state);
+        log::trace!("Engine governor: {:?}", engine_state);
 
         engine_state
     }
