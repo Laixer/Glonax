@@ -46,6 +46,7 @@ impl Service<GnssConfig> for Gnss {
         if let Ok(Some(line)) = self.line_reader.next_line().await {
             if let Some(message) = self.driver.decode(line) {
                 let mut runtime_state = runtime_state.write().await;
+                runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
 
                 if let Some((lat, long)) = message.coordinates {
                     runtime_state.state.gnss_signal.location = (lat, long)

@@ -131,7 +131,7 @@ pub struct MachineState {
     /// Hydraulic quick disconnect.
     pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct // COMMAND
     /// Hydraulic lock.
-    pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct // STATE
+    pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct // COMMAND
     /// Hydraulic actual instant.
     pub hydraulic_actual_instant: Option<std::time::Instant>,
 
@@ -149,6 +149,9 @@ pub struct MachineState {
 
     /// Robot as an actor.
     pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL, EMIT
+    /// Robot as an actor instant.
+    pub actor_instant: Option<std::time::Instant>,
+
     /// Current program queue.
     pub program: std::collections::VecDeque<core::Target>, // COMMAND, STATE
     /// Electronic control unit data.
