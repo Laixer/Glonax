@@ -42,7 +42,7 @@ impl UnixServerConfig {
 pub struct TcpServer {
     config: TcpServerConfig,
     semaphore: Arc<Semaphore>,
-    listener: TcpListener,
+    listener: Option<TcpListener>,
 }
 
 impl TcpServer {
@@ -64,6 +64,7 @@ impl TcpServer {
         let mut session_shutdown = false;
 
         // TODO: If possible, move to glonax-runtime
+        // TODO: Handle all unwraps, most just need to be logged
         while let Ok(frame) = client.read_frame().await {
             match frame.message {
                 crate::protocol::frame::Request::MESSAGE_TYPE => {
@@ -72,7 +73,6 @@ impl TcpServer {
                         .await
                         .unwrap();
 
-                    // FUTURE: Pack into a single packet
                     match request.message() {
                         crate::core::Instance::MESSAGE_TYPE => {
                             // TODO: Return the actual instance
@@ -153,12 +153,12 @@ impl TcpServer {
                     break;
                 }
                 crate::core::Engine::MESSAGE_TYPE => {
-                    let engine = client
-                        .recv_packet::<crate::core::Engine>(frame.payload_length)
-                        .await
-                        .unwrap();
-
                     if session.is_control() {
+                        let engine = client
+                            .recv_packet::<crate::core::Engine>(frame.payload_length)
+                            .await
+                            .unwrap();
+
                         let state = &mut runtime_state.write().await.state;
                         state.engine_command = Some(engine);
                         state.engine_state_request_instant = Some(std::time::Instant::now());
@@ -169,12 +169,12 @@ impl TcpServer {
                     }
                 }
                 crate::core::Motion::MESSAGE_TYPE => {
-                    let motion = client
-                        .recv_packet::<crate::core::Motion>(frame.payload_length)
-                        .await
-                        .unwrap();
-
                     if session.is_control() {
+                        let motion = client
+                            .recv_packet::<crate::core::Motion>(frame.payload_length)
+                            .await
+                            .unwrap();
+
                         // TODO: Move this further into the runtime
                         if motion.is_movable() {
                             if let Ok(mut runtime_state) = runtime_state.try_write() {
@@ -183,7 +183,7 @@ impl TcpServer {
                             }
                         }
 
-                        // if let Err(e) = motion_sender.send(motion).await {
+                        // if let Err(e) = motion_sender.send(crate::core::Object::Motion(motion)).await {
                         //     log::error!("Failed to queue motion: {}", e);
                         //     break;
                         // }
@@ -192,51 +192,58 @@ impl TcpServer {
                     }
                 }
                 crate::core::Target::MESSAGE_TYPE => {
-                    let target = client
-                        .recv_packet::<crate::core::Target>(frame.payload_length)
-                        .await
-                        .unwrap();
+                    if session.is_command() {
+                        let target = client
+                            .recv_packet::<crate::core::Target>(frame.payload_length)
+                            .await
+                            .unwrap();
 
-                    if session.is_control() {
                         runtime_state.write().await.state.program.push_back(target);
                     } else {
                         log::warn!("Client is not authorized to queue targets");
                     }
                 }
                 crate::core::Control::MESSAGE_TYPE => {
-                    let control = client
-                        .recv_packet::<crate::core::Control>(frame.payload_length)
-                        .await
-                        .unwrap();
+                    if session.is_control() {
+                        let control = client
+                            .recv_packet::<crate::core::Control>(frame.payload_length)
+                            .await
+                            .unwrap();
 
-                    match control {
-                        crate::core::Control::HydraulicQuickDisconnect(on) => {
-                            log::info!("Hydraulic quick disconnect: {}", on);
+                        match control {
+                            crate::core::Control::HydraulicQuickDisconnect(on) => {
+                                log::info!("Hydraulic quick disconnect: {}", on);
+                                runtime_state.write().await.state.hydraulic_quick_disconnect = on;
+                            }
+                            crate::core::Control::HydraulicLock(on) => {
+                                log::info!("Hydraulic lock: {}", on);
+                                runtime_state.write().await.state.hydraulic_lock = on;
+                            }
+                            crate::core::Control::HydraulicBoost(on) => {
+                                log::info!("Hydraulic boost: {}", on);
+                            }
+
+                            crate::core::Control::MachineShutdown => {
+                                log::info!("Machine shutdown");
+                            }
+                            crate::core::Control::MachineIllumination(on) => {
+                                log::info!("Machine illumination: {}", on);
+                            }
+                            crate::core::Control::MachineLights(on) => {
+                                log::info!("Machine lights: {}", on);
+                            }
+                            crate::core::Control::MachineHorn(on) => {
+                                log::info!("Machine horn: {}", on);
+                            }
+                            crate::core::Control::MachineStrobeLight(on) => {
+                                log::info!("Machine strobe light: {}", on);
+                            }
+                            crate::core::Control::MachineTravelAlarm(on) => {
+                                log::info!("Machine travel light: {}", on);
+                            }
                         }
-                        crate::core::Control::HydraulicLock(on) => {
-                            log::info!("Hydraulic lock: {}", on);
-                        }
-                        crate::core::Control::HydraulicBoost(on) => {
-                            log::info!("Hydraulic boost: {}", on);
-                        }
-                        crate::core::Control::MachineShutdown => {
-                            log::info!("Machine shutdown");
-                        }
-                        crate::core::Control::MachineIllumination(on) => {
-                            log::info!("Machine illumination: {}", on);
-                        }
-                        crate::core::Control::MachineLights(on) => {
-                            log::info!("Machine lights: {}", on);
-                        }
-                        crate::core::Control::MachineHorn(on) => {
-                            log::info!("Machine horn: {}", on);
-                        }
-                        crate::core::Control::MachineStrobeLight(on) => {
-                            log::info!("Machine strobe light: {}", on);
-                        }
-                        crate::core::Control::MachineTravelAlarm(on) => {
-                            log::info!("Machine travel light: {}", on);
-                        }
+                    } else {
+                        log::warn!("Client is not authorized to control the machine");
                     }
                 }
                 _ => {
@@ -266,13 +273,10 @@ impl Service<TcpServerConfig> for TcpServer {
 
         let semaphore = Arc::new(Semaphore::new(config.max_connections));
 
-        let core_listener = std::net::TcpListener::bind(config.listen.clone()).unwrap();
-        let listener = tokio::net::TcpListener::from_std(core_listener).unwrap();
-
         Self {
             config,
             semaphore,
-            listener,
+            listener: None,
         }
     }
 
@@ -280,22 +284,16 @@ impl Service<TcpServerConfig> for TcpServer {
         ServiceContext::with_address("tcp_server", self.config.listen.clone())
     }
 
+    async fn setup(&mut self, _runtime_state: SharedOperandState) {
+        log::debug!("Listening on: {}", self.config.listen);
+
+        self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
+    }
+
     async fn wait_io(&mut self, runtime_state: SharedOperandState) {
-        let rs =
-            tokio::time::timeout(std::time::Duration::from_secs(1), self.listener.accept()).await;
+        log::debug!("Waiting for connection");
 
-        let (stream, addr) = match rs {
-            Ok(Ok((stream, addr))) => (stream, addr),
-            Ok(Err(e)) => {
-                log::error!("Failed to accept connection: {}", e);
-                return;
-            }
-            Err(_) => {
-                return;
-            }
-        };
-
-        // let (stream, addr) = self.listener.accept().await.unwrap();
+        let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
         log::debug!("Accepted connection from: {}", addr);
@@ -316,10 +314,18 @@ impl Service<TcpServerConfig> for TcpServer {
             self.config.max_connections
         );
 
+        log::debug!("Spawning client session");
+
+        // TODO: Maybe add to thread pool
         tokio::spawn(Self::spawn_client_session(
             stream,
             runtime_state.clone(),
             permit,
         ));
+    }
+
+    async fn teardown(&mut self, _runtime_state: SharedOperandState) {
+        // TODO: Inform clients of shutdown
+        log::info!("Shutting down TCP server");
     }
 }

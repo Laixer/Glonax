@@ -260,7 +260,11 @@ where
         log::debug!("Wait on IO runtime service '{}'", self.service.ctx());
 
         tokio::select! {
-            _ = self.service.wait_io(self.operand.clone()) => {}
+            _ = async {
+                loop {
+                    self.service.wait_io(self.operand.clone()).await;
+                }
+            } => {}
             _ = self.shutdown.recv() => {}
         }
     }
@@ -360,7 +364,7 @@ pub struct Runtime<Conf> {
     /// Motion command receiver.
     motion_rx: Option<CommandReceiver>,
     /// Runtime tasks.
-    tasks: Vec<tokio::task::JoinHandle<()>>,
+    tasks: Vec<tokio::task::JoinHandle<()>>, // TODO: Rename to task pool.
     /// Runtime event bus.
     shutdown: (
         tokio::sync::broadcast::Sender<()>,

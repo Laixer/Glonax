@@ -8,7 +8,7 @@ use clap::{Parser, ValueHint};
 
 mod components;
 mod config;
-mod server;
+// mod server;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -145,7 +145,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         }
 
         for j1939_net_config in &config.j1939 {
-            runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
+            // runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
             runtime.schedule_service::<service::NetworkAuthorityTx, _>(
                 j1939_net_config.clone(),
                 Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
@@ -159,13 +159,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         }
     }
 
-    if config.tcp_server.is_some() {
-        runtime.schedule_io_func(server::tcp_listen);
+    if let Some(tcp_server) = config.tcp_server.clone() {
+        runtime.schedule_io_service::<service::TcpServer, _>(tcp_server);
     }
-    runtime.schedule_io_func(server::unix_listen);
-    // runtime.schedule_io_service::<service::TcpServer, service::TcpServerConfig>(
-    //     config.tcp_server.clone().unwrap(),
-    // );
 
     runtime.schedule_service_default::<service::Announcer>(Duration::from_millis(1_000));
 

@@ -145,7 +145,7 @@ pub struct MachineState {
     /// Robot as an actor.
     pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL, EMIT
     /// Current program queue.
-    pub program: std::collections::VecDeque<core::Target>, // COMMAND
+    pub program: std::collections::VecDeque<core::Target>, // COMMAND, STATE
     /// Electronic control unit data.
     pub ecu_state: driver::VirtualHCU, // CROSS SERVICE (Sim actuator, sim encoder)
 }
