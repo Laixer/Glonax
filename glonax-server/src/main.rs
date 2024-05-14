@@ -8,7 +8,11 @@ use clap::{Parser, ValueHint};
 
 mod components;
 mod config;
-// mod server;
+
+/// Interval for the host service.
+const SERVICE_HOST_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
+/// Interval for the service announcer.
+const SERVICE_ANNOUNCER_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -129,7 +133,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
-    runtime.schedule_service_default::<service::Host>(Duration::from_millis(200));
+    runtime.schedule_service_default::<service::Host>(SERVICE_HOST_INTERVAL);
 
     // TODO: Do we need a simulator?
     if config.is_simulation {
@@ -145,7 +149,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         }
 
         for j1939_net_config in &config.j1939 {
-            // runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
+            runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
             runtime.schedule_service::<service::NetworkAuthorityTx, _>(
                 j1939_net_config.clone(),
                 Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
@@ -163,7 +167,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_io_service::<service::TcpServer, _>(tcp_server);
     }
 
-    runtime.schedule_service_default::<service::Announcer>(Duration::from_millis(1_000));
+    runtime.schedule_service_default::<service::Announcer>(SERVICE_ANNOUNCER_INTERVAL);
 
     let mut pipe = service::Pipeline::new(runtime.motion_sender());
 
