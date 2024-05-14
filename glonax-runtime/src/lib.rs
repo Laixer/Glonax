@@ -155,12 +155,18 @@ struct Governor {
     rpm_idle: u16,
     /// Maximum RPM for the engine.
     rpm_max: u16,
+    /// Engine state transition timeout.
+    state_transition_timeout: std::time::Duration,
 }
 
 impl Governor {
     /// Construct a new governor.
     fn new(rpm_idle: u16, rpm_max: u16) -> Self {
-        Self { rpm_idle, rpm_max }
+        Self {
+            rpm_idle,
+            rpm_max,
+            state_transition_timeout: std::time::Duration::from_millis(2_000),
+        }
     }
 
     /// Reshape the torque.
@@ -175,31 +181,72 @@ impl Governor {
     ///
     /// This method determines the next engine state based on the actual and requested
     /// engine states. It returns the next engine state as an `EngineRequest`.
-    fn next_state(&self, signal: &core::Engine, command: &core::Engine) -> crate::core::Engine {
+    fn next_state(
+        &self,
+        signal: &core::Engine,
+        command: &core::Engine,
+        command_instant: Option<std::time::Instant>,
+    ) -> crate::core::Engine {
         use crate::core::EngineState;
 
         match (signal.state, command.state) {
-            (EngineState::NoRequest, EngineState::Starting) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::Starting,
-                ..Default::default()
-            },
-            (EngineState::NoRequest, EngineState::Request) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::Starting,
-                ..Default::default()
-            },
+            (EngineState::NoRequest, EngineState::Starting) => {
+                if let Some(instant) = command_instant {
+                    if instant.elapsed() > self.state_transition_timeout {
+                        return core::Engine {
+                            rpm: self.reshape(command.rpm),
+                            state: EngineState::NoRequest,
+                            ..Default::default()
+                        };
+                    }
+                }
+
+                core::Engine {
+                    rpm: self.reshape(self.rpm_idle),
+                    state: EngineState::Starting,
+                    ..Default::default()
+                }
+            }
+            (EngineState::NoRequest, EngineState::Request) => {
+                if let Some(instant) = command_instant {
+                    if instant.elapsed() > self.state_transition_timeout {
+                        return core::Engine {
+                            rpm: self.reshape(command.rpm),
+                            state: EngineState::NoRequest,
+                            ..Default::default()
+                        };
+                    }
+                }
+
+                core::Engine {
+                    rpm: self.reshape(self.rpm_idle),
+                    state: EngineState::Starting,
+                    ..Default::default()
+                }
+            }
             (EngineState::NoRequest, _) => core::Engine {
                 rpm: self.reshape(self.rpm_idle),
                 state: EngineState::NoRequest,
                 ..Default::default()
             },
 
-            (EngineState::Starting, _) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::Starting,
-                ..Default::default()
-            },
+            (EngineState::Starting, _) => {
+                if let Some(instant) = command_instant {
+                    if instant.elapsed() > self.state_transition_timeout {
+                        return core::Engine {
+                            rpm: self.reshape(command.rpm),
+                            state: EngineState::NoRequest,
+                            ..Default::default()
+                        };
+                    }
+                }
+
+                core::Engine {
+                    rpm: self.reshape(self.rpm_idle),
+                    state: EngineState::Starting,
+                    ..Default::default()
+                }
+            }
             (EngineState::Stopping, _) => core::Engine {
                 rpm: self.reshape(self.rpm_idle),
                 state: EngineState::Stopping,
@@ -229,9 +276,6 @@ impl Governor {
         }
     }
 }
-
-// const ENGINE_MOTION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
-// const ENGINE_AUTO_REV: bool = false;
 
 /// The operand is the current state of the machine.
 ///
@@ -266,15 +310,6 @@ impl Operand {
 
         engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
 
-        // if let Some(last_update) = self.state.motion_instant {
-        //     if last_update.elapsed() < ENGINE_MOTION_TIMEOUT && ENGINE_AUTO_REV {
-        //         request = core::EngineRequest {
-        //             speed: request.speed.max(1_500),
-        //             state: core::EngineState::Request,
-        //         };
-        //     }
-        // }
-
         if engine_command.rpm == 0 {
             if engine_command.driver_demand == 0 {
                 engine_command.state = core::EngineState::NoRequest;
@@ -282,10 +317,19 @@ impl Operand {
                 engine_command.rpm = (engine_command.driver_demand as f32 / 100.0
                     * self.governor.rpm_max as f32) as u16;
             }
+        } else {
+            engine_command.state = core::EngineState::Request;
         }
 
-        self.governor
-            .next_state(&self.state.engine_signal, &engine_command)
+        let engine_state = self.governor.next_state(
+            &self.state.engine_signal,
+            &engine_command,
+            self.state.engine_state_request_instant,
+        );
+
+        log::trace!("Governor engine : {:?}", engine_state);
+
+        engine_state
     }
 
     // TODO: Report all statuses, not just a single one
