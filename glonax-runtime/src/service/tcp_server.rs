@@ -67,16 +67,72 @@ impl TcpServer {
 
         // TODO: If possible, move to glonax-runtime
         // TODO: Handle all unwraps, most just need to be logged
-        while let Ok(frame) = client.read_frame().await {
-            match frame.message {
-                crate::protocol::frame::Request::MESSAGE_TYPE => {
-                    let request = client
-                        .recv_packet::<Request>(frame.payload_length)
-                        .await
-                        .unwrap();
+        loop {
+            match client.read_frame().await {
+                Ok(frame) => {
+                    match frame.message {
+                        crate::protocol::frame::Request::MESSAGE_TYPE => {
+                            let request = client
+                                .recv_packet::<Request>(frame.payload_length)
+                                .await
+                                .unwrap();
 
-                    match request.message() {
-                        crate::core::Instance::MESSAGE_TYPE => {
+                            match request.message() {
+                                crate::core::Instance::MESSAGE_TYPE => {
+                                    // TODO: Return the actual instance
+                                    let instance = crate::core::Instance::new(
+                                        "f0c4e7f1-f4e1-42b8-b002-afcdf1c76d12",
+                                        "kaas",
+                                        crate::core::MachineType::Excavator,
+                                        (1, 2, 3),
+                                    );
+                                    client.send_packet(&instance).await.unwrap();
+                                }
+                                crate::core::Status::MESSAGE_TYPE => {
+                                    client
+                                        .send_packet(&runtime_state.read().await.status())
+                                        .await
+                                        .unwrap();
+                                }
+                                crate::core::Host::MESSAGE_TYPE => {
+                                    client
+                                        .send_packet(&runtime_state.read().await.state.vms_signal)
+                                        .await
+                                        .unwrap();
+                                }
+                                crate::core::Gnss::MESSAGE_TYPE => {
+                                    client
+                                        .send_packet(&runtime_state.read().await.state.gnss_signal)
+                                        .await
+                                        .unwrap();
+                                }
+                                crate::core::Engine::MESSAGE_TYPE => {
+                                    client
+                                        .send_packet(
+                                            &runtime_state.read().await.state.engine_signal,
+                                        )
+                                        .await
+                                        .unwrap();
+                                }
+                                crate::world::Actor::MESSAGE_TYPE => {
+                                    if let Some(actor) = &runtime_state.read().await.state.actor {
+                                        client.send_packet(actor).await.unwrap();
+                                    }
+                                }
+                                // TODO: Respond with error
+                                _ => {
+                                    log::warn!("Unknown request type: {}", request.message());
+                                }
+                            }
+                        }
+                        crate::protocol::frame::Session::MESSAGE_TYPE => {
+                            session = client
+                                .recv_packet::<Session>(frame.payload_length)
+                                .await
+                                .unwrap();
+
+                            log::info!("Session started for: {}", session.name());
+
                             // TODO: Return the actual instance
                             let instance = crate::core::Instance::new(
                                 "f0c4e7f1-f4e1-42b8-b002-afcdf1c76d12",
@@ -86,190 +142,152 @@ impl TcpServer {
                             );
                             client.send_packet(&instance).await.unwrap();
                         }
-                        crate::core::Status::MESSAGE_TYPE => {
-                            client
-                                .send_packet(&runtime_state.read().await.status())
+                        crate::protocol::frame::Echo::MESSAGE_TYPE => {
+                            let echo = client
+                                .recv_packet::<Echo>(frame.payload_length)
                                 .await
                                 .unwrap();
+
+                            client.send_packet(&echo).await.unwrap();
                         }
-                        crate::core::Host::MESSAGE_TYPE => {
-                            client
-                                .send_packet(&runtime_state.read().await.state.vms_signal)
-                                .await
-                                .unwrap();
-                        }
-                        crate::core::Gnss::MESSAGE_TYPE => {
-                            client
-                                .send_packet(&runtime_state.read().await.state.gnss_signal)
-                                .await
-                                .unwrap();
-                        }
-                        crate::core::Engine::MESSAGE_TYPE => {
-                            client
-                                .send_packet(&runtime_state.read().await.state.engine_signal)
-                                .await
-                                .unwrap();
-                        }
-                        crate::world::Actor::MESSAGE_TYPE => {
-                            if let Some(actor) = &runtime_state.read().await.state.actor {
-                                client.send_packet(actor).await.unwrap();
-                            }
-                        }
-                        // TODO: Respond with error
-                        _ => {
-                            log::warn!("Unknown request type: {}", request.message());
-                        }
-                    }
-                }
-                crate::protocol::frame::Session::MESSAGE_TYPE => {
-                    session = client
-                        .recv_packet::<Session>(frame.payload_length)
-                        .await
-                        .unwrap();
+                        crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
+                            log::debug!("Session shutdown requested for: {}", session.name());
 
-                    log::info!("Session started for: {}", session.name());
+                            use tokio::io::AsyncWriteExt;
 
-                    // TODO: Return the actual instance
-                    let instance = crate::core::Instance::new(
-                        "f0c4e7f1-f4e1-42b8-b002-afcdf1c76d12",
-                        "kaas",
-                        crate::core::MachineType::Excavator,
-                        (1, 2, 3),
-                    );
-                    client.send_packet(&instance).await.unwrap();
-                }
-                crate::protocol::frame::Echo::MESSAGE_TYPE => {
-                    let echo = client
-                        .recv_packet::<Echo>(frame.payload_length)
-                        .await
-                        .unwrap();
+                            client.inner_mut().shutdown().await.ok();
 
-                    client.send_packet(&echo).await.unwrap();
-                }
-                crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
-                    log::debug!("Session shutdown requested for: {}", session.name());
-
-                    use tokio::io::AsyncWriteExt;
-
-                    client.inner_mut().shutdown().await.ok();
-
-                    session_shutdown = true;
-                    break;
-                }
-                crate::core::Engine::MESSAGE_TYPE => {
-                    if session.is_control() {
-                        let engine = client
-                            .recv_packet::<crate::core::Engine>(frame.payload_length)
-                            .await
-                            .unwrap();
-
-                        let state = &mut runtime_state.write().await.state;
-                        state.engine_command = Some(engine);
-                        state.engine_command_instant = Some(std::time::Instant::now());
-
-                        log::debug!("Engine request RPM: {}", engine.rpm);
-                    } else {
-                        log::warn!("Session is not authorized to control the machine");
-                    }
-                }
-                crate::core::Motion::MESSAGE_TYPE => {
-                    if session.is_command() {
-                        let motion = client
-                            .recv_packet::<crate::core::Motion>(frame.payload_length)
-                            .await
-                            .unwrap();
-
-                        // TODO: Move this further into the runtime
-                        if motion.is_movable() {
-                            if let Ok(mut runtime_state) = runtime_state.try_write() {
-                                runtime_state.state.motion_instant =
-                                    Some(std::time::Instant::now());
-                            }
-                        }
-
-                        if let Err(e) = command_tx.send(crate::core::Object::Motion(motion)).await {
-                            log::error!("Failed to queue motion: {}", e);
+                            session_shutdown = true;
                             break;
                         }
-                    } else {
-                        log::warn!("Session is not authorized to command the machine");
-                    }
-                }
-                crate::core::Target::MESSAGE_TYPE => {
-                    if session.is_command() {
-                        let target = client
-                            .recv_packet::<crate::core::Target>(frame.payload_length)
-                            .await
-                            .unwrap();
+                        crate::core::Engine::MESSAGE_TYPE => {
+                            let engine = client
+                                .recv_packet::<crate::core::Engine>(frame.payload_length)
+                                .await
+                                .unwrap();
 
-                        runtime_state.write().await.state.program.push_back(target);
-                    } else {
-                        log::warn!("Session is not authorized to command the machine");
-                    }
-                }
-                crate::core::Control::MESSAGE_TYPE => {
-                    if session.is_control() {
-                        let control = client
-                            .recv_packet::<crate::core::Control>(frame.payload_length)
-                            .await
-                            .unwrap();
+                            if session.is_control() {
+                                let state = &mut runtime_state.write().await.state;
+                                state.engine_command = Some(engine);
+                                state.engine_command_instant = Some(std::time::Instant::now());
 
-                        match control {
-                            crate::core::Control::HydraulicQuickDisconnect(on) => {
-                                log::info!("Hydraulic quick disconnect: {}", on);
-                                runtime_state.write().await.state.hydraulic_quick_disconnect = on;
-                            }
-                            crate::core::Control::HydraulicLock(on) => {
-                                log::info!("Hydraulic lock: {}", on);
-                                runtime_state.write().await.state.hydraulic_lock = on;
-                            }
-                            crate::core::Control::HydraulicBoost(on) => {
-                                log::info!("Hydraulic boost: {}", on);
-                            }
-
-                            crate::core::Control::MachineShutdown => {
-                                log::info!("Machine shutdown");
-                            }
-                            crate::core::Control::MachineIllumination(on) => {
-                                log::info!("Machine illumination: {}", on);
-                            }
-                            crate::core::Control::MachineLights(on) => {
-                                log::info!("Machine lights: {}", on);
-                            }
-                            crate::core::Control::MachineHorn(on) => {
-                                log::info!("Machine horn: {}", on);
-                            }
-                            crate::core::Control::MachineStrobeLight(on) => {
-                                log::info!("Machine strobe light: {}", on);
-                            }
-                            crate::core::Control::MachineTravelAlarm(on) => {
-                                log::info!("Machine travel light: {}", on);
+                                log::debug!("Engine request RPM: {}", engine.rpm);
+                            } else {
+                                log::warn!("Session is not authorized to control the machine");
                             }
                         }
-                    } else {
-                        log::warn!("Session is not authorized to control the machine");
+                        crate::core::Motion::MESSAGE_TYPE => {
+                            let motion = client
+                                .recv_packet::<crate::core::Motion>(frame.payload_length)
+                                .await
+                                .unwrap();
+
+                            if session.is_command() {
+                                // TODO: Move this further into the runtime
+                                if motion.is_movable() {
+                                    if let Ok(mut runtime_state) = runtime_state.try_write() {
+                                        runtime_state.state.motion_instant =
+                                            Some(std::time::Instant::now());
+                                    }
+                                }
+
+                                if let Err(e) =
+                                    command_tx.send(crate::core::Object::Motion(motion)).await
+                                {
+                                    log::error!("Failed to queue motion: {}", e);
+                                    break;
+                                }
+                            } else {
+                                log::warn!("Session is not authorized to command the machine");
+                            }
+                        }
+                        crate::core::Target::MESSAGE_TYPE => {
+                            let target = client
+                                .recv_packet::<crate::core::Target>(frame.payload_length)
+                                .await
+                                .unwrap();
+
+                            if session.is_command() {
+                                runtime_state.write().await.state.program.push_back(target);
+                            } else {
+                                log::warn!("Session is not authorized to command the machine");
+                            }
+                        }
+                        crate::core::Control::MESSAGE_TYPE => {
+                            let control = client
+                                .recv_packet::<crate::core::Control>(frame.payload_length)
+                                .await
+                                .unwrap();
+
+                            if session.is_control() {
+                                match control {
+                                    crate::core::Control::HydraulicQuickDisconnect(on) => {
+                                        log::info!("Hydraulic quick disconnect: {}", on);
+                                        runtime_state
+                                            .write()
+                                            .await
+                                            .state
+                                            .hydraulic_quick_disconnect = on;
+                                    }
+                                    crate::core::Control::HydraulicLock(on) => {
+                                        log::info!("Hydraulic lock: {}", on);
+                                        runtime_state.write().await.state.hydraulic_lock = on;
+                                    }
+                                    crate::core::Control::HydraulicBoost(on) => {
+                                        log::info!("Hydraulic boost: {}", on);
+                                    }
+
+                                    crate::core::Control::MachineShutdown => {
+                                        log::info!("Machine shutdown");
+                                    }
+                                    crate::core::Control::MachineIllumination(on) => {
+                                        log::info!("Machine illumination: {}", on);
+                                    }
+                                    crate::core::Control::MachineLights(on) => {
+                                        log::info!("Machine lights: {}", on);
+                                    }
+                                    crate::core::Control::MachineHorn(on) => {
+                                        log::info!("Machine horn: {}", on);
+                                    }
+                                    crate::core::Control::MachineStrobeLight(on) => {
+                                        log::info!("Machine strobe light: {}", on);
+                                    }
+                                    crate::core::Control::MachineTravelAlarm(on) => {
+                                        log::info!("Machine travel light: {}", on);
+                                    }
+                                }
+                            } else {
+                                log::warn!("Session is not authorized to control the machine");
+                            }
+                        }
+                        _ => {
+                            log::debug!("Unknown message type: {}", frame.message);
+                        }
                     }
                 }
-                _ => {
-                    log::debug!("Unknown message type: {}", frame.message);
+                Err(e) => {
+                    if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                        log::warn!("Session abandoned for: {}", session.name());
+                        break;
+                    } else {
+                        log::warn!("Failed to read frame: {}", e);
+                    }
                 }
             }
         }
 
-        if !session_shutdown {
-            log::warn!("Session abandoned for: {}", session.name());
+        if !session_shutdown && session.is_control() && session.is_failsafe() {
+            log::warn!("Enacting failsafe for: {}", session.name());
 
-            if session.is_control() && session.is_failsafe() {
-                log::warn!("Enacting failsafe for: {}", session.name());
-
-                if let Err(e) = command_tx
-                    .send(crate::core::Object::Motion(crate::core::Motion::StopAll))
-                    .await
-                {
-                    log::error!("Failed to send motion: {}", e);
-                }
+            if let Err(e) = command_tx
+                .send(crate::core::Object::Motion(crate::core::Motion::StopAll))
+                .await
+            {
+                log::error!("Failed to send motion: {}", e);
             }
         }
+
+        // TODO: close the stream
 
         log::info!("Session shutdown for: {}", session.name());
     }
