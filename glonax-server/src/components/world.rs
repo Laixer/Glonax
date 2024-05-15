@@ -10,6 +10,7 @@ const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
 pub struct WorldBuilder {
     actor: Actor,
+    is_actor_attached: bool,
 }
 
 impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
@@ -32,17 +33,21 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
             )
             .build();
 
-        Self { actor }
+        Self {
+            actor,
+            is_actor_attached: false,
+        }
     }
 
-    fn once(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
-        ctx.world.add_actor(self.actor.clone());
+    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+        if !self.is_actor_attached {
+            ctx.world.add_actor(self.actor.clone());
+            self.is_actor_attached = true;
+        }
 
         // TODO: For now
         if ctx.target.is_none() && !state.program.is_empty() {
             ctx.target = state.program.pop_front();
         }
     }
-
-    fn tick(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {}
 }

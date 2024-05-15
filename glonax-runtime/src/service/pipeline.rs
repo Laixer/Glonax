@@ -58,22 +58,6 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         ServiceContext::new("pipeline")
     }
 
-    async fn setup(&mut self, runtime_state: SharedOperandState) {
-        let machine_state = &mut runtime_state.write().await.state;
-
-        for service in self.map.values_mut() {
-            service.once(&mut self.ctx, machine_state);
-        }
-
-        self.ctx.post_tick();
-    }
-
-    async fn teardown(&mut self, _runtime_state: SharedOperandState) {
-        // TODO: Call teardown on each component
-
-        self.ctx.post_tick();
-    }
-
     async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: MotionSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
