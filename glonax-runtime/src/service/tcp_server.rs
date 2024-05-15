@@ -116,7 +116,9 @@ impl TcpServer {
                             }
                         }
                         // TODO: Respond with error
-                        _ => {}
+                        _ => {
+                            log::warn!("Unknown request type: {}", request.message());
+                        }
                     }
                 }
                 crate::protocol::frame::Session::MESSAGE_TYPE => {
@@ -167,7 +169,7 @@ impl TcpServer {
 
                         log::debug!("Engine request RPM: {}", engine.rpm);
                     } else {
-                        log::warn!("Client is not authorized to send engine data");
+                        log::warn!("Session is not authorized to control the machine");
                     }
                 }
                 crate::core::Motion::MESSAGE_TYPE => {
@@ -190,7 +192,7 @@ impl TcpServer {
                             break;
                         }
                     } else {
-                        log::warn!("Client is not authorized to send motion");
+                        log::warn!("Session is not authorized to command the machine");
                     }
                 }
                 crate::core::Target::MESSAGE_TYPE => {
@@ -202,7 +204,7 @@ impl TcpServer {
 
                         runtime_state.write().await.state.program.push_back(target);
                     } else {
-                        log::warn!("Client is not authorized to queue targets");
+                        log::warn!("Session is not authorized to command the machine");
                     }
                 }
                 crate::core::Control::MESSAGE_TYPE => {
@@ -245,7 +247,7 @@ impl TcpServer {
                             }
                         }
                     } else {
-                        log::warn!("Client is not authorized to control the machine");
+                        log::warn!("Session is not authorized to control the machine");
                     }
                 }
                 _ => {
