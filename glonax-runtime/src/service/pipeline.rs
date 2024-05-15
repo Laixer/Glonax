@@ -74,7 +74,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         self.ctx.post_tick();
     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState) {
+    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: MotionSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
         for service in self.map.values_mut() {

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
-use crate::runtime::{Service, ServiceContext, SharedOperandState};
+use crate::runtime::{MotionSender, Service, ServiceContext, SharedOperandState};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct TcpServerConfig {
@@ -49,6 +49,7 @@ impl TcpServer {
     async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         stream: T,
         runtime_state: SharedOperandState,
+        command_tx: MotionSender,
         _permit: tokio::sync::OwnedSemaphorePermit,
     ) {
         use crate::protocol::{
@@ -183,10 +184,10 @@ impl TcpServer {
                             }
                         }
 
-                        // if let Err(e) = motion_sender.send(crate::core::Object::Motion(motion)).await {
-                        //     log::error!("Failed to queue motion: {}", e);
-                        //     break;
-                        // }
+                        if let Err(e) = command_tx.send(crate::core::Object::Motion(motion)).await {
+                            log::error!("Failed to queue motion: {}", e);
+                            break;
+                        }
                     } else {
                         log::warn!("Client is not authorized to send motion");
                     }
@@ -255,9 +256,12 @@ impl TcpServer {
         if !session_shutdown && session.is_control() && session.is_failsafe() {
             log::warn!("Enacting failsafe for: {}", session.name());
 
-            // if let Err(e) = motion_sender.send(crate::core::Motion::StopAll).await {
-            //     log::error!("Failed to send motion: {}", e);
-            // }
+            if let Err(e) = command_tx
+                .send(crate::core::Object::Motion(crate::core::Motion::StopAll))
+                .await
+            {
+                log::error!("Failed to send motion: {}", e);
+            }
         }
 
         log::info!("Session shutdown for: {}", session.name());
@@ -287,10 +291,11 @@ impl Service<TcpServerConfig> for TcpServer {
     async fn setup(&mut self, _runtime_state: SharedOperandState) {
         log::debug!("Listening on: {}", self.config.listen);
 
+        // FUTURE: This is a bit of a hack, but there is no obvious way to create async constructors
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+    async fn wait_io(&mut self, runtime_state: SharedOperandState, command_tx: MotionSender) {
         log::debug!("Waiting for connection");
 
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
@@ -320,6 +325,7 @@ impl Service<TcpServerConfig> for TcpServer {
         tokio::spawn(Self::spawn_client_session(
             stream,
             runtime_state.clone(),
+            command_tx,
             permit,
         ));
     }

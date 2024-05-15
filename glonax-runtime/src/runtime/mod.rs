@@ -144,6 +144,7 @@ pub trait Service<Cnf> {
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
+        _command_tx: MotionSender,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -156,6 +157,7 @@ pub trait Service<Cnf> {
     fn tick(
         &mut self,
         _runtime_state: SharedOperandState,
+        _command_tx: MotionSender,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -200,7 +202,7 @@ where
     service: S,
     _config: C,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-    _command_tx: MotionSender,
+    command_tx: MotionSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 }
 
@@ -218,7 +220,7 @@ where
             service,
             _config: crate::runtime::NullConfig,
             operand,
-            _command_tx: command_tx,
+            command_tx,
             shutdown,
         }
     }
@@ -239,7 +241,7 @@ where
             service: S::new(config.clone()),
             _config: config,
             operand,
-            _command_tx: command_tx,
+            command_tx,
             shutdown,
         }
     }
@@ -262,7 +264,7 @@ where
         tokio::select! {
             _ = async {
                 loop {
-                    self.service.wait_io(self.operand.clone()).await;
+                    self.service.wait_io(self.operand.clone(), self.command_tx.clone()).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -274,7 +276,9 @@ where
 
         while self.shutdown.is_empty() {
             tokio::time::sleep(duration).await;
-            self.service.tick(self.operand.clone()).await;
+            self.service
+                .tick(self.operand.clone(), self.command_tx.clone())
+                .await;
         }
     }
 

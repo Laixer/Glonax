@@ -1,6 +1,6 @@
 use sysinfo::{Components, System};
 
-use crate::runtime::{Service, ServiceContext, SharedOperandState};
+use crate::runtime::{MotionSender, Service, ServiceContext, SharedOperandState};
 
 pub struct Host {
     system: System,
@@ -28,7 +28,7 @@ impl<C> Service<C> for Host {
         ServiceContext::new("host")
     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState) {
+    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: MotionSender) {
         self.system.refresh_memory();
         self.system.refresh_cpu();
         self.components.refresh();

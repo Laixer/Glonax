@@ -6,7 +6,7 @@ use std::{
 use glonax_serial::{BaudRate, Uart};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 
-use crate::runtime::{Service, ServiceContext, SharedOperandState};
+use crate::runtime::{MotionSender, Service, ServiceContext, SharedOperandState};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct GnssConfig {
@@ -42,7 +42,7 @@ impl Service<GnssConfig> for Gnss {
         ServiceContext::with_address("gnss", self.path.display().to_string())
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState) {
+    async fn wait_io(&mut self, runtime_state: SharedOperandState, _command_tx: MotionSender) {
         if let Ok(Some(line)) = self.line_reader.next_line().await {
             if let Some(message) = self.driver.decode(line) {
                 let mut runtime_state = runtime_state.write().await;
