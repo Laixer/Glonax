@@ -168,7 +168,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     runtime.schedule_service_default::<service::Announcer>(SERVICE_ANNOUNCER_INTERVAL);
 
-    let mut pipe = service::Pipeline::new(runtime.motion_sender());
+    // TODO: Let runtime instantiate the pipeline
+    use glonax::runtime::Service;
+    let mut pipe = service::Pipeline::new(glonax::runtime::NullConfig {});
 
     pipe.insert_component::<components::WorldBuilder>(0);
     pipe.insert_component::<components::SensorFusion>(2);

@@ -1,5 +1,5 @@
 use glonax::{
-    runtime::{Component, ComponentContext},
+    runtime::{Component, ComponentContext, MotionSender},
     MachineState,
 };
 
@@ -16,7 +16,12 @@ impl<Cnf: Clone> Component<Cnf> for LocalActor {
         Self
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+    fn tick(
+        &mut self,
+        ctx: &mut ComponentContext,
+        state: &mut MachineState,
+        _command_tx: MotionSender,
+    ) {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
         let body_world_location = actor.world_location("frame");

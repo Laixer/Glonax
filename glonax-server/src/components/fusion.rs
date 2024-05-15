@@ -1,6 +1,6 @@
 use glonax::{
     driver::EncoderConverter,
-    runtime::{Component, ComponentContext},
+    runtime::{Component, ComponentContext, MotionSender},
     MachineState,
 };
 
@@ -47,7 +47,12 @@ impl<Cnf: Clone> Component<Cnf> for SensorFusion {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+    fn tick(
+        &mut self,
+        ctx: &mut ComponentContext,
+        state: &mut MachineState,
+        _command_tx: MotionSender,
+    ) {
         let actor = ctx.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
 
         if let Some(value) = state.encoders.get(&FRAME_ENCODER) {

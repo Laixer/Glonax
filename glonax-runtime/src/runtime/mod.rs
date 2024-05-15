@@ -181,17 +181,16 @@ pub trait Component<Cnf: Clone> {
     where
         Self: Sized;
 
-    /// Run the component once.
-    ///
-    /// This method will be called once on startup.
-    /// The component should use this method to initialize itself.
-    fn once(&mut self, _ctx: &mut ComponentContext, _state: &mut MachineState) {}
-
     /// Tick the component.
     ///
     /// This method will be called on each tick of the runtime.
     /// How often the runtime ticks is determined by the runtime configuration.
-    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState);
+    fn tick(
+        &mut self,
+        ctx: &mut ComponentContext,
+        state: &mut MachineState,
+        command_tx: MotionSender,
+    );
 }
 
 struct ServiceDescriptor<S, C = crate::runtime::NullConfig>
@@ -302,8 +301,6 @@ where
 /// The component context is provided to each component on each tick. The
 /// component context is used to communicate within the component pipeline.
 pub struct ComponentContext {
-    /// Motion command sender.
-    signal_tx: MotionSender,
     /// World.
     pub world: World,
     /// Current target.
@@ -315,22 +312,6 @@ pub struct ComponentContext {
 }
 
 impl ComponentContext {
-    /// Construct a new component context.
-    pub fn new(signal_tx: MotionSender) -> Self {
-        Self {
-            signal_tx,
-            world: World::default(),
-            target: None,
-            actuators: std::collections::HashMap::new(),
-            last_tick: std::time::Instant::now(),
-        }
-    }
-
-    /// Retrieve the motion command sender.
-    pub fn command(&self) -> &MotionSender {
-        &self.signal_tx
-    }
-
     /// Retrieve the tick delta.
     pub fn delta(&self) -> std::time::Duration {
         self.last_tick.elapsed()
@@ -340,6 +321,17 @@ impl ComponentContext {
     pub(crate) fn post_tick(&mut self) {
         self.actuators.clear();
         self.last_tick = std::time::Instant::now();
+    }
+}
+
+impl Default for ComponentContext {
+    fn default() -> Self {
+        Self {
+            world: World::default(),
+            target: None,
+            actuators: std::collections::HashMap::new(),
+            last_tick: std::time::Instant::now(),
+        }
     }
 }
 

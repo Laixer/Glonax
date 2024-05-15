@@ -1,6 +1,6 @@
 use glonax::{
     core::MachineType,
-    runtime::{Component, ComponentContext},
+    runtime::{Component, ComponentContext, MotionSender},
     world::{Actor, ActorBuilder, ActorSegment},
     MachineState,
 };
@@ -39,7 +39,12 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, state: &mut MachineState) {
+    fn tick(
+        &mut self,
+        ctx: &mut ComponentContext,
+        state: &mut MachineState,
+        _command_tx: MotionSender,
+    ) {
         if !self.is_actor_attached {
             ctx.world.add_actor(self.actor.clone());
             self.is_actor_attached = true;

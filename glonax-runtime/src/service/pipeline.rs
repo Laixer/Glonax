@@ -10,14 +10,6 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    /// Construct a new pipeline.
-    pub fn new(command_tx: MotionSender) -> Self {
-        Self {
-            ctx: ComponentContext::new(command_tx),
-            map: BTreeMap::new(),
-        }
-    }
-
     // TODO: Add instance to new
     /// Create a dynamic component with the given order.
     ///
@@ -51,18 +43,21 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     where
         Self: Sized,
     {
-        unimplemented!()
+        Self {
+            ctx: ComponentContext::default(),
+            map: BTreeMap::new(),
+        }
     }
 
     fn ctx(&self) -> ServiceContext {
         ServiceContext::new("pipeline")
     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: MotionSender) {
+    async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: MotionSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
         for service in self.map.values_mut() {
-            service.tick(&mut self.ctx, machine_state);
+            service.tick(&mut self.ctx, machine_state, command_tx.clone());
         }
 
         self.ctx.post_tick();
