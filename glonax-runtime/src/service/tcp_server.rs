@@ -170,7 +170,7 @@ impl TcpServer {
                     }
                 }
                 crate::core::Motion::MESSAGE_TYPE => {
-                    if session.is_control() {
+                    if session.is_command() {
                         let motion = client
                             .recv_packet::<crate::core::Motion>(frame.payload_length)
                             .await
