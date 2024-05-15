@@ -67,6 +67,7 @@ impl TcpServer {
 
         // TODO: If possible, move to glonax-runtime
         // TODO: Handle all unwraps, most just need to be logged
+        // TODO: If possble, read the payload before the match
         loop {
             match client.read_frame().await {
                 Ok(frame) => {
@@ -155,7 +156,9 @@ impl TcpServer {
 
                             use tokio::io::AsyncWriteExt;
 
-                            client.inner_mut().shutdown().await.ok();
+                            if let Err(e) = client.inner_mut().shutdown().await {
+                                log::error!("Failed to shutdown stream: {}", e);
+                            }
 
                             session_shutdown = true;
                             break;
@@ -286,8 +289,6 @@ impl TcpServer {
                 log::error!("Failed to send motion: {}", e);
             }
         }
-
-        // TODO: close the stream
 
         log::info!("Session shutdown for: {}", session.name());
     }

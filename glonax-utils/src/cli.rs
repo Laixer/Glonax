@@ -69,16 +69,6 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Connected to {}", address);
 
-    // Connect over Unix socket
-
-    // let (mut client, instance) = glonax::protocol::client::unix::connect(
-    //     glonax::consts::DEFAULT_SOCKET_PATH,
-    //     format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
-    // )
-    // .await?;
-
-    // println!("Connected to {}", glonax::consts::DEFAULT_SOCKET_PATH);
-
     println!("{}", instance);
 
     fn print_help() {
@@ -319,11 +309,26 @@ async fn main() -> anyhow::Result<()> {
                 client.send_packet(&target).await?;
             }
             "q" | "quit" => {
-                client.send_packet(&glonax::protocol::frame::Shutdown).await?;
+                client
+                    .send_packet(&glonax::protocol::frame::Shutdown)
+                    .await?;
+
+                use tokio::io::AsyncReadExt;
+
+                // TODO: Read until EOF
+                // TOOD: Move to client
+                let mut buf = [0; 1024];
+                if let Ok(size) = client.inner_mut().read(&mut buf).await {
+                    if size == 0 {
+                        break;
+                    }
+                }
             }
             _ => {
                 print_help();
             }
         }
     }
+
+    Ok(())
 }
