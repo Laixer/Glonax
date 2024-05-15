@@ -1,10 +1,6 @@
 mod error;
 
-use crate::{
-    core::{Instance, Target},
-    world::World,
-    MachineState,
-};
+use crate::{core::Target, world::World, MachineState};
 
 pub use self::error::Error;
 
@@ -54,49 +50,6 @@ impl std::fmt::Display for ServiceContext {
         }
     }
 }
-
-// TODO: Change to ServiceContext
-pub struct ServiceErrorBuilder {
-    name: String,
-    address: String,
-}
-
-impl ServiceErrorBuilder {
-    pub fn new(name: impl ToString, address: impl ToString) -> Self {
-        Self {
-            name: name.to_string(),
-            address: address.to_string(),
-        }
-    }
-
-    pub fn io_error(&self, io_error: std::io::Error) -> ServiceError {
-        ServiceError {
-            name: self.name.clone(),
-            address: self.address.clone(),
-            io_error,
-        }
-    }
-}
-
-pub struct ServiceError {
-    name: String,
-    address: String,
-    io_error: std::io::Error,
-}
-
-impl std::fmt::Display for ServiceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Service {} error: {}", self.name, self.io_error)
-    }
-}
-
-impl std::fmt::Debug for ServiceError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Service {} error: {:?}", self.name, self.io_error)
-    }
-}
-
-impl std::error::Error for ServiceError {}
 
 pub trait Service<Cnf> {
     // TODO: Add instance to new
@@ -348,9 +301,11 @@ pub fn builder<Cnf: Clone>(
 
 pub struct Runtime<Conf> {
     /// Runtime configuration.
-    config: Conf,
+    #[allow(dead_code)]
+    config: Conf, // TODO: Remove config.
     /// Instance.
-    instance: crate::core::Instance,
+    #[allow(dead_code)]
+    instance: crate::core::Instance, // TODO: Remove instance.
     /// Glonax operand.
     operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
     /// Motion command sender.
@@ -367,44 +322,12 @@ pub struct Runtime<Conf> {
 }
 
 impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
-    // TODO: This is temporary
-    /// Returns a clone of the motion sender.
-    ///
-    /// This method returns a clone of the motion sender, allowing other components to send motion commands.
-    pub fn motion_sender(&self) -> CommandSender {
-        self.motion_tx.clone()
-    }
-
     /// Spawns a future onto the runtime's executor.
     ///
     /// This method spawns a future onto the runtime's executor, allowing it to run in the background.
     /// The future must implement the `Future` trait with an output type of `()`, and it must also be `Send` and `'static`.
     fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(&mut self, f: F) {
         self.tasks.push(tokio::spawn(f));
-    }
-
-    #[deprecated]
-    pub fn schedule_io_func<Fut>(
-        &self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, CommandSender) -> Fut + Send + 'static,
-    ) where
-        Fut: std::future::Future<Output = std::result::Result<(), ServiceError>> + Send + 'static,
-    {
-        let config = self.config.clone();
-        let instance = self.instance.clone();
-        let operand = self.operand.clone();
-        let motion_tx = self.motion_tx.clone();
-
-        tokio::spawn(async move {
-            if let Err(e) = service(config, instance, operand, motion_tx).await {
-                log::error!(
-                    "Failed to schedule '{}' at {}: {}",
-                    e.name,
-                    e.address,
-                    e.io_error
-                );
-            }
-        });
     }
 
     /// Listen for IO event service in the background.
