@@ -62,7 +62,6 @@ async fn main() -> anyhow::Result<()> {
     }
 
     let is_daemon = std::env::var("INVOCATION_ID").is_ok() || args.daemon;
-
     if is_daemon {
         log::set_max_level(LevelFilter::Debug);
         log::set_boxed_logger(Box::new(glonax::logger::SystemdLogger))?;

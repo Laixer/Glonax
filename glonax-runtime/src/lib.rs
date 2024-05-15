@@ -110,17 +110,17 @@ pub fn log_system() {
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.
-    pub vms_signal: core::Host, // SIGNAL, EMIT
+    pub vms_signal: core::Host, // SIGNAL
     /// Vehicle management system update.
     pub vms_signal_instant: Option<std::time::Instant>,
 
     /// Global navigation satellite system data.
-    pub gnss_signal: core::Gnss, // SIGNAL, EMIT
+    pub gnss_signal: core::Gnss, // SIGNAL
     /// GNSS signal update.
     pub gnss_signal_instant: Option<std::time::Instant>,
 
     /// Engine signal.
-    pub engine_signal: core::Engine, // SIGNAL, STATE
+    pub engine_signal: core::Engine, // SIGNAL
     /// Engine state actual instant.
     pub engine_signal_instant: Option<std::time::Instant>,
     /// Engine command.
@@ -136,24 +136,24 @@ pub struct MachineState {
     pub hydraulic_actual_instant: Option<std::time::Instant>,
 
     /// Motion locked.
-    pub motion_locked: bool, // TODO: Move into motion request struct // SIGNAL
+    pub motion_locked: bool, // SIGNAL
     /// Motion data.
     pub motion: core::Motion, // INNER SERVICE (hydraulic)
     /// Motion instant.
     pub motion_instant: Option<std::time::Instant>,
 
     /// Encoder data.
-    pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL, STATE
+    pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL
     /// Encoder instant.
     pub encoders_instant: Option<std::time::Instant>,
 
     /// Robot as an actor.
-    pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL, EMIT
+    pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL
     /// Robot as an actor instant.
     pub actor_instant: Option<std::time::Instant>,
 
     /// Current program queue.
-    pub program: std::collections::VecDeque<core::Target>, // COMMAND, STATE
+    pub program: std::collections::VecDeque<core::Target>, // TODO: Move into component state? // COMMAND
     /// Electronic control unit data.
     pub ecu_state: driver::VirtualHCU, // CROSS SERVICE (Sim actuator, sim encoder)
 }
