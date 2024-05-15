@@ -1,5 +1,5 @@
 use glonax::{
-    core::{Actuator, Motion},
+    core::{Actuator, Motion, Object},
     runtime::{Component, ComponentContext},
     MachineState,
 };
@@ -190,10 +190,19 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         // }
 
         if !motion.is_empty() {
-            ctx.send_motion(Motion::from_iter(motion));
+            if let Err(e) = ctx
+                .command()
+                .try_send(Object::Motion(Motion::from_iter(motion)))
+            {
+                log::error!("Failed to send motion command: {}", e);
+            }
+
             self.stopall = false;
         } else if !self.stopall {
-            ctx.send_motion(Motion::StopAll);
+            if let Err(e) = ctx.command().try_send(Object::Motion(Motion::StopAll)) {
+                log::error!("Failed to send motion command: {}", e);
+            }
+
             self.stopall = true;
         }
     }

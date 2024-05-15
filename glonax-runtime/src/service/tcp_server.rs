@@ -43,6 +43,7 @@ pub struct TcpServer {
     config: TcpServerConfig,
     semaphore: Arc<Semaphore>,
     listener: Option<TcpListener>,
+    clients: Vec<tokio::task::JoinHandle<()>>,
 }
 
 impl TcpServer {
@@ -281,6 +282,7 @@ impl Service<TcpServerConfig> for TcpServer {
             config,
             semaphore,
             listener: None,
+            clients: Vec::new(),
         }
     }
 
@@ -321,17 +323,26 @@ impl Service<TcpServerConfig> for TcpServer {
 
         log::debug!("Spawning client session");
 
-        // TODO: Maybe add to thread pool
-        tokio::spawn(Self::spawn_client_session(
+        self.clients.push(tokio::spawn(Self::spawn_client_session(
             stream,
             runtime_state.clone(),
             command_tx,
             permit,
-        ));
+        )));
     }
 
     async fn teardown(&mut self, _runtime_state: SharedOperandState) {
+        log::debug!(
+            "Waiting for {} connected clients to shutdown",
+            self.clients.len()
+        );
+
         // TODO: Inform clients of shutdown
-        log::info!("Shutting down TCP server");
+
+        // for client in self.clients.drain(..) {
+        //     if let Err(e) = client.await {
+        //         log::error!("Client session failed: {}", e);
+        //     }
+        // }
     }
 }

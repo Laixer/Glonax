@@ -326,11 +326,9 @@ impl ComponentContext {
         }
     }
 
-    /// Commit a motion command.
-    pub fn send_motion(&mut self, motion: crate::core::Motion) {
-        if let Err(e) = self.signal_tx.try_send(crate::core::Object::Motion(motion)) {
-            log::error!("Failed to send motion command: {}", e);
-        }
+    /// Retrieve the motion command sender.
+    pub fn command(&self) -> &MotionSender {
+        &self.signal_tx
     }
 
     /// Retrieve the tick delta.
