@@ -132,5 +132,17 @@ impl super::J1939Unit for VolvoD7E {
         Ok(())
     }
 
-    // TODO: Accept trigger with engine message
+    async fn trigger(
+        &self,
+        _ctx: &mut super::NetDriverContext,
+        _network: &crate::net::ControlNetwork,
+        runtime_state: crate::runtime::SharedOperandState,
+        object: &crate::core::Object,
+    ) -> Result<(), super::J1939UnitError> {
+        if let crate::core::Object::Engine(engine) = object {
+            runtime_state.write().await.state.engine_command = Some(*engine);
+        }
+
+        Ok(())
+    }
 }
