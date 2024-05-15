@@ -1,6 +1,6 @@
 use glonax::{
     core::MachineType,
-    runtime::{Component, ComponentContext, MotionSender},
+    runtime::{CommandSender, Component, ComponentContext},
     world::{Actor, ActorBuilder, ActorSegment},
     MachineState,
 };
@@ -43,7 +43,7 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
         &mut self,
         ctx: &mut ComponentContext,
         state: &mut MachineState,
-        _command_tx: MotionSender,
+        _command_tx: CommandSender,
     ) {
         if !self.is_actor_attached {
             ctx.world.add_actor(self.actor.clone());

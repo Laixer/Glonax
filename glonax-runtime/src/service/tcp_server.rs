@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
-use crate::runtime::{MotionSender, Service, ServiceContext, SharedOperandState};
+use crate::runtime::{CommandSender, Service, ServiceContext, SharedOperandState};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct TcpServerConfig {
@@ -50,7 +50,7 @@ impl TcpServer {
     async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         stream: T,
         runtime_state: SharedOperandState,
-        command_tx: MotionSender,
+        command_tx: CommandSender,
         _permit: tokio::sync::OwnedSemaphorePermit,
     ) {
         use crate::protocol::{
@@ -58,7 +58,7 @@ impl TcpServer {
             Packetize, Stream,
         };
 
-        log::info!("Client session started");
+        log::debug!("Client session started");
 
         let mut client = Stream::new(stream);
         let mut session = Session::new(0, String::new());
@@ -323,7 +323,7 @@ impl Service<TcpServerConfig> for TcpServer {
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState, command_tx: MotionSender) {
+    async fn wait_io(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 

@@ -1,5 +1,5 @@
 use glonax::{
-    runtime::{Component, ComponentContext, MotionSender},
+    runtime::{CommandSender, Component, ComponentContext},
     MachineState,
 };
 use nalgebra::Point3;
@@ -24,7 +24,7 @@ impl<Cnf: Clone> Component<Cnf> for Kinematic {
         &mut self,
         ctx: &mut ComponentContext,
         _state: &mut MachineState,
-        _command_tx: MotionSender,
+        _command_tx: CommandSender,
     ) {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 

@@ -1,6 +1,6 @@
 use std::net::UdpSocket;
 
-use crate::runtime::{MotionSender, Service, ServiceContext, SharedOperandState};
+use crate::runtime::{CommandSender, Service, ServiceContext, SharedOperandState};
 
 pub struct Announcer(UdpSocket);
 
@@ -16,7 +16,7 @@ impl<C> Service<C> for Announcer {
         ServiceContext::with_address("announcer", "[::1]:0")
     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: MotionSender) {
+    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: CommandSender) {
         // let instance = instance.clone();
         // let payload = [instance.to_bytes(), status.to_bytes()].concat();
 

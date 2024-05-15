@@ -1,6 +1,6 @@
 use glonax::{
     math::EulerAngles,
-    runtime::{Component, ComponentContext, MotionSender},
+    runtime::{CommandSender, Component, ComponentContext},
     MachineState,
 };
 
@@ -20,7 +20,7 @@ impl<Cnf: Clone> Component<Cnf> for Example {
         &mut self,
         ctx: &mut ComponentContext,
         _state: &mut MachineState,
-        _command_tx: MotionSender,
+        _command_tx: CommandSender,
     ) {
         let delta = ctx.delta();
 

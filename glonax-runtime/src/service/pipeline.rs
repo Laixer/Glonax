@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::runtime::{
-    Component, ComponentContext, MotionSender, Service, ServiceContext, SharedOperandState,
+    CommandSender, Component, ComponentContext, Service, ServiceContext, SharedOperandState,
 };
 
 pub struct Pipeline {
@@ -53,7 +53,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         ServiceContext::new("pipeline")
     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: MotionSender) {
+    async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
         for service in self.map.values_mut() {

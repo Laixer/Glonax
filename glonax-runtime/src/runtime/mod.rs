@@ -11,7 +11,7 @@ pub use self::error::Error;
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 // TODO: Rename to CommandSender
-pub type MotionSender = tokio::sync::mpsc::Sender<crate::core::Object>;
+pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
 
@@ -144,7 +144,7 @@ pub trait Service<Cnf> {
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
-        _command_tx: MotionSender,
+        _command_tx: CommandSender,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -157,7 +157,7 @@ pub trait Service<Cnf> {
     fn tick(
         &mut self,
         _runtime_state: SharedOperandState,
-        _command_tx: MotionSender,
+        _command_tx: CommandSender,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -189,7 +189,7 @@ pub trait Component<Cnf: Clone> {
         &mut self,
         ctx: &mut ComponentContext,
         state: &mut MachineState,
-        command_tx: MotionSender,
+        command_tx: CommandSender,
     );
 }
 
@@ -201,7 +201,7 @@ where
     service: S,
     _config: C,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-    command_tx: MotionSender,
+    command_tx: CommandSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 }
 
@@ -212,7 +212,7 @@ where
     fn new(
         service: S,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        command_tx: MotionSender,
+        command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
@@ -233,7 +233,7 @@ where
     fn with_config(
         config: C,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        command_tx: MotionSender,
+        command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
@@ -354,7 +354,7 @@ pub struct Runtime<Conf> {
     /// Glonax operand.
     operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
     /// Motion command sender.
-    motion_tx: MotionSender,
+    motion_tx: CommandSender,
     /// Motion command receiver.
     motion_rx: Option<CommandReceiver>,
     /// Runtime tasks.
@@ -371,7 +371,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     /// Returns a clone of the motion sender.
     ///
     /// This method returns a clone of the motion sender, allowing other components to send motion commands.
-    pub fn motion_sender(&self) -> MotionSender {
+    pub fn motion_sender(&self) -> CommandSender {
         self.motion_tx.clone()
     }
 
@@ -386,7 +386,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
     #[deprecated]
     pub fn schedule_io_func<Fut>(
         &self,
-        service: impl FnOnce(Cnf, Instance, SharedOperandState, MotionSender) -> Fut + Send + 'static,
+        service: impl FnOnce(Cnf, Instance, SharedOperandState, CommandSender) -> Fut + Send + 'static,
     ) where
         Fut: std::future::Future<Output = std::result::Result<(), ServiceError>> + Send + 'static,
     {

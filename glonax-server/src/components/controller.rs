@@ -1,6 +1,6 @@
 use glonax::{
     core::{Actuator, Motion, Object},
-    runtime::{Component, ComponentContext, MotionSender},
+    runtime::{CommandSender, Component, ComponentContext},
     MachineState,
 };
 
@@ -86,7 +86,7 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         &mut self,
         ctx: &mut ComponentContext,
         _state: &mut MachineState,
-        command_tx: MotionSender,
+        command_tx: CommandSender,
     ) {
         let frame_error = ctx.actuators.get(&(Actuator::Slew as u16));
         let boom_error = ctx.actuators.get(&(Actuator::Boom as u16));
