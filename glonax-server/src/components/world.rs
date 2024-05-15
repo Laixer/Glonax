@@ -50,7 +50,7 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
             self.is_actor_attached = true;
         }
 
-        // TODO: For now
+        // TODO: Place the target in the world as actor
         if ctx.target.is_none() && !state.program.is_empty() {
             ctx.target = state.program.pop_front();
         }
