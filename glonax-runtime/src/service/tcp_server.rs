@@ -145,7 +145,7 @@ impl TcpServer {
                     client.send_packet(&echo).await.unwrap();
                 }
                 crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
-                    log::debug!("Client initiated shutdown");
+                    log::debug!("Session shutdown requested for: {}", session.name());
 
                     use tokio::io::AsyncWriteExt;
 
@@ -254,14 +254,18 @@ impl TcpServer {
             }
         }
 
-        if !session_shutdown && session.is_control() && session.is_failsafe() {
-            log::warn!("Enacting failsafe for: {}", session.name());
+        if !session_shutdown {
+            log::warn!("Session abandoned for: {}", session.name());
 
-            if let Err(e) = command_tx
-                .send(crate::core::Object::Motion(crate::core::Motion::StopAll))
-                .await
-            {
-                log::error!("Failed to send motion: {}", e);
+            if session.is_control() && session.is_failsafe() {
+                log::warn!("Enacting failsafe for: {}", session.name());
+
+                if let Err(e) = command_tx
+                    .send(crate::core::Object::Motion(crate::core::Motion::StopAll))
+                    .await
+                {
+                    log::error!("Failed to send motion: {}", e);
+                }
             }
         }
 

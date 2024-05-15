@@ -319,7 +319,7 @@ async fn main() -> anyhow::Result<()> {
                 client.send_packet(&target).await?;
             }
             "q" | "quit" => {
-                return Ok(());
+                client.send_packet(&glonax::protocol::frame::Shutdown).await?;
             }
             _ => {
                 print_help();
