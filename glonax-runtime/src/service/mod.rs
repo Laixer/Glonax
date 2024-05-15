@@ -1,5 +1,4 @@
 pub use actuator::ActuatorSimulator;
-pub use announcer::Announcer;
 pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkAuthorityTx, NetworkConfig};
 pub use encoder::EncoderSimulator;
 pub use engine::EngineSimulator;
@@ -9,7 +8,6 @@ pub use pipeline::Pipeline;
 pub use tcp_server::{TcpServer, TcpServerConfig, UnixServerConfig};
 
 mod actuator;
-mod announcer;
 mod authority;
 mod encoder;
 mod engine;

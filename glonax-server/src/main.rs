@@ -11,8 +11,6 @@ mod config;
 
 /// Interval for the host service.
 const SERVICE_HOST_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
-/// Interval for the service announcer.
-const SERVICE_ANNOUNCER_INTERVAL: std::time::Duration = std::time::Duration::from_secs(1);
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -165,8 +163,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     if let Some(tcp_server) = config.tcp_server.clone() {
         runtime.schedule_io_service::<service::TcpServer, _>(tcp_server);
     }
-
-    runtime.schedule_service_default::<service::Announcer>(SERVICE_ANNOUNCER_INTERVAL);
 
     // TODO: Let runtime instantiate the pipeline
     use glonax::runtime::Service;
