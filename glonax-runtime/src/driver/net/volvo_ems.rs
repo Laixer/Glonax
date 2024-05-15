@@ -140,7 +140,9 @@ impl super::J1939Unit for VolvoD7E {
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         if let crate::core::Object::Engine(engine) = object {
-            runtime_state.write().await.state.engine_command = Some(*engine);
+            let state = &mut runtime_state.write().await.state;
+            state.engine_command = Some(*engine);
+            state.engine_command_instant = Some(std::time::Instant::now());
         }
 
         Ok(())

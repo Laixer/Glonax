@@ -138,9 +138,9 @@ pub struct MachineState {
     /// Motion locked.
     pub motion_locked: bool, // SIGNAL
     /// Motion data.
-    pub motion: core::Motion, // INNER SERVICE (hydraulic)
+    pub motion_command: core::Motion, // INNER SERVICE (hydraulic)
     /// Motion instant.
-    pub motion_instant: Option<std::time::Instant>,
+    pub motion_command_instant: Option<std::time::Instant>,
 
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL

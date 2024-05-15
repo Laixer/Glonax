@@ -564,7 +564,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         if let Ok(runtime_state) = runtime_state.try_read() {
-            self.send_motion_command(network, &runtime_state.state.motion)
+            self.send_motion_command(network, &runtime_state.state.motion_command)
                 .await?;
             ctx.tx_mark();
         }
@@ -580,7 +580,9 @@ impl super::J1939Unit for HydraulicControlUnit {
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         if let crate::core::Object::Motion(motion) = object {
-            runtime_state.write().await.state.motion = motion.clone();
+            let state = &mut runtime_state.write().await.state;
+            state.motion_command = motion.clone();
+            state.motion_command_instant = Some(std::time::Instant::now());
 
             self.send_motion_command(network, motion).await?;
             ctx.tx_mark();

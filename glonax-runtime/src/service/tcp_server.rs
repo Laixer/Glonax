@@ -171,11 +171,19 @@ impl TcpServer {
                                 .unwrap();
 
                             if session.is_control() {
+                                // TODO: Replace with command sender
                                 let state = &mut runtime_state.write().await.state;
                                 state.engine_command = Some(engine);
                                 state.engine_command_instant = Some(std::time::Instant::now());
 
                                 log::debug!("Engine request RPM: {}", engine.rpm);
+
+                                // if let Err(e) =
+                                //     command_tx.send(crate::core::Object::Engine(engine)).await
+                                // {
+                                //     log::error!("Failed to queue command: {}", e);
+                                //     break;
+                                // }
                             } else {
                                 log::warn!("Session is not authorized to control the machine");
                             }
@@ -187,18 +195,10 @@ impl TcpServer {
                                 .unwrap();
 
                             if session.is_command() {
-                                // TODO: Move this further into the runtime
-                                if motion.is_movable() {
-                                    if let Ok(mut runtime_state) = runtime_state.try_write() {
-                                        runtime_state.state.motion_instant =
-                                            Some(std::time::Instant::now());
-                                    }
-                                }
-
                                 if let Err(e) =
                                     command_tx.send(crate::core::Object::Motion(motion)).await
                                 {
-                                    log::error!("Failed to queue motion: {}", e);
+                                    log::error!("Failed to queue command: {}", e);
                                     break;
                                 }
                             } else {
