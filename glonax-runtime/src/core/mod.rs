@@ -20,12 +20,12 @@ mod target;
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
     Engine(Engine),
-    Gnss(Gnss),
-    Host(Host),
-    Instance(Instance),
+    // Gnss(Gnss),         // TODO: Not a common
+    // Host(Host),         // TODO: Not a common
+    // Instance(Instance), // TODO: Not a common
     Motion(Motion),
     Target(Target),
-    Status(Status),
+    // Status(Status), // TODO: Not a common
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
