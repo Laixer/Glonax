@@ -324,8 +324,6 @@ impl Service<TcpServerConfig> for TcpServer {
     }
 
     async fn wait_io(&mut self, runtime_state: SharedOperandState, command_tx: MotionSender) {
-        log::debug!("Waiting for connection");
-
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
@@ -341,8 +339,8 @@ impl Service<TcpServerConfig> for TcpServer {
 
         let active_client_count = self.config.max_connections - self.semaphore.available_permits();
 
-        log::trace!(
-            "Connections: {}/{}",
+        log::debug!(
+            "Active connections: {}/{}",
             active_client_count,
             self.config.max_connections
         );
