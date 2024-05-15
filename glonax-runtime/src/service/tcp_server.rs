@@ -332,9 +332,11 @@ impl Service<TcpServerConfig> for TcpServer {
     }
 
     async fn teardown(&mut self, _runtime_state: SharedOperandState) {
+        let active_client_count = self.config.max_connections - self.semaphore.available_permits();
+
         log::debug!(
             "Waiting for {} connected clients to shutdown",
-            self.clients.len()
+            active_client_count
         );
 
         // TODO: Inform clients of shutdown
