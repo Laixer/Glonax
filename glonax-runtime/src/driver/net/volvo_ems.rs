@@ -226,13 +226,16 @@ impl VolvoD7E {
             if engine_command.driver_demand == 0 {
                 engine_command.state = core::EngineState::NoRequest;
             } else {
-                engine_command.rpm = (engine_command.driver_demand as f32 / 100.0 * self.governor.rpm_max as f32) as u16;
+                engine_command.rpm = (engine_command.driver_demand as f32 / 100.0
+                    * self.governor.rpm_max as f32) as u16;
             }
         } else {
             engine_command.state = core::EngineState::Request;
         }
 
-        let engine_state = self.governor.next_state(&engine_signal, &engine_command, test.engine_command_instant);
+        let engine_state =
+            self.governor
+                .next_state(&engine_signal, &engine_command, test.engine_command_instant);
 
         log::trace!("Engine governor: {:?}", engine_state);
 
@@ -374,9 +377,8 @@ impl super::J1939Unit for VolvoD7E {
             });
 
             if let Ok(request) = runtime_state.try_read() {
-
                 log::debug!("VolvoD7E trigger, send engine command");
-    
+
                 let request = self.governor_mode(request.state.engine_signal);
                 match request.state {
                     crate::core::EngineState::NoRequest => {
@@ -396,7 +398,6 @@ impl super::J1939Unit for VolvoD7E {
                         ctx.tx_mark();
                     }
                 }
-    
             }
 
             // {
