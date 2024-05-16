@@ -10,7 +10,7 @@ mod components;
 mod config;
 
 /// Interval for the host service.
-const SERVICE_HOST_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
+// const SERVICE_HOST_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -173,19 +173,18 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     pipe.insert_component::<glonax::components::HostComponent>(0);
     pipe.insert_component::<components::WorldBuilder>(1);
-    pipe.insert_component::<components::SensorFusion>(2);
-    pipe.insert_component::<components::LocalActor>(3);
+
+    if config.mode != config::OperationMode::PilotRestrict {
+        pipe.insert_component::<components::SensorFusion>(2);
+        pipe.insert_component::<components::LocalActor>(3);
+    }
 
     if config.mode == config::OperationMode::Autonomous {
         pipe.insert_component::<components::Kinematic>(5);
         pipe.insert_component::<components::Controller>(10);
     }
 
-    // if config.mode != config::OperationMode::PilotRestrict {
     runtime.run_interval(pipe, Duration::from_millis(10)).await;
-    // } else {
-    //     runtime.wait_for_shutdown().await;
-    // }
 
     log::info!("Waiting for shutdown");
 
