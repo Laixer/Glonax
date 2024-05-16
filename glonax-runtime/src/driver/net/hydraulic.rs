@@ -563,6 +563,8 @@ impl super::J1939Unit for HydraulicControlUnit {
         network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
+        // TODO: This lock is held for the entire tick, which is not ideal.
+        // TODO: If the lock is not acquired, the tick will not be able to send a motion command.
         if let Ok(runtime_state) = runtime_state.try_read() {
             self.send_motion_command(network, &runtime_state.state.motion_command)
                 .await?;
@@ -580,9 +582,11 @@ impl super::J1939Unit for HydraulicControlUnit {
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         if let crate::core::Object::Motion(motion) = object {
-            let state = &mut runtime_state.write().await.state;
-            state.motion_command = motion.clone();
-            state.motion_command_instant = Some(std::time::Instant::now());
+            {
+                let state = &mut runtime_state.write().await.state;
+                state.motion_command = motion.clone();
+                state.motion_command_instant = Some(std::time::Instant::now());
+            }
 
             self.send_motion_command(network, motion).await?;
             ctx.tx_mark();

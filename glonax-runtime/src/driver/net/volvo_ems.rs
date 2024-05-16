@@ -107,6 +107,8 @@ impl super::J1939Unit for VolvoD7E {
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
+        // TODO: This lock is held for the entire tick, which is not ideal.
+        // TODO: If the lock is not acquired, the tick will not be able to send an engine command.
         if let Ok(request) = runtime_state.try_read() {
             let request = request.governor_mode();
             match request.state {
@@ -134,15 +136,43 @@ impl super::J1939Unit for VolvoD7E {
 
     async fn trigger(
         &self,
-        _ctx: &mut super::NetDriverContext,
-        _network: &crate::net::ControlNetwork,
+        ctx: &mut super::NetDriverContext,
+        network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
+        use super::engine::Engine;
+
         if let crate::core::Object::Engine(engine) = object {
-            let state = &mut runtime_state.write().await.state;
-            state.engine_command = Some(*engine);
-            state.engine_command_instant = Some(std::time::Instant::now());
+            {
+                let state = &mut runtime_state.write().await.state;
+                state.engine_command = Some(*engine);
+                state.engine_command_instant = Some(std::time::Instant::now());
+            }
+
+            // TODO: This lock is held for the entire tick, which is not ideal.
+            // TODO: If the lock is not acquired, the tick will not be able to send an engine command.
+            if let Ok(request) = runtime_state.try_read() {
+                let request = request.governor_mode();
+                match request.state {
+                    crate::core::EngineState::NoRequest => {
+                        network.send(&self.request(request.rpm)).await?;
+                        ctx.tx_mark();
+                    }
+                    crate::core::EngineState::Starting => {
+                        network.send(&self.start(request.rpm)).await?;
+                        ctx.tx_mark();
+                    }
+                    crate::core::EngineState::Stopping => {
+                        network.send(&self.stop(request.rpm)).await?;
+                        ctx.tx_mark();
+                    }
+                    crate::core::EngineState::Request => {
+                        network.send(&self.request(request.rpm)).await?;
+                        ctx.tx_mark();
+                    }
+                }
+            }
         }
 
         Ok(())
