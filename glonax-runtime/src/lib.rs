@@ -124,7 +124,7 @@ pub struct MachineState {
     /// Engine state actual instant.
     pub engine_signal_instant: Option<std::time::Instant>,
     /// Engine command.
-    pub engine_command: Option<core::Engine>, // COMMAND
+    pub engine_command: Option<core::Engine>, // INNER SERVICE (engine)
     /// Engine state request instant.
     pub engine_command_instant: Option<std::time::Instant>,
 

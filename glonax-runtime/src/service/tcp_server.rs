@@ -170,19 +170,14 @@ impl TcpServer {
                                 .unwrap();
 
                             if session.is_control() {
-                                // TODO: Replace with command sender
-                                let state = &mut runtime_state.write().await.state;
-                                state.engine_command = Some(engine);
-                                state.engine_command_instant = Some(std::time::Instant::now());
-
                                 log::debug!("Engine request RPM: {}", engine.rpm);
 
-                                // if let Err(e) =
-                                //     command_tx.send(crate::core::Object::Engine(engine)).await
-                                // {
-                                //     log::error!("Failed to queue command: {}", e);
-                                //     break;
-                                // }
+                                if let Err(e) =
+                                    command_tx.send(crate::core::Object::Engine(engine)).await
+                                {
+                                    log::error!("Failed to queue command: {}", e);
+                                    break;
+                                }
                             } else {
                                 log::warn!("Session is not authorized to control the machine");
                             }
