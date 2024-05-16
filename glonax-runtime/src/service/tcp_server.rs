@@ -297,8 +297,6 @@ impl Service<TcpServerConfig> for TcpServer {
     where
         Self: Sized,
     {
-        log::debug!("Listening on: {}", config.listen);
-
         let semaphore = Arc::new(Semaphore::new(config.max_connections));
 
         Self {
