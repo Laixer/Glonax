@@ -43,7 +43,7 @@ impl std::fmt::Display for FrameError {
 }
 
 enum FrameMessage {
-    _Error = 0x0,
+    Error = 0x0,
     Echo = 0x1,
     Session = 0x10,
     Shutdown = 0x11,
@@ -195,6 +195,44 @@ impl super::Packetize for Session {
         buf.put(name_bytes);
 
         buf.to_vec()
+    }
+}
+
+#[derive(Debug)]
+pub enum SessionError {
+    UnknownRequest = 0x0,
+    UnknownMessage = 0x1,
+    UnauthorizedControl = 0x2,
+    UnauthorizedCommand = 0x3,
+}
+
+impl SessionError {}
+
+impl TryFrom<Vec<u8>> for SessionError {
+    type Error = ();
+
+    fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+        match buffer[0] {
+            0x0 => Ok(Self::UnknownRequest),
+            0x1 => Ok(Self::UnknownMessage),
+            0x2 => Ok(Self::UnauthorizedControl),
+            0x3 => Ok(Self::UnauthorizedCommand),
+            _ => Err(()),
+        }
+    }
+}
+
+impl super::Packetize for SessionError {
+    const MESSAGE_TYPE: u8 = FrameMessage::Error as u8;
+    const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<u8>());
+
+    fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Self::UnknownRequest => vec![0x0],
+            Self::UnknownMessage => vec![0x1],
+            Self::UnauthorizedControl => vec![0x2],
+            Self::UnauthorizedCommand => vec![0x3],
+        }
     }
 }
 

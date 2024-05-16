@@ -114,6 +114,13 @@ async fn main() -> anyhow::Result<()> {
 
         let frame = client.read_frame().await?;
         match frame.message {
+            glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
+                let error = client
+                    .recv_packet::<glonax::protocol::frame::SessionError>(frame.payload_length)
+                    .await?;
+
+                eprintln!("{:?}", error);
+            }
             glonax::core::Status::MESSAGE_TYPE => {
                 let status = client
                     .recv_packet::<glonax::core::Status>(frame.payload_length)

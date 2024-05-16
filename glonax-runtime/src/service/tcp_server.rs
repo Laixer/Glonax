@@ -121,9 +121,8 @@ impl TcpServer {
                                         client.send_packet(actor).await.unwrap();
                                     }
                                 }
-                                // TODO: Respond with error
                                 _ => {
-                                    log::warn!("Unknown request type: {}", request.message());
+                                    log::warn!("Unknown request: {}", request.message());
                                 }
                             }
                         }
@@ -265,7 +264,7 @@ impl TcpServer {
                             }
                         }
                         _ => {
-                            log::debug!("Unknown message type: {}", frame.message);
+                            log::debug!("Unknown message: {}", frame.message);
                         }
                     }
                 }
