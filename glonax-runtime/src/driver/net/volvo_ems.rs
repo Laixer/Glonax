@@ -150,7 +150,7 @@ pub enum VolvoEngineState {
     Starting = 0b1100_0011,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 struct Test {
     /// Engine command.
     engine_command: Option<core::Engine>, // INNER SERVICE (engine)
@@ -158,16 +158,6 @@ struct Test {
     engine_command_instant: Option<std::time::Instant>,
 }
 
-impl std::default::Default for Test {
-    fn default() -> Self {
-        Self {
-            engine_command: None,
-            engine_command_instant: None,
-        }
-    }
-}
-
-#[derive(Default)] // TODO: Do we need this?
 pub struct VolvoD7E {
     /// Destination address.
     destination_address: u8,
