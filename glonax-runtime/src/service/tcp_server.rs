@@ -273,6 +273,9 @@ impl TcpServer {
                     if e.kind() == std::io::ErrorKind::UnexpectedEof {
                         log::warn!("Session abandoned for: {}", session.name());
                         break;
+                    } else if e.kind() == std::io::ErrorKind::ConnectionReset {
+                        log::warn!("Session reset for: {}", session.name());
+                        break;
                     } else {
                         log::warn!("Failed to read frame: {}", e);
                     }
