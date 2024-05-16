@@ -191,6 +191,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 }
 
+// TODO: Should be replaced by NetworkAuthorityAtx
 pub struct NetworkAuthorityTx {
     interface: String,
     network: ControlNetwork,
