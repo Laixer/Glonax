@@ -237,10 +237,15 @@ where
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
         log::debug!("Wait on command runtime service '{}'", self.service.ctx());
 
+        // TODO: Add timeout
         tokio::select! {
             _ = async {
-                while let Some(signal) = command_rx.recv().await {
-                    self.service.on_command(self.operand.clone(), &signal).await;
+                loop {
+                    if let Ok(Some(signal)) = tokio::time::timeout(std::time::Duration::from_millis(10), command_rx.recv()).await {
+                        self.service.on_command(self.operand.clone(), &signal).await;
+                    } else {
+                        self.service.tick(self.operand.clone(), self.command_tx.clone()).await;
+                    }
                 }
             } => {}
             _ = self.shutdown.recv() => {}
