@@ -85,7 +85,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         let loop_duration = loop_start.elapsed();
         log::trace!("Control loop duration: {:?}", loop_duration);
 
-        if loop_duration > std::time::Duration::from_millis(20) {
+        if loop_duration > std::time::Duration::from_millis(10) {
             log::warn!("Control loop delta is too high: {:?}", loop_duration);
         }
 

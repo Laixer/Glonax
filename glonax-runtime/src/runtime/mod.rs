@@ -226,8 +226,12 @@ where
     async fn tick(&mut self, duration: std::time::Duration) {
         log::debug!("Tick runtime service '{}'", self.service.ctx());
 
+        let mut interval = tokio::time::interval(duration);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
         while self.shutdown.is_empty() {
-            tokio::time::sleep(duration).await;
+            interval.tick().await;
+
             self.service
                 .tick(self.operand.clone(), self.command_tx.clone())
                 .await;

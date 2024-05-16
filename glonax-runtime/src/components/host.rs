@@ -1,4 +1,4 @@
-use sysinfo::{Components, System};
+use sysinfo::System;
 
 use crate::{
     runtime::{CommandSender, Component, ComponentContext},
