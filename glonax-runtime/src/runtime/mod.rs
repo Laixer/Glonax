@@ -269,6 +269,8 @@ pub struct ComponentContext {
     pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around.
     /// Last tick.
     last_tick: std::time::Instant,
+    /// Iteration count.
+    iteration: u64,
 }
 
 impl ComponentContext {
@@ -277,10 +279,17 @@ impl ComponentContext {
         self.last_tick.elapsed()
     }
 
+    /// Retrieve the iteration count.
+    #[inline]
+    pub fn iteration(&self) -> u64 {
+        self.iteration
+    }
+
     /// Called after all components are ticked.
     pub(crate) fn post_tick(&mut self) {
         self.actuators.clear();
         self.last_tick = std::time::Instant::now();
+        self.iteration += 1;
     }
 }
 
@@ -291,6 +300,7 @@ impl Default for ComponentContext {
             target: None,
             actuators: std::collections::HashMap::new(),
             last_tick: std::time::Instant::now(),
+            iteration: 0,
         }
     }
 }

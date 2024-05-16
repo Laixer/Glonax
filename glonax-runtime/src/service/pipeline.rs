@@ -39,6 +39,15 @@ impl Pipeline {
 }
 
 impl Service<crate::runtime::NullConfig> for Pipeline {
+    /// Creates a new instance of `Pipeline`.
+    ///
+    /// # Arguments
+    ///
+    /// * `_` - A `NullConfig` object (ignored).
+    ///
+    /// # Returns
+    ///
+    /// A new instance of `Pipeline`.
     fn new(_: crate::runtime::NullConfig) -> Self
     where
         Self: Sized,
@@ -49,10 +58,21 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         }
     }
 
+    /// Returns the service context for the `Pipeline`.
+    ///
+    /// # Returns
+    ///
+    /// A `ServiceContext` object representing the service context for the `Pipeline`.
     fn ctx(&self) -> ServiceContext {
         ServiceContext::new("pipeline")
     }
 
+    /// Executes the tick operation for the `Pipeline`.
+    ///
+    /// # Arguments
+    ///
+    /// * `runtime_state` - A `SharedOperandState` object representing the runtime state.
+    /// * `command_tx` - A `CommandSender` object representing the command sender.
     async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let machine_state = &mut runtime_state.write().await.state;
 

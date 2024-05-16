@@ -7,7 +7,6 @@ use crate::{
 
 pub struct HostComponent {
     system: System,
-    components: Components,
 }
 
 impl<Cnf: Clone> Component<Cnf> for HostComponent {
@@ -17,19 +16,21 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
     {
         Self {
             system: System::new_all(),
-            components: Components::new_with_refreshed_list(),
         }
     }
 
     fn tick(
         &mut self,
-        _ctx: &mut ComponentContext,
+        ctx: &mut ComponentContext,
         state: &mut MachineState,
         _command_tx: CommandSender,
     ) {
+        if ctx.iteration() % 20 != 0 {
+            return;
+        }
+
         self.system.refresh_memory();
         self.system.refresh_cpu();
-        self.components.refresh();
 
         let load_avg = System::load_average();
 
@@ -39,18 +40,5 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         state.vms_signal.cpu_load = (load_avg.one, load_avg.five, load_avg.fifteen);
         state.vms_signal.uptime = System::uptime();
         state.vms_signal.timestamp = chrono::Utc::now();
-
-        for component in &self.components {
-            if let Some(critical) = component.critical() {
-                if component.temperature() > critical {
-                    // TODO: Set system state to critical
-                    log::warn!(
-                        "{} is reaching cirital temperatures: {}°C",
-                        component.label(),
-                        component.temperature(),
-                    );
-                }
-            }
-        }
     }
 }
