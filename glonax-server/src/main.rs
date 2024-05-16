@@ -130,7 +130,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         .with_shutdown()
         .build();
 
-    runtime.schedule_service_default::<service::Host>(SERVICE_HOST_INTERVAL);
+    // TODO: Dont need a service for this, just a component in the pipeline
+    // runtime.schedule_service_default::<service::Host>(SERVICE_HOST_INTERVAL);
 
     // TODO: Do we need a simulator?
     if config.is_simulation {
@@ -147,6 +148,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
         for j1939_net_config in &config.j1939 {
             runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
+
+            // TODO: Should not exist, trigger from component via command tx
             runtime.schedule_service::<service::NetworkAuthorityTx, _>(
                 j1939_net_config.clone(),
                 Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
@@ -168,7 +171,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::runtime::Service;
     let mut pipe = service::Pipeline::new(glonax::runtime::NullConfig {});
 
-    pipe.insert_component::<components::WorldBuilder>(0);
+    pipe.insert_component::<glonax::components::HostComponent>(0);
+    pipe.insert_component::<components::WorldBuilder>(1);
     pipe.insert_component::<components::SensorFusion>(2);
     pipe.insert_component::<components::LocalActor>(3);
 
@@ -177,11 +181,11 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.insert_component::<components::Controller>(10);
     }
 
-    if config.mode != config::OperationMode::PilotRestrict {
-        runtime.run_interval(pipe, Duration::from_millis(10)).await;
-    } else {
-        runtime.wait_for_shutdown().await;
-    }
+    // if config.mode != config::OperationMode::PilotRestrict {
+    runtime.run_interval(pipe, Duration::from_millis(10)).await;
+    // } else {
+    //     runtime.wait_for_shutdown().await;
+    // }
 
     log::info!("Waiting for shutdown");
 
