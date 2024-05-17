@@ -295,18 +295,17 @@ impl super::J1939Unit for VolvoD7E {
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
-        if let Ok(request) = runtime_state.try_read() {
-            self.signal.set(Test {
+        let request = if let Ok(request) = runtime_state.try_read() {
+            let request = Test {
                 engine_command: Some(request.state.engine_signal),
                 engine_command_instant: request.state.engine_command_instant,
-            });
+            };
+            self.signal.set(request);
+            request
         } else {
             log::warn!("VolvoD7E tick failed to acquire runtime state lock");
-        }
-
-        let request = self.signal.get();
-
-        // log::debug!("VolvoD7E tick, send engine command");
+            self.signal.get()
+        };
 
         let request = self.governor_mode(request.engine_command.unwrap());
         match request.state {
@@ -328,34 +327,6 @@ impl super::J1939Unit for VolvoD7E {
             }
         }
 
-        // } else {
-        //     log::warn!("VolvoD7E tick failed to acquire runtime state lock");
-        // }
-
-        // TODO: This lock is held for the entire tick, which is not ideal.
-        // TODO: If the lock is not acquired, the tick will not be able to send an engine command.
-        // if let Ok(request) = runtime_state.try_read() {
-        //     let request = request.governor_mode();
-        //     match request.state {
-        //         crate::core::EngineState::NoRequest => {
-        //             network.send(&self.request(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //         crate::core::EngineState::Starting => {
-        //             network.send(&self.start(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //         crate::core::EngineState::Stopping => {
-        //             network.send(&self.stop(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //         crate::core::EngineState::Request => {
-        //             network.send(&self.request(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //     }
-        // }
-
         Ok(())
     }
 
@@ -369,66 +340,42 @@ impl super::J1939Unit for VolvoD7E {
         use super::engine::Engine;
 
         if let crate::core::Object::Engine(engine) = object {
-            // log::debug!("VolvoD7E trigger");
-
             self.value.set(Test {
                 engine_command: Some(*engine),
                 engine_command_instant: Some(std::time::Instant::now()),
             });
 
-            if let Ok(request) = runtime_state.try_read() {
-                log::debug!("VolvoD7E trigger, send engine command");
+            let request = if let Ok(request) = runtime_state.try_read() {
+                let request = Test {
+                    engine_command: Some(request.state.engine_signal),
+                    engine_command_instant: request.state.engine_command_instant,
+                };
+                self.signal.set(request);
+                request
+            } else {
+                log::warn!("VolvoD7E tick failed to acquire runtime state lock");
+                self.signal.get()
+            };
 
-                let request = self.governor_mode(request.state.engine_signal);
-                match request.state {
-                    crate::core::EngineState::NoRequest => {
-                        network.send(&self.request(request.rpm)).await?;
-                        ctx.tx_mark();
-                    }
-                    crate::core::EngineState::Starting => {
-                        network.send(&self.start(request.rpm)).await?;
-                        ctx.tx_mark();
-                    }
-                    crate::core::EngineState::Stopping => {
-                        network.send(&self.stop(request.rpm)).await?;
-                        ctx.tx_mark();
-                    }
-                    crate::core::EngineState::Request => {
-                        network.send(&self.request(request.rpm)).await?;
-                        ctx.tx_mark();
-                    }
+            let request = self.governor_mode(request.engine_command.unwrap());
+            match request.state {
+                crate::core::EngineState::NoRequest => {
+                    network.send(&self.request(request.rpm)).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::EngineState::Starting => {
+                    network.send(&self.start(request.rpm)).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::EngineState::Stopping => {
+                    network.send(&self.stop(request.rpm)).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::EngineState::Request => {
+                    network.send(&self.request(request.rpm)).await?;
+                    ctx.tx_mark();
                 }
             }
-
-            // {
-            //     let state = &mut runtime_state.write().await.state;
-            //     state.engine_command = Some(*engine);
-            //     state.engine_command_instant = Some(std::time::Instant::now());
-            // }
-
-            // // TODO: This lock is held for the entire tick, which is not ideal.
-            // // TODO: If the lock is not acquired, the tick will not be able to send an engine command.
-            // if let Ok(request) = runtime_state.try_read() {
-            //     let request = request.governor_mode();
-            //     match request.state {
-            //         crate::core::EngineState::NoRequest => {
-            //             network.send(&self.request(request.rpm)).await?;
-            //             ctx.tx_mark();
-            //         }
-            //         crate::core::EngineState::Starting => {
-            //             network.send(&self.start(request.rpm)).await?;
-            //             ctx.tx_mark();
-            //         }
-            //         crate::core::EngineState::Stopping => {
-            //             network.send(&self.stop(request.rpm)).await?;
-            //             ctx.tx_mark();
-            //         }
-            //         crate::core::EngineState::Request => {
-            //             network.send(&self.request(request.rpm)).await?;
-            //             ctx.tx_mark();
-            //         }
-            //     }
-            // }
         }
 
         Ok(())
