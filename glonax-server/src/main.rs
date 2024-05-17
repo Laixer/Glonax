@@ -111,8 +111,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         (version_major, version_minor, version_patch),
     );
 
-    glonax::set_instance(instance.clone());
-
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);
@@ -127,6 +125,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     if config.is_simulation {
         log::info!("Running in simulation mode");
     }
+
+    glonax::global::set_instance(instance.clone());
 
     let mut runtime = glonax::runtime::builder(&config, instance.clone())?
         .with_shutdown()

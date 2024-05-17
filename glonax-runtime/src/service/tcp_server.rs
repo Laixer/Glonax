@@ -80,7 +80,7 @@ impl TcpServer {
 
                         match request.message() {
                             crate::core::Instance::MESSAGE_TYPE => {
-                                client.send_packet(crate::instance()).await.unwrap();
+                                client.send_packet(crate::global::instance()).await.unwrap();
                             }
                             crate::core::Status::MESSAGE_TYPE => {
                                 client
@@ -124,7 +124,7 @@ impl TcpServer {
 
                         log::info!("Session started for: {}", session.name());
 
-                        client.send_packet(crate::instance()).await.unwrap();
+                        client.send_packet(crate::global::instance()).await.unwrap();
                     }
                     crate::protocol::frame::Echo::MESSAGE_TYPE => {
                         let echo = client
