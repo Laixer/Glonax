@@ -319,22 +319,16 @@ impl Default for ComponentContext {
 ///
 /// Note that this method is certain to block.
 #[inline]
-pub fn builder<Cnf: Clone>(
-    config: &Cnf,
-    instance: crate::core::Instance,
-) -> self::Result<builder::Builder<Cnf>> {
-    builder::Builder::new(config, instance)
+pub fn builder<Cnf: Clone>(config: &Cnf) -> self::Result<builder::Builder<Cnf>> {
+    builder::Builder::new(config)
 }
 
 pub struct Runtime<Conf> {
     /// Runtime configuration.
     #[allow(dead_code)]
     config: Conf, // TODO: Remove config.
-    /// Instance.
-    #[allow(dead_code)]
-    instance: crate::core::Instance, // TODO: Remove instance.
     /// Glonax operand.
-    operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
+    operand: SharedOperandState,
     /// Signal sender.
     signal_tx: SignalSender,
     /// Signal receiver.
