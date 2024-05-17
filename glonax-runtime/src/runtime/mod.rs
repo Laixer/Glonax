@@ -369,13 +369,13 @@ impl Runtime {
             self.shutdown.0.subscribe(),
         );
 
-        // TODO: Check if runtime is shutdown
-
-        self.spawn(async move {
-            service_descriptor.setup().await;
-            service_descriptor.wait_io().await;
-            service_descriptor.teardown().await;
-        });
+        if self.shutdown.1.is_empty() {
+            self.spawn(async move {
+                service_descriptor.setup().await;
+                service_descriptor.wait_io().await;
+                service_descriptor.teardown().await;
+            });
+        }
     }
 
     /// Listen for signal event service in the background.
@@ -397,13 +397,13 @@ impl Runtime {
             self.shutdown.0.subscribe(),
         );
 
-        // TODO: Check if runtime is shutdown
-
-        self.spawn(async move {
-            service_descriptor.setup().await;
-            service_descriptor.on_command(command_rx).await;
-            service_descriptor.teardown().await;
-        });
+        if self.shutdown.1.is_empty() {
+            self.spawn(async move {
+                service_descriptor.setup().await;
+                service_descriptor.on_command(command_rx).await;
+                service_descriptor.teardown().await;
+            });
+        }
     }
 
     /// Schedule a component to run in the background.
@@ -423,13 +423,13 @@ impl Runtime {
             self.shutdown.0.subscribe(),
         );
 
-        // TODO: Check if runtime is shutdown
-
-        self.spawn(async move {
-            service_descriptor.setup().await;
-            service_descriptor.tick(duration).await;
-            service_descriptor.teardown().await;
-        });
+        if self.shutdown.1.is_empty() {
+            self.spawn(async move {
+                service_descriptor.setup().await;
+                service_descriptor.tick(duration).await;
+                service_descriptor.teardown().await;
+            });
+        }
     }
 
     /// Schedule a component to run in the background with default configuration.
@@ -448,13 +448,13 @@ impl Runtime {
             self.shutdown.0.subscribe(),
         );
 
-        // TODO: Check if runtime is shutdown
-
-        self.spawn(async move {
-            service_descriptor.setup().await;
-            service_descriptor.tick(duration).await;
-            service_descriptor.teardown().await;
-        });
+        if self.shutdown.1.is_empty() {
+            self.spawn(async move {
+                service_descriptor.setup().await;
+                service_descriptor.tick(duration).await;
+                service_descriptor.teardown().await;
+            });
+        }
     }
 
     /// Run a service in the background.
@@ -473,11 +473,11 @@ impl Runtime {
             self.shutdown.0.subscribe(),
         );
 
-        // TODO: Check if runtime is shutdown
-
-        service_descriptor.setup().await;
-        service_descriptor.tick(duration).await;
-        service_descriptor.teardown().await;
+        if self.shutdown.1.is_empty() {
+            service_descriptor.setup().await;
+            service_descriptor.tick(duration).await;
+            service_descriptor.teardown().await;
+        }
     }
 
     /// Wait for the runtime to shutdown.
