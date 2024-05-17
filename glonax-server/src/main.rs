@@ -111,6 +111,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         (version_major, version_minor, version_patch),
     );
 
+    glonax::set_instance(instance.clone());
+
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);

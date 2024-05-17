@@ -55,6 +55,18 @@ pub mod runtime;
 pub use self::runtime::Error;
 pub use self::runtime::Runtime;
 
+static INSTANCE: std::sync::OnceLock<core::Instance> = std::sync::OnceLock::new();
+
+#[inline]
+pub fn instance() -> &'static core::Instance {
+    INSTANCE.get().unwrap()
+}
+
+#[inline]
+pub fn set_instance(instance: core::Instance) {
+    INSTANCE.set(instance).unwrap();
+}
+
 pub mod consts {
     /// Glonax runtime version.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");
