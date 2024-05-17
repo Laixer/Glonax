@@ -8,21 +8,20 @@ use crate::Runtime;
 /// the runtime loop.
 ///
 /// The runtime builder *must* be used to construct a runtime.
-pub struct Builder<Cnf>(Runtime<Cnf>);
+pub struct Builder(Runtime);
 
-impl<Cnf: Clone> Builder<Cnf> {
+impl Builder {
     /// Construct runtime service from configuration.
     ///
     /// Note that this method is certain to block.
-    pub fn new(config: &Cnf) -> super::Result<Self> {
+    pub fn new() -> super::Result<Self> {
         let (signal_tx, signal_rx) = std::sync::mpsc::channel();
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
-        Ok(Self(Runtime::<Cnf> {
-            config: config.clone(),
+        Ok(Self(Runtime {
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
                 state: crate::MachineState::default(),
-                governor: crate::Governor::new(800, 2_100), // TODO: Remove hardcoded values, use config
+                governor: crate::Governor::new(800, 2_100), // TODO: Remove governor
             })),
             signal_tx,
             signal_rx: Some(signal_rx),
@@ -66,7 +65,7 @@ impl<Cnf: Clone> Builder<Cnf> {
 
     /// Build the runtime.
     #[inline]
-    pub fn build(self) -> Runtime<Cnf> {
+    pub fn build(self) -> Runtime {
         self.0
     }
 }

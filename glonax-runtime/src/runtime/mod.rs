@@ -319,14 +319,11 @@ impl Default for ComponentContext {
 ///
 /// Note that this method is certain to block.
 #[inline]
-pub fn builder<Cnf: Clone>(config: &Cnf) -> self::Result<builder::Builder<Cnf>> {
-    builder::Builder::new(config)
+pub fn builder() -> self::Result<builder::Builder> {
+    builder::Builder::new()
 }
 
-pub struct Runtime<Conf> {
-    /// Runtime configuration.
-    #[allow(dead_code)]
-    config: Conf, // TODO: Remove config.
+pub struct Runtime {
     /// Glonax operand.
     operand: SharedOperandState,
     /// Signal sender.
@@ -346,7 +343,7 @@ pub struct Runtime<Conf> {
     ),
 }
 
-impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
+impl Runtime {
     /// Spawns a future onto the runtime's executor.
     ///
     /// This method spawns a future onto the runtime's executor, allowing it to run in the background.
@@ -371,6 +368,8 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );
+
+        // TODO: Check if runtime is shutdown
 
         self.spawn(async move {
             service_descriptor.setup().await;
@@ -398,6 +397,8 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.shutdown.0.subscribe(),
         );
 
+        // TODO: Check if runtime is shutdown
+
         self.spawn(async move {
             service_descriptor.setup().await;
             service_descriptor.on_command(command_rx).await;
@@ -422,6 +423,8 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.shutdown.0.subscribe(),
         );
 
+        // TODO: Check if runtime is shutdown
+
         self.spawn(async move {
             service_descriptor.setup().await;
             service_descriptor.tick(duration).await;
@@ -445,6 +448,8 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.shutdown.0.subscribe(),
         );
 
+        // TODO: Check if runtime is shutdown
+
         self.spawn(async move {
             service_descriptor.setup().await;
             service_descriptor.tick(duration).await;
@@ -467,6 +472,8 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );
+
+        // TODO: Check if runtime is shutdown
 
         service_descriptor.setup().await;
         service_descriptor.tick(duration).await;

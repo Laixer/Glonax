@@ -129,7 +129,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     // TODO: Let the runtie builder set the instance
     glonax::global::set_instance(instance);
 
-    let mut runtime = glonax::runtime::builder(&config)?.with_shutdown().build();
+    let mut runtime = glonax::runtime::builder()?.with_shutdown().build();
 
     // TODO: Dont need a service for this, just a component in the pipeline
     // runtime.schedule_service_default::<service::Host>(SERVICE_HOST_INTERVAL);
