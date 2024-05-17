@@ -6,7 +6,7 @@ use std::{
 use glonax_serial::{BaudRate, Uart};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 
-use crate::runtime::{CommandSender, Service, ServiceContext, SharedOperandState};
+use crate::runtime::{CommandSender, Service, ServiceContext, SharedOperandState, SignalSender};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct GnssConfig {
@@ -42,29 +42,42 @@ impl Service<GnssConfig> for Gnss {
         ServiceContext::with_address("gnss", self.path.display().to_string())
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState, _command_tx: CommandSender) {
+    async fn wait_io(
+        &mut self,
+        runtime_state: SharedOperandState,
+        signal_tx: SignalSender,
+        _command_tx: CommandSender,
+    ) {
         if let Ok(Some(line)) = self.line_reader.next_line().await {
             if let Some(message) = self.driver.decode(line) {
-                let mut runtime_state = runtime_state.write().await;
-                runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
+                let mut gnss = crate::core::Gnss::default();
 
                 if let Some((lat, long)) = message.coordinates {
-                    runtime_state.state.gnss_signal.location = (lat, long)
+                    gnss.location = (lat, long)
                 }
                 if let Some(altitude) = message.altitude {
-                    runtime_state.state.gnss_signal.altitude = altitude;
+                    gnss.altitude = altitude;
                 }
                 if let Some(speed) = message.speed {
                     const KNOT_TO_METER_PER_SECOND: f32 = 0.5144;
 
-                    runtime_state.state.gnss_signal.speed = speed * KNOT_TO_METER_PER_SECOND;
+                    gnss.speed = speed * KNOT_TO_METER_PER_SECOND;
                 }
                 if let Some(heading) = message.heading {
-                    runtime_state.state.gnss_signal.heading = heading;
+                    gnss.heading = heading;
                 }
                 if let Some(satellites) = message.satellites {
-                    runtime_state.state.gnss_signal.satellites = satellites;
+                    gnss.satellites = satellites;
                 }
+
+                if let Err(e) = signal_tx.send(crate::core::Object::GNSS(gnss)) {
+                    log::error!("Failed to send GNSS signal: {}", e);
+                }
+
+                // TODO: Needs to be removed
+                let mut runtime_state = runtime_state.write().await;
+                runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
+                runtime_state.state.gnss_signal = gnss;
             }
         }
     }

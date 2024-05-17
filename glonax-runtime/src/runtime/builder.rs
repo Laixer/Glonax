@@ -15,6 +15,7 @@ impl<Cnf: Clone> Builder<Cnf> {
     ///
     /// Note that this method is certain to block.
     pub fn new(config: &Cnf, instance: crate::core::Instance) -> super::Result<Self> {
+        let (signal_tx, signal_rx) = std::sync::mpsc::channel();
         let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(Runtime::<Cnf> {
@@ -24,6 +25,8 @@ impl<Cnf: Clone> Builder<Cnf> {
                 state: crate::MachineState::default(),
                 governor: crate::Governor::new(800, 2_100), // TODO: Remove hardcoded values, use config
             })),
+            signal_tx,
+            signal_rx: Some(signal_rx),
             motion_tx,
             motion_rx: Some(motion_rx),
             tasks: Vec::new(),

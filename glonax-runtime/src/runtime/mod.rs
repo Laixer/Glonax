@@ -6,7 +6,8 @@ pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-// TODO: Rename to CommandSender
+pub type SignalSender = std::sync::mpsc::Sender<crate::core::Object>;
+pub type SignalReceiver = std::sync::mpsc::Receiver<crate::core::Object>;
 pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
@@ -97,6 +98,7 @@ pub trait Service<Cnf> {
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
+        _signal_tx: SignalSender,
         _command_tx: CommandSender,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
@@ -154,6 +156,7 @@ where
     service: S,
     _config: C,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
+    signal_tx: SignalSender,
     command_tx: CommandSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
 }
@@ -165,6 +168,7 @@ where
     fn new(
         service: S,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
+        signal_tx: SignalSender,
         command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
@@ -172,6 +176,7 @@ where
             service,
             _config: crate::runtime::NullConfig,
             operand,
+            signal_tx,
             command_tx,
             shutdown,
         }
@@ -186,6 +191,7 @@ where
     fn with_config(
         config: C,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
+        signal_tx: SignalSender,
         command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
@@ -193,6 +199,7 @@ where
             service: S::new(config.clone()),
             _config: config,
             operand,
+            signal_tx,
             command_tx,
             shutdown,
         }
@@ -328,10 +335,14 @@ pub struct Runtime<Conf> {
     instance: crate::core::Instance, // TODO: Remove instance.
     /// Glonax operand.
     operand: SharedOperandState, // TODO: Generic, TODO: Remove instance from operand.
+    /// Signal sender.
+    signal_tx: SignalSender,
+    /// Signal receiver.
+    signal_rx: Option<SignalReceiver>,
     /// Motion command sender.
-    motion_tx: CommandSender,
+    motion_tx: CommandSender, // TODO: Rename to command_tx.
     /// Motion command receiver.
-    motion_rx: Option<CommandReceiver>,
+    motion_rx: Option<CommandReceiver>, // TODO: Rename to command_rx.
     /// Runtime tasks.
     tasks: Vec<tokio::task::JoinHandle<()>>, // TODO: Rename to task pool.
     /// Runtime event bus.
@@ -362,6 +373,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
+            self.signal_tx.clone(),
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -387,6 +399,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
+            self.signal_tx.clone(),
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -410,6 +423,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
+            self.signal_tx.clone(),
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -432,6 +446,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let mut service_descriptor = ServiceDescriptor::<S, _>::new(
             S::new(crate::runtime::NullConfig),
             self.operand.clone(),
+            self.signal_tx.clone(),
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -454,6 +469,7 @@ impl<Cnf: Clone + Send + 'static> Runtime<Cnf> {
         let mut service_descriptor = ServiceDescriptor::new(
             service,
             self.operand.clone(),
+            self.signal_tx.clone(),
             self.motion_tx.clone(),
             self.shutdown.0.subscribe(),
         );

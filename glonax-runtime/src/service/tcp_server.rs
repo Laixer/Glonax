@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
-use crate::runtime::{CommandSender, Service, ServiceContext, SharedOperandState};
+use crate::runtime::{CommandSender, Service, ServiceContext, SharedOperandState, SignalSender};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct TcpServerConfig {
@@ -318,7 +318,12 @@ impl Service<TcpServerConfig> for TcpServer {
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
     }
 
-    async fn wait_io(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
+    async fn wait_io(
+        &mut self,
+        runtime_state: SharedOperandState,
+        _signal_tx: SignalSender,
+        command_tx: CommandSender,
+    ) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
