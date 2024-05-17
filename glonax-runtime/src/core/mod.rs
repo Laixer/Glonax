@@ -19,7 +19,10 @@ mod target;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
+    Control(Control),
     Engine(Engine),
+    GNSS(Gnss),
+    Host(Host),
     Motion(Motion),
     Target(Target),
 }

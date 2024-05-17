@@ -211,12 +211,10 @@ where
     }
 
     async fn wait_io(&mut self) {
-        log::debug!("Wait on IO runtime service '{}'", self.service.ctx());
-
         tokio::select! {
             _ = async {
                 loop {
-                    self.service.wait_io(self.operand.clone(), self.command_tx.clone()).await;
+                    self.service.wait_io(self.operand.clone(), self.signal_tx.clone(), self.command_tx.clone()).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -224,8 +222,6 @@ where
     }
 
     async fn tick(&mut self, duration: std::time::Duration) {
-        log::debug!("Tick runtime service '{}'", self.service.ctx());
-
         let mut interval = tokio::time::interval(duration);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
@@ -248,20 +244,11 @@ where
     }
 
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
-        log::debug!("Wait on command runtime service '{}'", self.service.ctx());
-
         tokio::select! {
             _ = async {
                 while let Some(signal) = command_rx.recv().await {
                     self.service.on_command(self.operand.clone(), &signal).await;
                 }
-                // loop {
-                // if let Ok(Some(signal)) = tokio::time::timeout(std::time::Duration::from_millis(10), command_rx.recv()).await {
-                //     self.service.on_command(self.operand.clone(), &signal).await;
-                // } else {
-                //     self.service.tick(self.operand.clone(), self.command_tx.clone()).await;
-                // }
-                // }
             } => {}
             _ = self.shutdown.recv() => {}
         }
