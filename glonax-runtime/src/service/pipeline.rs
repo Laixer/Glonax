@@ -76,17 +76,8 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
-        let loop_start = std::time::Instant::now();
-
         for service in self.map.values_mut() {
             service.tick(&mut self.ctx, machine_state, command_tx.clone());
-        }
-
-        let loop_duration = loop_start.elapsed();
-        log::trace!("Control loop duration: {:?}", loop_duration);
-
-        if loop_duration > std::time::Duration::from_millis(10) {
-            log::warn!("Control loop delta is too high: {:?}", loop_duration);
         }
 
         self.ctx.post_tick();

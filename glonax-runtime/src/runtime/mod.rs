@@ -232,9 +232,18 @@ where
         while self.shutdown.is_empty() {
             interval.tick().await;
 
+            let tick_start = std::time::Instant::now();
+
             self.service
                 .tick(self.operand.clone(), self.command_tx.clone())
                 .await;
+
+            let tick_duration = tick_start.elapsed();
+            log::trace!("Tick loop duration: {:?}", tick_duration);
+
+            if tick_duration > duration {
+                log::warn!("Tick loop delta is too high: {:?}", tick_duration);
+            }
         }
     }
 
