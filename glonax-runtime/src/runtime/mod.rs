@@ -154,11 +154,11 @@ where
     C: Clone + Send + 'static,
 {
     service: S,
-    _config: C,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
     signal_tx: SignalSender,
     command_tx: CommandSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
+    phantom: std::marker::PhantomData<C>,
 }
 
 impl<S> ServiceDescriptor<S, crate::runtime::NullConfig>
@@ -174,11 +174,11 @@ where
     ) -> Self {
         Self {
             service,
-            _config: crate::runtime::NullConfig,
             operand,
             signal_tx,
             command_tx,
             shutdown,
+            phantom: std::marker::PhantomData,
         }
     }
 }
@@ -197,11 +197,11 @@ where
     ) -> Self {
         Self {
             service: S::new(config.clone()),
-            _config: config,
             operand,
             signal_tx,
             command_tx,
             shutdown,
+            phantom: std::marker::PhantomData,
         }
     }
 
