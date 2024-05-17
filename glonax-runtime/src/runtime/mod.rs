@@ -265,6 +265,8 @@ pub struct ComponentContext {
     pub world: World,
     /// Current target.
     pub target: Option<Target>,
+    /// Published signals.
+    pub signals: Vec<crate::core::Object>, // TODO:
     /// Actuator values.
     pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around.
     /// Last tick.
@@ -298,6 +300,7 @@ impl Default for ComponentContext {
         Self {
             world: World::default(),
             target: None,
+            signals: Vec::new(),
             actuators: std::collections::HashMap::new(),
             last_tick: std::time::Instant::now(),
             iteration: 0,

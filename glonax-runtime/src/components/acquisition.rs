@@ -15,10 +15,12 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
 
     fn tick(
         &mut self,
-        _ctx: &mut ComponentContext,
+        ctx: &mut ComponentContext,
         _state: &mut MachineState,
         _command_tx: CommandSender,
     ) {
         // TODO: Transmit the sensor data to the server peers
+
+        log::debug!("Acquisition tick, number of objects: {}", ctx.signals.len());
     }
 }

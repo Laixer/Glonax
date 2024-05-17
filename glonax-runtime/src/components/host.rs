@@ -34,11 +34,29 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
 
         let load_avg = System::load_average();
 
+        let vms_signal = crate::core::Host {
+            memory: (self.system.used_memory(), self.system.total_memory()),
+            swap: (self.system.used_swap(), self.system.total_swap()),
+            cpu_load: (load_avg.one, load_avg.five, load_avg.fifteen),
+            uptime: System::uptime(),
+            timestamp: chrono::Utc::now(),
+            status: crate::core::HostStatus::Nominal,
+        };
+
         state.vms_signal_instant = Some(std::time::Instant::now());
-        state.vms_signal.memory = (self.system.used_memory(), self.system.total_memory());
-        state.vms_signal.swap = (self.system.used_swap(), self.system.total_swap());
-        state.vms_signal.cpu_load = (load_avg.one, load_avg.five, load_avg.fifteen);
-        state.vms_signal.uptime = System::uptime();
-        state.vms_signal.timestamp = chrono::Utc::now();
+        state.vms_signal = vms_signal;
+
+        let mut found = false;
+        for signal in ctx.signals.iter_mut() {
+            if let crate::core::Object::Host(vms_signal) = signal {
+                *vms_signal = state.vms_signal;
+                found = true;
+                break;
+            }
+        }
+
+        if !found {
+            ctx.signals.push(crate::core::Object::Host(vms_signal));
+        }
     }
 }
