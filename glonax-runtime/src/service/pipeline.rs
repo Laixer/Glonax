@@ -1,4 +1,7 @@
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    time::{Duration, Instant},
+};
 
 use crate::runtime::{
     CommandSender, Component, ComponentContext, Service, ServiceContext, SharedOperandState,
@@ -76,8 +79,14 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
-        for service in self.map.values_mut() {
-            service.tick(&mut self.ctx, machine_state, command_tx.clone());
+        for component in self.map.values_mut() {
+            let component_tick_start = Instant::now();
+
+            component.tick(&mut self.ctx, machine_state, command_tx.clone());
+
+            if component_tick_start.elapsed() > Duration::from_millis(1) {
+                log::warn!("Component is falling behind");
+            }
         }
 
         self.ctx.post_tick();
