@@ -172,18 +172,18 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::runtime::Service;
     let mut pipe = service::Pipeline::new(glonax::runtime::NullConfig {});
 
-    pipe.insert_component::<glonax::components::HostComponent>(0);
-    pipe.insert_component::<glonax::components::Acquisition>(1);
-    pipe.insert_component::<components::WorldBuilder>(2);
+    pipe.add_component_default::<glonax::components::HostComponent>();
+    pipe.add_component_default::<glonax::components::Acquisition>();
+    pipe.add_component_default::<components::WorldBuilder>();
 
     if config.mode != config::OperationMode::PilotRestrict {
-        pipe.insert_component::<components::SensorFusion>(10);
-        pipe.insert_component::<components::LocalActor>(11);
+        pipe.add_component_default::<components::SensorFusion>();
+        pipe.add_component_default::<components::LocalActor>();
     }
 
     if config.mode == config::OperationMode::Autonomous {
-        pipe.insert_component::<components::Kinematic>(20);
-        pipe.insert_component::<components::Controller>(21);
+        pipe.add_component_default::<components::Kinematic>();
+        pipe.add_component_default::<components::Controller>();
     }
 
     runtime.run_interval(pipe, Duration::from_millis(10)).await;

@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use crate::runtime::{
     CommandSender, Component, ComponentContext, Service, ServiceContext, SharedOperandState,
@@ -9,35 +6,31 @@ use crate::runtime::{
 
 pub struct Pipeline {
     ctx: ComponentContext,
-    map: BTreeMap<i32, Box<dyn Component<crate::runtime::NullConfig> + Send + Sync>>,
+    components: Vec<Box<dyn Component<crate::runtime::NullConfig> + Send + Sync>>,
 }
 
 impl Pipeline {
-    // TODO: Add instance to new
-    /// Create a dynamic component with the given order.
-    ///
-    /// This method will create a dynamic component with the given order. The component will be
-    /// provided with a copy of the runtime configuration.
-    pub fn insert_component<C>(&mut self, order: i32)
-    where
-        C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
-    {
-        self.map
-            .insert(order, Box::new(C::new(crate::runtime::NullConfig {})));
-    }
-
-    // TODO: Add instance to new
     /// Add a component to the pipeline.
     ///
     /// This method will add a component to the pipeline. The component will be provided with a copy
     /// of the runtime configuration.
+
     pub fn add_component<C>(&mut self, component: C)
     where
         C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let last_order = self.map.keys().last().unwrap_or(&0);
+        self.components.push(Box::new(component));
+    }
 
-        self.map.insert(*last_order + 1, Box::new(component));
+    /// Add a component to the pipeline with the default configuration.
+    ///
+    /// This method will add a component to the pipeline with the default configuration. The component
+    /// will be provided with a copy of the runtime configuration.
+    pub fn add_component_default<C>(&mut self)
+    where
+        C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
+    {
+        self.add_component(C::new(crate::runtime::NullConfig {}));
     }
 }
 
@@ -57,7 +50,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     {
         Self {
             ctx: ComponentContext::default(),
-            map: BTreeMap::new(),
+            components: Vec::new(),
         }
     }
 
@@ -79,12 +72,12 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
-        for component in self.map.values_mut() {
+        for component in self.components.iter_mut() {
             let component_tick_start = Instant::now();
 
             component.tick(&mut self.ctx, machine_state, command_tx.clone());
 
-            if component_tick_start.elapsed() > Duration::from_millis(1) {
+            if component_tick_start.elapsed() > Duration::from_millis(2) {
                 log::warn!("Component is falling behind");
             }
         }
