@@ -19,6 +19,7 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
         _state: &mut MachineState,
         _command_tx: CommandSender,
     ) {
+        // TODO: Acquire sensor data
         // TODO: Transmit the sensor data to the server peers
 
         log::debug!("Acquisition tick, number of objects: {}", ctx.signals.len());

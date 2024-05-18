@@ -139,7 +139,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_service_default::<service::EncoderSimulator>(Duration::from_millis(5));
         runtime.schedule_service_default::<service::EngineSimulator>(Duration::from_millis(10));
 
-        runtime.schedule_signal_service::<service::ActuatorSimulator, _>(
+        runtime.schedule_command_service::<service::ActuatorSimulator, _>(
             glonax::runtime::NullConfig {},
         );
     } else {
@@ -157,7 +157,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             );
 
             if j1939_net_config.authority_atx {
-                runtime.schedule_signal_service::<service::NetworkAuthorityAtx, _>(
+                runtime.schedule_command_service::<service::NetworkAuthorityAtx, _>(
                     j1939_net_config.clone(),
                 );
             }

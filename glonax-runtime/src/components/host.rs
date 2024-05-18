@@ -43,6 +43,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
             status: crate::core::HostStatus::Nominal,
         };
 
+        // TODO: state will not exist in the future
         state.vms_signal_instant = Some(std::time::Instant::now());
         state.vms_signal = vms_signal;
 

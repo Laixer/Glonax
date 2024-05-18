@@ -53,7 +53,6 @@ impl std::fmt::Display for ServiceContext {
 }
 
 pub trait Service<Cnf> {
-    // TODO: Add instance to new
     /// Construct a new component.
     ///
     /// This method will be called once on startup.
@@ -127,7 +126,6 @@ pub trait Service<Cnf> {
 }
 
 pub trait Component<Cnf: Clone> {
-    // TODO: Add instance to new
     /// Construct a new component.
     ///
     /// This method will be called once on startup.
@@ -315,7 +313,7 @@ impl Default for ComponentContext {
     }
 }
 
-/// Construct runtime service from configuration and instance.
+/// Construct runtime service from configuration.
 ///
 /// Note that this method is certain to block.
 #[inline]
@@ -330,10 +328,10 @@ pub struct Runtime {
     signal_tx: SignalSender,
     /// Signal receiver.
     signal_rx: Option<SignalReceiver>,
-    /// Motion command sender.
-    motion_tx: CommandSender, // TODO: Rename to command_tx.
-    /// Motion command receiver.
-    motion_rx: Option<CommandReceiver>, // TODO: Rename to command_rx.
+    /// Command sender.
+    command_tx: CommandSender,
+    /// Command receiver.
+    command_rx: Option<CommandReceiver>,
     /// Runtime tasks.
     tasks: Vec<tokio::task::JoinHandle<()>>, // TODO: Rename to task pool.
     /// Runtime event bus.
@@ -365,7 +363,7 @@ impl Runtime {
             config,
             self.operand.clone(),
             self.signal_tx.clone(),
-            self.motion_tx.clone(),
+            self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
 
@@ -378,22 +376,22 @@ impl Runtime {
         }
     }
 
-    /// Listen for signal event service in the background.
+    /// Listen for command event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_signal_service<S, C>(&mut self, config: C)
+    pub fn schedule_command_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
-        let command_rx = self.motion_rx.take().unwrap();
+        let command_rx = self.command_rx.take().unwrap();
 
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
             self.signal_tx.clone(),
-            self.motion_tx.clone(),
+            self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
 
@@ -419,7 +417,7 @@ impl Runtime {
             config,
             self.operand.clone(),
             self.signal_tx.clone(),
-            self.motion_tx.clone(),
+            self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
 
@@ -444,7 +442,7 @@ impl Runtime {
             S::new(crate::runtime::NullConfig),
             self.operand.clone(),
             self.signal_tx.clone(),
-            self.motion_tx.clone(),
+            self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
 
@@ -469,7 +467,7 @@ impl Runtime {
             service,
             self.operand.clone(),
             self.signal_tx.clone(),
-            self.motion_tx.clone(),
+            self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
 

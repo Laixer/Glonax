@@ -72,13 +72,13 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
         let machine_state = &mut runtime_state.write().await.state;
 
-        for component in self.components.iter_mut() {
+        for (idx, component) in self.components.iter_mut().enumerate() {
             let component_tick_start = Instant::now();
 
             component.tick(&mut self.ctx, machine_state, command_tx.clone());
 
             if component_tick_start.elapsed() > Duration::from_millis(2) {
-                log::warn!("Component is falling behind");
+                log::warn!("Component {} is delaying execution", idx);
             }
         }
 

@@ -74,7 +74,7 @@ impl Service<GnssConfig> for Gnss {
                     log::error!("Failed to send GNSS signal: {}", e);
                 }
 
-                // TODO: Needs to be removed
+                // TODO: state will not exist in the future
                 let mut runtime_state = runtime_state.write().await;
                 runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
                 runtime_state.state.gnss_signal = gnss;

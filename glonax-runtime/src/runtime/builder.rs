@@ -16,7 +16,7 @@ impl Builder {
     /// Note that this method is certain to block.
     pub fn new() -> super::Result<Self> {
         let (signal_tx, signal_rx) = std::sync::mpsc::channel();
-        let (motion_tx, motion_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
+        let (command_tx, command_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(Runtime {
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
@@ -25,8 +25,8 @@ impl Builder {
             })),
             signal_tx,
             signal_rx: Some(signal_rx),
-            motion_tx,
-            motion_rx: Some(motion_rx),
+            command_tx,
+            command_rx: Some(command_rx),
             tasks: Vec::new(),
             shutdown: tokio::sync::broadcast::channel(1),
         }))
