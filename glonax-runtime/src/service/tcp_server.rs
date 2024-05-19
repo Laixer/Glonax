@@ -203,38 +203,11 @@ impl TcpServer {
                             .unwrap();
 
                         if session.is_control() {
-                            match control {
-                                crate::core::Control::HydraulicQuickDisconnect(on) => {
-                                    log::info!("Hydraulic quick disconnect: {}", on);
-                                    runtime_state.write().await.state.hydraulic_quick_disconnect =
-                                        on;
-                                }
-                                crate::core::Control::HydraulicLock(on) => {
-                                    log::info!("Hydraulic lock: {}", on);
-                                    runtime_state.write().await.state.hydraulic_lock = on;
-                                }
-                                crate::core::Control::HydraulicBoost(on) => {
-                                    log::info!("Hydraulic boost: {}", on);
-                                }
-
-                                crate::core::Control::MachineShutdown => {
-                                    log::info!("Machine shutdown");
-                                }
-                                crate::core::Control::MachineIllumination(on) => {
-                                    log::info!("Machine illumination: {}", on);
-                                }
-                                crate::core::Control::MachineLights(on) => {
-                                    log::info!("Machine lights: {}", on);
-                                }
-                                crate::core::Control::MachineHorn(on) => {
-                                    log::info!("Machine horn: {}", on);
-                                }
-                                crate::core::Control::MachineStrobeLight(on) => {
-                                    log::info!("Machine strobe light: {}", on);
-                                }
-                                crate::core::Control::MachineTravelAlarm(on) => {
-                                    log::info!("Machine travel light: {}", on);
-                                }
+                            if let Err(e) =
+                                command_tx.send(crate::core::Object::Control(control)).await
+                            {
+                                log::error!("Failed to queue command: {}", e);
+                                break;
                             }
                         } else {
                             log::warn!("Session is not authorized to control the machine");
