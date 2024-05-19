@@ -44,7 +44,7 @@ impl Service<GnssConfig> for Gnss {
 
     async fn wait_io(
         &mut self,
-        runtime_state: SharedOperandState,
+        _runtime_state: SharedOperandState,
         signal_tx: SignalSender,
         _command_tx: CommandSender,
     ) {
@@ -75,9 +75,9 @@ impl Service<GnssConfig> for Gnss {
                 }
 
                 // TODO: state will not exist in the future
-                let mut runtime_state = runtime_state.write().await;
-                runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
-                runtime_state.state.gnss_signal = gnss;
+                // let mut runtime_state = runtime_state.write().await;
+                // runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
+                // runtime_state.state.gnss_signal = gnss;
             }
         }
     }

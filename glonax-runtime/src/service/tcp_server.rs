@@ -88,18 +88,20 @@ impl TcpServer {
                                     .await
                                     .unwrap();
                             }
-                            crate::core::Host::MESSAGE_TYPE => {
-                                client
-                                    .send_packet(&runtime_state.read().await.state.vms_signal)
-                                    .await
-                                    .unwrap();
-                            }
-                            crate::core::Gnss::MESSAGE_TYPE => {
-                                client
-                                    .send_packet(&runtime_state.read().await.state.gnss_signal)
-                                    .await
-                                    .unwrap();
-                            }
+                            // TODO: Not available at the moment
+                            // crate::core::Host::MESSAGE_TYPE => {
+                            //     client
+                            //         .send_packet(&runtime_state.read().await.state.vms_signal)
+                            //         .await
+                            //         .unwrap();
+                            // }
+                            // TODO: Not available at the moment
+                            // crate::core::Gnss::MESSAGE_TYPE => {
+                            //     client
+                            //         .send_packet(&runtime_state.read().await.state.gnss_signal)
+                            //         .await
+                            //         .unwrap();
+                            // }
                             crate::core::Engine::MESSAGE_TYPE => {
                                 client
                                     .send_packet(&runtime_state.read().await.state.engine_signal)
