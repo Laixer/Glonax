@@ -22,7 +22,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
     fn tick(
         &mut self,
         ctx: &mut ComponentContext,
-        state: &mut MachineState,
+        _state: &mut MachineState,
         _command_tx: CommandSender,
     ) {
         if ctx.iteration() % 20 != 0 {
@@ -49,8 +49,8 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
 
         let mut found = false;
         for signal in ctx.objects.iter_mut() {
-            if let crate::core::Object::Host(vms_signal) = signal {
-                *vms_signal = state.vms_signal;
+            if let crate::core::Object::Host(vms) = signal {
+                *vms = vms_signal;
                 found = true;
                 break;
             }

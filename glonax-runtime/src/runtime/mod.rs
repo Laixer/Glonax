@@ -271,7 +271,7 @@ pub struct ComponentContext {
     /// Current target.
     pub target: Option<Target>,
     /// Published objects.
-    pub objects: Vec<crate::core::Object>, // TODO:
+    pub objects: Vec<crate::core::Object>,
     /// Actuator values.
     pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around.
     /// Last tick.

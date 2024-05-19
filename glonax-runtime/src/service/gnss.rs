@@ -71,7 +71,7 @@ impl Service<GnssConfig> for Gnss {
                 }
 
                 if let Err(e) = ipc_tx.send(crate::core::Object::GNSS(gnss)) {
-                    log::error!("Failed to send GNSS signal: {}", e);
+                    log::error!("Failed to send GNSS: {}", e);
                 }
 
                 // TODO: state will not exist in the future
