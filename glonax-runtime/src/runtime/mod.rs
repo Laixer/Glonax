@@ -6,8 +6,8 @@ pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-pub type SignalSender = std::sync::mpsc::Sender<crate::core::Object>;
-pub type SignalReceiver = std::sync::mpsc::Receiver<crate::core::Object>;
+pub type IPCSender = std::sync::mpsc::Sender<crate::core::Object>;
+pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::Object>;
 pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
@@ -97,7 +97,7 @@ pub trait Service<Cnf> {
     fn wait_io(
         &mut self,
         _runtime_state: SharedOperandState,
-        _signal_tx: SignalSender,
+        _ipc_tx: IPCSender,
         _command_tx: CommandSender,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
@@ -153,7 +153,7 @@ where
 {
     service: S,
     operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-    signal_tx: SignalSender,
+    ipc_tx: IPCSender,
     command_tx: CommandSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
     phantom: std::marker::PhantomData<C>,
@@ -166,14 +166,14 @@ where
     fn new(
         service: S,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        signal_tx: SignalSender,
+        ipc_tx: IPCSender,
         command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service,
             operand,
-            signal_tx,
+            ipc_tx,
             command_tx,
             shutdown,
             phantom: std::marker::PhantomData,
@@ -189,14 +189,14 @@ where
     fn with_config(
         config: C,
         operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
-        signal_tx: SignalSender,
+        ipc_tx: IPCSender,
         command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service: S::new(config.clone()),
             operand,
-            signal_tx,
+            ipc_tx,
             command_tx,
             shutdown,
             phantom: std::marker::PhantomData,
@@ -219,7 +219,7 @@ where
         tokio::select! {
             _ = async {
                 loop {
-                    self.service.wait_io(self.operand.clone(), self.signal_tx.clone(), self.command_tx.clone()).await;
+                    self.service.wait_io(self.operand.clone(), self.ipc_tx.clone(), self.command_tx.clone()).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -251,8 +251,8 @@ where
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
         tokio::select! {
             _ = async {
-                while let Some(signal) = command_rx.recv().await {
-                    self.service.on_command(self.operand.clone(), &signal).await;
+                while let Some(command) = command_rx.recv().await {
+                    self.service.on_command(self.operand.clone(), &command).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -270,8 +270,8 @@ pub struct ComponentContext {
     pub world: World,
     /// Current target.
     pub target: Option<Target>,
-    /// Published signals.
-    pub signals: Vec<crate::core::Object>, // TODO:
+    /// Published objects.
+    pub objects: Vec<crate::core::Object>, // TODO:
     /// Actuator values.
     pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around.
     /// Last tick.
@@ -305,7 +305,7 @@ impl Default for ComponentContext {
         Self {
             world: World::default(),
             target: None,
-            signals: Vec::new(),
+            objects: Vec::new(),
             actuators: std::collections::HashMap::new(),
             last_tick: std::time::Instant::now(),
             iteration: 0,
@@ -324,10 +324,10 @@ pub fn builder() -> self::Result<builder::Builder> {
 pub struct Runtime {
     /// Glonax operand.
     operand: SharedOperandState,
-    /// Signal sender.
-    signal_tx: SignalSender,
-    /// Signal receiver.
-    signal_rx: Option<SignalReceiver>,
+    /// IPC sender.
+    ipc_tx: IPCSender,
+    /// IPC receiver.
+    ipc_rx: Option<IPCReceiver>,
     /// Command sender.
     command_tx: CommandSender,
     /// Command receiver.
@@ -362,7 +362,7 @@ impl Runtime {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
-            self.signal_tx.clone(),
+            self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -390,7 +390,7 @@ impl Runtime {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
-            self.signal_tx.clone(),
+            self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -416,7 +416,7 @@ impl Runtime {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
             self.operand.clone(),
-            self.signal_tx.clone(),
+            self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -441,7 +441,7 @@ impl Runtime {
         let mut service_descriptor = ServiceDescriptor::<S, _>::new(
             S::new(crate::runtime::NullConfig),
             self.operand.clone(),
-            self.signal_tx.clone(),
+            self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );
@@ -466,7 +466,7 @@ impl Runtime {
         let mut service_descriptor = ServiceDescriptor::new(
             service,
             self.operand.clone(),
-            self.signal_tx.clone(),
+            self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
         );

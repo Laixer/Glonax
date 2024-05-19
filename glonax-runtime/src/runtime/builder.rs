@@ -15,7 +15,7 @@ impl Builder {
     ///
     /// Note that this method is certain to block.
     pub fn new() -> super::Result<Self> {
-        let (signal_tx, signal_rx) = std::sync::mpsc::channel();
+        let (ipc_tx, ipc_rx) = std::sync::mpsc::channel();
         let (command_tx, command_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(Runtime {
@@ -23,8 +23,8 @@ impl Builder {
                 state: crate::MachineState::default(),
                 governor: crate::Governor::new(800, 2_100), // TODO: Remove governor
             })),
-            signal_tx,
-            signal_rx: Some(signal_rx),
+            ipc_tx,
+            ipc_rx: Some(ipc_rx),
             command_tx,
             command_rx: Some(command_rx),
             tasks: Vec::new(),

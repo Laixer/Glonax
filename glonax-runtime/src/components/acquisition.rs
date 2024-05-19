@@ -22,6 +22,6 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
         // TODO: Acquire sensor data
         // TODO: Transmit the sensor data to the server peers
 
-        log::debug!("Acquisition tick, number of objects: {}", ctx.signals.len());
+        log::debug!("Acquisition tick, number of objects: {}", ctx.objects.len());
     }
 }

@@ -44,11 +44,11 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         };
 
         // TODO: state will not exist in the future
-        state.vms_signal_instant = Some(std::time::Instant::now());
-        state.vms_signal = vms_signal;
+        // state.vms_signal_instant = Some(std::time::Instant::now());
+        // state.vms_signal = vms_signal;
 
         let mut found = false;
-        for signal in ctx.signals.iter_mut() {
+        for signal in ctx.objects.iter_mut() {
             if let crate::core::Object::Host(vms_signal) = signal {
                 *vms_signal = state.vms_signal;
                 found = true;
@@ -57,7 +57,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         }
 
         if !found {
-            ctx.signals.push(crate::core::Object::Host(vms_signal));
+            ctx.objects.push(crate::core::Object::Host(vms_signal));
         }
     }
 }
