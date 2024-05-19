@@ -17,6 +17,7 @@ mod motion;
 mod status;
 mod target;
 
+// TODO: Add object for encoder
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
     Control(Control),
@@ -25,6 +26,20 @@ pub enum Object {
     Host(Host),
     Motion(Motion),
     Target(Target),
+}
+
+// NOTE: Return hash based on the variant of the enum can have unintended consequences.
+impl std::hash::Hash for Object {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            Object::Control(_) => 0.hash(state),
+            Object::Engine(_) => 2.hash(state),
+            Object::GNSS(_) => 3.hash(state),
+            Object::Host(_) => 4.hash(state),
+            Object::Motion(_) => 5.hash(state),
+            Object::Target(_) => 6.hash(state),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
