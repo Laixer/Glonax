@@ -330,7 +330,6 @@ impl super::J1939Unit for EngineManagementSystem {
         }
 
         if let Some(message) = network.try_accept(self) {
-
             // if let Err(e) = ipc_tx.send(crate::core::Object::Engine(engine)) {
             //     log::error!("Failed to send engine signal: {}", e);
             // }

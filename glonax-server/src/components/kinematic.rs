@@ -9,14 +9,16 @@ const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 // TODO: Get this from config
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
-pub struct Kinematic;
+pub struct Kinematic {
+    target: Option<glonax::core::Target>, // TOD: This is a temporary solution, get the target from the world
+}
 
 impl<Cnf: Clone> Component<Cnf> for Kinematic {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
     {
-        Self
+        Self { target: None }
     }
 
     // TODO: Move the IK into a helper function
@@ -28,7 +30,7 @@ impl<Cnf: Clone> Component<Cnf> for Kinematic {
     ) {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
-        if let Some(target) = &ctx.target {
+        if let Some(target) = &self.target {
             log::debug!("Objective target: {}", target);
 
             let actor_world_distance =
@@ -51,7 +53,7 @@ impl<Cnf: Clone> Component<Cnf> for Kinematic {
             }
         }
 
-        if let Some(target) = &ctx.target {
+        if let Some(target) = &self.target {
             let boom_length = actor.relative_location("arm").unwrap().x;
             // log::debug!("Boom length: {:?}", boom_length);
 

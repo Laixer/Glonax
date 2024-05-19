@@ -42,7 +42,7 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
     fn tick(
         &mut self,
         ctx: &mut ComponentContext,
-        state: &mut MachineState,
+        _state: &mut MachineState,
         _command_tx: CommandSender,
     ) {
         if !self.is_actor_attached {
@@ -51,8 +51,8 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
         }
 
         // TODO: Place the target in the world as actor
-        if ctx.target.is_none() && !state.program.is_empty() {
-            ctx.target = state.program.pop_front();
-        }
+        // if ctx.target.is_none() && !state.program.is_empty() {
+        //     ctx.target = state.program.pop_front();
+        // }
     }
 }
