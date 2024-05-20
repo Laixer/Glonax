@@ -193,56 +193,6 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 }
 
-// TODO: Should be replaced by NetworkAuthorityAtx
-// pub struct NetworkAuthorityTx {
-//     interface: String,
-//     network: ControlNetwork,
-//     drivers: NetDriverCollection,
-// }
-
-// impl Service<NetworkConfig> for NetworkAuthorityTx {
-//     fn new(config: NetworkConfig) -> Self
-//     where
-//         Self: Sized,
-//     {
-//         let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
-
-//         let mut drivers = NetDriverCollection::default();
-//         for driver in config.driver.iter() {
-//             drivers.push((
-//                 driver
-//                     .to_net_driver(config.address)
-//                     .expect("Failed to register driver"),
-//                 crate::driver::net::NetDriverContext::default(),
-//             ));
-//         }
-
-//         Self {
-//             interface: config.interface,
-//             network,
-//             drivers,
-//         }
-//     }
-
-//     fn ctx(&self) -> ServiceContext {
-//         ServiceContext::with_address("authority_tx", self.interface.clone())
-//     }
-
-//     async fn tick(&mut self, _runtime_state: SharedOperandState, _command_tx: CommandSender) {
-// for (drv, ctx) in self.drivers.iter_mut() {
-//     if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
-//         log::error!(
-//             "[{}:0x{:X}] {}: {}",
-//             self.interface,
-//             drv.destination(),
-//             drv.name(),
-//             error
-//         );
-//     }
-// }
-// }
-// }
-
 pub struct NetworkAuthorityAtx {
     interface: String,
     network: ControlNetwork,
@@ -277,16 +227,9 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         ServiceContext::with_address("authority_atx", self.interface.clone())
     }
 
-    async fn on_command(
-        &mut self,
-        runtime_state: SharedOperandState,
-        object: &crate::core::Object,
-    ) {
+    async fn on_command(&mut self, object: &crate::core::Object) {
         for (drv, ctx) in self.drivers.iter_mut() {
-            if let Err(error) = drv
-                .trigger(ctx, &self.network, runtime_state.clone(), object)
-                .await
-            {
+            if let Err(error) = drv.trigger(ctx, &self.network, object).await {
                 log::error!(
                     "[{}:0x{:X}] {}: {}",
                     self.interface,

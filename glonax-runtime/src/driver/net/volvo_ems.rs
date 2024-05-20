@@ -102,7 +102,6 @@ impl super::J1939Unit for VolvoD7E {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;

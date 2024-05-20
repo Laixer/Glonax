@@ -187,29 +187,20 @@ impl J1939Unit for NetDriver {
         &self,
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
         object: &crate::core::Object,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => {
-                encoder.trigger(ctx, network, runtime_state, object).await
-            }
+            Self::KueblerEncoder(encoder) => encoder.trigger(ctx, network, object).await,
             Self::KueblerInclinometer(inclinometer) => {
-                inclinometer
-                    .trigger(ctx, network, runtime_state, object)
-                    .await
+                inclinometer.trigger(ctx, network, object).await
             }
-            Self::VolvoD7E(volvo) => volvo.trigger(ctx, network, runtime_state, object).await,
-            Self::BoschEngineManagementSystem(bosch) => {
-                bosch.trigger(ctx, network, runtime_state, object).await
-            }
-            Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.trigger(ctx, network, runtime_state, object).await
-            }
+            Self::VolvoD7E(volvo) => volvo.trigger(ctx, network, object).await,
+            Self::BoschEngineManagementSystem(bosch) => bosch.trigger(ctx, network, object).await,
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.trigger(ctx, network, object).await,
             Self::VehicleManagementSystem(responder) => {
-                responder.trigger(ctx, network, runtime_state, object).await
+                responder.trigger(ctx, network, object).await
             }
-            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, network, runtime_state, object).await,
+            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, network, object).await,
         }
     }
 }
@@ -352,7 +343,6 @@ pub trait J1939Unit {
         &self,
         _ctx: &mut NetDriverContext,
         _network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
         _object: &crate::core::Object,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
         std::future::ready(Ok(()))

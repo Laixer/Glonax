@@ -120,7 +120,6 @@ pub trait Service<Cnf> {
 
     fn on_command(
         &mut self,
-        _runtime_state: SharedOperandState,
         _object: &crate::core::Object,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
@@ -260,7 +259,7 @@ where
         tokio::select! {
             _ = async {
                 while let Some(command) = command_rx.recv().await {
-                    self.service.on_command(self.operand.clone(), &command).await;
+                    self.service.on_command(&command).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
