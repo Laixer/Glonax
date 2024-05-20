@@ -20,12 +20,53 @@ mod target;
 // TODO: Add object for encoder
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
+    /// Control.
     Control(Control),
+    /// Engine.
     Engine(Engine),
+    /// GNSS.
     GNSS(Gnss),
+    /// Host.
     Host(Host),
+    /// Motion.
     Motion(Motion),
+    /// Target.
     Target(Target),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum ObjectType {
+    Command,
+    Signal,
+}
+
+pub struct ObjectMessage {
+    /// Object.
+    pub object: Object,
+    /// Object type.
+    pub object_type: ObjectType,
+    /// Timestamp of queueing.
+    pub timestamp: std::time::Instant,
+}
+
+impl ObjectMessage {
+    /// Create a new command message.
+    pub fn command(object: Object) -> Self {
+        Self {
+            object,
+            object_type: ObjectType::Command,
+            timestamp: std::time::Instant::now(),
+        }
+    }
+
+    /// Create a new signal message.
+    pub fn signal(object: Object) -> Self {
+        Self {
+            object,
+            object_type: ObjectType::Signal,
+            timestamp: std::time::Instant::now(),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
