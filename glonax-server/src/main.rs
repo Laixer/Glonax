@@ -174,6 +174,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     pipe.add_component_default::<glonax::components::HostComponent>();
     pipe.add_component_default::<glonax::components::Acquisition>();
+    pipe.add_component_default::<glonax::components::EngineComponent>();
     pipe.add_component_default::<components::WorldBuilder>();
 
     if config.mode != config::OperationMode::PilotRestrict {
