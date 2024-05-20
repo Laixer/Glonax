@@ -557,16 +557,6 @@ impl super::J1939Unit for HydraulicControlUnit {
         result
     }
 
-    // TODO: Deprecate this method.
-    async fn tick(
-        &self,
-        _ctx: &mut super::NetDriverContext,
-        _network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
-    ) -> Result<(), super::J1939UnitError> {
-        unimplemented!()
-    }
-
     async fn trigger(
         &self,
         ctx: &mut super::NetDriverContext,

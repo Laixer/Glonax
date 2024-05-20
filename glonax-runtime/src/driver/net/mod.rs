@@ -183,31 +183,6 @@ impl J1939Unit for NetDriver {
         }
     }
 
-    async fn tick(
-        &self,
-        ctx: &mut NetDriverContext,
-        network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
-    ) -> Result<(), J1939UnitError> {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.tick(ctx, network, runtime_state).await,
-            Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.tick(ctx, network, runtime_state).await
-            }
-            Self::VolvoD7E(volvo) => volvo.tick(ctx, network, runtime_state).await,
-            Self::BoschEngineManagementSystem(bosch) => {
-                bosch.tick(ctx, network, runtime_state).await
-            }
-            Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.tick(ctx, network, runtime_state).await
-            }
-            Self::VehicleManagementSystem(responder) => {
-                responder.tick(ctx, network, runtime_state).await
-            }
-            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, network, runtime_state).await,
-        }
-    }
-
     async fn trigger(
         &self,
         ctx: &mut NetDriverContext,
@@ -366,22 +341,6 @@ pub trait J1939Unit {
         network: &crate::net::ControlNetwork,
         runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send;
-
-    /// Tick the unit on interval.
-    ///
-    /// This method will be called on interval to allow the unit to perform any necessary
-    /// operations. This method should be non-blocking and should only perform asynchronous
-    /// I/O operations.
-    ///
-    /// This method is optional and may be a no-op.
-    fn tick(
-        &self,
-        _ctx: &mut NetDriverContext,
-        _network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
-    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
-        std::future::ready(Ok(()))
-    }
 
     /// Trigger the unit manually.
     ///

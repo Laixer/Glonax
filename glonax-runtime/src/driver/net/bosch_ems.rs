@@ -75,13 +75,4 @@ impl super::J1939Unit for BoschEngineManagementSystem {
     ) -> Result<(), super::J1939UnitError> {
         self.ems.try_accept(ctx, network, runtime_state).await
     }
-
-    async fn tick(
-        &self,
-        ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
-    ) -> Result<(), super::J1939UnitError> {
-        self.ems.tick(ctx, network, runtime_state).await
-    }
 }
