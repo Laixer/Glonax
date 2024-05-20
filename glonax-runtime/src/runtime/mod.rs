@@ -260,20 +260,56 @@ where
     }
 }
 
+use crate::core;
+
+/// Represents the state of a machine.
+///
+/// The project refers to the machine as the entire system including
+/// hardware, software, sensors and actuators.
+#[derive(Default)]
+pub struct Machine {
+    /// Vehicle management system data.
+    pub vms_signal: core::Host,
+    /// Vehicle management system update.
+    pub vms_signal_instant: Option<std::time::Instant>,
+
+    /// Global navigation satellite system data.
+    pub gnss_signal: core::Gnss,
+    /// GNSS signal update.
+    pub gnss_signal_instant: Option<std::time::Instant>,
+
+    /// Engine signal.
+    pub engine_signal: core::Engine,
+    /// Engine state actual instant.
+    pub engine_signal_instant: Option<std::time::Instant>,
+    /// Engine command.
+    pub engine_command: Option<core::Engine>,
+    /// Engine state request instant.
+    pub engine_command_instant: Option<std::time::Instant>,
+
+    /// Motion data.
+    pub motion_command: core::Motion,
+    /// Motion instant.
+    pub motion_command_instant: Option<std::time::Instant>,
+
+    /// Current program queue.
+    pub program_command: std::collections::VecDeque<core::Target>,
+}
+
 // TODO: Move
 /// Component context.
 ///
 /// The component context is provided to each component on each tick. The
 /// component context is used to communicate within the component pipeline.
 pub struct ComponentContext {
-    /// World.
+    /// Machine state.
+    pub machine: Machine,
+    /// World state.
     pub world: World,
-    /// Current target.
-    pub target: Option<Target>,
     /// Published objects.
-    pub objects: Vec<crate::core::Object>,
+    pub objects: Vec<crate::core::Object>, // TODO: Replace with Machine.
     /// Actuator values.
-    pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around.
+    pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around. Maybe via objects.
     /// Last tick.
     last_tick: std::time::Instant,
     /// Iteration count.
@@ -303,8 +339,8 @@ impl ComponentContext {
 impl Default for ComponentContext {
     fn default() -> Self {
         Self {
+            machine: Machine::default(),
             world: World::default(),
-            target: None,
             objects: Vec::new(),
             actuators: std::collections::HashMap::new(),
             last_tick: std::time::Instant::now(),

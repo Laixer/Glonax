@@ -25,7 +25,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         _state: &mut MachineState,
         _command_tx: CommandSender,
     ) {
-        if ctx.iteration() % 20 != 0 {
+        if ctx.iteration() % 50 != 0 {
             return;
         }
 
@@ -47,17 +47,20 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         // state.vms_signal_instant = Some(std::time::Instant::now());
         // state.vms_signal = vms_signal;
 
-        let mut found = false;
-        for signal in ctx.objects.iter_mut() {
-            if let crate::core::Object::Host(vms) = signal {
-                *vms = vms_signal;
-                found = true;
-                break;
-            }
-        }
+        // let mut found = false;
+        // for signal in ctx.objects.iter_mut() {
+        //     if let crate::core::Object::Host(vms) = signal {
+        //         *vms = vms_signal;
+        //         found = true;
+        //         break;
+        //     }
+        // }
 
-        if !found {
-            ctx.objects.push(crate::core::Object::Host(vms_signal));
-        }
+        // if !found {
+        //     ctx.objects.push(crate::core::Object::Host(vms_signal));
+        // }
+
+        ctx.machine.vms_signal = vms_signal;
+        ctx.machine.vms_signal_instant = Some(std::time::Instant::now());
     }
 }
