@@ -207,6 +207,7 @@ impl VolvoD7E {
         .build()
     }
 
+    #[deprecated]
     fn governor_mode(&self, engine_signal: core::Engine) -> crate::core::Engine {
         let test = self.value.get();
 

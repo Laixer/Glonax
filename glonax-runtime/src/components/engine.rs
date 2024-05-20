@@ -154,35 +154,24 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
 
     fn tick(
         &mut self,
-        _ctx: &mut ComponentContext,
+        ctx: &mut ComponentContext,
         _state: &mut MachineState,
         command_tx: CommandSender,
     ) {
-        let engine_signal = crate::core::Engine {
-            rpm: 0,
-            state: crate::core::EngineState::NoRequest,
-            driver_demand: 0,
-            actual_engine: 0,
-        };
-        let engine_command = Some(crate::core::Engine {
-            rpm: 0,
-            state: crate::core::EngineState::NoRequest,
-            driver_demand: 0,
-            actual_engine: 0,
-        });
-        let engine_command_instant = None;
+        let engine_signal = ctx.machine.engine_signal;
+        let engine_command = ctx.machine.engine_command;
+        let engine_command_instant = ctx.machine.engine_command_instant;
 
         //
 
         let mut engine_command = engine_command.unwrap_or(engine_signal);
         engine_command.actual_engine = 0;
+        engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
         engine_command.state = match engine_command.state {
             crate::core::EngineState::NoRequest => crate::core::EngineState::NoRequest,
             crate::core::EngineState::Request => crate::core::EngineState::Request,
             _ => engine_signal.state,
         };
-
-        engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
 
         if engine_command.rpm == 0 {
             if engine_command.driver_demand == 0 {

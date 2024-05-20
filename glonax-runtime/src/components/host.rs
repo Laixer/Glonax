@@ -43,23 +43,6 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
             status: crate::core::HostStatus::Nominal,
         };
 
-        // TODO: state will not exist in the future
-        // state.vms_signal_instant = Some(std::time::Instant::now());
-        // state.vms_signal = vms_signal;
-
-        // let mut found = false;
-        // for signal in ctx.objects.iter_mut() {
-        //     if let crate::core::Object::Host(vms) = signal {
-        //         *vms = vms_signal;
-        //         found = true;
-        //         break;
-        //     }
-        // }
-
-        // if !found {
-        //     ctx.objects.push(crate::core::Object::Host(vms_signal));
-        // }
-
         ctx.machine.vms_signal = vms_signal;
         ctx.machine.vms_signal_instant = Some(std::time::Instant::now());
     }

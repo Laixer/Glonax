@@ -280,6 +280,7 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         ServiceContext::with_address("authority_atx", self.interface.clone())
     }
 
+    // TODO: This should never be called
     async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: CommandSender) {
         for (drv, ctx) in self.drivers.iter_mut() {
             if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {

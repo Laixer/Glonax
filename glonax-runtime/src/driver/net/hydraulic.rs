@@ -513,10 +513,12 @@ impl super::J1939Unit for HydraulicControlUnit {
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
+        // TODO: If possible, move timeout checks to pipeline
         if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
             result = Err(super::J1939UnitError::MessageTimeout);
         }
 
+        // TODO: Send motion signal to the pipeline
         if let Some(message) = network.try_accept(self) {
             match message {
                 HydraulicMessage::Actuator(_actuator) => {}

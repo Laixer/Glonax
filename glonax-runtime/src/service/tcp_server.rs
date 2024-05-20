@@ -136,6 +136,7 @@ impl TcpServer {
 
                         client.send_packet(&echo).await.unwrap();
                     }
+                    // TODO: Replace with TCP shutdown
                     crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
                         log::debug!("Session shutdown requested for: {}", session.name());
 
