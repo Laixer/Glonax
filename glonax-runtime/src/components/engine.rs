@@ -3,6 +3,7 @@ use crate::{
     MachineState,
 };
 
+// TODO: Move to drivers?
 struct Governor {
     /// Default engine speed.
     rpm_idle: u16,

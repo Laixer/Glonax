@@ -175,16 +175,19 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     pipe.add_component_default::<glonax::components::HostComponent>();
     pipe.add_component_default::<glonax::components::Acquisition>();
     pipe.add_component_default::<glonax::components::EngineComponent>();
+    pipe.add_component_default::<glonax::components::ControlComponent>();
     pipe.add_component_default::<components::WorldBuilder>();
 
     if config.mode != config::OperationMode::PilotRestrict {
-        pipe.add_component_default::<components::SensorFusion>();
+        pipe.add_component_default::<components::SensorFusion>(); // TODO: Replaced by AQ?
         pipe.add_component_default::<components::LocalActor>();
     }
 
     if config.mode == config::OperationMode::Autonomous {
         pipe.add_component_default::<components::Kinematic>();
         pipe.add_component_default::<components::Controller>();
+    } else {
+        // pipe.add_component_default::<glonax::components::HydraulicComponent>();
     }
 
     runtime.run_interval(pipe, Duration::from_millis(10)).await;

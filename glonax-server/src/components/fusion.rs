@@ -11,6 +11,7 @@ const ATTACHMENT_ENCODER: u8 = 0x6D;
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
+// TODO: Rename to encoder?
 pub struct SensorFusion {
     frame_encoder_converter: EncoderConverter,
     boom_encoder_converter: EncoderConverter,
