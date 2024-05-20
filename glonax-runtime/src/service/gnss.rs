@@ -70,7 +70,8 @@ impl Service<GnssConfig> for Gnss {
                     gnss.satellites = satellites;
                 }
 
-                if let Err(e) = ipc_tx.send(crate::core::Object::GNSS(gnss)) {
+                use crate::core::{Object, ObjectMessage};
+                if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::GNSS(gnss))) {
                     log::error!("Failed to send GNSS: {}", e);
                 }
             }

@@ -1,7 +1,8 @@
 use std::time::{Duration, Instant};
 
 use crate::runtime::{
-    CommandSender, Component, ComponentContext, Service, ServiceContext, SharedOperandState,
+    CommandSender, Component, ComponentContext, IPCReceiver, Service, ServiceContext,
+    SharedOperandState,
 };
 
 pub struct Pipeline {
@@ -69,13 +70,20 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     ///
     /// * `runtime_state` - A `SharedOperandState` object representing the runtime state.
     /// * `command_tx` - A `CommandSender` object representing the command sender.
-    async fn tick(&mut self, runtime_state: SharedOperandState, command_tx: CommandSender) {
-        let machine_state = &mut runtime_state.write().await.state;
+    fn tick2(
+        &mut self,
+        _runtime_state: SharedOperandState,
+        ipc_rx: std::rc::Rc<IPCReceiver>,
+        command_tx: CommandSender,
+    ) {
+        // if let Ok(mut runtime_state) = runtime_state.try_write() {
+        //     let machine_state = &mut runtime_state.state;
+        // }
 
         for (idx, component) in self.components.iter_mut().enumerate() {
             let component_tick_start = Instant::now();
 
-            component.tick(&mut self.ctx, machine_state, command_tx.clone());
+            component.tick2(&mut self.ctx, ipc_rx.clone(), command_tx.clone());
 
             if component_tick_start.elapsed() > Duration::from_millis(2) {
                 log::warn!("Component {} is delaying execution", idx);

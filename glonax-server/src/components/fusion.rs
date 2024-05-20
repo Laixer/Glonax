@@ -1,7 +1,6 @@
 use glonax::{
     driver::EncoderConverter,
     runtime::{CommandSender, Component, ComponentContext},
-    MachineState,
 };
 
 const FRAME_ENCODER: u8 = 0x6A;
@@ -48,15 +47,10 @@ impl<Cnf: Clone> Component<Cnf> for SensorFusion {
         }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        state: &mut MachineState,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         let actor = ctx.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
 
-        if let Some(value) = state.encoders.get(&FRAME_ENCODER) {
+        if let Some(value) = ctx.machine.encoders.get(&FRAME_ENCODER) {
             log::trace!("Frame encoder: {}", value);
 
             // FUTURE: Detect outlying values, apply a filter
@@ -73,7 +67,7 @@ impl<Cnf: Clone> Component<Cnf> for SensorFusion {
             actor.set_relative_rotation("frame", rotator);
         }
 
-        if let Some(value) = state.encoders.get(&BOOM_ENCODER) {
+        if let Some(value) = ctx.machine.encoders.get(&BOOM_ENCODER) {
             log::trace!("Boom encoder: {}", value);
 
             // FUTURE: Detect outlying values, apply a filter
@@ -90,7 +84,7 @@ impl<Cnf: Clone> Component<Cnf> for SensorFusion {
             actor.set_relative_rotation("boom", rotator);
         }
 
-        if let Some(value) = state.encoders.get(&ARM_ENCODER) {
+        if let Some(value) = ctx.machine.encoders.get(&ARM_ENCODER) {
             log::trace!("Arm encoder: {}", value);
 
             // FUTURE: Detect outlying values, apply a filter
@@ -107,7 +101,7 @@ impl<Cnf: Clone> Component<Cnf> for SensorFusion {
             actor.set_relative_rotation("arm", rotator);
         }
 
-        if let Some(value) = state.encoders.get(&ATTACHMENT_ENCODER) {
+        if let Some(value) = ctx.machine.encoders.get(&ATTACHMENT_ENCODER) {
             log::trace!("Attachment encoder: {}", value);
 
             // FUTURE: Detect outlying values, apply a filter

@@ -116,8 +116,6 @@ pub fn log_system() {
     );
 }
 
-// TODO: Return the machine state in its entirety over the network
-// TODO: Integrate into the operand
 /// Represents the state of a machine.
 ///
 /// The project refers to the machine as the entire system including
@@ -133,10 +131,6 @@ pub struct MachineState {
     pub engine_signal: core::Engine, // SIGNAL
     /// Engine state actual instant.
     pub engine_signal_instant: Option<std::time::Instant>,
-    /// Engine command.
-    pub engine_command: Option<core::Engine>, // INNER SERVICE (engine)
-    /// Engine state request instant.
-    pub engine_command_instant: Option<std::time::Instant>,
 
     /// Motion locked.
     pub motion_locked: bool, // SIGNAL
@@ -149,11 +143,6 @@ pub struct MachineState {
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: Remove from here // SIGNAL
     /// Encoder instant.
     pub encoders_instant: Option<std::time::Instant>,
-
-    /// Robot as an actor.
-    pub actor: Option<crate::world::Actor>, // TODO: Remove from here // SIGNAL
-    /// Robot as an actor instant.
-    pub actor_instant: Option<std::time::Instant>,
 
     /// Electronic control unit data.
     pub ecu_state: driver::VirtualHCU, // CROSS SERVICE (Sim actuator, sim encoder)

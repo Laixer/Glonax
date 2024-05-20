@@ -49,7 +49,8 @@ pub struct TcpServer {
 impl TcpServer {
     async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         stream: T,
-        runtime_state: SharedOperandState,
+        _runtime_state: SharedOperandState,
+        ipc_tx: IPCSender,
         command_tx: CommandSender,
         _permit: tokio::sync::OwnedSemaphorePermit,
     ) {
@@ -82,12 +83,13 @@ impl TcpServer {
                             crate::core::Instance::MESSAGE_TYPE => {
                                 client.send_packet(crate::global::instance()).await.unwrap();
                             }
-                            crate::core::Status::MESSAGE_TYPE => {
-                                client
-                                    .send_packet(&runtime_state.read().await.status())
-                                    .await
-                                    .unwrap();
-                            }
+                            // TODO: Not available at the moment
+                            // crate::core::Status::MESSAGE_TYPE => {
+                            //     client
+                            //         .send_packet(&runtime_state.read().await.status())
+                            //         .await
+                            //         .unwrap();
+                            // }
                             // TODO: Not available at the moment
                             // crate::core::Host::MESSAGE_TYPE => {
                             //     client
@@ -102,17 +104,19 @@ impl TcpServer {
                             //         .await
                             //         .unwrap();
                             // }
-                            crate::core::Engine::MESSAGE_TYPE => {
-                                client
-                                    .send_packet(&runtime_state.read().await.state.engine_signal)
-                                    .await
-                                    .unwrap();
-                            }
-                            crate::world::Actor::MESSAGE_TYPE => {
-                                if let Some(actor) = &runtime_state.read().await.state.actor {
-                                    client.send_packet(actor).await.unwrap();
-                                }
-                            }
+                            // TODO: Not available at the moment
+                            // crate::core::Engine::MESSAGE_TYPE => {
+                            //     client
+                            //         .send_packet(&runtime_state.read().await.state.engine_signal)
+                            //         .await
+                            //         .unwrap();
+                            // }
+                            // TODO: Not available at the moment
+                            // crate::world::Actor::MESSAGE_TYPE => {
+                            //     if let Some(actor) = &runtime_state.read().await.state.actor {
+                            //         client.send_packet(actor).await.unwrap();
+                            //     }
+                            // }
                             _ => {
                                 log::warn!("Unknown request: {}", request.message());
                             }
@@ -158,11 +162,15 @@ impl TcpServer {
                         if session.is_control() {
                             log::debug!("Engine request RPM: {}", engine.rpm);
 
+                            // if let Err(e) = command_tx.send(crate::core::Object::Engine(engine)).await {
+                            //     log::error!("Failed to queue command: {}", e);
+                            //     break;
+                            // }
+                            use crate::core::{Object, ObjectMessage};
                             if let Err(e) =
-                                command_tx.send(crate::core::Object::Engine(engine)).await
+                                ipc_tx.send(ObjectMessage::command(Object::Engine(engine)))
                             {
-                                log::error!("Failed to queue command: {}", e);
-                                break;
+                                log::error!("Failed to send target: {}", e);
                             }
                         } else {
                             log::warn!("Session is not authorized to control the machine");
@@ -175,11 +183,17 @@ impl TcpServer {
                             .unwrap();
 
                         if session.is_command() {
-                            if let Err(e) =
-                                command_tx.send(crate::core::Object::Motion(motion)).await
+                            if let Err(e) = command_tx
+                                .send(crate::core::Object::Motion(motion.clone()))
+                                .await
                             {
                                 log::error!("Failed to queue command: {}", e);
-                                break;
+                            }
+                            use crate::core::{Object, ObjectMessage};
+                            if let Err(e) =
+                                ipc_tx.send(ObjectMessage::command(Object::Motion(motion)))
+                            {
+                                log::error!("Failed to send motion: {}", e);
                             }
                         } else {
                             log::warn!("Session is not authorized to command the machine");
@@ -192,7 +206,12 @@ impl TcpServer {
                             .unwrap();
 
                         if session.is_command() {
-                            runtime_state.write().await.state.program.push_back(target);
+                            use crate::core::{Object, ObjectMessage};
+                            if let Err(e) =
+                                ipc_tx.send(ObjectMessage::command(Object::Target(target)))
+                            {
+                                log::error!("Failed to send target: {}", e);
+                            }
                         } else {
                             log::warn!("Session is not authorized to command the machine");
                         }
@@ -204,11 +223,11 @@ impl TcpServer {
                             .unwrap();
 
                         if session.is_control() {
+                            use crate::core::{Object, ObjectMessage};
                             if let Err(e) =
-                                command_tx.send(crate::core::Object::Control(control)).await
+                                ipc_tx.send(ObjectMessage::command(Object::Control(control)))
                             {
-                                log::error!("Failed to queue command: {}", e);
-                                break;
+                                log::error!("Failed to send control: {}", e);
                             }
                         } else {
                             log::warn!("Session is not authorized to control the machine");
@@ -276,7 +295,7 @@ impl Service<TcpServerConfig> for TcpServer {
     async fn wait_io(
         &mut self,
         runtime_state: SharedOperandState,
-        _ipc_tx: IPCSender,
+        ipc_tx: IPCSender,
         command_tx: CommandSender,
     ) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
@@ -305,6 +324,7 @@ impl Service<TcpServerConfig> for TcpServer {
         self.clients.push(tokio::spawn(Self::spawn_client_session(
             stream,
             runtime_state.clone(),
+            ipc_tx,
             command_tx,
             permit,
         )));

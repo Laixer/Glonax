@@ -561,19 +561,20 @@ impl super::J1939Unit for HydraulicControlUnit {
 
     async fn tick(
         &self,
-        ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        _ctx: &mut super::NetDriverContext,
+        _network: &crate::net::ControlNetwork,
+        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        // TODO: This lock is held for the entire tick, which is not ideal.
-        // TODO: If the lock is not acquired, the tick will not be able to send a motion command.
-        if let Ok(runtime_state) = runtime_state.try_read() {
-            self.send_motion_command(network, &runtime_state.state.motion_command)
-                .await?;
-            ctx.tx_mark();
-        }
+        // // TODO: This lock is held for the entire tick, which is not ideal.
+        // // TODO: If the lock is not acquired, the tick will not be able to send a motion command.
+        // if let Ok(runtime_state) = runtime_state.try_read() {
+        //     self.send_motion_command(network, &runtime_state.state.motion_command)
+        //         .await?;
+        //     ctx.tx_mark();
+        // }
 
-        Ok(())
+        // Ok(())
+        unimplemented!()
     }
 
     async fn trigger(

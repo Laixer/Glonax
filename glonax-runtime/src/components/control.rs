@@ -1,7 +1,4 @@
-use crate::{
-    runtime::{CommandSender, Component, ComponentContext},
-    MachineState,
-};
+use crate::runtime::{CommandSender, Component, ComponentContext};
 
 pub struct ControlComponent {}
 
@@ -13,12 +10,7 @@ impl<Cnf: Clone> Component<Cnf> for ControlComponent {
         Self {}
     }
 
-    fn tick(
-        &mut self,
-        _ctx: &mut ComponentContext,
-        _state: &mut MachineState,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
         // TODO: Implement the control logic
     }
 }

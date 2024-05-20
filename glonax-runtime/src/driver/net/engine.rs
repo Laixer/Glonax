@@ -405,32 +405,33 @@ impl super::J1939Unit for EngineManagementSystem {
 
     async fn tick(
         &self,
-        ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        _ctx: &mut super::NetDriverContext,
+        _network: &crate::net::ControlNetwork,
+        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        if let Ok(request) = runtime_state.try_read() {
-            let request = request.governor_mode();
-            match request.state {
-                crate::core::EngineState::NoRequest => {
-                    network.send(&self.request(request.rpm)).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::EngineState::Stopping => {
-                    network.send(&self.stop(request.rpm)).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::EngineState::Starting => {
-                    network.send(&self.start(request.rpm)).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::EngineState::Request => {
-                    network.send(&self.request(request.rpm)).await?;
-                    ctx.tx_mark();
-                }
-            }
-        }
+        // if let Ok(request) = runtime_state.try_read() {
+        //     let request = request.governor_mode();
+        //     match request.state {
+        //         crate::core::EngineState::NoRequest => {
+        //             network.send(&self.request(request.rpm)).await?;
+        //             ctx.tx_mark();
+        //         }
+        //         crate::core::EngineState::Stopping => {
+        //             network.send(&self.stop(request.rpm)).await?;
+        //             ctx.tx_mark();
+        //         }
+        //         crate::core::EngineState::Starting => {
+        //             network.send(&self.start(request.rpm)).await?;
+        //             ctx.tx_mark();
+        //         }
+        //         crate::core::EngineState::Request => {
+        //             network.send(&self.request(request.rpm)).await?;
+        //             ctx.tx_mark();
+        //         }
+        //     }
+        // }
 
-        Ok(())
+        // Ok(())
+        unimplemented!()
     }
 }

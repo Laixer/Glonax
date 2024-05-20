@@ -1,13 +1,13 @@
 mod error;
 
-use crate::{core::Target, world::World, MachineState};
+use crate::world::World;
 
 pub use self::error::Error;
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-pub type IPCSender = std::sync::mpsc::Sender<crate::core::Object>;
-pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::Object>;
+pub type IPCSender = std::sync::mpsc::Sender<crate::core::ObjectMessage>;
+pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::ObjectMessage>;
 pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
@@ -116,6 +116,14 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
+    fn tick2(
+        &mut self,
+        _runtime_state: SharedOperandState,
+        _ipc_rx: std::rc::Rc<IPCReceiver>,
+        _command_tx: CommandSender,
+    ) {
+    }
+
     fn on_command(
         &mut self,
         _runtime_state: SharedOperandState,
@@ -123,27 +131,6 @@ pub trait Service<Cnf> {
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
-}
-
-pub trait Component<Cnf: Clone> {
-    /// Construct a new component.
-    ///
-    /// This method will be called once on startup.
-    /// The component should use this method to initialize itself.
-    fn new(config: Cnf) -> Self
-    where
-        Self: Sized;
-
-    /// Tick the component.
-    ///
-    /// This method will be called on each tick of the runtime.
-    /// How often the runtime ticks is determined by the runtime configuration.
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        state: &mut MachineState,
-        command_tx: CommandSender,
-    );
 }
 
 struct ServiceDescriptor<S, C = crate::runtime::NullConfig>
@@ -248,6 +235,33 @@ where
         }
     }
 
+    async fn tick2(&mut self, duration: std::time::Duration, ipc_rx: IPCReceiver) {
+        let mut interval = tokio::time::interval(duration);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+
+        // Wrap the IPC in an arc to allow for cloning.
+        let ipc_rx = std::rc::Rc::new(ipc_rx);
+
+        while self.shutdown.is_empty() {
+            interval.tick().await;
+
+            let tick_start = std::time::Instant::now();
+
+            self.service.tick2(
+                self.operand.clone(),
+                ipc_rx.clone(),
+                self.command_tx.clone(),
+            );
+
+            let tick_duration = tick_start.elapsed();
+            log::trace!("Tick loop duration: {:?}", tick_duration);
+
+            if tick_duration > duration {
+                log::warn!("Tick loop delta is too high: {:?}", tick_duration);
+            }
+        }
+    }
+
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
         tokio::select! {
             _ = async {
@@ -287,10 +301,19 @@ pub struct Machine {
     /// Engine state request instant.
     pub engine_command_instant: Option<std::time::Instant>,
 
-    /// Motion data.
-    pub motion_command: core::Motion,
-    /// Motion instant.
+    /// Motion signal.
+    pub motion_signal: core::Motion,
+    /// Motion signal instant.
+    pub motion_signal_instant: Option<std::time::Instant>,
+    /// Motion command.
+    pub motion_command: Option<core::Motion>,
+    /// Motion command instant.
     pub motion_command_instant: Option<std::time::Instant>,
+
+    /// Encoder data.
+    pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
+    /// Encoder instant.
+    pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
 
     /// Current program queue.
     pub program_command: std::collections::VecDeque<core::Target>,
@@ -346,6 +369,31 @@ impl Default for ComponentContext {
             last_tick: std::time::Instant::now(),
             iteration: 0,
         }
+    }
+}
+
+pub trait Component<Cnf: Clone> {
+    /// Construct a new component.
+    ///
+    /// This method will be called once on startup.
+    /// The component should use this method to initialize itself.
+    fn new(config: Cnf) -> Self
+    where
+        Self: Sized;
+
+    /// Tick the component.
+    ///
+    /// This method will be called on each tick of the runtime.
+    /// How often the runtime ticks is determined by the runtime configuration.
+    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender);
+
+    fn tick2(
+        &mut self,
+        ctx: &mut ComponentContext,
+        _ipc_rx: std::rc::Rc<IPCReceiver>,
+        command_tx: CommandSender,
+    ) {
+        self.tick(ctx, command_tx);
     }
 }
 
@@ -499,6 +547,8 @@ impl Runtime {
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
+        let ipc_rx = self.ipc_rx.take().unwrap();
+
         let mut service_descriptor = ServiceDescriptor::new(
             service,
             self.operand.clone(),
@@ -509,7 +559,7 @@ impl Runtime {
 
         if self.shutdown.1.is_empty() {
             service_descriptor.setup().await;
-            service_descriptor.tick(duration).await;
+            service_descriptor.tick2(duration, ipc_rx).await;
             service_descriptor.teardown().await;
         }
     }

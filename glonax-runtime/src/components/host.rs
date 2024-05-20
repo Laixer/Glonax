@@ -1,9 +1,6 @@
 use sysinfo::System;
 
-use crate::{
-    runtime::{CommandSender, Component, ComponentContext},
-    MachineState,
-};
+use crate::runtime::{CommandSender, Component, ComponentContext};
 
 pub struct HostComponent {
     system: System,
@@ -19,12 +16,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _state: &mut MachineState,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         if ctx.iteration() % 50 != 0 {
             return;
         }

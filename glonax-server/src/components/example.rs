@@ -1,7 +1,6 @@
 use glonax::{
     math::EulerAngles,
     runtime::{CommandSender, Component, ComponentContext},
-    MachineState,
 };
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
@@ -16,12 +15,7 @@ impl<Cnf: Clone> Component<Cnf> for Example {
         Self
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _state: &mut MachineState,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         let delta = ctx.delta();
 
         let actor = ctx.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();

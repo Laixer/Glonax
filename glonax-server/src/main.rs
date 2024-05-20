@@ -151,10 +151,10 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
 
             // TODO: Should not exist, trigger from component via command tx
-            runtime.schedule_service::<service::NetworkAuthorityTx, _>(
-                j1939_net_config.clone(),
-                Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
-            );
+            // runtime.schedule_service::<service::NetworkAuthorityTx, _>(
+            //     j1939_net_config.clone(),
+            //     Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
+            // );
 
             if j1939_net_config.authority_atx {
                 runtime.schedule_command_service::<service::NetworkAuthorityAtx, _>(

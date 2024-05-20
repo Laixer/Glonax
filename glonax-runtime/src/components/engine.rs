@@ -1,7 +1,4 @@
-use crate::{
-    runtime::{CommandSender, Component, ComponentContext},
-    MachineState,
-};
+use crate::runtime::{CommandSender, Component, ComponentContext};
 
 // TODO: Move to drivers?
 struct Governor {
@@ -152,12 +149,7 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
         }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _state: &mut MachineState,
-        command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         let engine_signal = ctx.machine.engine_signal;
         let engine_command = ctx.machine.engine_command;
         let engine_command_instant = ctx.machine.engine_command_instant;
