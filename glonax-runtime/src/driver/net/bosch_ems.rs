@@ -55,18 +55,16 @@ impl super::J1939Unit for BoschEngineManagementSystem {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.setup(ctx, network, runtime_state).await
+        self.ems.setup(ctx, network).await
     }
 
     async fn teardown(
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.teardown(ctx, network, runtime_state).await
+        self.ems.teardown(ctx, network).await
     }
 
     async fn try_accept(

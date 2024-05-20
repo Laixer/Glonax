@@ -460,7 +460,6 @@ impl super::J1939Unit for HydraulicControlUnit {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network
             .send(&protocol::request(
@@ -497,7 +496,6 @@ impl super::J1939Unit for HydraulicControlUnit {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&self.motion_reset()).await?;
         ctx.tx_mark();
@@ -559,21 +557,13 @@ impl super::J1939Unit for HydraulicControlUnit {
         result
     }
 
+    // TODO: Deprecate this method.
     async fn tick(
         &self,
         _ctx: &mut super::NetDriverContext,
         _network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        // // TODO: This lock is held for the entire tick, which is not ideal.
-        // // TODO: If the lock is not acquired, the tick will not be able to send a motion command.
-        // if let Ok(runtime_state) = runtime_state.try_read() {
-        //     self.send_motion_command(network, &runtime_state.state.motion_command)
-        //         .await?;
-        //     ctx.tx_mark();
-        // }
-
-        // Ok(())
         unimplemented!()
     }
 

@@ -285,7 +285,7 @@ impl Service<TcpServerConfig> for TcpServer {
         ServiceContext::with_address("tcp_server", self.config.listen.clone())
     }
 
-    async fn setup(&mut self, _runtime_state: SharedOperandState) {
+    async fn setup(&mut self) {
         log::debug!("Listening on: {}", self.config.listen);
 
         // FUTURE: This is a bit of a hack, but there is no obvious way to create async constructors
@@ -330,7 +330,7 @@ impl Service<TcpServerConfig> for TcpServer {
         )));
     }
 
-    async fn teardown(&mut self, _runtime_state: SharedOperandState) {
+    async fn teardown(&mut self) {
         let active_client_count = self.config.max_connections - self.semaphore.available_permits();
 
         log::debug!(

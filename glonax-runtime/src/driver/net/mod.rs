@@ -130,24 +130,15 @@ impl J1939Unit for NetDriver {
         &self,
         ctx: &mut NetDriverContext,
         router: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.setup(ctx, router, runtime_state).await,
-            Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.setup(ctx, router, runtime_state).await
-            }
-            Self::VolvoD7E(volvo) => volvo.setup(ctx, router, runtime_state).await,
-            Self::BoschEngineManagementSystem(bosch) => {
-                bosch.setup(ctx, router, runtime_state).await
-            }
-            Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.setup(ctx, router, runtime_state).await
-            }
-            Self::VehicleManagementSystem(responder) => {
-                responder.setup(ctx, router, runtime_state).await
-            }
-            Self::VehicleControlUnit(vcu) => vcu.setup(ctx, router, runtime_state).await,
+            Self::KueblerEncoder(encoder) => encoder.setup(ctx, router).await,
+            Self::KueblerInclinometer(inclinometer) => inclinometer.setup(ctx, router).await,
+            Self::VolvoD7E(volvo) => volvo.setup(ctx, router).await,
+            Self::BoschEngineManagementSystem(bosch) => bosch.setup(ctx, router).await,
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.setup(ctx, router).await,
+            Self::VehicleManagementSystem(responder) => responder.setup(ctx, router).await,
+            Self::VehicleControlUnit(vcu) => vcu.setup(ctx, router).await,
         }
     }
 
@@ -155,24 +146,15 @@ impl J1939Unit for NetDriver {
         &self,
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.teardown(ctx, network, runtime_state).await,
-            Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.teardown(ctx, network, runtime_state).await
-            }
-            Self::VolvoD7E(volvo) => volvo.teardown(ctx, network, runtime_state).await,
-            Self::BoschEngineManagementSystem(bosch) => {
-                bosch.teardown(ctx, network, runtime_state).await
-            }
-            Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.teardown(ctx, network, runtime_state).await
-            }
-            Self::VehicleManagementSystem(responder) => {
-                responder.teardown(ctx, network, runtime_state).await
-            }
-            Self::VehicleControlUnit(vcu) => vcu.teardown(ctx, network, runtime_state).await,
+            Self::KueblerEncoder(encoder) => encoder.teardown(ctx, network).await,
+            Self::KueblerInclinometer(inclinometer) => inclinometer.teardown(ctx, network).await,
+            Self::VolvoD7E(volvo) => volvo.teardown(ctx, network).await,
+            Self::BoschEngineManagementSystem(bosch) => bosch.teardown(ctx, network).await,
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.teardown(ctx, network).await,
+            Self::VehicleManagementSystem(responder) => responder.teardown(ctx, network).await,
+            Self::VehicleControlUnit(vcu) => vcu.teardown(ctx, network).await,
         }
     }
 
@@ -353,7 +335,6 @@ pub trait J1939Unit {
         &self,
         _ctx: &mut NetDriverContext,
         _network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
         std::future::ready(Ok(()))
     }
@@ -366,7 +347,6 @@ pub trait J1939Unit {
         &self,
         _ctx: &mut NetDriverContext,
         _network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
         std::future::ready(Ok(()))
     }

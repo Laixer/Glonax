@@ -1,5 +1,5 @@
 pub use actuator::ActuatorSimulator;
-pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkAuthorityTx, NetworkConfig};
+pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkConfig};
 pub use encoder::EncoderSimulator;
 pub use engine::EngineSimulator;
 pub use gnss::{Gnss, GnssConfig};

@@ -126,7 +126,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ServiceContext::with_address("authority_rx", self.interface.clone())
     }
 
-    async fn setup(&mut self, runtime_state: SharedOperandState) {
+    async fn setup(&mut self) {
         for (drv, ctx) in self.drivers.iter_mut() {
             log::debug!(
                 "[{}:0x{:X}] Setup network driver '{}'",
@@ -134,7 +134,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                 drv.destination(),
                 drv.name()
             );
-            if let Err(error) = drv.setup(ctx, &self.network, runtime_state.clone()).await {
+            if let Err(error) = drv.setup(ctx, &self.network).await {
                 log::error!(
                     "[{}:0x{:X}] {}: {}",
                     self.interface,
@@ -146,7 +146,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
     }
 
-    async fn teardown(&mut self, runtime_state: SharedOperandState) {
+    async fn teardown(&mut self) {
         for (drv, ctx) in self.drivers.iter_mut() {
             log::debug!(
                 "[{}:0x{:X}] Teardown network driver '{}'",
@@ -154,10 +154,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                 drv.destination(),
                 drv.name()
             );
-            if let Err(error) = drv
-                .teardown(ctx, &self.network, runtime_state.clone())
-                .await
-            {
+            if let Err(error) = drv.teardown(ctx, &self.network).await {
                 log::error!(
                     "[{}:0x{:X}] {}: {}",
                     self.interface,
@@ -197,54 +194,54 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 }
 
 // TODO: Should be replaced by NetworkAuthorityAtx
-pub struct NetworkAuthorityTx {
-    interface: String,
-    network: ControlNetwork,
-    drivers: NetDriverCollection,
-}
+// pub struct NetworkAuthorityTx {
+//     interface: String,
+//     network: ControlNetwork,
+//     drivers: NetDriverCollection,
+// }
 
-impl Service<NetworkConfig> for NetworkAuthorityTx {
-    fn new(config: NetworkConfig) -> Self
-    where
-        Self: Sized,
-    {
-        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
+// impl Service<NetworkConfig> for NetworkAuthorityTx {
+//     fn new(config: NetworkConfig) -> Self
+//     where
+//         Self: Sized,
+//     {
+//         let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
-        let mut drivers = NetDriverCollection::default();
-        for driver in config.driver.iter() {
-            drivers.push((
-                driver
-                    .to_net_driver(config.address)
-                    .expect("Failed to register driver"),
-                crate::driver::net::NetDriverContext::default(),
-            ));
-        }
+//         let mut drivers = NetDriverCollection::default();
+//         for driver in config.driver.iter() {
+//             drivers.push((
+//                 driver
+//                     .to_net_driver(config.address)
+//                     .expect("Failed to register driver"),
+//                 crate::driver::net::NetDriverContext::default(),
+//             ));
+//         }
 
-        Self {
-            interface: config.interface,
-            network,
-            drivers,
-        }
-    }
+//         Self {
+//             interface: config.interface,
+//             network,
+//             drivers,
+//         }
+//     }
 
-    fn ctx(&self) -> ServiceContext {
-        ServiceContext::with_address("authority_tx", self.interface.clone())
-    }
+//     fn ctx(&self) -> ServiceContext {
+//         ServiceContext::with_address("authority_tx", self.interface.clone())
+//     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: CommandSender) {
-        for (drv, ctx) in self.drivers.iter_mut() {
-            if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
-            }
-        }
-    }
-}
+//     async fn tick(&mut self, _runtime_state: SharedOperandState, _command_tx: CommandSender) {
+// for (drv, ctx) in self.drivers.iter_mut() {
+//     if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
+//         log::error!(
+//             "[{}:0x{:X}] {}: {}",
+//             self.interface,
+//             drv.destination(),
+//             drv.name(),
+//             error
+//         );
+//     }
+// }
+// }
+// }
 
 pub struct NetworkAuthorityAtx {
     interface: String,
@@ -278,21 +275,6 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
 
     fn ctx(&self) -> ServiceContext {
         ServiceContext::with_address("authority_atx", self.interface.clone())
-    }
-
-    // TODO: This should never be called
-    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: CommandSender) {
-        for (drv, ctx) in self.drivers.iter_mut() {
-            if let Err(error) = drv.tick(ctx, &self.network, runtime_state.clone()).await {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
-            }
-        }
     }
 
     async fn on_command(

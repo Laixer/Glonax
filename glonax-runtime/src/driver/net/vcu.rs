@@ -125,7 +125,6 @@ impl super::J1939Unit for VehicleControlUnit {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;

@@ -45,7 +45,6 @@ impl super::J1939Unit for VehicleManagementSystem {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
         ctx.tx_mark();

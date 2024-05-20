@@ -72,20 +72,14 @@ pub trait Service<Cnf> {
     /// Setup the service.
     ///
     /// This method is called once on startup and should be used to initialize the service.
-    fn setup(
-        &mut self,
-        _runtime_state: SharedOperandState,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    fn setup(&mut self) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
 
     /// Teardown the service.
     ///
     /// This method is called once on shutdown and should be used to cleanup the service.
-    fn teardown(
-        &mut self,
-        _runtime_state: SharedOperandState,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    fn teardown(&mut self) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
 
@@ -193,13 +187,13 @@ where
     async fn setup(&mut self) {
         log::debug!("Setup runtime service '{}'", self.service.ctx());
 
-        self.service.setup(self.operand.clone()).await;
+        self.service.setup().await;
     }
 
     async fn teardown(&mut self) {
         log::debug!("Teardown runtime service '{}'", self.service.ctx());
 
-        self.service.teardown(self.operand.clone()).await;
+        self.service.teardown().await;
     }
 
     async fn wait_io(&mut self) {

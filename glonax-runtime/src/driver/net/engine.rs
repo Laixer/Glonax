@@ -307,7 +307,6 @@ impl super::J1939Unit for EngineManagementSystem {
         &self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
@@ -403,35 +402,13 @@ impl super::J1939Unit for EngineManagementSystem {
         result
     }
 
+    // TODO: Deprecate this method.
     async fn tick(
         &self,
         _ctx: &mut super::NetDriverContext,
         _network: &crate::net::ControlNetwork,
         _runtime_state: crate::runtime::SharedOperandState,
     ) -> Result<(), super::J1939UnitError> {
-        // if let Ok(request) = runtime_state.try_read() {
-        //     let request = request.governor_mode();
-        //     match request.state {
-        //         crate::core::EngineState::NoRequest => {
-        //             network.send(&self.request(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //         crate::core::EngineState::Stopping => {
-        //             network.send(&self.stop(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //         crate::core::EngineState::Starting => {
-        //             network.send(&self.start(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //         crate::core::EngineState::Request => {
-        //             network.send(&self.request(request.rpm)).await?;
-        //             ctx.tx_mark();
-        //         }
-        //     }
-        // }
-
-        // Ok(())
         unimplemented!()
     }
 }
