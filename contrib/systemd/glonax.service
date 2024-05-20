@@ -29,6 +29,13 @@ SupplementaryGroups=tty dialout
 ExecStart=/usr/local/bin/glonaxd
 RuntimeDirectory=glonax
 ConfigurationDirectory=glonax
+#ProtectClock=true
+#ProtectKernelTunables=true
+#ProtectKernelModules=true
+#ProtectKernelLogs=true
+#ProtectControlGroups=true
+#MemoryDenyWriteExecute=true
+#SystemCallArchitectures=native
 
 [Install]
 WantedBy=multi-user.target
