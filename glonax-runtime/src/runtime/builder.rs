@@ -21,7 +21,6 @@ impl Builder {
         Ok(Self(Runtime {
             operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
                 state: crate::MachineState::default(),
-                governor: crate::Governor::new(800, 2_100), // TODO: Remove governor
             })),
             ipc_tx,
             ipc_rx: Some(ipc_rx),

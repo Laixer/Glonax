@@ -73,11 +73,6 @@ impl Service<GnssConfig> for Gnss {
                 if let Err(e) = ipc_tx.send(crate::core::Object::GNSS(gnss)) {
                     log::error!("Failed to send GNSS: {}", e);
                 }
-
-                // TODO: state will not exist in the future
-                // let mut runtime_state = runtime_state.write().await;
-                // runtime_state.state.gnss_signal_instant = Some(std::time::Instant::now());
-                // runtime_state.state.gnss_signal = gnss;
             }
         }
     }

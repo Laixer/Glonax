@@ -57,6 +57,6 @@ impl<Cnf: Clone> Component<Cnf> for LocalActor {
         );
 
         // TODO: This is a hack to get the actor into the state
-        state.actor = Some(actor.clone());
+        // state.actor = Some(actor.clone());
     }
 }

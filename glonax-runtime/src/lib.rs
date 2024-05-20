@@ -129,11 +129,6 @@ pub struct MachineState {
     /// Vehicle management system update.
     pub vms_signal_instant: Option<std::time::Instant>,
 
-    /// Global navigation satellite system data.
-    pub gnss_signal: core::Gnss, // SIGNAL
-    /// GNSS signal update.
-    pub gnss_signal_instant: Option<std::time::Instant>,
-
     /// Engine signal.
     pub engine_signal: core::Engine, // SIGNAL
     /// Engine state actual instant.
@@ -142,13 +137,6 @@ pub struct MachineState {
     pub engine_command: Option<core::Engine>, // INNER SERVICE (engine)
     /// Engine state request instant.
     pub engine_command_instant: Option<std::time::Instant>,
-
-    /// Hydraulic quick disconnect.
-    pub hydraulic_quick_disconnect: bool, // TODO: Move into hydraulic request struct // COMMAND
-    /// Hydraulic lock.
-    pub hydraulic_lock: bool, // TODO: Move into hydraulic request struct // COMMAND
-    /// Hydraulic actual instant.
-    pub hydraulic_actual_instant: Option<std::time::Instant>,
 
     /// Motion locked.
     pub motion_locked: bool, // SIGNAL
@@ -167,137 +155,8 @@ pub struct MachineState {
     /// Robot as an actor instant.
     pub actor_instant: Option<std::time::Instant>,
 
-    /// Current program queue.
-    pub program: std::collections::VecDeque<core::Target>, // TODO: Move into component state? // COMMAND
     /// Electronic control unit data.
     pub ecu_state: driver::VirtualHCU, // CROSS SERVICE (Sim actuator, sim encoder)
-}
-
-struct Governor {
-    /// Default engine speed.
-    rpm_idle: u16,
-    /// Maximum RPM for the engine.
-    rpm_max: u16,
-    /// Engine state transition timeout.
-    state_transition_timeout: std::time::Duration,
-}
-
-impl Governor {
-    /// Construct a new governor.
-    fn new(rpm_idle: u16, rpm_max: u16) -> Self {
-        Self {
-            rpm_idle,
-            rpm_max,
-            state_transition_timeout: std::time::Duration::from_millis(2_000),
-        }
-    }
-
-    /// Reshape the torque.
-    ///
-    /// This method reshapes the torque based on the engine speed.
-    #[inline]
-    fn reshape(&self, torque: u16) -> u16 {
-        torque.clamp(self.rpm_idle, self.rpm_max)
-    }
-
-    /// Get the next engine state.
-    ///
-    /// This method determines the next engine state based on the actual and requested
-    /// engine states. It returns the next engine state as an `EngineRequest`.
-    fn next_state(
-        &self,
-        signal: &core::Engine,
-        command: &core::Engine,
-        command_instant: Option<std::time::Instant>,
-    ) -> crate::core::Engine {
-        use crate::core::EngineState;
-
-        match (signal.state, command.state) {
-            (EngineState::NoRequest, EngineState::Starting) => {
-                if let Some(instant) = command_instant {
-                    if instant.elapsed() > self.state_transition_timeout {
-                        return core::Engine {
-                            rpm: self.reshape(self.rpm_idle),
-                            state: EngineState::NoRequest,
-                            ..Default::default()
-                        };
-                    }
-                }
-
-                core::Engine {
-                    rpm: self.reshape(self.rpm_idle),
-                    state: EngineState::Starting,
-                    ..Default::default()
-                }
-            }
-            (EngineState::NoRequest, EngineState::Request) => {
-                if let Some(instant) = command_instant {
-                    if instant.elapsed() > self.state_transition_timeout {
-                        return core::Engine {
-                            rpm: self.reshape(self.rpm_idle),
-                            state: EngineState::NoRequest,
-                            ..Default::default()
-                        };
-                    }
-                }
-
-                core::Engine {
-                    rpm: self.reshape(self.rpm_idle),
-                    state: EngineState::Starting,
-                    ..Default::default()
-                }
-            }
-            (EngineState::NoRequest, _) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::NoRequest,
-                ..Default::default()
-            },
-
-            (EngineState::Starting, _) => {
-                if let Some(instant) = command_instant {
-                    if instant.elapsed() > self.state_transition_timeout {
-                        return core::Engine {
-                            rpm: self.reshape(self.rpm_idle),
-                            state: EngineState::NoRequest,
-                            ..Default::default()
-                        };
-                    }
-                }
-
-                core::Engine {
-                    rpm: self.reshape(self.rpm_idle),
-                    state: EngineState::Starting,
-                    ..Default::default()
-                }
-            }
-            (EngineState::Stopping, _) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::Stopping,
-                ..Default::default()
-            },
-
-            (EngineState::Request, EngineState::NoRequest) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::Stopping,
-                ..Default::default()
-            },
-            (EngineState::Request, EngineState::Starting) => core::Engine {
-                rpm: self.reshape(command.rpm),
-                state: EngineState::Request,
-                ..Default::default()
-            },
-            (EngineState::Request, EngineState::Stopping) => core::Engine {
-                rpm: self.reshape(self.rpm_idle),
-                state: EngineState::Stopping,
-                ..Default::default()
-            },
-            (EngineState::Request, EngineState::Request) => core::Engine {
-                rpm: self.reshape(command.rpm),
-                state: EngineState::Request,
-                ..Default::default()
-            },
-        }
-    }
 }
 
 /// The operand is the current state of the machine.
@@ -307,54 +166,9 @@ impl Governor {
 pub struct Operand {
     /// Current machine state.
     pub state: MachineState,
-    /// Governor for the engine.
-    governor: Governor,
 }
 
 impl Operand {
-    /// Get the governor mode for the engine.
-    ///
-    /// This method determines the governor mode based on the current
-    /// engine request, the actual engine mode and the last motion update.
-    ///
-    /// If no engine state request is present, the governor will use the
-    /// actual engine state, essentially maintaining the current state.
-    pub fn governor_mode(&self) -> crate::core::Engine {
-        let mut engine_command = self
-            .state
-            .engine_command
-            .unwrap_or(self.state.engine_signal);
-        engine_command.actual_engine = 0;
-        engine_command.state = match engine_command.state {
-            core::EngineState::NoRequest => core::EngineState::NoRequest,
-            core::EngineState::Request => core::EngineState::Request,
-            _ => self.state.engine_signal.state,
-        };
-
-        engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
-
-        if engine_command.rpm == 0 {
-            if engine_command.driver_demand == 0 {
-                engine_command.state = core::EngineState::NoRequest;
-            } else {
-                engine_command.rpm = (engine_command.driver_demand as f32 / 100.0
-                    * self.governor.rpm_max as f32) as u16;
-            }
-        } else {
-            engine_command.state = core::EngineState::Request;
-        }
-
-        let engine_state = self.governor.next_state(
-            &self.state.engine_signal,
-            &engine_command,
-            self.state.engine_command_instant,
-        );
-
-        log::trace!("Engine governor: {:?}", engine_state);
-
-        engine_state
-    }
-
     // TODO: Report all statuses, not just a single one
     /// Get the status of the machine.
     ///
@@ -362,7 +176,7 @@ impl Operand {
     /// into account the status of the vehicle management system, global navigation satellite system,
     /// engine, and other factors.
     pub fn status(&self) -> core::Status {
-        use crate::core::{GnssStatus, HostStatus, Status};
+        use crate::core::{HostStatus, Status};
 
         let mut status = Status::Healthy;
 
@@ -376,9 +190,9 @@ impl Operand {
             _ => {}
         }
 
-        if let GnssStatus::DeviceNotFound = self.state.gnss_signal.status {
-            status = Status::Faulty;
-        }
+        // if let GnssStatus::DeviceNotFound = self.state.gnss_signal.status {
+        //     status = Status::Faulty;
+        // }
 
         // match self.state.engine.status {
         //     EngineStatus::NetworkDown => {
