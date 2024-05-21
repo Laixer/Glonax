@@ -322,8 +322,6 @@ pub struct ComponentContext {
     pub machine: Machine,
     /// World state.
     pub world: World,
-    /// Published objects.
-    pub objects: Vec<crate::core::Object>, // TODO: Replace with Machine.
     /// Actuator values.
     pub actuators: std::collections::HashMap<u16, f32>, // TODO: Find another way to pass actuator errors around. Maybe via objects.
     /// Last tick.
@@ -357,7 +355,6 @@ impl Default for ComponentContext {
         Self {
             machine: Machine::default(),
             world: World::default(),
-            objects: Vec::new(),
             actuators: std::collections::HashMap::new(),
             last_tick: std::time::Instant::now(),
             iteration: 0,

@@ -60,7 +60,5 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
                 }
             }
         }
-
-        log::debug!("Acquisition tick, number of objects: {}", ctx.objects.len());
     }
 }
