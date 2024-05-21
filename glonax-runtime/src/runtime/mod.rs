@@ -100,11 +100,7 @@ pub trait Service<Cnf> {
     /// This method is called in conjunction with other services
     /// and should therefore be non-blocking. The method is optional
     /// and does not need to be implemented.
-    fn tick(&mut self, _command_tx: CommandSender) -> impl std::future::Future<Output = ()> + Send {
-        std::future::ready(())
-    }
-
-    fn tick2(&mut self, _ipc_rx: std::rc::Rc<IPCReceiver>, _command_tx: CommandSender) {}
+    fn tick(&mut self, _ipc_rx: std::rc::Rc<IPCReceiver>, _command_tx: CommandSender) {}
 
     fn on_command(
         &mut self,
@@ -189,27 +185,7 @@ where
         }
     }
 
-    async fn tick(&mut self, duration: std::time::Duration) {
-        let mut interval = tokio::time::interval(duration);
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-
-        while self.shutdown.is_empty() {
-            interval.tick().await;
-
-            let tick_start = std::time::Instant::now();
-
-            self.service.tick(self.command_tx.clone()).await;
-
-            let tick_duration = tick_start.elapsed();
-            log::trace!("Tick loop duration: {:?}", tick_duration);
-
-            if tick_duration > duration {
-                log::warn!("Tick loop delta is too high: {:?}", tick_duration);
-            }
-        }
-    }
-
-    async fn tick2(&mut self, duration: std::time::Duration, ipc_rx: IPCReceiver) {
+    async fn tick(&mut self, duration: std::time::Duration, ipc_rx: IPCReceiver) {
         let mut interval = tokio::time::interval(duration);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
@@ -221,7 +197,7 @@ where
 
             let tick_start = std::time::Instant::now();
 
-            self.service.tick2(ipc_rx.clone(), self.command_tx.clone());
+            self.service.tick(ipc_rx.clone(), self.command_tx.clone());
 
             let tick_duration = tick_start.elapsed();
             log::trace!("Tick loop duration: {:?}", tick_duration);
@@ -464,55 +440,6 @@ impl Runtime {
         }
     }
 
-    /// Schedule a component to run in the background.
-    ///
-    /// This method will schedule a component to run in the background. On each tick, the component
-    /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_service<S, C>(&mut self, config: C, duration: std::time::Duration)
-    where
-        S: Service<C> + Send + Sync + 'static,
-        C: Clone + Send + 'static,
-    {
-        let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
-            config,
-            self.ipc_tx.clone(),
-            self.command_tx.clone(),
-            self.shutdown.0.subscribe(),
-        );
-
-        if self.shutdown.1.is_empty() {
-            self.spawn(async move {
-                service_descriptor.setup().await;
-                service_descriptor.tick(duration).await;
-                service_descriptor.teardown().await;
-            });
-        }
-    }
-
-    /// Schedule a component to run in the background with default configuration.
-    ///
-    /// This method will schedule a component to run in the background. On each tick, the component
-    /// will be provided with a component context and a mutable reference to the runtime state.
-    pub fn schedule_service_default<S>(&mut self, duration: std::time::Duration)
-    where
-        S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
-    {
-        let mut service_descriptor = ServiceDescriptor::<S, _>::new(
-            S::new(crate::runtime::NullConfig),
-            self.ipc_tx.clone(),
-            self.command_tx.clone(),
-            self.shutdown.0.subscribe(),
-        );
-
-        if self.shutdown.1.is_empty() {
-            self.spawn(async move {
-                service_descriptor.setup().await;
-                service_descriptor.tick(duration).await;
-                service_descriptor.teardown().await;
-            });
-        }
-    }
-
     /// Run a service in the background.
     ///
     /// This method will run a service in the background. The service will be provided with a copy of
@@ -532,7 +459,7 @@ impl Runtime {
 
         if self.shutdown.1.is_empty() {
             service_descriptor.setup().await;
-            service_descriptor.tick2(duration, ipc_rx).await;
+            service_descriptor.tick(duration, ipc_rx).await;
             service_descriptor.teardown().await;
         }
     }

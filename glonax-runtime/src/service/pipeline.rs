@@ -91,8 +91,8 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     ///
     /// * `ipc_rx` - An `IPCReceiver` object representing the IPC receiver.
     /// * `command_tx` - A `CommandSender` object representing the command sender.
-    fn tick2(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>, command_tx: CommandSender) {
-        for (idx, component) in self.init_components.iter_mut().enumerate() {
+    fn tick(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>, command_tx: CommandSender) {
+        for (idx, component) in self.init_components.iter().enumerate() {
             let component_start = Instant::now();
 
             component.init(&mut self.ctx, ipc_rx.clone());
@@ -112,7 +112,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
             }
         }
 
-        for (idx, component) in self.post_components.iter_mut().enumerate() {
+        for (idx, component) in self.post_components.iter().enumerate() {
             let component_start = Instant::now();
 
             component.finalize(&mut self.ctx, command_tx.clone());
