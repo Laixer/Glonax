@@ -134,11 +134,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     // TODO: Dont need a service for this, just a component in the pipeline
     // runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
-    // TODO: Do we need a simulator?
     if config.is_simulation {
-        runtime.schedule_service_default::<service::EncoderSimulator>(Duration::from_millis(5));
-        runtime.schedule_service_default::<service::EngineSimulator>(Duration::from_millis(10));
-
         runtime.schedule_command_service::<service::ActuatorSimulator, _>(
             glonax::runtime::NullConfig {},
         );
@@ -169,9 +165,15 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     pipe.add_component_default::<glonax::components::HostComponent>();
     pipe.add_component_default::<glonax::components::Acquisition>();
+
+    if config.is_simulation {
+        pipe.add_component_default::<glonax::components::EncoderSimulator>();
+        pipe.add_component_default::<glonax::components::EngineSimulator>();
+    }
+
+    pipe.add_component_default::<glonax::components::StatusComponent>();
     pipe.add_component_default::<glonax::components::EngineComponent>();
     pipe.add_component_default::<glonax::components::ControlComponent>();
-    pipe.add_component_default::<glonax::components::StatusComponent>();
     pipe.add_component_default::<components::WorldBuilder>();
 
     if config.mode != config::OperationMode::PilotRestrict {

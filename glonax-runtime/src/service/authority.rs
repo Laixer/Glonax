@@ -99,6 +99,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 
         let mut drivers = NetDriverCollection::default();
 
+        // TODO: Do we need to add a VMS driver?
         drivers.push((
             NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(
                 config.address,
