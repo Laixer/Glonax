@@ -150,12 +150,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         for j1939_net_config in &config.j1939 {
             runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
 
-            // TODO: Should not exist, trigger from component via command tx
-            // runtime.schedule_service::<service::NetworkAuthorityTx, _>(
-            //     j1939_net_config.clone(),
-            //     Duration::from_millis(j1939_net_config.interval.clamp(5, 1_000)),
-            // );
-
+            // TODO: Why not on all J1939 units?
             if j1939_net_config.authority_atx {
                 runtime.schedule_command_service::<service::NetworkAuthorityAtx, _>(
                     j1939_net_config.clone(),
@@ -176,6 +171,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     pipe.add_component_default::<glonax::components::Acquisition>();
     pipe.add_component_default::<glonax::components::EngineComponent>();
     pipe.add_component_default::<glonax::components::ControlComponent>();
+    pipe.add_component_default::<glonax::components::StatusComponent>();
     pipe.add_component_default::<components::WorldBuilder>();
 
     if config.mode != config::OperationMode::PilotRestrict {
