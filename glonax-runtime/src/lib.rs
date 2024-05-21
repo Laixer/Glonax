@@ -120,6 +120,7 @@ pub fn log_system() {
 ///
 /// The project refers to the machine as the entire system including
 /// hardware, software, sensors and actuators.
+#[deprecated]
 #[derive(Default)]
 pub struct MachineState {
     /// Vehicle management system data.

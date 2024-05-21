@@ -1,4 +1,7 @@
-use crate::runtime::{CommandSender, Component, ComponentContext};
+use crate::{
+    core::{EngineState, Object},
+    runtime::{CommandSender, Component, ComponentContext},
+};
 
 // TODO: Move to drivers?
 struct Governor {
@@ -149,7 +152,7 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender) {
         let engine_signal = ctx.machine.engine_signal;
         let engine_command = ctx.machine.engine_command;
         let engine_command_instant = ctx.machine.engine_command_instant;
@@ -160,20 +163,20 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
         engine_command.actual_engine = 0;
         engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
         engine_command.state = match engine_command.state {
-            crate::core::EngineState::NoRequest => crate::core::EngineState::NoRequest,
-            crate::core::EngineState::Request => crate::core::EngineState::Request,
+            EngineState::NoRequest => EngineState::NoRequest,
+            EngineState::Request => EngineState::Request,
             _ => engine_signal.state,
         };
 
         if engine_command.rpm == 0 {
             if engine_command.driver_demand == 0 {
-                engine_command.state = crate::core::EngineState::NoRequest;
+                engine_command.state = EngineState::NoRequest;
             } else {
                 engine_command.rpm = (engine_command.driver_demand as f32 / 100.0
                     * self.governor.rpm_max as f32) as u16;
             }
         } else {
-            engine_command.state = crate::core::EngineState::Request;
+            engine_command.state = EngineState::Request;
         }
 
         let governor_engine =
@@ -182,8 +185,8 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
 
         log::trace!("Engine governor: {:?}", governor_engine);
 
-        // if let Err(e) = command_tx.try_send(crate::core::Object::Engine(governor_engine)) {
-        //     log::error!("Failed to send engine command: {}", e);
-        // }
+        if let Err(e) = command_tx.try_send(Object::Engine(governor_engine)) {
+            log::error!("Failed to send engine command: {}", e);
+        }
     }
 }
