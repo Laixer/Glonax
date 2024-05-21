@@ -233,7 +233,17 @@ impl TcpServer {
                 },
                 Err(e) => {
                     if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                        log::warn!("Session abandoned for: {}", session.name());
+                        // log::warn!("Session abandoned for: {}", session.name());
+                        log::debug!("Session shutdown requested for: {}", session.name());
+
+                        use tokio::io::AsyncWriteExt;
+
+                        if let Err(e) = client.inner_mut().shutdown().await {
+                            log::error!("Failed to shutdown stream: {}", e);
+                        }
+
+                        session_shutdown = true;
+
                         break;
                     } else if e.kind() == std::io::ErrorKind::ConnectionReset {
                         log::warn!("Session reset for: {}", session.name());
