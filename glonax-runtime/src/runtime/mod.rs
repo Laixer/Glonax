@@ -364,6 +364,7 @@ pub trait Component<Cnf: Clone> {
     where
         Self: Sized;
 
+    // TODO: Remove `command_tx`
     /// Tick the component.
     ///
     /// This method will be called on each tick of the runtime.

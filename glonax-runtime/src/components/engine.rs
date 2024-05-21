@@ -1,6 +1,6 @@
 use crate::{
     core::{EngineState, Object},
-    runtime::{CommandSender, Component, ComponentContext},
+    runtime::{CommandSender, ComponentContext, PostComponent},
 };
 
 // TODO: Move to drivers?
@@ -135,7 +135,7 @@ pub struct EngineComponent {
     governor: Governor,
 }
 
-impl<Cnf: Clone> Component<Cnf> for EngineComponent {
+impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -145,7 +145,7 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender) {
+    fn finalize(&self, ctx: &mut ComponentContext, command_tx: CommandSender) {
         let engine_signal = ctx.machine.engine_signal;
         let engine_command = ctx.machine.engine_command;
         let engine_command_instant = ctx.machine.engine_command_instant;

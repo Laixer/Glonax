@@ -93,31 +93,31 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     /// * `command_tx` - A `CommandSender` object representing the command sender.
     fn tick2(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>, command_tx: CommandSender) {
         for (idx, component) in self.init_components.iter_mut().enumerate() {
-            let component_tick_start = Instant::now();
+            let component_start = Instant::now();
 
             component.init(&mut self.ctx, ipc_rx.clone());
 
-            if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+            if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Init component {} is delaying execution", idx);
             }
         }
 
         for (idx, component) in self.tick_components.iter_mut().enumerate() {
-            let component_tick_start = Instant::now();
+            let component_start = Instant::now();
 
             component.tick(&mut self.ctx, command_tx.clone());
 
-            if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+            if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Tick component {} is delaying execution", idx);
             }
         }
 
         for (idx, component) in self.post_components.iter_mut().enumerate() {
-            let component_tick_start = Instant::now();
+            let component_start = Instant::now();
 
             component.finalize(&mut self.ctx, command_tx.clone());
 
-            if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+            if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Post component {} is delaying execution", idx);
             }
         }

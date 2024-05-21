@@ -171,7 +171,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     pipe.add_component_default::<glonax::components::StatusComponent>();
-    pipe.add_component_default::<glonax::components::EngineComponent>();
     pipe.add_component_default::<glonax::components::ControlComponent>();
     pipe.add_component_default::<components::WorldBuilder>();
 
@@ -183,9 +182,10 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     if config.mode == config::OperationMode::Autonomous {
         pipe.add_component_default::<components::Kinematic>();
         pipe.add_component_default::<components::Controller>();
-    } else {
-        // pipe.add_component_default::<glonax::components::HydraulicComponent>();
     }
+
+    pipe.add_post_component::<glonax::components::EngineComponent>();
+    pipe.add_post_component::<glonax::components::HydraulicComponent>();
 
     runtime.run_interval(pipe, Duration::from_millis(10)).await;
 
