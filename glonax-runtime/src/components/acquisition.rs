@@ -58,6 +58,10 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
                         ctx.machine.program_command.push_back(target);
                     }
                 }
+                Object::Encoder((id, value)) => {
+                    ctx.machine.encoders.insert(id, value);
+                    ctx.machine.encoders_instant = Some(message.timestamp);
+                }
             }
         }
     }
