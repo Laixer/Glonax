@@ -28,7 +28,12 @@ impl<Cnf: Clone> Component<Cnf> for EncoderSimulator {
         Self { encoder_list }
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(
+        &mut self,
+        _ctx: &mut ComponentContext,
+        _ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,
+        _command_tx: CommandSender,
+    ) {
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());
 

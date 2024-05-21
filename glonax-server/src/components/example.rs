@@ -1,6 +1,6 @@
 use glonax::{
     math::EulerAngles,
-    runtime::{CommandSender, Component, ComponentContext},
+    runtime::{CommandSender, Component, ComponentContext, IPCReceiver},
 };
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
@@ -15,7 +15,12 @@ impl<Cnf: Clone> Component<Cnf> for Example {
         Self
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(
+        &mut self,
+        ctx: &mut ComponentContext,
+        _ipc_rx: std::rc::Rc<IPCReceiver>,
+        _command_tx: CommandSender,
+    ) {
         let delta = ctx.delta();
 
         let actor = ctx.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();

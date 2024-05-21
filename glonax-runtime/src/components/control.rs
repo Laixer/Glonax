@@ -10,7 +10,12 @@ impl<Cnf: Clone> Component<Cnf> for ControlComponent {
         Self {}
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(
+        &mut self,
+        _ctx: &mut ComponentContext,
+        _ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,
+        _command_tx: CommandSender,
+    ) {
         // TODO: Implement the control logic
     }
 }

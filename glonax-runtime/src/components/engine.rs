@@ -1,6 +1,6 @@
 use crate::{
     core::{EngineState, Object},
-    runtime::{CommandSender, Component, ComponentContext},
+    runtime::{CommandSender, Component, ComponentContext, IPCReceiver},
 };
 
 // TODO: Move to drivers?
@@ -145,7 +145,12 @@ impl<Cnf: Clone> Component<Cnf> for EngineComponent {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender) {
+    fn tick(
+        &mut self,
+        ctx: &mut ComponentContext,
+        _ipc_rx: std::rc::Rc<IPCReceiver>,
+        command_tx: CommandSender,
+    ) {
         let engine_signal = ctx.machine.engine_signal;
         let engine_command = ctx.machine.engine_command;
         let engine_command_instant = ctx.machine.engine_command_instant;

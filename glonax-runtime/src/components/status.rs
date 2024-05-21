@@ -10,7 +10,12 @@ impl<Cnf: Clone> Component<Cnf> for StatusComponent {
         Self {}
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(
+        &mut self,
+        _ctx: &mut ComponentContext,
+        _ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,
+        _command_tx: CommandSender,
+    ) {
         // // TODO: Report all statuses, not just a single one
         // /// Get the status of the machine.
         // ///

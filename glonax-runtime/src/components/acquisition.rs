@@ -10,9 +10,7 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
         Self {}
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {}
-
-    fn tick2(
+    fn tick(
         &mut self,
         ctx: &mut ComponentContext,
         ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,

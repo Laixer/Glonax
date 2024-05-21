@@ -352,16 +352,12 @@ pub trait Component<Cnf: Clone> {
     ///
     /// This method will be called on each tick of the runtime.
     /// How often the runtime ticks is determined by the runtime configuration.
-    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender);
-
-    fn tick2(
+    fn tick(
         &mut self,
         ctx: &mut ComponentContext,
-        _ipc_rx: std::rc::Rc<IPCReceiver>,
+        ipc_rx: std::rc::Rc<IPCReceiver>,
         command_tx: CommandSender,
-    ) {
-        self.tick(ctx, command_tx);
-    }
+    );
 }
 
 /// Construct runtime service from configuration.
