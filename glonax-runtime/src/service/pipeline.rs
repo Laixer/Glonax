@@ -4,6 +4,8 @@ use crate::runtime::{
     CommandSender, Component, ComponentContext, IPCReceiver, Service, ServiceContext,
 };
 
+const COMPONENT_DELAY_THRESHOLD: Duration = Duration::from_micros(500);
+
 pub struct Pipeline {
     ctx: ComponentContext,
     components: Vec<Box<dyn Component<crate::runtime::NullConfig> + Send + Sync>>,
@@ -74,7 +76,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
 
             component.tick(&mut self.ctx, ipc_rx.clone(), command_tx.clone());
 
-            if component_tick_start.elapsed() > Duration::from_millis(2) {
+            if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Component {} is delaying execution", idx);
             }
         }
