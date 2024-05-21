@@ -125,7 +125,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         log::info!("Running in simulation mode");
     }
 
-    // TODO: Let the runtie builder set the instance
     glonax::global::set_instance(instance);
 
     let mut runtime = glonax::Runtime::default();

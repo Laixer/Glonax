@@ -120,26 +120,6 @@ where
     phantom: std::marker::PhantomData<C>,
 }
 
-// impl<S> ServiceDescriptor<S, crate::runtime::NullConfig>
-// where
-//     S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
-// {
-//     fn new(
-//         service: S,
-//         ipc_tx: IPCSender,
-//         command_tx: CommandSender,
-//         shutdown: tokio::sync::broadcast::Receiver<()>,
-//     ) -> Self {
-//         Self {
-//             service,
-//             ipc_tx,
-//             command_tx,
-//             shutdown,
-//             phantom: std::marker::PhantomData,
-//         }
-//     }
-// }
-
 impl<S, C> ServiceDescriptor<S, C>
 where
     S: Service<C> + Send + Sync + 'static,
@@ -177,40 +157,6 @@ where
             _ = async {
                 loop {
                     self.service.wait_io(self.ipc_tx.clone(), self.command_tx.clone()).await;
-                }
-            } => {}
-            _ = self.shutdown.recv() => {}
-        }
-    }
-
-    // async fn tick(&mut self, duration: std::time::Duration, ipc_rx: IPCReceiver) {
-    //     let mut interval = tokio::time::interval(duration);
-    //     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-
-    //     // Wrap the IPC in an arc to allow for cloning.
-    //     let ipc_rx = std::rc::Rc::new(ipc_rx);
-
-    //     while self.shutdown.is_empty() {
-    //         interval.tick().await;
-
-    //         let tick_start = std::time::Instant::now();
-
-    //         self.service.tick(ipc_rx.clone(), self.command_tx.clone());
-
-    //         let tick_duration = tick_start.elapsed();
-    //         log::trace!("Tick loop duration: {:?}", tick_duration);
-
-    //         if tick_duration > duration {
-    //             log::warn!("Tick loop delta is too high: {:?}", tick_duration);
-    //         }
-    //     }
-    // }
-
-    async fn on_command(&mut self, mut command_rx: CommandReceiver) {
-        tokio::select! {
-            _ = async {
-                while let Some(command) = command_rx.recv().await {
-                    self.service.on_command(&command).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -457,20 +403,21 @@ impl Runtime {
         S: Service<C> + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
-        let command_rx = self.command_rx.take().unwrap();
+        let mut command_rx = self.command_rx.take().unwrap();
+        let mut shutdown = self.shutdown.0.subscribe();
 
-        let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
-            config,
-            self.ipc_tx.clone(),
-            self.command_tx.clone(),
-            self.shutdown.0.subscribe(),
-        );
+        let mut service = S::new(config.clone());
 
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
-                // service_descriptor.setup().await;
-                service_descriptor.on_command(command_rx).await;
-                // service_descriptor.teardown().await;
+                tokio::select! {
+                    _ = async {
+                        while let Some(command) = command_rx.recv().await {
+                            service.on_command(&command).await;
+                        }
+                    } => {}
+                    _ = shutdown.recv() => {}
+                }
             });
         }
     }
