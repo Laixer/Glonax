@@ -122,25 +122,25 @@ where
     phantom: std::marker::PhantomData<C>,
 }
 
-impl<S> ServiceDescriptor<S, crate::runtime::NullConfig>
-where
-    S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
-{
-    fn new(
-        service: S,
-        ipc_tx: IPCSender,
-        command_tx: CommandSender,
-        shutdown: tokio::sync::broadcast::Receiver<()>,
-    ) -> Self {
-        Self {
-            service,
-            ipc_tx,
-            command_tx,
-            shutdown,
-            phantom: std::marker::PhantomData,
-        }
-    }
-}
+// impl<S> ServiceDescriptor<S, crate::runtime::NullConfig>
+// where
+//     S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
+// {
+//     fn new(
+//         service: S,
+//         ipc_tx: IPCSender,
+//         command_tx: CommandSender,
+//         shutdown: tokio::sync::broadcast::Receiver<()>,
+//     ) -> Self {
+//         Self {
+//             service,
+//             ipc_tx,
+//             command_tx,
+//             shutdown,
+//             phantom: std::marker::PhantomData,
+//         }
+//     }
+// }
 
 impl<S, C> ServiceDescriptor<S, C>
 where
@@ -185,28 +185,28 @@ where
         }
     }
 
-    async fn tick(&mut self, duration: std::time::Duration, ipc_rx: IPCReceiver) {
-        let mut interval = tokio::time::interval(duration);
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    // async fn tick(&mut self, duration: std::time::Duration, ipc_rx: IPCReceiver) {
+    //     let mut interval = tokio::time::interval(duration);
+    //     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
-        // Wrap the IPC in an arc to allow for cloning.
-        let ipc_rx = std::rc::Rc::new(ipc_rx);
+    //     // Wrap the IPC in an arc to allow for cloning.
+    //     let ipc_rx = std::rc::Rc::new(ipc_rx);
 
-        while self.shutdown.is_empty() {
-            interval.tick().await;
+    //     while self.shutdown.is_empty() {
+    //         interval.tick().await;
 
-            let tick_start = std::time::Instant::now();
+    //         let tick_start = std::time::Instant::now();
 
-            self.service.tick(ipc_rx.clone(), self.command_tx.clone());
+    //         self.service.tick(ipc_rx.clone(), self.command_tx.clone());
 
-            let tick_duration = tick_start.elapsed();
-            log::trace!("Tick loop duration: {:?}", tick_duration);
+    //         let tick_duration = tick_start.elapsed();
+    //         log::trace!("Tick loop duration: {:?}", tick_duration);
 
-            if tick_duration > duration {
-                log::warn!("Tick loop delta is too high: {:?}", tick_duration);
-            }
-        }
-    }
+    //         if tick_duration > duration {
+    //             log::warn!("Tick loop delta is too high: {:?}", tick_duration);
+    //         }
+    //     }
+    // }
 
     async fn on_command(&mut self, mut command_rx: CommandReceiver) {
         tokio::select! {
@@ -433,9 +433,9 @@ impl Runtime {
 
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
-                service_descriptor.setup().await;
+                // service_descriptor.setup().await;
                 service_descriptor.on_command(command_rx).await;
-                service_descriptor.teardown().await;
+                // service_descriptor.teardown().await;
             });
         }
     }
@@ -444,23 +444,28 @@ impl Runtime {
     ///
     /// This method will run a service in the background. The service will be provided with a copy of
     /// the runtime configuration and a reference to the runtime.
-    pub async fn run_interval<S>(&mut self, service: S, duration: std::time::Duration)
+    pub async fn run_interval<S>(&mut self, mut service: S, duration: std::time::Duration)
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let ipc_rx = self.ipc_rx.take().unwrap();
+        let mut interval = tokio::time::interval(duration);
+        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
-        let mut service_descriptor = ServiceDescriptor::new(
-            service,
-            self.ipc_tx.clone(),
-            self.command_tx.clone(),
-            self.shutdown.0.subscribe(),
-        );
+        let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
 
-        if self.shutdown.1.is_empty() {
-            service_descriptor.setup().await;
-            service_descriptor.tick(duration, ipc_rx).await;
-            service_descriptor.teardown().await;
+        while self.shutdown.1.is_empty() {
+            interval.tick().await;
+
+            let tick_start = std::time::Instant::now();
+
+            service.tick(ipc_rx.clone(), self.command_tx.clone());
+
+            let tick_duration = tick_start.elapsed();
+            log::trace!("Tick loop duration: {:?}", tick_duration);
+
+            if tick_duration > duration {
+                log::warn!("Tick loop delta is too high: {:?}", tick_duration);
+            }
         }
     }
 
