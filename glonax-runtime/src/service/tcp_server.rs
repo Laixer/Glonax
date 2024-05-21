@@ -86,38 +86,34 @@ impl TcpServer {
                                 client.send_packet(crate::global::instance()).await.unwrap();
                             }
                             // TODO: Not available at the moment
-                            // crate::core::Status::MESSAGE_TYPE => {
-                            //     client
-                            //         .send_packet(&runtime_state.read().await.status())
-                            //         .await
-                            //         .unwrap();
-                            // }
+                            crate::core::Status::MESSAGE_TYPE => {
+                                let status = crate::core::Status::Healthy;
+
+                                client.send_packet(&status).await.unwrap();
+                            }
                             // TODO: Not available at the moment
-                            // crate::core::Host::MESSAGE_TYPE => {
-                            //     client
-                            //         .send_packet(&runtime_state.read().await.state.vms_signal)
-                            //         .await
-                            //         .unwrap();
-                            // }
+                            crate::core::Host::MESSAGE_TYPE => {
+                                let host = crate::core::Host::default();
+
+                                client.send_packet(&host).await.unwrap();
+                            }
                             // TODO: Not available at the moment
-                            // crate::core::Gnss::MESSAGE_TYPE => {
-                            //     client
-                            //         .send_packet(&runtime_state.read().await.state.gnss_signal)
-                            //         .await
-                            //         .unwrap();
-                            // }
+                            crate::core::Gnss::MESSAGE_TYPE => {
+                                let gnss = crate::core::Gnss::default();
+
+                                client.send_packet(&gnss).await.unwrap();
+                            }
                             // TODO: Not available at the moment
-                            // crate::core::Engine::MESSAGE_TYPE => {
-                            //     client
-                            //         .send_packet(&runtime_state.read().await.state.engine_signal)
-                            //         .await
-                            //         .unwrap();
-                            // }
+                            crate::core::Engine::MESSAGE_TYPE => {
+                                let engine = crate::core::Engine::default();
+
+                                client.send_packet(&engine).await.unwrap();
+                            }
                             // TODO: Not available at the moment
                             // crate::world::Actor::MESSAGE_TYPE => {
-                            //     if let Some(actor) = &runtime_state.read().await.state.actor {
-                            //         client.send_packet(actor).await.unwrap();
-                            //     }
+                            // if let Some(actor) = &runtime_state.read().await.state.actor {
+                            //     client.send_packet(actor).await.unwrap();
+                            // }
                             // }
                             _ => {
                                 log::warn!("Unknown request: {}", request.message());
