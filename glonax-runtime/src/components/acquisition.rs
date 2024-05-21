@@ -37,12 +37,16 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
                     }
                 }
                 Object::GNSS(gnss_signal) => {
-                    ctx.machine.gnss_signal = gnss_signal;
-                    ctx.machine.gnss_signal_instant = Some(message.timestamp);
+                    if message.object_type == ObjectType::Signal {
+                        ctx.machine.gnss_signal = gnss_signal;
+                        ctx.machine.gnss_signal_instant = Some(message.timestamp);
+                    }
                 }
                 Object::Host(vms_signal) => {
-                    ctx.machine.vms_signal = vms_signal;
-                    ctx.machine.vms_signal_instant = Some(message.timestamp);
+                    if message.object_type == ObjectType::Signal {
+                        ctx.machine.vms_signal = vms_signal;
+                        ctx.machine.vms_signal_instant = Some(message.timestamp);
+                    }
                 }
                 Object::Motion(motion) => {
                     if message.object_type == ObjectType::Command {

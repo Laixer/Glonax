@@ -21,6 +21,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
             return;
         }
 
+        // TODO: Call to external system, execution is non-deterministic. Test show significant delays.
         self.system.refresh_memory();
         self.system.refresh_cpu();
 

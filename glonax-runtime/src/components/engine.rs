@@ -13,13 +13,6 @@ struct Governor {
     state_transition_timeout: std::time::Duration,
 }
 
-// TODO: Remove this when we have a proper implementation.
-impl std::default::Default for Governor {
-    fn default() -> Self {
-        Self::new(0, 0)
-    }
-}
-
 impl Governor {
     /// Construct a new governor.
     fn new(rpm_idle: u16, rpm_max: u16) -> Self {
