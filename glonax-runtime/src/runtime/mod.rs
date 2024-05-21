@@ -280,6 +280,11 @@ pub struct Machine {
     /// Motion command instant.
     pub motion_command_instant: Option<std::time::Instant>,
 
+    /// Control command.
+    pub control_command: Option<core::Control>,
+    /// Control command instant.
+    pub control_command_instant: Option<std::time::Instant>,
+
     /// Encoder data.
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
     /// Encoder instant.

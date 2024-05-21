@@ -1,4 +1,7 @@
-use crate::runtime::{ComponentContext, IPCReceiver, InitComponent};
+use crate::{
+    core::{Object, ObjectType},
+    runtime::{ComponentContext, IPCReceiver, InitComponent},
+};
 
 pub struct Acquisition {}
 
@@ -11,14 +14,15 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
     }
 
     fn init(&self, ctx: &mut ComponentContext, ipc_rx: std::rc::Rc<IPCReceiver>) {
-        while let Ok(message) = ipc_rx.try_recv() {
+        for message in ipc_rx.try_iter() {
             log::trace!("Received IPC object: {:?}", message.object);
 
-            use crate::core::{Object, ObjectType};
-
             match message.object {
-                Object::Control(_control_signal) => {
-                    // TODO: Handle control signal
+                Object::Control(control) => {
+                    if message.object_type == ObjectType::Command {
+                        ctx.machine.control_command = Some(control);
+                        ctx.machine.control_command_instant = Some(message.timestamp);
+                    }
                 }
                 Object::Engine(engine) => {
                     if message.object_type == ObjectType::Command {

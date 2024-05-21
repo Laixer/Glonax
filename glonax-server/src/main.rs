@@ -133,24 +133,18 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
-    if config.is_simulation {
-        runtime.schedule_command_service::<service::ActuatorSimulator, _>(
-            glonax::runtime::NullConfig {},
-        );
-    } else {
-        if let Some(gnss_config) = config.clone().gnss {
-            runtime.schedule_io_service::<service::Gnss, _>(gnss_config);
-        }
+    if let Some(gnss_config) = config.clone().gnss {
+        runtime.schedule_io_service::<service::Gnss, _>(gnss_config);
+    }
 
-        for j1939_net_config in &config.j1939 {
-            runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
+    for j1939_net_config in &config.j1939 {
+        runtime.schedule_io_service::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
 
-            // TODO: Why not on all J1939 units?
-            if j1939_net_config.authority_atx {
-                runtime.schedule_command_service::<service::NetworkAuthorityAtx, _>(
-                    j1939_net_config.clone(),
-                );
-            }
+        // TODO: Why not on all J1939 units? Because there is only one command_rx
+        if j1939_net_config.authority_atx {
+            runtime.schedule_command_service::<service::NetworkAuthorityAtx, _>(
+                j1939_net_config.clone(),
+            );
         }
     }
 
@@ -184,8 +178,17 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.add_component_default::<components::Controller>();
     }
 
-    pipe.add_post_component::<glonax::components::EngineComponent>();
-    pipe.add_post_component::<glonax::components::HydraulicComponent>();
+    if config.is_simulation {
+        //     runtime.schedule_command_service::<service::ActuatorSimulator, _>(
+        //         glonax::runtime::NullConfig {},
+        //     );
+        // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
+    } else {
+        pipe.add_post_component::<glonax::components::EngineComponent>();
+        pipe.add_post_component::<glonax::components::HydraulicComponent>();
+    }
+
+    // TODO: Any reporting to the network will be done here
 
     runtime.run_interval(pipe, Duration::from_millis(10)).await;
 
