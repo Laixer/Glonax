@@ -1,4 +1,4 @@
-use glonax::runtime::{CommandSender, Component, ComponentContext};
+use glonax::runtime::{Component, ComponentContext};
 use nalgebra::Point3;
 
 // TODO: Calculate this from the actor
@@ -19,7 +19,7 @@ impl<Cnf: Clone> Component<Cnf> for Kinematic {
     }
 
     // TODO: Move the IK into a helper function
-    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(&mut self, ctx: &mut ComponentContext) {
         let actor = ctx.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
 
         if let Some(target) = &self.target {

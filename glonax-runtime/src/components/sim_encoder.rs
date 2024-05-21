@@ -1,6 +1,6 @@
 use crate::{
     driver::VirtualEncoder,
-    runtime::{CommandSender, Component, ComponentContext},
+    runtime::{Component, ComponentContext},
 };
 
 #[allow(dead_code)]
@@ -28,7 +28,7 @@ impl<Cnf: Clone> Component<Cnf> for EncoderSimulator {
         Self { encoder_list }
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(&mut self, _ctx: &mut ComponentContext) {
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());
 

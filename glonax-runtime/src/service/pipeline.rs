@@ -105,7 +105,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         for (idx, component) in self.tick_components.iter_mut().enumerate() {
             let component_start = Instant::now();
 
-            component.tick(&mut self.ctx, command_tx.clone());
+            component.tick(&mut self.ctx);
 
             if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Tick component {} is delaying execution", idx);

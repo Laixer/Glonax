@@ -345,12 +345,11 @@ pub trait Component<Cnf: Clone> {
     where
         Self: Sized;
 
-    // TODO: Remove `command_tx`
     /// Tick the component.
     ///
     /// This method will be called on each tick of the runtime.
     /// How often the runtime ticks is determined by the runtime configuration.
-    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender);
+    fn tick(&mut self, ctx: &mut ComponentContext);
 }
 
 /// Construct runtime service from configuration.

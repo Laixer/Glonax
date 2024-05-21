@@ -165,7 +165,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     pipe.add_component_default::<glonax::components::StatusComponent>();
-    pipe.add_component_default::<glonax::components::ControlComponent>();
     pipe.add_component_default::<components::WorldBuilder>();
 
     if config.mode != config::OperationMode::PilotRestrict {
@@ -176,6 +175,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     if config.mode == config::OperationMode::Autonomous {
         pipe.add_component_default::<components::Kinematic>();
         pipe.add_component_default::<components::Controller>();
+        pipe.add_post_component::<glonax::components::HydraulicComponent>();
     }
 
     if config.is_simulation {
@@ -184,8 +184,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         //     );
         // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
     } else {
+        pipe.add_post_component::<glonax::components::ControlComponent>();
         pipe.add_post_component::<glonax::components::EngineComponent>();
-        pipe.add_post_component::<glonax::components::HydraulicComponent>();
     }
 
     // TODO: Any reporting to the network will be done here

@@ -1,8 +1,8 @@
-use crate::runtime::{CommandSender, Component, ComponentContext};
+use crate::runtime::{CommandSender, ComponentContext, PostComponent};
 
 pub struct ControlComponent {}
 
-impl<Cnf: Clone> Component<Cnf> for ControlComponent {
+impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -10,7 +10,7 @@ impl<Cnf: Clone> Component<Cnf> for ControlComponent {
         Self {}
     }
 
-    fn tick(&mut self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn finalize(&self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
         // TODO: Implement the control logic
     }
 }

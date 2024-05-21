@@ -1,6 +1,6 @@
 use glonax::{
     core::MachineType,
-    runtime::{CommandSender, Component, ComponentContext},
+    runtime::{Component, ComponentContext},
     world::{Actor, ActorBuilder, ActorSegment},
 };
 use nalgebra::Vector3;
@@ -38,7 +38,7 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
+    fn tick(&mut self, ctx: &mut ComponentContext) {
         if !self.is_actor_attached {
             ctx.world.add_actor(self.actor.clone());
             self.is_actor_attached = true;

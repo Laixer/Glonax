@@ -1,6 +1,6 @@
 use glonax::{
-    core::{Actuator, Motion, Object},
-    runtime::{CommandSender, Component, ComponentContext},
+    core::{Actuator, Motion},
+    runtime::{Component, ComponentContext},
 };
 
 struct ActuatorMotionEvent {
@@ -81,7 +81,7 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         }
     }
 
-    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender) {
+    fn tick(&mut self, ctx: &mut ComponentContext) {
         let frame_error = ctx.actuators.get(&(Actuator::Slew as u16));
         let boom_error = ctx.actuators.get(&(Actuator::Boom as u16));
         let arm_error = ctx.actuators.get(&(Actuator::Arm as u16));
@@ -190,20 +190,12 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
 
         if !motion.is_empty() {
             let motion_command = Motion::from_iter(motion);
-            if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
-                log::error!("Failed to send motion command: {}", e);
-            }
-
             ctx.machine.motion_command = Some(motion_command);
             ctx.machine.motion_command_instant = Some(std::time::Instant::now());
 
             self.stopall = false;
         } else if !self.stopall {
             let motion_command = Motion::StopAll;
-            if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
-                log::error!("Failed to send motion command: {}", e);
-            }
-
             ctx.machine.motion_command = Some(motion_command);
             ctx.machine.motion_command_instant = Some(std::time::Instant::now());
 
