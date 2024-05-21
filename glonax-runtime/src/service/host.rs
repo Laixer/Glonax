@@ -1,6 +1,9 @@
 use sysinfo::{Components, System};
 
-use crate::runtime::{CommandSender, Service, ServiceContext};
+use crate::{
+    core::{Object, ObjectMessage},
+    runtime::{CommandSender, IPCSender, Service, ServiceContext},
+};
 
 pub struct Host {
     system: System,
@@ -28,21 +31,21 @@ impl<C> Service<C> for Host {
         ServiceContext::new("host")
     }
 
-    async fn tick(&mut self, _command_tx: CommandSender) {
+    async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
         self.system.refresh_memory();
         self.system.refresh_cpu();
         self.components.refresh();
 
-        let _load_avg = System::load_average();
+        let load_avg = System::load_average();
 
-        // let mut runtime_state = runtime_state.write().await;
-        // runtime_state.state.vms_signal_instant = Some(std::time::Instant::now());
-        // runtime_state.state.vms_signal.memory =
-        //     (self.system.used_memory(), self.system.total_memory());
-        // runtime_state.state.vms_signal.swap = (self.system.used_swap(), self.system.total_swap());
-        // runtime_state.state.vms_signal.cpu_load = (load_avg.one, load_avg.five, load_avg.fifteen);
-        // runtime_state.state.vms_signal.uptime = System::uptime();
-        // runtime_state.state.vms_signal.timestamp = chrono::Utc::now();
+        let vms_signal = crate::core::Host {
+            memory: (self.system.used_memory(), self.system.total_memory()),
+            swap: (self.system.used_swap(), self.system.total_swap()),
+            cpu_load: (load_avg.one, load_avg.five, load_avg.fifteen),
+            uptime: System::uptime(),
+            timestamp: chrono::Utc::now(),
+            status: crate::core::HostStatus::Nominal,
+        };
 
         // for component in &self.components {
         //     if let Some(critical) = component.critical() {
@@ -56,5 +59,11 @@ impl<C> Service<C> for Host {
         //         }
         //     }
         // }
+
+        if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::Host(vms_signal))) {
+            log::error!("Failed to send host signal: {}", e);
+        }
+
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
 }

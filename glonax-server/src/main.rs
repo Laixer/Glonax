@@ -132,7 +132,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     let mut runtime = glonax::runtime::builder()?.with_shutdown().build();
 
     // TODO: Dont need a service for this, just a component in the pipeline
-    // runtime.schedule_service_default::<service::Host>(SERVICE_HOST_INTERVAL);
+    // runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
     // TODO: Do we need a simulator?
     if config.is_simulation {
