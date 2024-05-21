@@ -138,19 +138,6 @@ impl TcpServer {
 
                         client.send_packet(&echo).await.unwrap();
                     }
-                    // TODO: Replace with TCP shutdown
-                    // crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
-                    //     log::debug!("Session shutdown requested for: {}", session.name());
-
-                    //     use tokio::io::AsyncWriteExt;
-
-                    //     if let Err(e) = client.inner_mut().shutdown().await {
-                    //         log::error!("Failed to shutdown stream: {}", e);
-                    //     }
-
-                    //     session_shutdown = true;
-                    //     break;
-                    // }
                     crate::core::Engine::MESSAGE_TYPE => {
                         let engine = client
                             .recv_packet::<crate::core::Engine>(frame.payload_length)
@@ -240,7 +227,13 @@ impl TcpServer {
                         session_shutdown = true;
 
                         break;
-                    } else if e.kind() == std::io::ErrorKind::ConnectionReset {
+                    } else if [
+                        std::io::ErrorKind::ConnectionReset,
+                        std::io::ErrorKind::TimedOut,
+                        std::io::ErrorKind::ConnectionAborted,
+                    ]
+                    .contains(&e.kind())
+                    {
                         log::warn!("Session reset for: {}", session.name());
                         break;
                     } else {
