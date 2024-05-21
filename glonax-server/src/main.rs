@@ -131,8 +131,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     let mut runtime = glonax::runtime::builder()?.with_shutdown().build();
 
-    // TODO: Dont need a service for this, just a component in the pipeline
-    // runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
+    runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
     if config.is_simulation {
         runtime.schedule_command_service::<service::ActuatorSimulator, _>(
@@ -163,8 +162,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::runtime::Service;
     let mut pipe = service::Pipeline::new(glonax::runtime::NullConfig {});
 
-    pipe.add_component_default::<glonax::components::HostComponent>();
-    pipe.add_component_default::<glonax::components::Acquisition>();
+    // pipe.add_component_default::<glonax::components::HostComponent>();
+    pipe.add_init_component::<glonax::components::Acquisition>();
 
     if config.is_simulation {
         pipe.add_component_default::<glonax::components::EncoderSimulator>();

@@ -1,22 +1,17 @@
-use crate::runtime::{CommandSender, Component, ComponentContext};
+use crate::runtime::{ComponentContext, IPCReceiver, InitComponent};
 
 pub struct Acquisition {}
 
-impl<Cnf: Clone> Component<Cnf> for Acquisition {
-    fn new(_config: Cnf) -> Self
+impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
+    fn new(_: Cnf) -> Self
     where
         Self: Sized,
     {
         Self {}
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,
-        _command_tx: CommandSender,
-    ) {
-        if let Ok(message) = ipc_rx.try_recv() {
+    fn init(&self, ctx: &mut ComponentContext, ipc_rx: std::rc::Rc<IPCReceiver>) {
+        while let Ok(message) = ipc_rx.try_recv() {
             log::trace!("Received IPC object: {:?}", message.object);
 
             use crate::core::{Object, ObjectType};

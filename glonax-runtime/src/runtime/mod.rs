@@ -339,6 +339,22 @@ impl Default for ComponentContext {
     }
 }
 
+pub trait InitComponent<Cnf: Clone> {
+    fn new(config: Cnf) -> Self
+    where
+        Self: Sized;
+
+    fn init(&self, ctx: &mut ComponentContext, ipc_rx: std::rc::Rc<IPCReceiver>);
+}
+
+pub trait PostComponent<Cnf: Clone> {
+    fn new(config: Cnf) -> Self
+    where
+        Self: Sized;
+
+    fn finalize(&self, ctx: &mut ComponentContext, command_tx: CommandSender);
+}
+
 pub trait Component<Cnf: Clone> {
     /// Construct a new component.
     ///
@@ -352,12 +368,7 @@ pub trait Component<Cnf: Clone> {
     ///
     /// This method will be called on each tick of the runtime.
     /// How often the runtime ticks is determined by the runtime configuration.
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        ipc_rx: std::rc::Rc<IPCReceiver>,
-        command_tx: CommandSender,
-    );
+    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender);
 }
 
 /// Construct runtime service from configuration.

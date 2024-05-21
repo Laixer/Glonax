@@ -16,12 +16,7 @@ impl<Cnf: Clone> Component<Cnf> for HostComponent {
         }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         if ctx.iteration() % 50 != 0 {
             return;
         }

@@ -1,6 +1,6 @@
 use glonax::{
     driver::EncoderConverter,
-    runtime::{CommandSender, Component, ComponentContext, IPCReceiver},
+    runtime::{CommandSender, Component, ComponentContext},
 };
 
 const FRAME_ENCODER: u8 = 0x6A;
@@ -47,12 +47,7 @@ impl<Cnf: Clone> Component<Cnf> for SensorFusion {
         }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _ipc_rx: std::rc::Rc<IPCReceiver>,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         let actor = ctx.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
 
         if let Some(value) = ctx.machine.encoders.get(&FRAME_ENCODER) {

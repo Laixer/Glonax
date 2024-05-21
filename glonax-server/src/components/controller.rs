@@ -1,6 +1,6 @@
 use glonax::{
     core::{Actuator, Motion, Object},
-    runtime::{CommandSender, Component, ComponentContext, IPCReceiver},
+    runtime::{CommandSender, Component, ComponentContext},
 };
 
 struct ActuatorMotionEvent {
@@ -81,12 +81,7 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _ipc_rx: std::rc::Rc<IPCReceiver>,
-        command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, command_tx: CommandSender) {
         let frame_error = ctx.actuators.get(&(Actuator::Slew as u16));
         let boom_error = ctx.actuators.get(&(Actuator::Boom as u16));
         let arm_error = ctx.actuators.get(&(Actuator::Arm as u16));

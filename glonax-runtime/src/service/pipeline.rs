@@ -1,14 +1,17 @@
 use std::time::{Duration, Instant};
 
 use crate::runtime::{
-    CommandSender, Component, ComponentContext, IPCReceiver, Service, ServiceContext,
+    CommandSender, Component, ComponentContext, IPCReceiver, InitComponent, PostComponent, Service,
+    ServiceContext,
 };
 
 const COMPONENT_DELAY_THRESHOLD: Duration = Duration::from_micros(500);
 
 pub struct Pipeline {
     ctx: ComponentContext,
-    components: Vec<Box<dyn Component<crate::runtime::NullConfig> + Send + Sync>>,
+    init_components: Vec<Box<dyn InitComponent<crate::runtime::NullConfig> + Send + Sync>>,
+    tick_components: Vec<Box<dyn Component<crate::runtime::NullConfig> + Send + Sync>>,
+    post_components: Vec<Box<dyn PostComponent<crate::runtime::NullConfig> + Send + Sync>>,
 }
 
 impl Pipeline {
@@ -20,7 +23,7 @@ impl Pipeline {
     where
         C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        self.components.push(Box::new(component));
+        self.tick_components.push(Box::new(component));
     }
 
     /// Add a component to the pipeline with the default configuration.
@@ -32,6 +35,22 @@ impl Pipeline {
         C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
         self.add_component(C::new(crate::runtime::NullConfig {}));
+    }
+
+    pub fn add_init_component<C>(&mut self)
+    where
+        C: InitComponent<crate::runtime::NullConfig> + Send + Sync + 'static,
+    {
+        self.init_components
+            .push(Box::new(C::new(crate::runtime::NullConfig {})));
+    }
+
+    pub fn add_post_component<C>(&mut self)
+    where
+        C: PostComponent<crate::runtime::NullConfig> + Send + Sync + 'static,
+    {
+        self.post_components
+            .push(Box::new(C::new(crate::runtime::NullConfig {})));
     }
 }
 
@@ -51,7 +70,9 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     {
         Self {
             ctx: ComponentContext::default(),
-            components: Vec::new(),
+            init_components: Vec::new(),
+            tick_components: Vec::new(),
+            post_components: Vec::new(),
         }
     }
 
@@ -71,13 +92,33 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     /// * `ipc_rx` - An `IPCReceiver` object representing the IPC receiver.
     /// * `command_tx` - A `CommandSender` object representing the command sender.
     fn tick2(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>, command_tx: CommandSender) {
-        for (idx, component) in self.components.iter_mut().enumerate() {
+        for (idx, component) in self.init_components.iter_mut().enumerate() {
             let component_tick_start = Instant::now();
 
-            component.tick(&mut self.ctx, ipc_rx.clone(), command_tx.clone());
+            component.init(&mut self.ctx, ipc_rx.clone());
 
             if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
-                log::warn!("Component {} is delaying execution", idx);
+                log::warn!("Init component {} is delaying execution", idx);
+            }
+        }
+
+        for (idx, component) in self.tick_components.iter_mut().enumerate() {
+            let component_tick_start = Instant::now();
+
+            component.tick(&mut self.ctx, command_tx.clone());
+
+            if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+                log::warn!("Tick component {} is delaying execution", idx);
+            }
+        }
+
+        for (idx, component) in self.post_components.iter_mut().enumerate() {
+            let component_tick_start = Instant::now();
+
+            component.finalize(&mut self.ctx, command_tx.clone());
+
+            if component_tick_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+                log::warn!("Post component {} is delaying execution", idx);
             }
         }
 

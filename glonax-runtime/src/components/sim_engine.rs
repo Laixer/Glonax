@@ -14,12 +14,7 @@ impl<Cnf: Clone> Component<Cnf> for EngineSimulator {
         Self { rng: OsRng }
     }
 
-    fn tick(
-        &mut self,
-        ctx: &mut ComponentContext,
-        _ipc_rx: std::rc::Rc<crate::runtime::IPCReceiver>,
-        _command_tx: CommandSender,
-    ) {
+    fn tick(&mut self, ctx: &mut ComponentContext, _command_tx: CommandSender) {
         let engine_signal = crate::core::Engine {
             driver_demand: self.rng.gen_range(18..=20),
             actual_engine: self.rng.gen_range(19..=21),
