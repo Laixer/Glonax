@@ -316,20 +316,11 @@ async fn main() -> anyhow::Result<()> {
                 client.send_packet(&target).await?;
             }
             "q" | "quit" => {
-                client
-                    .send_packet(&glonax::protocol::frame::Shutdown)
-                    .await?;
-
-                use tokio::io::AsyncReadExt;
-
-                // TODO: Read until EOF
-                // TOOD: Move to client
-                let mut buf = [0; 1024];
-                if let Ok(size) = client.inner_mut().read(&mut buf).await {
-                    if size == 0 {
-                        break;
-                    }
+                use tokio::io::AsyncWriteExt;
+                if let Err(e) = client.inner_mut().shutdown().await {
+                    eprintln!("Failed to shutdown: {}", e);
                 }
+                break;
             }
             _ => {
                 print_help();
