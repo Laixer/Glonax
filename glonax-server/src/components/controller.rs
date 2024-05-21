@@ -189,15 +189,23 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         // }
 
         if !motion.is_empty() {
-            if let Err(e) = command_tx.try_send(Object::Motion(Motion::from_iter(motion))) {
+            let motion_command = Motion::from_iter(motion);
+            if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
                 log::error!("Failed to send motion command: {}", e);
             }
 
+            ctx.machine.motion_command = Some(motion_command);
+            ctx.machine.motion_command_instant = Some(std::time::Instant::now());
+
             self.stopall = false;
         } else if !self.stopall {
-            if let Err(e) = command_tx.try_send(Object::Motion(Motion::StopAll)) {
+            let motion_command = Motion::StopAll;
+            if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
                 log::error!("Failed to send motion command: {}", e);
             }
+
+            ctx.machine.motion_command = Some(motion_command);
+            ctx.machine.motion_command_instant = Some(std::time::Instant::now());
 
             self.stopall = true;
         }
