@@ -143,18 +143,18 @@ impl TcpServer {
                         client.send_packet(&echo).await.unwrap();
                     }
                     // TODO: Replace with TCP shutdown
-                    crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
-                        log::debug!("Session shutdown requested for: {}", session.name());
+                    // crate::protocol::frame::Shutdown::MESSAGE_TYPE => {
+                    //     log::debug!("Session shutdown requested for: {}", session.name());
 
-                        use tokio::io::AsyncWriteExt;
+                    //     use tokio::io::AsyncWriteExt;
 
-                        if let Err(e) = client.inner_mut().shutdown().await {
-                            log::error!("Failed to shutdown stream: {}", e);
-                        }
+                    //     if let Err(e) = client.inner_mut().shutdown().await {
+                    //         log::error!("Failed to shutdown stream: {}", e);
+                    //     }
 
-                        session_shutdown = true;
-                        break;
-                    }
+                    //     session_shutdown = true;
+                    //     break;
+                    // }
                     crate::core::Engine::MESSAGE_TYPE => {
                         let engine = client
                             .recv_packet::<crate::core::Engine>(frame.payload_length)
@@ -233,7 +233,6 @@ impl TcpServer {
                 },
                 Err(e) => {
                     if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                        // log::warn!("Session abandoned for: {}", session.name());
                         log::debug!("Session shutdown requested for: {}", session.name());
 
                         use tokio::io::AsyncWriteExt;
