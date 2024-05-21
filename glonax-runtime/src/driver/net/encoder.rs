@@ -1,6 +1,9 @@
 use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PGN};
 
-use crate::net::Parsable;
+use crate::{
+    core::{Object, ObjectMessage},
+    net::Parsable,
+};
 
 const _CONFIG_PGN: PGN = PGN::ProprietaryA;
 const ENCODER_PGN: PGN = PGN::ProprietaryB(65_450);
@@ -232,7 +235,7 @@ impl super::J1939Unit for KueblerEncoder {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 

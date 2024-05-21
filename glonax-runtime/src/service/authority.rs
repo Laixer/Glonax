@@ -1,7 +1,7 @@
 use crate::{
     driver::net::{J1939Unit, NetDriver, NetDriverCollection},
     net::ControlNetwork,
-    runtime::{CommandSender, IPCSender, Service, ServiceContext, SharedOperandState},
+    runtime::{CommandSender, IPCSender, Service, ServiceContext},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -166,21 +166,13 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
     }
 
-    async fn wait_io(
-        &mut self,
-        runtime_state: SharedOperandState,
-        _ipc_tx: IPCSender,
-        _command_tx: CommandSender,
-    ) {
+    async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
         if let Err(e) = self.network.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }
 
         for (drv, ctx) in self.drivers.iter_mut() {
-            if let Err(error) = drv
-                .try_accept(ctx, &self.network, runtime_state.clone())
-                .await
-            {
+            if let Err(error) = drv.try_accept(ctx, &self.network, ipc_tx.clone()).await {
                 log::error!(
                     "[{}:0x{:X}] {}: {}",
                     self.interface,

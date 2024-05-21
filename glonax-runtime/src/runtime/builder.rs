@@ -19,9 +19,6 @@ impl Builder {
         let (command_tx, command_rx) = tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_MOTION);
 
         Ok(Self(Runtime {
-            operand: std::sync::Arc::new(tokio::sync::RwLock::new(crate::Operand {
-                state: crate::MachineState::default(),
-            })),
             ipc_tx,
             ipc_rx: Some(ipc_rx),
             command_tx,

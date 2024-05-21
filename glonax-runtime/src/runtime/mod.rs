@@ -10,7 +10,6 @@ pub type IPCSender = std::sync::mpsc::Sender<crate::core::ObjectMessage>;
 pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::ObjectMessage>;
 pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
-pub type SharedOperandState = std::sync::Arc<tokio::sync::RwLock<crate::Operand>>;
 
 pub mod builder;
 
@@ -90,7 +89,6 @@ pub trait Service<Cnf> {
     /// and does not need to be implemented.
     fn wait_io(
         &mut self,
-        _runtime_state: SharedOperandState,
         _ipc_tx: IPCSender,
         _command_tx: CommandSender,
     ) -> impl std::future::Future<Output = ()> + Send {
@@ -102,21 +100,11 @@ pub trait Service<Cnf> {
     /// This method is called in conjunction with other services
     /// and should therefore be non-blocking. The method is optional
     /// and does not need to be implemented.
-    fn tick(
-        &mut self,
-        _runtime_state: SharedOperandState,
-        _command_tx: CommandSender,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    fn tick(&mut self, _command_tx: CommandSender) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
 
-    fn tick2(
-        &mut self,
-        _runtime_state: SharedOperandState,
-        _ipc_rx: std::rc::Rc<IPCReceiver>,
-        _command_tx: CommandSender,
-    ) {
-    }
+    fn tick2(&mut self, _ipc_rx: std::rc::Rc<IPCReceiver>, _command_tx: CommandSender) {}
 
     fn on_command(
         &mut self,
@@ -132,7 +120,6 @@ where
     C: Clone + Send + 'static,
 {
     service: S,
-    operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
     ipc_tx: IPCSender,
     command_tx: CommandSender,
     shutdown: tokio::sync::broadcast::Receiver<()>,
@@ -145,14 +132,12 @@ where
 {
     fn new(
         service: S,
-        operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
         ipc_tx: IPCSender,
         command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service,
-            operand,
             ipc_tx,
             command_tx,
             shutdown,
@@ -168,14 +153,12 @@ where
 {
     fn with_config(
         config: C,
-        operand: std::sync::Arc<tokio::sync::RwLock<crate::Operand>>,
         ipc_tx: IPCSender,
         command_tx: CommandSender,
         shutdown: tokio::sync::broadcast::Receiver<()>,
     ) -> Self {
         Self {
             service: S::new(config.clone()),
-            operand,
             ipc_tx,
             command_tx,
             shutdown,
@@ -199,7 +182,7 @@ where
         tokio::select! {
             _ = async {
                 loop {
-                    self.service.wait_io(self.operand.clone(), self.ipc_tx.clone(), self.command_tx.clone()).await;
+                    self.service.wait_io(self.ipc_tx.clone(), self.command_tx.clone()).await;
                 }
             } => {}
             _ = self.shutdown.recv() => {}
@@ -215,9 +198,7 @@ where
 
             let tick_start = std::time::Instant::now();
 
-            self.service
-                .tick(self.operand.clone(), self.command_tx.clone())
-                .await;
+            self.service.tick(self.command_tx.clone()).await;
 
             let tick_duration = tick_start.elapsed();
             log::trace!("Tick loop duration: {:?}", tick_duration);
@@ -240,11 +221,7 @@ where
 
             let tick_start = std::time::Instant::now();
 
-            self.service.tick2(
-                self.operand.clone(),
-                ipc_rx.clone(),
-                self.command_tx.clone(),
-            );
+            self.service.tick2(ipc_rx.clone(), self.command_tx.clone());
 
             let tick_duration = tick_start.elapsed();
             log::trace!("Tick loop duration: {:?}", tick_duration);
@@ -396,8 +373,6 @@ pub fn builder() -> self::Result<builder::Builder> {
 }
 
 pub struct Runtime {
-    /// Glonax operand.
-    operand: SharedOperandState,
     /// IPC sender.
     ipc_tx: IPCSender,
     /// IPC receiver.
@@ -435,7 +410,6 @@ impl Runtime {
     {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
-            self.operand.clone(),
             self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
@@ -463,7 +437,6 @@ impl Runtime {
 
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
-            self.operand.clone(),
             self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
@@ -489,7 +462,6 @@ impl Runtime {
     {
         let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
             config,
-            self.operand.clone(),
             self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
@@ -514,7 +486,6 @@ impl Runtime {
     {
         let mut service_descriptor = ServiceDescriptor::<S, _>::new(
             S::new(crate::runtime::NullConfig),
-            self.operand.clone(),
             self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),
@@ -541,7 +512,6 @@ impl Runtime {
 
         let mut service_descriptor = ServiceDescriptor::new(
             service,
-            self.operand.clone(),
             self.ipc_tx.clone(),
             self.command_tx.clone(),
             self.shutdown.0.subscribe(),

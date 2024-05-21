@@ -162,24 +162,24 @@ impl J1939Unit for NetDriver {
         &mut self,
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.try_accept(ctx, network, runtime_state).await,
+            Self::KueblerEncoder(encoder) => encoder.try_accept(ctx, network, ipc_tx).await,
             Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.try_accept(ctx, network, runtime_state).await
+                inclinometer.try_accept(ctx, network, ipc_tx).await
             }
-            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, network, runtime_state).await,
+            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, network, ipc_tx).await,
             Self::BoschEngineManagementSystem(bosch) => {
-                bosch.try_accept(ctx, network, runtime_state).await
+                bosch.try_accept(ctx, network, ipc_tx).await
             }
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.try_accept(ctx, network, runtime_state).await
+                hydraulic.try_accept(ctx, network, ipc_tx).await
             }
             Self::VehicleManagementSystem(responder) => {
-                responder.try_accept(ctx, network, runtime_state).await
+                responder.try_accept(ctx, network, ipc_tx).await
             }
-            Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, network, runtime_state).await,
+            Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, network, ipc_tx).await,
         }
     }
 
@@ -330,7 +330,7 @@ pub trait J1939Unit {
         &mut self,
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        ipc_tx: crate::runtime::IPCSender,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send;
 
     /// Trigger the unit manually.

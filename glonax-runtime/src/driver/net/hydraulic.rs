@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PDU_NOT_AVAILABLE, PGN};
 
-use crate::net::Parsable;
+use crate::{
+    core::{Motion, Object, ObjectMessage},
+    net::Parsable,
+};
 
 use super::vecraft::{VecraftConfigMessage, VecraftFactoryResetMessage, VecraftStatusMessage};
 
@@ -507,7 +510,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
@@ -547,7 +550,13 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::Status(status) => {
                     ctx.rx_mark();
 
-                    runtime_state.write().await.state.motion_locked = status.locked;
+                    if status.locked {
+                        if let Err(e) =
+                            ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::StopAll)))
+                        {
+                            log::error!("Failed to send motion signal: {}", e);
+                        }
+                    }
 
                     status.into_error()?;
                 }

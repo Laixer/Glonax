@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
-use crate::runtime::{CommandSender, IPCSender, Service, ServiceContext, SharedOperandState};
+use crate::runtime::{CommandSender, IPCSender, Service, ServiceContext};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct TcpServerConfig {
@@ -49,7 +49,6 @@ pub struct TcpServer {
 impl TcpServer {
     async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         stream: T,
-        _runtime_state: SharedOperandState,
         ipc_tx: IPCSender,
         command_tx: CommandSender,
         _permit: tokio::sync::OwnedSemaphorePermit,
@@ -292,12 +291,7 @@ impl Service<TcpServerConfig> for TcpServer {
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
     }
 
-    async fn wait_io(
-        &mut self,
-        runtime_state: SharedOperandState,
-        ipc_tx: IPCSender,
-        command_tx: CommandSender,
-    ) {
+    async fn wait_io(&mut self, ipc_tx: IPCSender, command_tx: CommandSender) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
@@ -322,11 +316,7 @@ impl Service<TcpServerConfig> for TcpServer {
         log::debug!("Spawning client session");
 
         self.clients.push(tokio::spawn(Self::spawn_client_session(
-            stream,
-            runtime_state.clone(),
-            ipc_tx,
-            command_tx,
-            permit,
+            stream, ipc_tx, command_tx, permit,
         )));
     }
 

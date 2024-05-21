@@ -1,6 +1,6 @@
 use crate::{
     driver::VirtualEncoder,
-    runtime::{CommandSender, Service, ServiceContext, SharedOperandState},
+    runtime::{CommandSender, Service, ServiceContext},
 };
 
 pub struct EncoderSimulator {
@@ -31,7 +31,7 @@ impl<C> Service<C> for EncoderSimulator {
         ServiceContext::new("encoder simulator")
     }
 
-    async fn tick(&mut self, runtime_state: SharedOperandState, _command_tx: CommandSender) {
+    async fn tick(&mut self, _command_tx: CommandSender) {
         // let frame = &mut self.encoder_list[0];
         // let position = frame.1.position_from_angle(100_f32.to_radians());
 
@@ -40,19 +40,19 @@ impl<C> Service<C> for EncoderSimulator {
         // state.encoders.insert(0x6C, 0.0);
         // state.encoders.insert(0x6D, 0.0);
 
-        let mut runtime_state = runtime_state.write().await;
-        for (id, actuator, encoder) in self.encoder_list.iter_mut() {
-            let velocity = runtime_state.state.ecu_state.speed(actuator);
-            let position = runtime_state.state.ecu_state.position(actuator);
+        // let mut runtime_state = runtime_state.write().await;
+        // for (id, actuator, encoder) in self.encoder_list.iter_mut() {
+        //     let velocity = runtime_state.state.ecu_state.speed(actuator);
+        //     let position = runtime_state.state.ecu_state.position(actuator);
 
-            let position = encoder.position(position, velocity);
+        //     let position = encoder.position(position, velocity);
 
-            runtime_state.state.encoders.insert(*id, position as f32);
+        //     runtime_state.state.encoders.insert(*id, position as f32);
 
-            runtime_state
-                .state
-                .ecu_state
-                .set_position(actuator, position);
-        }
+        //     runtime_state
+        //         .state
+        //         .ecu_state
+        //         .set_position(actuator, position);
+        // }
     }
 }

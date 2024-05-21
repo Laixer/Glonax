@@ -208,7 +208,7 @@ impl super::J1939Unit for KueblerInclinometer {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _runtime_state: crate::runtime::SharedOperandState,
+        _ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 

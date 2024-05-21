@@ -1,6 +1,9 @@
 use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 
-use crate::net::Parsable;
+use crate::{
+    core::{Object, ObjectMessage},
+    net::Parsable,
+};
 
 pub trait Engine {
     /// Request speed control
@@ -320,7 +323,7 @@ impl super::J1939Unit for EngineManagementSystem {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        runtime_state: crate::runtime::SharedOperandState,
+        ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
         let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
@@ -329,38 +332,31 @@ impl super::J1939Unit for EngineManagementSystem {
         }
 
         if let Some(message) = network.try_accept(self) {
-            // if let Err(e) = ipc_tx.send(crate::core::Object::Engine(engine)) {
-            //     log::error!("Failed to send engine signal: {}", e);
-            // }
-
-            if let Ok(mut runtime_state) = runtime_state.try_write() {
-                runtime_state.state.engine_signal_instant = Some(std::time::Instant::now());
-
-                if let EngineMessage::EngineController1(controller) = message {
+            match message {
+                EngineMessage::EngineController1(controller) => {
+                    let mut engine_signal = crate::core::Engine::default();
                     ctx.rx_mark();
 
                     if let Some(driver_demand) = controller.driver_demand {
-                        runtime_state.state.engine_signal.driver_demand = driver_demand;
+                        engine_signal.driver_demand = driver_demand;
                     }
                     if let Some(actual_engine) = controller.actual_engine {
-                        runtime_state.state.engine_signal.actual_engine = actual_engine;
+                        engine_signal.actual_engine = actual_engine;
                     }
                     if let Some(rpm) = controller.rpm {
-                        runtime_state.state.engine_signal.rpm = rpm;
+                        engine_signal.rpm = rpm;
                     }
 
                     if let Some(starter_mode) = controller.starter_mode {
                         match starter_mode {
                             spn::EngineStarterMode::StarterActiveGearNotEngaged
                             | spn::EngineStarterMode::StarterActiveGearEngaged => {
-                                runtime_state.state.engine_signal.state =
-                                    crate::core::EngineState::Starting;
+                                engine_signal.state = crate::core::EngineState::Starting;
                             }
                             spn::EngineStarterMode::StartFinished => {
                                 if let Some(rpm) = controller.rpm {
                                     if rpm > 0 {
-                                        runtime_state.state.engine_signal.state =
-                                            crate::core::EngineState::Request;
+                                        engine_signal.state = crate::core::EngineState::Request;
                                     }
                                 }
                             }
@@ -371,31 +367,35 @@ impl super::J1939Unit for EngineManagementSystem {
                             | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
                             | spn::EngineStarterMode::StarterInhibitedOverHeat
                             | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
-                                runtime_state.state.engine_signal.state =
-                                    crate::core::EngineState::NoRequest;
+                                engine_signal.state = crate::core::EngineState::NoRequest;
                             }
                             _ => {}
                         }
                     } else if let Some(rpm) = controller.rpm {
                         if rpm == 0 {
-                            runtime_state.state.engine_signal.state =
-                                crate::core::EngineState::NoRequest;
+                            engine_signal.state = crate::core::EngineState::NoRequest;
                         } else if rpm < 500 {
-                            runtime_state.state.engine_signal.state =
-                                crate::core::EngineState::Starting;
+                            engine_signal.state = crate::core::EngineState::Starting;
                         } else {
-                            runtime_state.state.engine_signal.state =
-                                crate::core::EngineState::Request;
+                            engine_signal.state = crate::core::EngineState::Request;
                         }
                     } else if controller.rpm.is_none()
                         || controller.actual_engine.is_none()
                         || controller.engine_torque_mode.is_none()
                     {
-                        runtime_state.state.engine_signal.state =
-                            crate::core::EngineState::NoRequest;
+                        engine_signal.state = crate::core::EngineState::NoRequest;
+                    }
+
+                    if let Err(e) =
+                        ipc_tx.send(ObjectMessage::signal(Object::Engine(engine_signal)))
+                    {
+                        log::error!("Failed to send engine signal: {}", e);
                     }
                 }
-                // TODO: Handle shutdown message, set state to stopping
+                EngineMessage::Shutdown(_shutdown) => {
+                    // TODO: Handle shutdown message, set state to stopping
+                }
+                _ => {}
             }
         }
 

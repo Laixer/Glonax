@@ -1,6 +1,6 @@
 use crate::{
     core::Motion,
-    runtime::{Service, ServiceContext, SharedOperandState},
+    runtime::{Service, ServiceContext},
 };
 
 pub struct ActuatorSimulator {}

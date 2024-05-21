@@ -6,7 +6,10 @@ use std::{
 use glonax_serial::{BaudRate, Uart};
 use tokio::io::{AsyncBufReadExt, BufReader, Lines};
 
-use crate::runtime::{CommandSender, IPCSender, Service, ServiceContext, SharedOperandState};
+use crate::{
+    core::{Object, ObjectMessage},
+    runtime::{CommandSender, IPCSender, Service, ServiceContext},
+};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct GnssConfig {
@@ -42,12 +45,7 @@ impl Service<GnssConfig> for Gnss {
         ServiceContext::with_address("gnss", self.path.display().to_string())
     }
 
-    async fn wait_io(
-        &mut self,
-        _runtime_state: SharedOperandState,
-        ipc_tx: IPCSender,
-        _command_tx: CommandSender,
-    ) {
+    async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
         if let Ok(Some(line)) = self.line_reader.next_line().await {
             if let Some(message) = self.driver.decode(line) {
                 let mut gnss = crate::core::Gnss::default();
@@ -70,7 +68,6 @@ impl Service<GnssConfig> for Gnss {
                     gnss.satellites = satellites;
                 }
 
-                use crate::core::{Object, ObjectMessage};
                 if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::GNSS(gnss))) {
                     log::error!("Failed to send GNSS: {}", e);
                 }

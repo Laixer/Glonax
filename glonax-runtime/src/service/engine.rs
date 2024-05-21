@@ -1,6 +1,6 @@
 use rand::Rng;
 
-use crate::runtime::{CommandSender, Service, SharedOperandState};
+use crate::runtime::{CommandSender, Service};
 
 pub struct EngineSimulator {
     rng: rand::rngs::OsRng,
@@ -16,7 +16,7 @@ impl<C> Service<C> for EngineSimulator {
         }
     }
 
-    async fn tick(&mut self, _runtime_state: SharedOperandState, _command_tx: CommandSender) {
+    async fn tick(&mut self, _command_tx: CommandSender) {
         let engine_signal = crate::core::Engine {
             driver_demand: self.rng.gen_range(18..=20),
             actual_engine: self.rng.gen_range(19..=21),
