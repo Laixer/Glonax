@@ -166,6 +166,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
     }
 
+    // TODO: One solution to issue #38 is to call setup() after listen() in wait_io()
     async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
         if let Err(e) = self.network.listen().await {
             log::error!("Failed to receive from router: {}", e);

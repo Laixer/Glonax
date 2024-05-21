@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
-use crate::runtime::{CommandSender, IPCSender, Service, ServiceContext};
+use crate::{
+    core::{Object, ObjectMessage},
+    runtime::{CommandSender, IPCSender, Service, ServiceContext},
+};
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct TcpServerConfig {
@@ -161,11 +164,6 @@ impl TcpServer {
                         if session.is_control() {
                             log::debug!("Engine request RPM: {}", engine.rpm);
 
-                            // if let Err(e) = command_tx.send(crate::core::Object::Engine(engine)).await {
-                            //     log::error!("Failed to queue command: {}", e);
-                            //     break;
-                            // }
-                            use crate::core::{Object, ObjectMessage};
                             if let Err(e) =
                                 ipc_tx.send(ObjectMessage::command(Object::Engine(engine)))
                             {
@@ -188,7 +186,6 @@ impl TcpServer {
                             {
                                 log::error!("Failed to queue command: {}", e);
                             }
-                            use crate::core::{Object, ObjectMessage};
                             if let Err(e) =
                                 ipc_tx.send(ObjectMessage::command(Object::Motion(motion)))
                             {
@@ -205,7 +202,6 @@ impl TcpServer {
                             .unwrap();
 
                         if session.is_command() {
-                            use crate::core::{Object, ObjectMessage};
                             if let Err(e) =
                                 ipc_tx.send(ObjectMessage::command(Object::Target(target)))
                             {
@@ -222,7 +218,6 @@ impl TcpServer {
                             .unwrap();
 
                         if session.is_control() {
-                            use crate::core::{Object, ObjectMessage};
                             if let Err(e) =
                                 ipc_tx.send(ObjectMessage::command(Object::Control(control)))
                             {

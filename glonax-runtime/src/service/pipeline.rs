@@ -14,7 +14,6 @@ impl Pipeline {
     ///
     /// This method will add a component to the pipeline. The component will be provided with a copy
     /// of the runtime configuration.
-
     pub fn add_component<C>(&mut self, component: C)
     where
         C: Component<crate::runtime::NullConfig> + Send + Sync + 'static,
@@ -67,7 +66,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     ///
     /// # Arguments
     ///
-    /// * `runtime_state` - A `SharedOperandState` object representing the runtime state.
+    /// * `ipc_rx` - An `IPCReceiver` object representing the IPC receiver.
     /// * `command_tx` - A `CommandSender` object representing the command sender.
     fn tick2(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>, command_tx: CommandSender) {
         for (idx, component) in self.components.iter_mut().enumerate() {

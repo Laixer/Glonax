@@ -19,7 +19,7 @@ impl<Cnf: Clone> Component<Cnf> for Acquisition {
         _command_tx: CommandSender,
     ) {
         if let Ok(message) = ipc_rx.try_recv() {
-            // log::trace!("Received IPC object: {:?}", object);
+            log::trace!("Received IPC object: {:?}", message.object);
 
             use crate::core::{Object, ObjectType};
 

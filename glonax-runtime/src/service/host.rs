@@ -47,18 +47,18 @@ impl<C> Service<C> for Host {
             status: crate::core::HostStatus::Nominal,
         };
 
-        // for component in &self.components {
-        //     if let Some(critical) = component.critical() {
-        //         if component.temperature() > critical {
-        //             // TODO: Set system state to critical
-        //             log::warn!(
-        //                 "{} is reaching cirital temperatures: {}°C",
-        //                 component.label(),
-        //                 component.temperature(),
-        //             );
-        //         }
-        //     }
-        // }
+        for component in &self.components {
+            if let Some(critical) = component.critical() {
+                if component.temperature() > critical {
+                    // TODO: Set system state to critical
+                    log::warn!(
+                        "{} is reaching cirital temperatures: {}°C",
+                        component.label(),
+                        component.temperature(),
+                    );
+                }
+            }
+        }
 
         if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::Host(vms_signal))) {
             log::error!("Failed to send host signal: {}", e);

@@ -246,10 +246,8 @@ impl super::J1939Unit for KueblerEncoder {
         if let Some(message) = network.try_accept(self) {
             ctx.rx_mark();
 
-            if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::Encoder((
-                message.source_address,
-                message.position as f32,
-            )))) {
+            let encoder_signal = (message.source_address, message.position as f32);
+            if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::Encoder(encoder_signal))) {
                 log::error!("Failed to send encoder signal: {}", e);
             }
         }

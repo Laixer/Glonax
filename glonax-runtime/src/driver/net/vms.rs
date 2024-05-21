@@ -2,6 +2,7 @@ use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 
+// TODO: Why do we need this? The VMS reports no data to the network or other components.
 #[derive(Default)]
 pub struct VehicleManagementSystem {
     /// Source address.
