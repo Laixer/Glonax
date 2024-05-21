@@ -11,8 +11,6 @@ pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::ObjectMessage>;
 pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
 
-pub mod builder;
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
 
@@ -352,14 +350,6 @@ pub trait Component<Cnf: Clone> {
     fn tick(&mut self, ctx: &mut ComponentContext);
 }
 
-/// Construct runtime service from configuration.
-///
-/// Note that this method is certain to block.
-#[inline]
-pub fn builder() -> self::Result<builder::Builder> {
-    builder::Builder::new()
-}
-
 pub struct Runtime {
     /// IPC sender.
     ipc_tx: IPCSender,
@@ -378,7 +368,53 @@ pub struct Runtime {
     ),
 }
 
+impl std::default::Default for Runtime {
+    fn default() -> Self {
+        let (ipc_tx, ipc_rx) = std::sync::mpsc::channel();
+        let (command_tx, command_rx) =
+            tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_COMMAND);
+
+        Self {
+            ipc_tx,
+            ipc_rx: Some(ipc_rx),
+            command_tx,
+            command_rx: Some(command_rx),
+            tasks: Vec::new(),
+            shutdown: tokio::sync::broadcast::channel(1),
+        }
+    }
+}
+
 impl Runtime {
+    /// Listen for termination signal.
+    ///
+    /// This method will spawn a task that will listen for the interrupt signal
+    /// (SIGINT) and the termination signal (SIGTERM). The runtime will be
+    /// gracefully terminated when either signal is received.
+    pub fn register_shutdown_signal(&self) {
+        use tokio::signal::unix;
+
+        debug!("Enable shutdown signal");
+
+        let sender = self.shutdown.0.clone();
+
+        tokio::spawn(async move {
+            let sigint = tokio::signal::ctrl_c();
+
+            let mut binding = unix::signal(unix::SignalKind::terminate()).unwrap();
+            let sigterm = binding.recv();
+
+            tokio::select! {
+                _ = sigint => log::debug!("Received SIGINT"),
+                _ = sigterm => log::debug!("Received SIGTERM"),
+            }
+
+            info!("Termination requested");
+
+            sender.send(()).unwrap();
+        });
+    }
+
     /// Spawns a future onto the runtime's executor.
     ///
     /// This method spawns a future onto the runtime's executor, allowing it to run in the background.

@@ -1,11 +1,9 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use crate::runtime::{
     CommandSender, Component, ComponentContext, IPCReceiver, InitComponent, PostComponent, Service,
     ServiceContext,
 };
-
-const COMPONENT_DELAY_THRESHOLD: Duration = Duration::from_micros(500);
 
 pub struct Pipeline {
     ctx: ComponentContext,
@@ -97,7 +95,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
 
             component.init(&mut self.ctx, ipc_rx.clone());
 
-            if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+            if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Init component {} is delaying execution", idx);
             }
         }
@@ -107,7 +105,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
 
             component.tick(&mut self.ctx);
 
-            if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+            if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Tick component {} is delaying execution", idx);
             }
         }
@@ -117,7 +115,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
 
             component.finalize(&mut self.ctx, command_tx.clone());
 
-            if component_start.elapsed() > COMPONENT_DELAY_THRESHOLD {
+            if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Post component {} is delaying execution", idx);
             }
         }

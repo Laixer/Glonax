@@ -96,7 +96,6 @@ async fn main() -> anyhow::Result<()> {
 
 async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::service;
-    use std::time::Duration;
 
     let bin_name = env!("CARGO_BIN_NAME").to_string();
     let version_major: u8 = glonax::consts::VERSION_MAJOR.parse().unwrap();
@@ -129,7 +128,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     // TODO: Let the runtie builder set the instance
     glonax::global::set_instance(instance);
 
-    let mut runtime = glonax::runtime::builder()?.with_shutdown().build();
+    let mut runtime = glonax::Runtime::default();
+    runtime.register_shutdown_signal();
 
     runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
@@ -190,7 +190,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     // TODO: Any reporting to the network will be done here
 
-    runtime.run_interval(pipe, Duration::from_millis(10)).await;
+    use glonax::consts::SERVICE_PIPELINE_INTERVAL;
+
+    runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;
 
     log::info!("Waiting for shutdown");
 

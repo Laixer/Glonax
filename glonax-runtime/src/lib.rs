@@ -85,9 +85,13 @@ pub mod consts {
     /// Glonax default configuration path.
     pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml"; // TODO: get from env $CONFIGURATION_DIRECTORY
     /// Glonax default queue size for motion commands.
-    pub const QUEUE_SIZE_MOTION: usize = 32;
+    pub const QUEUE_SIZE_COMMAND: usize = 32;
     /// Glonax network maximum number of clients.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
+    /// Glonax component delay threshold.
+    pub const COMPONENT_DELAY_THRESHOLD: std::time::Duration = std::time::Duration::from_micros(500);
+    /// Glonax service pipeline interval.
+    pub const SERVICE_PIPELINE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
 }
 
 /// Log system information.
