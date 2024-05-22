@@ -108,62 +108,6 @@ pub trait Service<Cnf> {
     }
 }
 
-struct ServiceDescriptor<S, C = crate::runtime::NullConfig>
-where
-    S: Service<C> + Send + Sync + 'static,
-    C: Clone + Send + 'static,
-{
-    service: S,
-    ipc_tx: IPCSender,
-    command_tx: CommandSender,
-    shutdown: tokio::sync::broadcast::Receiver<()>,
-    phantom: std::marker::PhantomData<C>,
-}
-
-impl<S, C> ServiceDescriptor<S, C>
-where
-    S: Service<C> + Send + Sync + 'static,
-    C: Clone + Send + 'static,
-{
-    fn with_config(
-        config: C,
-        ipc_tx: IPCSender,
-        command_tx: CommandSender,
-        shutdown: tokio::sync::broadcast::Receiver<()>,
-    ) -> Self {
-        Self {
-            service: S::new(config.clone()),
-            ipc_tx,
-            command_tx,
-            shutdown,
-            phantom: std::marker::PhantomData,
-        }
-    }
-
-    async fn setup(&mut self) {
-        log::debug!("Setup runtime service '{}'", self.service.ctx());
-
-        self.service.setup().await;
-    }
-
-    async fn teardown(&mut self) {
-        log::debug!("Teardown runtime service '{}'", self.service.ctx());
-
-        self.service.teardown().await;
-    }
-
-    async fn wait_io(&mut self) {
-        tokio::select! {
-            _ = async {
-                loop {
-                    self.service.wait_io(self.ipc_tx.clone(), self.command_tx.clone()).await;
-                }
-            } => {}
-            _ = self.shutdown.recv() => {}
-        }
-    }
-}
-
 use crate::core;
 
 /// Represents the state of a machine.
@@ -394,18 +338,26 @@ impl Runtime {
         S: Service<C> + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
-        let mut service_descriptor = ServiceDescriptor::<S, _>::with_config(
-            config,
-            self.ipc_tx.clone(),
-            self.command_tx.clone(),
-            self.shutdown.0.subscribe(),
-        );
+        let command_tx = self.command_tx.clone();
+        let ipc_tx = self.ipc_tx.clone();
+        let mut shutdown = self.shutdown.0.subscribe();
+
+        let mut service = S::new(config.clone());
 
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
-                service_descriptor.setup().await;
-                service_descriptor.wait_io().await;
-                service_descriptor.teardown().await;
+                service.setup().await;
+
+                tokio::select! {
+                    _ = async {
+                        loop {
+                            service.wait_io(ipc_tx.clone(), command_tx.clone()).await;
+                        }
+                    } => {}
+                    _ = shutdown.recv() => {}
+                }
+
+                service.teardown().await;
             });
         }
     }
