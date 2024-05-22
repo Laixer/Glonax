@@ -221,10 +221,12 @@ impl TcpServer {
                         use tokio::io::AsyncWriteExt;
 
                         if let Err(e) = client.inner_mut().shutdown().await {
-                            log::error!("Failed to shutdown stream: {}", e);
+                            log::warn!("Failed to shutdown stream: {}", e);
                         }
 
                         session_shutdown = true;
+
+                        // TOOD: If this works, check fail-safe here
 
                         break;
                     } else if [
