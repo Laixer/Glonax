@@ -88,6 +88,7 @@ pub struct NetworkAuthorityRx {
     interface: String,
     network: ControlNetwork,
     drivers: NetDriverCollection,
+    is_setup: bool,
 }
 
 impl Service<NetworkConfig> for NetworkAuthorityRx {
@@ -120,6 +121,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             interface: config.interface,
             network,
             drivers,
+            is_setup: false,
         }
     }
 
@@ -127,61 +129,41 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ServiceContext::with_address("authority_rx", self.interface.clone())
     }
 
+    #[rustfmt::skip]
     async fn setup(&mut self) {
         for (drv, ctx) in self.drivers.iter_mut() {
-            log::debug!(
-                "[{}:0x{:X}] Setup network driver '{}'",
-                self.interface,
-                drv.destination(),
-                drv.name()
-            );
+            log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
             if let Err(error) = drv.setup(ctx, &self.network).await {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
+                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
             }
         }
     }
 
+    #[rustfmt::skip]
     async fn teardown(&mut self) {
         for (drv, ctx) in self.drivers.iter_mut() {
-            log::debug!(
-                "[{}:0x{:X}] Teardown network driver '{}'",
-                self.interface,
-                drv.destination(),
-                drv.name()
-            );
+            log::debug!("[{}:0x{:X}] Teardown network driver '{}'", self.interface, drv.destination(), drv.name());
             if let Err(error) = drv.teardown(ctx, &self.network).await {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
+                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
             }
         }
     }
 
     // TODO: One solution to issue #38 is to call setup() after listen() in wait_io()
+    #[rustfmt::skip]
     async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
         if let Err(e) = self.network.listen().await {
             log::error!("Failed to receive from router: {}", e);
         }
 
+        if !self.is_setup {
+            self.setup().await;
+            self.is_setup = true;
+        }
+
         for (drv, ctx) in self.drivers.iter_mut() {
             if let Err(error) = drv.try_accept(ctx, &self.network, ipc_tx.clone()).await {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
+                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
             }
         }
     }
