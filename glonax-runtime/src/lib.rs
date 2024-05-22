@@ -89,7 +89,7 @@ pub mod consts {
     /// Glonax network maximum number of clients.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
     /// Glonax component delay threshold.
-    pub const COMPONENT_DELAY_THRESHOLD: std::time::Duration = std::time::Duration::from_micros(500);
+    pub const COMPONENT_DELAY_THRESHOLD: std::time::Duration = std::time::Duration::from_micros(750);
     /// Glonax service pipeline interval.
     pub const SERVICE_PIPELINE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
 }

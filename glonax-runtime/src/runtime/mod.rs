@@ -265,18 +265,34 @@ impl Default for ComponentContext {
 }
 
 pub trait InitComponent<Cnf: Clone> {
+    /// Construct a new component.
+    ///
+    /// This method will be called once on startup.
+    /// The component should use this method to initialize itself.
     fn new(config: Cnf) -> Self
     where
         Self: Sized;
 
+    /// Initialize the component.
+    ///
+    /// This method will be called on each tick of the runtime.
+    /// How often the runtime ticks is determined by the runtime configuration.
     fn init(&self, ctx: &mut ComponentContext, ipc_rx: std::rc::Rc<IPCReceiver>);
 }
 
 pub trait PostComponent<Cnf: Clone> {
+    /// Construct a new component.
+    ///
+    /// This method will be called once on startup.
+    /// The component should use this method to initialize itself.
     fn new(config: Cnf) -> Self
     where
         Self: Sized;
 
+    /// Finalize the component.
+    ///
+    /// This method will be called on each tick of the runtime.
+    /// How often the runtime ticks is determined by the runtime configuration.
     fn finalize(&self, ctx: &mut ComponentContext, command_tx: CommandSender);
 }
 
