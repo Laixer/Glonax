@@ -266,7 +266,7 @@ pub struct Runtime {
     /// Command receiver.
     command_rx: Option<CommandReceiver>,
     /// Runtime tasks.
-    tasks: Vec<tokio::task::JoinHandle<()>>, // TODO: Rename to task pool.
+    task_pool: Vec<tokio::task::JoinHandle<()>>,
     /// Runtime event bus.
     shutdown: (
         tokio::sync::broadcast::Sender<()>,
@@ -285,7 +285,7 @@ impl std::default::Default for Runtime {
             ipc_rx: Some(ipc_rx),
             command_tx,
             command_rx: Some(command_rx),
-            tasks: Vec::new(),
+            task_pool: Vec::new(),
             shutdown: tokio::sync::broadcast::channel(1),
         }
     }
@@ -326,7 +326,7 @@ impl Runtime {
     /// This method spawns a future onto the runtime's executor, allowing it to run in the background.
     /// The future must implement the `Future` trait with an output type of `()`, and it must also be `Send` and `'static`.
     fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(&mut self, f: F) {
-        self.tasks.push(tokio::spawn(f));
+        self.task_pool.push(tokio::spawn(f));
     }
 
     /// Listen for IO event service in the background.
@@ -430,7 +430,7 @@ impl Runtime {
     ///
     /// This method will block until all tasks are completed.    
     pub async fn wait_for_tasks(&mut self) {
-        for task in self.tasks.drain(..) {
+        for task in self.task_pool.drain(..) {
             task.await.ok();
         }
     }

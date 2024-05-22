@@ -70,8 +70,6 @@ impl TcpServer {
 
         // TODO: If possible, move to glonax-runtime
         // TODO: Handle all unwraps, most just need to be logged
-        // TODO: If possble, read the payload before the match
-        // TODO: Seek frame header before reading the frame
         loop {
             match client.read_frame().await {
                 Ok(frame) => match frame.message {
