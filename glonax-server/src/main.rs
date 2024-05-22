@@ -95,12 +95,13 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(config: config::Config) -> anyhow::Result<()> {
+    use glonax::consts::*;
     use glonax::service;
 
     let bin_name = env!("CARGO_BIN_NAME").to_string();
-    let version_major: u8 = glonax::consts::VERSION_MAJOR.parse().unwrap();
-    let version_minor: u8 = glonax::consts::VERSION_MINOR.parse().unwrap();
-    let version_patch: u8 = glonax::consts::VERSION_PATCH.parse().unwrap();
+    let version_major: u8 = VERSION_MAJOR.parse().unwrap();
+    let version_minor: u8 = VERSION_MINOR.parse().unwrap();
+    let version_patch: u8 = VERSION_PATCH.parse().unwrap();
 
     let machine = config.machine.clone();
     let instance = glonax::core::Instance::new(
@@ -114,7 +115,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);
-    log::info!("Runtime version: {}", glonax::consts::VERSION);
+    log::info!("Runtime version: {}", VERSION);
     log::info!("Running in operation mode: {}", config.mode);
     log::info!("{}", instance);
 
@@ -165,12 +166,10 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     pipe.add_component_default::<glonax::components::StatusComponent>();
-    pipe.add_component_default::<components::WorldBuilder>();
 
-    if config.mode != config::OperationMode::PilotRestrict {
-        pipe.add_component_default::<components::SensorFusion>(); // TODO: Replaced by AQ?
-        pipe.add_component_default::<components::LocalActor>();
-    }
+    pipe.add_component_default::<components::WorldBuilder>();
+    pipe.add_component_default::<components::SensorFusion>();
+    pipe.add_component_default::<components::LocalActor>();
 
     if config.mode == config::OperationMode::Autonomous {
         pipe.add_component_default::<components::Kinematic>();
@@ -187,10 +186,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.add_post_component::<glonax::components::ControlComponent>();
         pipe.add_post_component::<glonax::components::EngineComponent>();
     }
-
-    // TODO: Any reporting to the network will be done here
-
-    use glonax::consts::SERVICE_PIPELINE_INTERVAL;
 
     runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;
 

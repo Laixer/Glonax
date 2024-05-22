@@ -46,6 +46,14 @@ impl Engine {
             ..Default::default()
         }
     }
+
+    /// Create a new engine with the given state.
+    pub fn shutdown() -> Self {
+        Self {
+            state: EngineState::NoRequest,
+            ..Default::default()
+        }
+    }
 }
 
 impl Default for Engine {

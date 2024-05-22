@@ -1,5 +1,5 @@
 use crate::{
-    core::{Engine, EngineState, Object},
+    core::{Engine, Object},
     runtime::{CommandSender, ComponentContext, PostComponent, SignalSender},
 };
 
@@ -42,6 +42,9 @@ impl Governor {
         command_instant: Option<std::time::Instant>,
     ) -> crate::core::Engine {
         use crate::core::EngineState;
+
+        // command.rpm = (command.driver_demand as f32 / 100.0 * self.rpm_max as f32) as u16;
+        // driver_demand: command.driver_demand.clamp(0, 100),
 
         match (signal.state, command.state) {
             (EngineState::NoRequest, EngineState::Starting) => {
@@ -155,12 +158,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
         let emergency = true;
 
         if emergency {
-            let engine_command = Engine {
-                rpm: 0,
-                state: EngineState::NoRequest,
-                ..Default::default()
-            };
-            if let Err(e) = command_tx.try_send(Object::Engine(engine_command)) {
+            if let Err(e) = command_tx.try_send(Object::Engine(Engine::shutdown())) {
                 log::error!("Failed to send engine command: {}", e);
             }
 
@@ -168,34 +166,11 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
         }
 
         let engine_signal = ctx.machine.engine_signal;
-        let engine_command = ctx.machine.engine_command;
-        let engine_command_instant = ctx.machine.engine_command_instant;
-
-        //
-
-        let mut engine_command = engine_command.unwrap_or(engine_signal);
-        engine_command.actual_engine = 0;
-        engine_command.driver_demand = engine_command.driver_demand.clamp(0, 100);
-        engine_command.state = match engine_command.state {
-            EngineState::NoRequest => EngineState::NoRequest,
-            EngineState::Request => EngineState::Request,
-            _ => engine_signal.state,
-        };
-
-        if engine_command.rpm == 0 {
-            if engine_command.driver_demand == 0 {
-                engine_command.state = EngineState::NoRequest;
-            } else {
-                engine_command.rpm = (engine_command.driver_demand as f32 / 100.0
-                    * self.governor.rpm_max as f32) as u16;
-            }
-        } else {
-            engine_command.state = EngineState::Request;
-        }
-
-        let governor_engine =
-            self.governor
-                .next_state(&engine_signal, &engine_command, engine_command_instant);
+        let governor_engine = self.governor.next_state(
+            &engine_signal,
+            &ctx.machine.engine_command.unwrap_or(engine_signal),
+            ctx.machine.engine_command_instant,
+        );
 
         log::trace!("Engine governor: {:?}", governor_engine);
 
