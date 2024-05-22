@@ -10,6 +10,8 @@ pub type IPCSender = std::sync::mpsc::Sender<crate::core::ObjectMessage>;
 pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::ObjectMessage>;
 pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
+pub type SignalSender = tokio::sync::broadcast::Sender<crate::core::Object>;
+pub type SignalReceiver = tokio::sync::broadcast::Receiver<crate::core::Object>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
@@ -89,6 +91,7 @@ pub trait Service<Cnf> {
         &mut self,
         _ipc_tx: IPCSender,
         _command_tx: CommandSender,
+        _signal_rx: SignalReceiver,
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
@@ -98,7 +101,13 @@ pub trait Service<Cnf> {
     /// This method is called in conjunction with other services
     /// and should therefore be non-blocking. The method is optional
     /// and does not need to be implemented.
-    fn tick(&mut self, _ipc_rx: std::rc::Rc<IPCReceiver>, _command_tx: CommandSender) {}
+    fn tick(
+        &mut self,
+        _ipc_rx: std::rc::Rc<IPCReceiver>,
+        _command_tx: CommandSender,
+        _signal_tx: std::rc::Rc<SignalSender>,
+    ) {
+    }
 
     fn on_command(
         &mut self,
@@ -237,7 +246,12 @@ pub trait PostComponent<Cnf: Clone> {
     ///
     /// This method will be called on each tick of the runtime.
     /// How often the runtime ticks is determined by the runtime configuration.
-    fn finalize(&self, ctx: &mut ComponentContext, command_tx: CommandSender);
+    fn finalize(
+        &self,
+        ctx: &mut ComponentContext,
+        command_tx: CommandSender,
+        signal_tx: std::rc::Rc<SignalSender>,
+    );
 }
 
 pub trait Component<Cnf: Clone> {
@@ -265,6 +279,12 @@ pub struct Runtime {
     command_tx: CommandSender,
     /// Command receiver.
     command_rx: Option<CommandReceiver>,
+
+    ///
+    signal_tx: Option<SignalSender>,
+    ///
+    signal_rx: SignalReceiver,
+
     /// Runtime tasks.
     task_pool: Vec<tokio::task::JoinHandle<()>>,
     /// Runtime event bus.
@@ -279,12 +299,15 @@ impl std::default::Default for Runtime {
         let (ipc_tx, ipc_rx) = std::sync::mpsc::channel();
         let (command_tx, command_rx) =
             tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_COMMAND);
+        let (signal_tx, signal_rx) = tokio::sync::broadcast::channel(16);
 
         Self {
             ipc_tx,
             ipc_rx: Some(ipc_rx),
             command_tx,
             command_rx: Some(command_rx),
+            signal_tx: Some(signal_tx),
+            signal_rx,
             task_pool: Vec::new(),
             shutdown: tokio::sync::broadcast::channel(1),
         }
@@ -329,6 +352,7 @@ impl Runtime {
         self.task_pool.push(tokio::spawn(f));
     }
 
+    // TODO: Only the TCP Server uses `command_tx`
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
@@ -340,6 +364,7 @@ impl Runtime {
     {
         let command_tx = self.command_tx.clone();
         let ipc_tx = self.ipc_tx.clone();
+        let signal_rx = self.signal_rx.resubscribe();
         let mut shutdown = self.shutdown.0.subscribe();
 
         let mut service = S::new(config.clone());
@@ -351,7 +376,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service.wait_io(ipc_tx.clone(), command_tx.clone()).await;
+                            service.wait_io(ipc_tx.clone(), command_tx.clone(), signal_rx.resubscribe()).await;
                         }
                     } => {}
                     _ = shutdown.recv() => {}
@@ -402,13 +427,14 @@ impl Runtime {
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
         let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
+        let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
 
         while self.shutdown.1.is_empty() {
             interval.tick().await;
 
             let tick_start = std::time::Instant::now();
 
-            service.tick(ipc_rx.clone(), self.command_tx.clone());
+            service.tick(ipc_rx.clone(), self.command_tx.clone(), signal_tx.clone());
 
             let tick_duration = tick_start.elapsed();
             log::trace!("Tick loop duration: {:?}", tick_duration);

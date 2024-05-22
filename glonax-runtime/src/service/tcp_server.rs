@@ -4,7 +4,7 @@ use tokio::{net::TcpListener, sync::Semaphore};
 
 use crate::{
     core::{Object, ObjectMessage},
-    runtime::{CommandSender, IPCSender, Service, ServiceContext},
+    runtime::{CommandSender, IPCSender, Service, ServiceContext, SignalReceiver},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -55,6 +55,7 @@ impl TcpServer {
         ipc_tx: IPCSender,
         command_tx: CommandSender,
         _permit: tokio::sync::OwnedSemaphorePermit,
+        mut signal_rx: SignalReceiver,
     ) {
         use crate::protocol::{
             frame::{Echo, Request, Session},
@@ -66,178 +67,213 @@ impl TcpServer {
         let mut client = Stream::new(stream);
         let mut session = Session::new(0, String::new());
 
+        let mut session_initialized = false;
         let mut session_shutdown = false;
 
         // TODO: If possible, move to glonax-runtime
         // TODO: Handle all unwraps, most just need to be logged
         loop {
-            match client.read_frame().await {
-                Ok(frame) => match frame.message {
-                    crate::protocol::frame::Request::MESSAGE_TYPE => {
-                        let request = client
-                            .recv_packet::<Request>(frame.payload_length)
-                            .await
-                            .unwrap();
+            tokio::select! {
+                signal = signal_rx.recv() => {
+                    if let Ok(signal) = signal {
+                        log::debug!("Signal received: {:?}", signal);
 
-                        match request.message() {
-                            crate::core::Instance::MESSAGE_TYPE => {
+                        if session_initialized {
+                            match signal {
+                                Object::Engine(engine) => {
+                                    client.send_packet(&engine).await.unwrap();
+                                }
+                                Object::GNSS(gnss) => {
+                                    client.send_packet(&gnss).await.unwrap();
+                                }
+                                Object::Host(vms) => {
+                                    client.send_packet(&vms).await.unwrap();
+                                }
+                                Object::Motion(motion) => {
+                                    client.send_packet(&motion).await.unwrap();
+                                }
+                                Object::Encoder(_) => {
+                                    // TODO
+                                }
+                                _ => {}
+                            }
+                        }
+
+                    } else if let Err(tokio::sync::broadcast::error::RecvError::Closed) = signal {
+                        log::warn!("Signal channel closed");
+                        break;
+                    }
+                }
+                frame_rs = client.read_frame() => {
+                    match frame_rs {
+                        Ok(frame) => match frame.message {
+                            // crate::protocol::frame::Request::MESSAGE_TYPE => {
+                                // let request = client
+                                //     .recv_packet::<Request>(frame.payload_length)
+                                //     .await
+                                //     .unwrap();
+
+                                // match request.message() {
+                                //     crate::core::Instance::MESSAGE_TYPE => {
+                                //         client.send_packet(crate::global::instance()).await.unwrap();
+                                //     }
+                                //     // TODO: Not available at the moment
+                                //     crate::core::Status::MESSAGE_TYPE => {
+                                //         let status = crate::core::Status::Healthy;
+
+                                //         client.send_packet(&status).await.unwrap();
+                                //     }
+                                //     // TODO: Not available at the moment
+                                //     crate::core::Host::MESSAGE_TYPE => {
+                                //         let host = crate::core::Host::default();
+
+                                //         client.send_packet(&host).await.unwrap();
+                                //     }
+                                //     // TODO: Not available at the moment
+                                //     crate::core::Gnss::MESSAGE_TYPE => {
+                                //         let gnss = crate::core::Gnss::default();
+
+                                //         client.send_packet(&gnss).await.unwrap();
+                                //     }
+                                //     // TODO: Not available at the moment
+                                //     crate::core::Engine::MESSAGE_TYPE => {
+                                //         let engine = crate::core::Engine::default();
+
+                                //         client.send_packet(&engine).await.unwrap();
+                                //     }
+                                //     // TODO: Not available at the moment
+                                //     // crate::world::Actor::MESSAGE_TYPE => {
+                                //     // if let Some(actor) = &runtime_state.read().await.state.actor {
+                                //     //     client.send_packet(actor).await.unwrap();
+                                //     // }
+                                //     // }
+                                //     _ => {
+                                //         log::warn!("Unknown request: {}", request.message());
+                                //     }
+                                // }
+                            // }
+                            crate::protocol::frame::Session::MESSAGE_TYPE => {
+                                session = client
+                                    .recv_packet::<Session>(frame.payload_length)
+                                    .await
+                                    .unwrap();
+
+                                log::info!("Session started for: {}", session.name());
+
                                 client.send_packet(crate::global::instance()).await.unwrap();
-                            }
-                            // TODO: Not available at the moment
-                            crate::core::Status::MESSAGE_TYPE => {
-                                let status = crate::core::Status::Healthy;
 
-                                client.send_packet(&status).await.unwrap();
+                                session_initialized = true;
                             }
-                            // TODO: Not available at the moment
-                            crate::core::Host::MESSAGE_TYPE => {
-                                let host = crate::core::Host::default();
+                            crate::protocol::frame::Echo::MESSAGE_TYPE => {
+                                let echo = client
+                                    .recv_packet::<Echo>(frame.payload_length)
+                                    .await
+                                    .unwrap();
 
-                                client.send_packet(&host).await.unwrap();
+                                client.send_packet(&echo).await.unwrap();
                             }
-                            // TODO: Not available at the moment
-                            crate::core::Gnss::MESSAGE_TYPE => {
-                                let gnss = crate::core::Gnss::default();
-
-                                client.send_packet(&gnss).await.unwrap();
-                            }
-                            // TODO: Not available at the moment
                             crate::core::Engine::MESSAGE_TYPE => {
-                                let engine = crate::core::Engine::default();
+                                let engine = client
+                                    .recv_packet::<crate::core::Engine>(frame.payload_length)
+                                    .await
+                                    .unwrap();
 
-                                client.send_packet(&engine).await.unwrap();
+                                if session.is_control() {
+                                    log::debug!("Engine request RPM: {}", engine.rpm);
+
+                                    if let Err(e) =
+                                        ipc_tx.send(ObjectMessage::command(Object::Engine(engine)))
+                                    {
+                                        log::error!("Failed to send target: {}", e);
+                                    }
+                                } else {
+                                    log::warn!("Session is not authorized to control the machine");
+                                }
                             }
-                            // TODO: Not available at the moment
-                            // crate::world::Actor::MESSAGE_TYPE => {
-                            // if let Some(actor) = &runtime_state.read().await.state.actor {
-                            //     client.send_packet(actor).await.unwrap();
-                            // }
-                            // }
+                            crate::core::Motion::MESSAGE_TYPE => {
+                                let motion = client
+                                    .recv_packet::<crate::core::Motion>(frame.payload_length)
+                                    .await
+                                    .unwrap();
+
+                                if session.is_command() {
+                                    if let Err(e) = command_tx
+                                        .send(crate::core::Object::Motion(motion.clone()))
+                                        .await
+                                    {
+                                        log::error!("Failed to queue command: {}", e);
+                                    }
+                                    if let Err(e) =
+                                        ipc_tx.send(ObjectMessage::command(Object::Motion(motion)))
+                                    {
+                                        log::error!("Failed to send motion: {}", e);
+                                    }
+                                } else {
+                                    log::warn!("Session is not authorized to command the machine");
+                                }
+                            }
+                            crate::core::Target::MESSAGE_TYPE => {
+                                let target = client
+                                    .recv_packet::<crate::core::Target>(frame.payload_length)
+                                    .await
+                                    .unwrap();
+
+                                if session.is_command() {
+                                    if let Err(e) =
+                                        ipc_tx.send(ObjectMessage::command(Object::Target(target)))
+                                    {
+                                        log::error!("Failed to send target: {}", e);
+                                    }
+                                } else {
+                                    log::warn!("Session is not authorized to command the machine");
+                                }
+                            }
+                            crate::core::Control::MESSAGE_TYPE => {
+                                let control = client
+                                    .recv_packet::<crate::core::Control>(frame.payload_length)
+                                    .await
+                                    .unwrap();
+
+                                if session.is_control() {
+                                    if let Err(e) =
+                                        ipc_tx.send(ObjectMessage::command(Object::Control(control)))
+                                    {
+                                        log::error!("Failed to send control: {}", e);
+                                    }
+                                } else {
+                                    log::warn!("Session is not authorized to control the machine");
+                                }
+                            }
                             _ => {
-                                log::warn!("Unknown request: {}", request.message());
+                                log::debug!("Unknown message: {}", frame.message);
                             }
-                        }
-                    }
-                    crate::protocol::frame::Session::MESSAGE_TYPE => {
-                        session = client
-                            .recv_packet::<Session>(frame.payload_length)
-                            .await
-                            .unwrap();
+                        },
+                        Err(e) => {
+                            if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                                log::debug!("Session shutdown requested for: {}", session.name());
 
-                        log::info!("Session started for: {}", session.name());
+                                use tokio::io::AsyncWriteExt;
 
-                        client.send_packet(crate::global::instance()).await.unwrap();
-                    }
-                    crate::protocol::frame::Echo::MESSAGE_TYPE => {
-                        let echo = client
-                            .recv_packet::<Echo>(frame.payload_length)
-                            .await
-                            .unwrap();
+                                client.inner_mut().shutdown().await.ok();
 
-                        client.send_packet(&echo).await.unwrap();
-                    }
-                    crate::core::Engine::MESSAGE_TYPE => {
-                        let engine = client
-                            .recv_packet::<crate::core::Engine>(frame.payload_length)
-                            .await
-                            .unwrap();
+                                session_shutdown = true;
 
-                        if session.is_control() {
-                            log::debug!("Engine request RPM: {}", engine.rpm);
+                                // TOOD: If this works, check fail-safe here
 
-                            if let Err(e) =
-                                ipc_tx.send(ObjectMessage::command(Object::Engine(engine)))
+                                break;
+                            } else if [
+                                std::io::ErrorKind::ConnectionReset,
+                                std::io::ErrorKind::TimedOut,
+                                std::io::ErrorKind::ConnectionAborted,
+                            ]
+                            .contains(&e.kind())
                             {
-                                log::error!("Failed to send target: {}", e);
+                                log::warn!("Session reset for: {}", session.name());
+                                break;
+                            } else {
+                                log::warn!("Failed to read frame: {}", e);
                             }
-                        } else {
-                            log::warn!("Session is not authorized to control the machine");
                         }
-                    }
-                    crate::core::Motion::MESSAGE_TYPE => {
-                        let motion = client
-                            .recv_packet::<crate::core::Motion>(frame.payload_length)
-                            .await
-                            .unwrap();
-
-                        if session.is_command() {
-                            if let Err(e) = command_tx
-                                .send(crate::core::Object::Motion(motion.clone()))
-                                .await
-                            {
-                                log::error!("Failed to queue command: {}", e);
-                            }
-                            if let Err(e) =
-                                ipc_tx.send(ObjectMessage::command(Object::Motion(motion)))
-                            {
-                                log::error!("Failed to send motion: {}", e);
-                            }
-                        } else {
-                            log::warn!("Session is not authorized to command the machine");
-                        }
-                    }
-                    crate::core::Target::MESSAGE_TYPE => {
-                        let target = client
-                            .recv_packet::<crate::core::Target>(frame.payload_length)
-                            .await
-                            .unwrap();
-
-                        if session.is_command() {
-                            if let Err(e) =
-                                ipc_tx.send(ObjectMessage::command(Object::Target(target)))
-                            {
-                                log::error!("Failed to send target: {}", e);
-                            }
-                        } else {
-                            log::warn!("Session is not authorized to command the machine");
-                        }
-                    }
-                    crate::core::Control::MESSAGE_TYPE => {
-                        let control = client
-                            .recv_packet::<crate::core::Control>(frame.payload_length)
-                            .await
-                            .unwrap();
-
-                        if session.is_control() {
-                            if let Err(e) =
-                                ipc_tx.send(ObjectMessage::command(Object::Control(control)))
-                            {
-                                log::error!("Failed to send control: {}", e);
-                            }
-                        } else {
-                            log::warn!("Session is not authorized to control the machine");
-                        }
-                    }
-                    _ => {
-                        log::debug!("Unknown message: {}", frame.message);
-                    }
-                },
-                Err(e) => {
-                    if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                        log::debug!("Session shutdown requested for: {}", session.name());
-
-                        use tokio::io::AsyncWriteExt;
-
-                        if let Err(e) = client.inner_mut().shutdown().await {
-                            log::warn!("Failed to shutdown stream: {}", e);
-                        }
-
-                        session_shutdown = true;
-
-                        // TOOD: If this works, check fail-safe here
-
-                        break;
-                    } else if [
-                        std::io::ErrorKind::ConnectionReset,
-                        std::io::ErrorKind::TimedOut,
-                        std::io::ErrorKind::ConnectionAborted,
-                    ]
-                    .contains(&e.kind())
-                    {
-                        log::warn!("Session reset for: {}", session.name());
-                        break;
-                    } else {
-                        log::warn!("Failed to read frame: {}", e);
                     }
                 }
             }
@@ -284,7 +320,12 @@ impl Service<TcpServerConfig> for TcpServer {
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
     }
 
-    async fn wait_io(&mut self, ipc_tx: IPCSender, command_tx: CommandSender) {
+    async fn wait_io(
+        &mut self,
+        ipc_tx: IPCSender,
+        command_tx: CommandSender,
+        signal_rx: SignalReceiver,
+    ) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
@@ -309,7 +350,7 @@ impl Service<TcpServerConfig> for TcpServer {
         log::debug!("Spawning client session");
 
         self.clients.push(tokio::spawn(Self::spawn_client_session(
-            stream, ipc_tx, command_tx, permit,
+            stream, ipc_tx, command_tx, permit, signal_rx,
         )));
     }
 

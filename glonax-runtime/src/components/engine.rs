@@ -1,6 +1,6 @@
 use crate::{
     core::{EngineState, Object},
-    runtime::{CommandSender, ComponentContext, PostComponent},
+    runtime::{CommandSender, ComponentContext, PostComponent, SignalSender},
 };
 
 // TODO: Move to drivers?
@@ -145,7 +145,12 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
         }
     }
 
-    fn finalize(&self, ctx: &mut ComponentContext, command_tx: CommandSender) {
+    fn finalize(
+        &self,
+        ctx: &mut ComponentContext,
+        command_tx: CommandSender,
+        signal_tx: std::rc::Rc<SignalSender>,
+    ) {
         let engine_signal = ctx.machine.engine_signal;
         let engine_command = ctx.machine.engine_command;
         let engine_command_instant = ctx.machine.engine_command_instant;
@@ -180,6 +185,16 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
 
         if let Err(e) = command_tx.try_send(Object::Engine(governor_engine)) {
             log::error!("Failed to send engine command: {}", e);
+        }
+
+        if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
+            log::error!("Failed to send engine signal: {}", e);
+        }
+        if let Err(e) = signal_tx.send(Object::Host(ctx.machine.vms_signal)) {
+            log::error!("Failed to send engine signal: {}", e);
+        }
+        if let Err(e) = signal_tx.send(Object::GNSS(ctx.machine.gnss_signal)) {
+            log::error!("Failed to send engine signal: {}", e);
         }
     }
 }

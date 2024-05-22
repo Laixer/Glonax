@@ -2,7 +2,7 @@ use sysinfo::{Components, System};
 
 use crate::{
     core::{Object, ObjectMessage},
-    runtime::{CommandSender, IPCSender, Service, ServiceContext},
+    runtime::{CommandSender, IPCSender, Service, ServiceContext, SignalReceiver},
 };
 
 pub struct Host {
@@ -31,7 +31,12 @@ impl<C> Service<C> for Host {
         ServiceContext::new("host")
     }
 
-    async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
+    async fn wait_io(
+        &mut self,
+        ipc_tx: IPCSender,
+        _command_tx: CommandSender,
+        _signal_rx: SignalReceiver,
+    ) {
         self.system.refresh_memory();
         self.system.refresh_cpu();
         self.components.refresh();

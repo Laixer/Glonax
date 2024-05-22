@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use crate::runtime::{
     CommandSender, Component, ComponentContext, IPCReceiver, InitComponent, PostComponent, Service,
-    ServiceContext,
+    ServiceContext, SignalSender,
 };
 
 pub struct Pipeline {
@@ -97,7 +97,12 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
     ///
     /// * `ipc_rx` - An `IPCReceiver` object representing the IPC receiver.
     /// * `command_tx` - A `CommandSender` object representing the command sender.
-    fn tick(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>, command_tx: CommandSender) {
+    fn tick(
+        &mut self,
+        ipc_rx: std::rc::Rc<IPCReceiver>,
+        command_tx: CommandSender,
+        signal_tx: std::rc::Rc<SignalSender>,
+    ) {
         for (idx, component) in self.init_components.iter().enumerate() {
             let component_start = Instant::now();
 
@@ -121,7 +126,7 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         for (idx, component) in self.post_components.iter().enumerate() {
             let component_start = Instant::now();
 
-            component.finalize(&mut self.ctx, command_tx.clone());
+            component.finalize(&mut self.ctx, command_tx.clone(), signal_tx.clone());
 
             if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
                 log::warn!("Post component {} is delaying execution", idx);
