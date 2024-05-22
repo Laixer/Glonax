@@ -58,7 +58,7 @@ impl TcpServer {
         mut signal_rx: SignalReceiver,
     ) {
         use crate::protocol::{
-            frame::{Echo, Request, Session},
+            frame::{Echo, Session},
             Packetize, Stream,
         };
 
@@ -76,8 +76,6 @@ impl TcpServer {
             tokio::select! {
                 signal = signal_rx.recv() => {
                     if let Ok(signal) = signal {
-                        log::debug!("Signal received: {:?}", signal);
-
                         if session_initialized {
                             match signal {
                                 Object::Engine(engine) => {
