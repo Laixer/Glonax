@@ -67,8 +67,6 @@ impl TcpServer {
         let mut client = Stream::new(stream);
         let mut session = Session::new(0, String::new());
 
-        let mut session_shutdown = false;
-
         // TODO: If possible, move to glonax-runtime
         // TODO: Handle all unwraps, most just need to be logged
         loop {
@@ -252,10 +250,6 @@ impl TcpServer {
 
                                 client.inner_mut().shutdown().await.ok();
 
-                                session_shutdown = true;
-
-                                // TOOD: If this works, check fail-safe here
-
                                 break;
                             } else if [
                                 std::io::ErrorKind::ConnectionReset,
@@ -265,6 +259,16 @@ impl TcpServer {
                             .contains(&e.kind())
                             {
                                 log::warn!("Session reset for: {}", session.name());
+
+                                if session.is_failsafe() {
+                                    log::warn!("Enacting failsafe for: {}", session.name());
+
+                                    if let Err(e) = command_tx.send(crate::core::Object::Motion(crate::core::Motion::StopAll)).await
+                                    {
+                                        log::error!("Failed to send motion: {}", e);
+                                    }
+                                }
+
                                 break;
                             } else {
                                 log::warn!("Failed to read frame: {}", e);
@@ -272,17 +276,6 @@ impl TcpServer {
                         }
                     }
                 }
-            }
-        }
-
-        if !session_shutdown && session.is_control() && session.is_failsafe() {
-            log::warn!("Enacting failsafe for: {}", session.name());
-
-            if let Err(e) = command_tx
-                .send(crate::core::Object::Motion(crate::core::Motion::StopAll))
-                .await
-            {
-                log::error!("Failed to send motion: {}", e);
             }
         }
 
