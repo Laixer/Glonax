@@ -91,6 +91,18 @@ pub struct NetworkAuthorityRx {
     is_setup: bool,
 }
 
+impl NetworkAuthorityRx {
+    #[rustfmt::skip]
+    async fn setup_delayed(&mut self) {
+        for (drv, ctx) in self.drivers.iter_mut() {
+            log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
+            if let Err(error) = drv.setup(ctx, &self.network).await {
+                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+            }
+        }
+    }
+}
+
 impl Service<NetworkConfig> for NetworkAuthorityRx {
     fn new(config: NetworkConfig) -> Self
     where
@@ -130,16 +142,6 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     }
 
     #[rustfmt::skip]
-    async fn setup(&mut self) {
-        for (drv, ctx) in self.drivers.iter_mut() {
-            log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
-            if let Err(error) = drv.setup(ctx, &self.network).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
-            }
-        }
-    }
-
-    #[rustfmt::skip]
     async fn teardown(&mut self) {
         for (drv, ctx) in self.drivers.iter_mut() {
             log::debug!("[{}:0x{:X}] Teardown network driver '{}'", self.interface, drv.destination(), drv.name());
@@ -149,7 +151,6 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
     }
 
-    // TODO: One solution to issue #38 is to call setup() after listen() in wait_io()
     #[rustfmt::skip]
     async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
         if let Err(e) = self.network.listen().await {
@@ -157,7 +158,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         }
 
         if !self.is_setup {
-            self.setup().await;
+            self.setup_delayed().await;
             self.is_setup = true;
         }
 

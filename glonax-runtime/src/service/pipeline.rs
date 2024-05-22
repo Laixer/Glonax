@@ -35,6 +35,10 @@ impl Pipeline {
         self.add_component(C::new(crate::runtime::NullConfig {}));
     }
 
+    /// Add an init component to the pipeline with the default configuration.
+    ///
+    /// This method will add an init component to the pipeline with the default configuration. The
+    /// component will be provided with a copy of the runtime configuration.
     pub fn add_init_component<C>(&mut self)
     where
         C: InitComponent<crate::runtime::NullConfig> + Send + Sync + 'static,
@@ -43,6 +47,10 @@ impl Pipeline {
             .push(Box::new(C::new(crate::runtime::NullConfig {})));
     }
 
+    /// Add a post component to the pipeline with the default configuration.
+    ///
+    /// This method will add a post component to the pipeline with the default configuration. The
+    /// component will be provided with a copy of the runtime configuration.
     pub fn add_post_component<C>(&mut self)
     where
         C: PostComponent<crate::runtime::NullConfig> + Send + Sync + 'static,
