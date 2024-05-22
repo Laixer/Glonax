@@ -299,7 +299,7 @@ impl std::default::Default for Runtime {
         let (ipc_tx, ipc_rx) = std::sync::mpsc::channel();
         let (command_tx, command_rx) =
             tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_COMMAND);
-        let (signal_tx, signal_rx) = tokio::sync::broadcast::channel(16);
+        let (signal_tx, signal_rx) = tokio::sync::broadcast::channel(8);
 
         Self {
             ipc_tx,

@@ -67,7 +67,6 @@ impl TcpServer {
         let mut client = Stream::new(stream);
         let mut session = Session::new(0, String::new());
 
-        let mut session_initialized = false;
         let mut session_shutdown = false;
 
         // TODO: If possible, move to glonax-runtime
@@ -76,7 +75,8 @@ impl TcpServer {
             tokio::select! {
                 signal = signal_rx.recv() => {
                     if let Ok(signal) = signal {
-                        if session_initialized {
+
+                        if session.is_stream() {
                             match signal {
                                 Object::Engine(engine) => {
                                     client.send_packet(&engine).await.unwrap();
@@ -159,8 +159,6 @@ impl TcpServer {
                                 log::info!("Session started for: {}", session.name());
 
                                 client.send_packet(crate::global::instance()).await.unwrap();
-
-                                session_initialized = true;
                             }
                             crate::protocol::frame::Echo::MESSAGE_TYPE => {
                                 let echo = client

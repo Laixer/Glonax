@@ -129,6 +129,7 @@ pub struct Session {
 }
 
 impl Session {
+    pub const MODE_STREAM: u8 = 0b0000_0001;
     pub const MODE_CONTROL: u8 = 0b0000_0010;
     pub const MODE_COMMAND: u8 = 0b0000_0100;
     pub const MODE_FAILSAFE: u8 = 0b0001_0000;
@@ -139,6 +140,11 @@ impl Session {
             flags: mode,
             name: name.chars().take(64).collect::<String>(),
         }
+    }
+
+    #[inline]
+    pub fn is_stream(&self) -> bool {
+        self.flags & Self::MODE_STREAM != 0
     }
 
     #[inline]
