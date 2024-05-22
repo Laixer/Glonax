@@ -1,5 +1,5 @@
 use crate::{
-    core::Object,
+    core::{Motion, Object},
     runtime::{CommandSender, ComponentContext, PostComponent, SignalSender},
 };
 
@@ -19,6 +19,18 @@ impl<Cnf: Clone> PostComponent<Cnf> for HydraulicComponent {
         command_tx: CommandSender,
         signal_tx: std::rc::Rc<SignalSender>,
     ) {
+        // TODO: Move this to context
+        let emergency = true;
+
+        if emergency {
+            let motion_command = Motion::StopAll;
+            if let Err(e) = command_tx.try_send(Object::Motion(motion_command)) {
+                log::error!("Failed to send motion command: {}", e);
+            }
+
+            return;
+        }
+
         if let Some(motion_command) = &ctx.machine.motion_command {
             if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
                 log::error!("Failed to send motion command: {}", e);

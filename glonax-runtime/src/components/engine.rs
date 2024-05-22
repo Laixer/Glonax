@@ -1,5 +1,5 @@
 use crate::{
-    core::{EngineState, Object},
+    core::{Engine, EngineState, Object},
     runtime::{CommandSender, ComponentContext, PostComponent, SignalSender},
 };
 
@@ -151,6 +151,22 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
         command_tx: CommandSender,
         signal_tx: std::rc::Rc<SignalSender>,
     ) {
+        // TODO: Move this to context
+        let emergency = true;
+
+        if emergency {
+            let engine_command = Engine {
+                rpm: 0,
+                state: EngineState::NoRequest,
+                ..Default::default()
+            };
+            if let Err(e) = command_tx.try_send(Object::Engine(engine_command)) {
+                log::error!("Failed to send engine command: {}", e);
+            }
+
+            return;
+        }
+
         let engine_signal = ctx.machine.engine_signal;
         let engine_command = ctx.machine.engine_command;
         let engine_command_instant = ctx.machine.engine_command_instant;
@@ -187,6 +203,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
             log::error!("Failed to send engine command: {}", e);
         }
 
+        // TODO: These signals do not belong here
         if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
             log::error!("Failed to send engine signal: {}", e);
         }
