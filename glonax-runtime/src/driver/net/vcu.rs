@@ -1,6 +1,6 @@
 use j1939::{protocol, Frame, Name, PGN};
 
-use crate::net::Parsable;
+use crate::{core::Object, net::Parsable};
 
 use super::vecraft::{VecraftConfigMessage, VecraftStatusMessage};
 
@@ -180,5 +180,19 @@ impl super::J1939Unit for VehicleControlUnit {
         }
 
         result
+    }
+
+    async fn trigger(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        _network: &crate::net::ControlNetwork,
+        object: &Object,
+    ) -> Result<(), super::J1939UnitError> {
+        if let Object::Control(_contrl) = object {
+            // FUTURE: Send control message
+            ctx.tx_mark();
+        }
+
+        Ok(())
     }
 }

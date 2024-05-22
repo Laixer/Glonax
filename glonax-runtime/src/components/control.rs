@@ -1,4 +1,7 @@
-use crate::runtime::{CommandSender, ComponentContext, PostComponent};
+use crate::{
+    core::Object,
+    runtime::{CommandSender, ComponentContext, PostComponent},
+};
 
 pub struct ControlComponent {}
 
@@ -10,7 +13,11 @@ impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
         Self {}
     }
 
-    fn finalize(&self, _ctx: &mut ComponentContext, _command_tx: CommandSender) {
-        // TODO: Implement the control logic
+    fn finalize(&self, ctx: &mut ComponentContext, command_tx: CommandSender) {
+        if let Some(control_command) = ctx.machine.control_command {
+            if let Err(e) = command_tx.try_send(Object::Control(control_command)) {
+                log::error!("Failed to send control command: {}", e);
+            }
+        }
     }
 }
