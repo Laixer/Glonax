@@ -369,6 +369,8 @@ impl Runtime {
 
         let mut service = S::new(config.clone());
 
+        log::debug!("Schedule IO service: {}", service.ctx());
+
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
                 service.setup().await;
@@ -401,6 +403,8 @@ impl Runtime {
 
         let mut service = S::new(config.clone());
 
+        log::debug!("Schedule command service: {}", service.ctx());
+
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
                 tokio::select! {
@@ -428,6 +432,8 @@ impl Runtime {
 
         let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
         let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
+
+        log::debug!("Run interval service: {}", service.ctx());
 
         while self.shutdown.1.is_empty() {
             interval.tick().await;
