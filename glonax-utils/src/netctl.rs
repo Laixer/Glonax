@@ -78,7 +78,7 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
     let mut jis0 = J1939ApplicationInspector;
 
     loop {
-        network.listen().await?;
+        network.recv().await?;
 
         if let Some(message) = network.try_accept(&mut ems0) {
             match message {
@@ -457,7 +457,7 @@ async fn diagnose(mut network: ControlNetwork) -> anyhow::Result<()> {
     let mut prb0 = glonax::driver::net::probe::Probe::default();
 
     loop {
-        network.listen().await?;
+        network.recv().await?;
 
         if let Some(message) = network.try_accept(&mut jis0) {
             match message {

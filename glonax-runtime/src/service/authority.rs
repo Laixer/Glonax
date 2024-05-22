@@ -108,11 +108,16 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
     where
         Self: Sized,
     {
-        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
+        let mut filter = crate::net::Filter::reject();
+
+        filter.push(crate::net::FilterItem::SourceAddress(config.address));
+
+        let network = ControlNetwork::bind(&config.interface, &config.name.into())
+            .unwrap()
+            .with_filter(filter);
 
         let mut drivers = NetDriverCollection::default();
 
-        // TODO: Do we need to add a VMS driver?
         drivers.push((
             NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(
                 config.address,
@@ -153,7 +158,7 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 
     #[rustfmt::skip]
     async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender) {
-        if let Err(e) = self.network.listen().await {
+        if let Err(e) = self.network.recv().await {
             log::error!("Failed to receive from router: {}", e);
         }
 

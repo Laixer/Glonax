@@ -389,9 +389,8 @@ impl ControlNetwork {
 
     // TODO: Refactor into a single expression.
     // TODO: This is a mess, split logic.
-    // TODO: Rename to `recv`
     /// Listen for incoming packets.
-    pub async fn listen(&mut self) -> io::Result<()> {
+    pub async fn recv(&mut self) -> io::Result<()> {
         loop {
             let frame = self.socket.recv().await?;
             if self.filter.matches(frame.id()) {
