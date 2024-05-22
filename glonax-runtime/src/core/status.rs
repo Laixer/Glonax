@@ -1,5 +1,3 @@
-use serde_derive::Deserialize;
-
 // TODO: Add all subsystem statusess
 /// Robot status.
 ///
@@ -8,7 +6,7 @@ use serde_derive::Deserialize;
 /// there is a problem that needs to be addressed.
 ///
 /// The status message is kept as simple and small as possible to reduce the amount of data.
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Status {
     /// The robot is operating normally.
     Healthy = 0xF8,

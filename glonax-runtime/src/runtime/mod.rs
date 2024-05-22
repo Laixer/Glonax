@@ -129,16 +129,22 @@ pub struct Machine {
     pub vms_signal: core::Host,
     /// Vehicle management system update.
     pub vms_signal_instant: Option<std::time::Instant>,
+    /// Vehicle management system update set.
+    pub vms_signal_set: bool,
 
     /// Global navigation satellite system data.
     pub gnss_signal: core::Gnss,
     /// GNSS signal update.
     pub gnss_signal_instant: Option<std::time::Instant>,
+    /// GNSS signal update set.
+    pub gnss_signal_set: bool,
 
     /// Engine signal.
     pub engine_signal: core::Engine,
     /// Engine state actual instant.
     pub engine_signal_instant: Option<std::time::Instant>,
+    /// Engine state actual set.
+    pub engine_signal_set: bool,
     /// Engine command.
     pub engine_command: Option<core::Engine>,
     /// Engine state request instant.
@@ -148,6 +154,8 @@ pub struct Machine {
     pub motion_signal: core::Motion,
     /// Motion signal instant.
     pub motion_signal_instant: Option<std::time::Instant>,
+    /// Motion signal set.
+    pub motion_signal_set: bool,
     /// Motion command.
     pub motion_command: Option<core::Motion>,
     /// Motion command instant.
@@ -162,6 +170,8 @@ pub struct Machine {
     pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
     /// Encoder instant.
     pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
+    /// Encoder set.
+    pub encoders_set: bool, // TODO: HACK: Temporary
 
     /// Current program queue.
     pub program_command: std::collections::VecDeque<core::Target>,

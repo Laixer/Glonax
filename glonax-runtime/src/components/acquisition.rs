@@ -14,6 +14,12 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
     }
 
     fn init(&self, ctx: &mut ComponentContext, ipc_rx: std::rc::Rc<IPCReceiver>) {
+        ctx.machine.vms_signal_set = false;
+        ctx.machine.gnss_signal_set = false;
+        ctx.machine.engine_signal_set = false;
+        ctx.machine.motion_signal_set = false;
+        ctx.machine.encoders_set = false;
+
         for message in ipc_rx.try_iter() {
             log::trace!("Received IPC object: {:?}", message.object);
 
@@ -31,18 +37,21 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
                     } else if message.object_type == ObjectType::Signal {
                         ctx.machine.engine_signal = engine;
                         ctx.machine.engine_signal_instant = Some(message.timestamp);
+                        ctx.machine.engine_signal_set = true;
                     }
                 }
                 Object::GNSS(gnss_signal) => {
                     if message.object_type == ObjectType::Signal {
                         ctx.machine.gnss_signal = gnss_signal;
                         ctx.machine.gnss_signal_instant = Some(message.timestamp);
+                        ctx.machine.gnss_signal_set = true;
                     }
                 }
                 Object::Host(vms_signal) => {
                     if message.object_type == ObjectType::Signal {
                         ctx.machine.vms_signal = vms_signal;
                         ctx.machine.vms_signal_instant = Some(message.timestamp);
+                        ctx.machine.vms_signal_set = true;
                     }
                 }
                 Object::Motion(motion) => {
@@ -52,6 +61,7 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
                     } else if message.object_type == ObjectType::Signal {
                         ctx.machine.motion_signal = motion;
                         ctx.machine.motion_signal_instant = Some(message.timestamp);
+                        ctx.machine.motion_signal_set = true;
                     }
                 }
                 Object::Target(target) => {
@@ -62,6 +72,7 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
                 Object::Encoder((id, value)) => {
                     ctx.machine.encoders.insert(id, value);
                     ctx.machine.encoders_instant = Some(message.timestamp);
+                    ctx.machine.encoders_set = true;
                 }
             }
         }

@@ -32,7 +32,7 @@ impl TryFrom<u8> for Constraint {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Target {
     /// The point in space.
     pub point: Point3<f32>,
