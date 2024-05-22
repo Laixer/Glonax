@@ -108,6 +108,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         machine.model.clone(),
         machine.machine_type,
         (version_major, version_minor, version_patch),
+        machine.serial.clone(),
     );
 
     glonax::log_system();

@@ -3,8 +3,6 @@ use serde_derive::Deserialize;
 
 use super::MachineType;
 
-// TODO: Add serial number
-// TODO: Rename to 'Machine'
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Instance {
     /// Instance unique identifier.
@@ -15,6 +13,8 @@ pub struct Instance {
     ty: MachineType,
     /// Machine version.
     version: (u8, u8, u8),
+    /// Machine serial number.
+    serial_number: String,
 }
 
 impl Instance {
@@ -24,12 +24,14 @@ impl Instance {
         model: impl ToString,
         ty: MachineType,
         version: (u8, u8, u8),
+        serial_number: impl ToString,
     ) -> Self {
         Self {
             id: uuid::Uuid::parse_str(&id.to_string()).unwrap(),
             model: model.to_string(),
             ty,
             version,
+            serial_number: serial_number.to_string(),
         }
     }
 
@@ -44,8 +46,14 @@ impl std::fmt::Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Instance ID: {}, Model: {}, Type: {:?}, Version: {}.{}.{}",
-            self.id, self.model, self.ty, self.version.0, self.version.1, self.version.2
+            "Instance ID: {}, Model: {}, Type: {:?}, Version: {}.{}.{}; Serial: {}",
+            self.id,
+            self.model,
+            self.ty,
+            self.version.0,
+            self.version.1,
+            self.version.2,
+            self.serial_number
         )
     }
 }
@@ -69,7 +77,13 @@ impl TryFrom<Vec<u8>> for Instance {
         let model_length = u16::from_be_bytes([value[20], value[21]]) as usize;
         let model = String::from_utf8_lossy(&value[22..22 + model_length]).to_string();
 
-        Ok(Self::new(id, model, ty, version))
+        let serial_length =
+            u16::from_be_bytes([value[22 + model_length], value[23 + model_length]]) as usize;
+        let serial_number =
+            String::from_utf8_lossy(&value[24 + model_length..24 + model_length + serial_length])
+                .to_string();
+
+        Ok(Self::new(id, model, ty, version, serial_number))
     }
 }
 
@@ -89,6 +103,10 @@ impl crate::protocol::Packetize for Instance {
         buf.put_u16(model_bytes.len() as u16);
         buf.put(model_bytes);
 
+        let serial_bytes = self.serial_number.as_bytes();
+        buf.put_u16(serial_bytes.len() as u16);
+        buf.put(serial_bytes);
+
         buf.to_vec()
     }
 }
@@ -106,6 +124,7 @@ mod tests {
             "Test",
             MachineType::Excavator,
             (0, 0, 1),
+            "T.00001.T.00002",
         );
 
         let bytes = instance.to_bytes();
