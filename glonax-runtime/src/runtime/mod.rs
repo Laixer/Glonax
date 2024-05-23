@@ -272,17 +272,12 @@ impl Runtime {
     where
         S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
     {
-        let mut interval = tokio::time::interval(duration);
-        interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-
         let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
         let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
 
         log::debug!("Run interval service: {}", service.ctx());
 
         while self.shutdown.1.is_empty() {
-            interval.tick().await;
-
             let tick_start = std::time::Instant::now();
 
             service.tick(ipc_rx.clone(), self.command_tx.clone(), signal_tx.clone());
@@ -292,7 +287,11 @@ impl Runtime {
 
             if tick_duration > duration {
                 log::warn!("Tick loop delta is too high: {:?}", tick_duration);
+            } else {
+                tokio::time::sleep(duration - tick_duration).await;
             }
+
+            // TODO: Call a commit method to commit the changes
         }
     }
 
