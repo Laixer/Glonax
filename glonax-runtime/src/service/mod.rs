@@ -2,7 +2,7 @@ pub use actuator::ActuatorSimulator;
 pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkConfig};
 pub use gnss::{Gnss, GnssConfig};
 pub use host::Host;
-pub use pipeline::Pipeline;
+pub use pipeline::ComponentExecutor;
 pub use tcp_server::{TcpServer, TcpServerConfig, UnixServerConfig};
 
 mod actuator;

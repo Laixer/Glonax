@@ -150,11 +150,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_io_service::<service::TcpServer, _>(tcp_server);
     }
 
-    // TODO: Let runtime instantiate the pipeline
-    use glonax::runtime::Service;
-    let mut pipe = service::Pipeline::new(glonax::runtime::NullConfig {});
+    let mut pipe = service::ComponentExecutor::default();
 
-    // pipe.add_component_default::<glonax::components::HostComponent>();
     pipe.add_init_component::<glonax::components::Acquisition>();
 
     if config.is_simulation {
@@ -174,9 +171,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     if config.is_simulation {
-        //     runtime.schedule_command_service::<service::ActuatorSimulator, _>(
-        //         glonax::runtime::NullConfig {},
-        //     );
         // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
     } else {
         pipe.add_post_component::<glonax::components::ControlComponent>();

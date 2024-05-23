@@ -118,6 +118,12 @@ pub trait Service<Cnf> {
     }
 }
 
+pub trait Executor {
+    fn run_init(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>);
+    fn run_tick(&mut self);
+    fn run_post(&mut self, command_tx: CommandSender, signal_tx: std::rc::Rc<SignalSender>);
+}
+
 pub struct Runtime {
     /// IPC sender.
     ipc_tx: IPCSender,
@@ -269,24 +275,19 @@ impl Runtime {
     ///
     /// This method will run a service in the background. The service will be provided with a copy of
     /// the runtime configuration and a reference to the runtime.
-    pub async fn run_interval<S>(&mut self, mut service: S, duration: std::time::Duration)
-    where
-        S: Service<crate::runtime::NullConfig> + Send + Sync + 'static,
-    {
+    pub async fn run_interval(
+        &mut self,
+        mut service: impl Executor,
+        duration: std::time::Duration,
+    ) {
         let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
         let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
-
-        log::debug!("Run interval service: {}", service.ctx());
 
         while self.shutdown.1.is_empty() {
             let tick_start = std::time::Instant::now();
 
-            service.tick(
-                ipc_rx.clone(),
-                self.command_tx.clone(),
-                signal_tx.clone(),
-                true,
-            );
+            service.run_init(ipc_rx.clone());
+            service.run_tick();
 
             let tick_duration = tick_start.elapsed();
             log::trace!("Tick loop duration: {:?}", tick_duration);
@@ -297,12 +298,7 @@ impl Runtime {
                 tokio::time::sleep(duration - tick_duration).await;
             }
 
-            service.tick(
-                ipc_rx.clone(),
-                self.command_tx.clone(),
-                signal_tx.clone(),
-                false,
-            );
+            service.run_post(self.command_tx.clone(), signal_tx.clone());
         }
     }
 
