@@ -183,10 +183,10 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
             log::error!("Failed to send engine signal: {}", e);
         }
         if let Err(e) = signal_tx.send(Object::Host(ctx.machine.vms_signal)) {
-            log::error!("Failed to send engine signal: {}", e);
+            log::error!("Failed to send host signal: {}", e);
         }
         if let Err(e) = signal_tx.send(Object::GNSS(ctx.machine.gnss_signal)) {
-            log::error!("Failed to send engine signal: {}", e);
+            log::error!("Failed to send gnss signal: {}", e);
         }
     }
 }

@@ -127,9 +127,7 @@ pub struct Runtime {
     /// Command receiver.
     command_rx: Option<CommandReceiver>,
 
-    ///
     signal_tx: Option<SignalSender>,
-    ///
     signal_rx: SignalReceiver,
 
     /// Runtime tasks.

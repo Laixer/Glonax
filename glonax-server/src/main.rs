@@ -169,7 +169,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     pipe.add_component_default::<components::WorldBuilder>();
     pipe.add_component_default::<components::SensorFusion>();
-    pipe.add_component_default::<components::LocalActor>();
 
     if config.mode == config::OperationMode::Autonomous {
         pipe.add_component_default::<components::Kinematic>();
