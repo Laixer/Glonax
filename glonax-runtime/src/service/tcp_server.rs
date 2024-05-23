@@ -42,6 +42,41 @@ impl UnixServerConfig {
     }
 }
 
+enum TcpError {
+    Io(std::io::Error),
+    UnauthorizedControl,
+    UnauthorizedCommand,
+    Queue(std::sync::mpsc::SendError<ObjectMessage>),
+    Command(tokio::sync::mpsc::error::SendError<Object>),
+    UnknownMessage(u8),
+}
+
+impl std::fmt::Debug for TcpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            TcpError::Io(e) => write!(f, "IO error: {}", e),
+            TcpError::UnauthorizedControl => write!(f, "Unauthorized control"),
+            TcpError::UnauthorizedCommand => write!(f, "Unauthorized command"),
+            TcpError::Queue(e) => write!(f, "Queue error: {}", e),
+            TcpError::Command(e) => write!(f, "Command error: {}", e),
+            TcpError::UnknownMessage(m) => write!(f, "Unknown message: {}", m),
+        }
+    }
+}
+
+impl std::fmt::Display for TcpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            TcpError::Io(e) => write!(f, "IO error: {}", e),
+            TcpError::UnauthorizedControl => write!(f, "Unauthorized control"),
+            TcpError::UnauthorizedCommand => write!(f, "Unauthorized command"),
+            TcpError::Queue(e) => write!(f, "Queue error: {}", e),
+            TcpError::Command(e) => write!(f, "Command error: {}", e),
+            TcpError::UnknownMessage(m) => write!(f, "Unknown message: {}", m),
+        }
+    }
+}
+
 pub struct TcpServer {
     config: TcpServerConfig,
     semaphore: Arc<Semaphore>,
@@ -56,7 +91,7 @@ impl TcpServer {
         ipc_tx: IPCSender,
         command_tx: CommandSender,
         session: &mut crate::protocol::frame::Session,
-    ) -> Result<(), std::io::Error> {
+    ) -> Result<(), TcpError> {
         use crate::protocol::{
             frame::{Echo, Session},
             Packetize,
@@ -64,89 +99,91 @@ impl TcpServer {
 
         match frame.message {
             crate::protocol::frame::Session::MESSAGE_TYPE => {
-                *session = client.recv_packet::<Session>(frame.payload_length).await?;
+                *session = client
+                    .recv_packet::<Session>(frame.payload_length)
+                    .await
+                    .map_err(TcpError::Io)?;
 
                 log::info!("Session started for: {}", session.name());
 
-                client.send_packet(crate::global::instance()).await?;
+                client
+                    .send_packet(crate::global::instance())
+                    .await
+                    .map_err(TcpError::Io)?;
             }
             crate::protocol::frame::Echo::MESSAGE_TYPE => {
-                let echo = client.recv_packet::<Echo>(frame.payload_length).await?;
+                let echo = client
+                    .recv_packet::<Echo>(frame.payload_length)
+                    .await
+                    .map_err(TcpError::Io)?;
 
-                client.send_packet(&echo).await?;
+                client.send_packet(&echo).await.map_err(TcpError::Io)?;
             }
             crate::core::Engine::MESSAGE_TYPE => {
                 let engine = client
                     .recv_packet::<crate::core::Engine>(frame.payload_length)
-                    .await?;
+                    .await
+                    .map_err(TcpError::Io)?;
 
                 if session.is_control() {
                     log::debug!("Engine request RPM: {}", engine.rpm);
 
-                    if let Err(e) = ipc_tx.send(ObjectMessage::command(Object::Engine(engine))) {
-                        // TODO: Return as error
-                        log::error!("Failed to send target: {}", e);
-                    }
+                    ipc_tx
+                        .send(ObjectMessage::command(Object::Engine(engine)))
+                        .map_err(TcpError::Queue)?;
                 } else {
-                    // TODO: Return as error
-                    log::warn!("Session is not authorized to control the machine");
+                    return Err(TcpError::UnauthorizedControl);
                 }
             }
             crate::core::Motion::MESSAGE_TYPE => {
                 let motion = client
                     .recv_packet::<crate::core::Motion>(frame.payload_length)
-                    .await?;
+                    .await
+                    .map_err(TcpError::Io)?;
 
                 if session.is_command() {
-                    if let Err(e) = command_tx
+                    command_tx
                         .send(crate::core::Object::Motion(motion.clone()))
                         .await
-                    {
-                        // TODO: Return as error
-                        log::error!("Failed to queue command: {}", e);
-                    }
-                    if let Err(e) = ipc_tx.send(ObjectMessage::command(Object::Motion(motion))) {
-                        // TODO: Return as error
-                        log::error!("Failed to send motion: {}", e);
-                    }
+                        .map_err(TcpError::Command)?;
+
+                    ipc_tx
+                        .send(ObjectMessage::command(Object::Motion(motion)))
+                        .map_err(TcpError::Queue)?;
                 } else {
-                    // TODO: Return as error
-                    log::warn!("Session is not authorized to command the machine");
+                    return Err(TcpError::UnauthorizedCommand);
                 }
             }
             crate::core::Target::MESSAGE_TYPE => {
                 let target = client
                     .recv_packet::<crate::core::Target>(frame.payload_length)
-                    .await?;
+                    .await
+                    .map_err(TcpError::Io)?;
 
                 if session.is_command() {
-                    if let Err(e) = ipc_tx.send(ObjectMessage::command(Object::Target(target))) {
-                        // TODO: Return as error
-                        log::error!("Failed to send target: {}", e);
-                    }
+                    ipc_tx
+                        .send(ObjectMessage::command(Object::Target(target)))
+                        .map_err(TcpError::Queue)?;
                 } else {
-                    // TODO: Return as error
-                    log::warn!("Session is not authorized to command the machine");
+                    return Err(TcpError::UnauthorizedCommand);
                 }
             }
             crate::core::Control::MESSAGE_TYPE => {
                 let control = client
                     .recv_packet::<crate::core::Control>(frame.payload_length)
-                    .await?;
+                    .await
+                    .map_err(TcpError::Io)?;
 
                 if session.is_control() {
-                    if let Err(e) = ipc_tx.send(ObjectMessage::command(Object::Control(control))) {
-                        // TODO: Return as error
-                        log::error!("Failed to send control: {}", e);
-                    }
+                    ipc_tx
+                        .send(ObjectMessage::command(Object::Control(control)))
+                        .map_err(TcpError::Queue)?;
                 } else {
-                    // TODO: Return as error
-                    log::warn!("Session is not authorized to control the machine");
+                    return Err(TcpError::UnauthorizedControl);
                 }
             }
             _ => {
-                // TODO: Return as error
-                log::debug!("Unknown message: {}", frame.message);
+                return Err(TcpError::UnknownMessage(frame.message));
             }
         }
 
