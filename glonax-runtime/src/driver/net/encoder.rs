@@ -267,7 +267,7 @@ impl super::J1939Unit for KueblerEncoder {
 
                     log::debug!(
                         "[{}:0x{:X}] {}: Address claimed: {}",
-                        network.name(),
+                        network.interface(),
                         self.destination(),
                         self.name(),
                         name

@@ -530,7 +530,7 @@ impl super::J1939Unit for HydraulicControlUnit {
 
                     log::debug!(
                         "[{}:0x{:X}] {}: Firmware version: {}.{}.{}",
-                        network.name(),
+                        network.interface(),
                         self.destination(),
                         self.name(),
                         version.0,
@@ -543,7 +543,7 @@ impl super::J1939Unit for HydraulicControlUnit {
 
                     log::debug!(
                         "[{}:0x{:X}] {}: Address claimed: {}",
-                        network.name(),
+                        network.interface(),
                         self.destination(),
                         self.name(),
                         name

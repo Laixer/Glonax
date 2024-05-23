@@ -337,23 +337,26 @@ pub struct ControlNetwork {
     filter: Filter,
     /// ECU Name.
     name: Name,
+    /// Network interface.
+    interface: String,
 }
 
 impl ControlNetwork {
     /// Construct a new control network.
-    pub fn from_socket(socket: CANSocket, name: &Name) -> Self {
+    fn from_socket(socket: CANSocket, name: &Name, interface: &str) -> Self {
         Self {
             socket,
             frame: None,
             filter: Filter::accept(),
             name: *name,
+            interface: interface.to_owned(),
         }
     }
 
     /// Construct a new control network and bind to an interface.
     pub fn bind(interface: &str, name: &Name) -> io::Result<Self> {
         let socket = CANSocket::bind(&SockAddrCAN::new(interface))?;
-        Ok(Self::from_socket(socket, name))
+        Ok(Self::from_socket(socket, name, interface))
     }
 
     /// Set the global filter.
@@ -373,6 +376,11 @@ impl ControlNetwork {
     #[inline]
     pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    #[inline]
+    pub fn interface(&self) -> &str {
+        &self.interface
     }
 
     /// Send a frame.
