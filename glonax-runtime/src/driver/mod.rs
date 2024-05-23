@@ -1,6 +1,7 @@
 use nalgebra::{Rotation3, UnitVector3};
 
 pub use error::{DeviceError, ErrorKind, Result};
+pub use governor::Governor;
 pub use hardware::nmea::Nmea;
 pub use net::bosch_ems::BoschEngineManagementSystem;
 pub use net::encoder::KueblerEncoder;
@@ -16,6 +17,7 @@ pub use r#virtual::encoder::VirtualEncoder;
 pub use r#virtual::hcu::VirtualHCU;
 
 mod error;
+mod governor;
 mod hardware;
 pub mod net;
 mod r#virtual;

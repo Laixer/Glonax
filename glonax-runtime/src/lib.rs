@@ -80,10 +80,6 @@ pub mod consts {
     pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
     /// Glonax default network port for both TCP.
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
-    /// Glonax default unix socket path.
-    pub const DEFAULT_SOCKET_PATH: &str = "/run/glonax/glonax.sock"; // TODO: get from env $RUNTIME_DIRECTORY
-    /// Glonax default configuration path.
-    pub const DEFAULT_CONFIG_PATH: &str = "/etc/glonax/glonax.toml"; // TODO: get from env $CONFIGURATION_DIRECTORY
     /// Glonax default queue size for motion commands.
     pub const QUEUE_SIZE_COMMAND: usize = 32;
     /// Glonax network maximum number of clients.
