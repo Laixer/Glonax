@@ -89,7 +89,8 @@ pub mod consts {
     /// Glonax network maximum number of clients.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
     /// Glonax component delay threshold.
-    pub const COMPONENT_DELAY_THRESHOLD: std::time::Duration = std::time::Duration::from_micros(750);
+    pub const COMPONENT_DELAY_THRESHOLD: std::time::Duration =
+        std::time::Duration::from_micros(750);
     /// Glonax service pipeline interval.
     pub const SERVICE_PIPELINE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
 }
@@ -118,4 +119,62 @@ pub fn log_system() {
         "System host name: {}",
         System::host_name().unwrap_or_default()
     );
+}
+
+/// Represents the state of a machine.
+///
+/// The project refers to the machine as the entire system including
+/// hardware, software, sensors and actuators.
+#[derive(Default)]
+pub struct Machine {
+    /// Vehicle management system data.
+    pub vms_signal: core::Host,
+    /// Vehicle management system update.
+    pub vms_signal_instant: Option<std::time::Instant>,
+    /// Vehicle management system update set.
+    pub vms_signal_set: bool,
+
+    /// Global navigation satellite system data.
+    pub gnss_signal: core::Gnss,
+    /// GNSS signal update.
+    pub gnss_signal_instant: Option<std::time::Instant>,
+    /// GNSS signal update set.
+    pub gnss_signal_set: bool,
+
+    /// Engine signal.
+    pub engine_signal: core::Engine,
+    /// Engine state actual instant.
+    pub engine_signal_instant: Option<std::time::Instant>,
+    /// Engine state actual set.
+    pub engine_signal_set: bool,
+    /// Engine command.
+    pub engine_command: Option<core::Engine>,
+    /// Engine state request instant.
+    pub engine_command_instant: Option<std::time::Instant>,
+
+    /// Motion signal.
+    pub motion_signal: core::Motion,
+    /// Motion signal instant.
+    pub motion_signal_instant: Option<std::time::Instant>,
+    /// Motion signal set.
+    pub motion_signal_set: bool,
+    /// Motion command.
+    pub motion_command: Option<core::Motion>,
+    /// Motion command instant.
+    pub motion_command_instant: Option<std::time::Instant>,
+
+    /// Control command.
+    pub control_command: Option<core::Control>,
+    /// Control command instant.
+    pub control_command_instant: Option<std::time::Instant>,
+
+    /// Encoder data.
+    pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
+    /// Encoder instant.
+    pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
+    /// Encoder set.
+    pub encoders_set: bool, // TODO: HACK: Temporary
+
+    /// Current program queue.
+    pub program_command: std::collections::VecDeque<core::Target>,
 }
