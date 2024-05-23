@@ -106,6 +106,7 @@ pub trait Service<Cnf> {
         _ipc_rx: std::rc::Rc<IPCReceiver>,
         _command_tx: CommandSender,
         _signal_tx: std::rc::Rc<SignalSender>,
+        _pre_tick: bool,
     ) {
     }
 
@@ -280,7 +281,12 @@ impl Runtime {
         while self.shutdown.1.is_empty() {
             let tick_start = std::time::Instant::now();
 
-            service.tick(ipc_rx.clone(), self.command_tx.clone(), signal_tx.clone());
+            service.tick(
+                ipc_rx.clone(),
+                self.command_tx.clone(),
+                signal_tx.clone(),
+                true,
+            );
 
             let tick_duration = tick_start.elapsed();
             log::trace!("Tick loop duration: {:?}", tick_duration);
@@ -291,7 +297,12 @@ impl Runtime {
                 tokio::time::sleep(duration - tick_duration).await;
             }
 
-            // TODO: Call a commit method to commit the changes
+            service.tick(
+                ipc_rx.clone(),
+                self.command_tx.clone(),
+                signal_tx.clone(),
+                false,
+            );
         }
     }
 

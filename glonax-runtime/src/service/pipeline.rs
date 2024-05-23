@@ -102,37 +102,40 @@ impl Service<crate::runtime::NullConfig> for Pipeline {
         ipc_rx: std::rc::Rc<IPCReceiver>,
         command_tx: CommandSender,
         signal_tx: std::rc::Rc<SignalSender>,
+        pre_tick: bool, // TODO: Remove this parameter, use new tick method
     ) {
-        for (idx, component) in self.init_components.iter().enumerate() {
-            let component_start = Instant::now();
+        if pre_tick {
+            for (idx, component) in self.init_components.iter().enumerate() {
+                let component_start = Instant::now();
 
-            component.init(&mut self.ctx, ipc_rx.clone());
+                component.init(&mut self.ctx, ipc_rx.clone());
 
-            if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
-                log::warn!("Init component {} is delaying execution", idx);
+                if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
+                    log::warn!("Init component {} is delaying execution", idx);
+                }
             }
-        }
 
-        for (idx, component) in self.tick_components.iter_mut().enumerate() {
-            let component_start = Instant::now();
+            for (idx, component) in self.tick_components.iter_mut().enumerate() {
+                let component_start = Instant::now();
 
-            component.tick(&mut self.ctx);
+                component.tick(&mut self.ctx);
 
-            if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
-                log::warn!("Tick component {} is delaying execution", idx);
+                if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
+                    log::warn!("Tick component {} is delaying execution", idx);
+                }
             }
-        }
+        } else {
+            for (idx, component) in self.post_components.iter().enumerate() {
+                let component_start = Instant::now();
 
-        for (idx, component) in self.post_components.iter().enumerate() {
-            let component_start = Instant::now();
+                component.finalize(&mut self.ctx, command_tx.clone(), signal_tx.clone());
 
-            component.finalize(&mut self.ctx, command_tx.clone(), signal_tx.clone());
-
-            if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
-                log::warn!("Post component {} is delaying execution", idx);
+                if component_start.elapsed() > crate::consts::COMPONENT_DELAY_THRESHOLD {
+                    log::warn!("Post component {} is delaying execution", idx);
+                }
             }
-        }
 
-        self.ctx.post_tick();
+            self.ctx.post_tick();
+        }
     }
 }
