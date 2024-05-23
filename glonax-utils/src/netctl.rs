@@ -286,13 +286,15 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
                 );
             }
         } else if let Some(message) = network.try_accept(&mut imu0) {
-            info!(
-                "{} {} {} » {}",
-                chrono::Utc::now().format("%T%.3f"),
-                style_address(network.frame_source().unwrap()),
-                Yellow.bold().paint("Inclinometer"),
-                message
-            );
+            if let glonax::driver::net::inclino::InclinoMessage::ProcessData(data) = message {
+                info!(
+                    "{} {} {} » {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    Yellow.bold().paint("Inclinometer"),
+                    data
+                );
+            }
         } else if let Some(message) = network.try_accept(&mut hcu0) {
             match message {
                 glonax::driver::net::hydraulic::HydraulicMessage::Actuator(actuator) => {

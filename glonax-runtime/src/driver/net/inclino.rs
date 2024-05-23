@@ -1,4 +1,4 @@
-use j1939::{protocol, Frame, PGN};
+use j1939::{protocol, Frame, Name, PGN};
 
 use crate::net::Parsable;
 
@@ -45,6 +45,11 @@ pub enum SensorOrientation {
     XPositive,
     XNegative,
     Other,
+}
+
+pub enum InclinoMessage {
+    ProcessData(ProcessDataMessage),
+    AddressClaim(Name),
 }
 
 // TODO: Missing a few fields.
@@ -160,22 +165,34 @@ impl KueblerInclinometer {
     }
 }
 
-impl Parsable<ProcessDataMessage> for KueblerInclinometer {
-    fn parse(&mut self, frame: &Frame) -> Option<ProcessDataMessage> {
+impl Parsable<InclinoMessage> for KueblerInclinometer {
+    fn parse(&mut self, frame: &Frame) -> Option<InclinoMessage> {
         if let Some(destination_address) = frame.id().destination_address() {
             if destination_address != self.destination_address && destination_address != 0xff {
                 return None;
             }
         }
 
-        if frame.id().pgn() == INCLINOMETER_PGN {
-            if frame.id().source_address() != self.destination_address {
-                return None;
-            }
+        match frame.id().pgn() {
+            PGN::AddressClaimed => {
+                if frame.id().source_address() != self.destination_address {
+                    return None;
+                }
 
-            Some(ProcessDataMessage::from_frame(frame))
-        } else {
-            None
+                Some(InclinoMessage::AddressClaim(Name::from_bytes(
+                    frame.pdu().try_into().unwrap(),
+                )))
+            }
+            INCLINOMETER_PGN => {
+                if frame.id().source_address() != self.destination_address {
+                    return None;
+                }
+
+                Some(InclinoMessage::ProcessData(ProcessDataMessage::from_frame(
+                    frame,
+                )))
+            }
+            _ => None,
         }
     }
 }
@@ -216,8 +233,23 @@ impl super::J1939Unit for KueblerInclinometer {
             result = Err(super::J1939UnitError::MessageTimeout);
         }
 
-        if let Some(_message) = network.try_accept(self) {
-            ctx.rx_mark();
+        if let Some(message) = network.try_accept(self) {
+            match message {
+                InclinoMessage::AddressClaim(name) => {
+                    ctx.rx_mark();
+
+                    log::debug!(
+                        "[{}:0x{:X}] {}: Address claimed: {}",
+                        network.interface(),
+                        self.destination(),
+                        self.name(),
+                        name
+                    );
+                }
+                InclinoMessage::ProcessData(_process_data) => {
+                    ctx.rx_mark();
+                }
+            }
         }
 
         result
