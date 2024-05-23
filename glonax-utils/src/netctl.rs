@@ -246,37 +246,45 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
                 }
             }
         } else if let Some(message) = network.try_accept(&mut enc2) {
-            info!(
-                "{} {} {} » {}",
-                chrono::Utc::now().format("%T%.3f"),
-                style_address(network.frame_source().unwrap()),
-                Yellow.bold().paint("Arm"),
-                message
-            );
+            if let glonax::driver::net::encoder::EncoderMessage::ProcessData(data) = message {
+                info!(
+                    "{} {} {} » {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    Yellow.bold().paint("Arm"),
+                    data
+                );
+            }
         } else if let Some(message) = network.try_accept(&mut enc1) {
-            info!(
-                "{} {} {} » {}",
-                chrono::Utc::now().format("%T%.3f"),
-                style_address(network.frame_source().unwrap()),
-                Yellow.bold().paint("Boom"),
-                message
-            );
+            if let glonax::driver::net::encoder::EncoderMessage::ProcessData(data) = message {
+                info!(
+                    "{} {} {} » {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    Yellow.bold().paint("Boom"),
+                    data
+                );
+            }
         } else if let Some(message) = network.try_accept(&mut enc0) {
-            info!(
-                "{} {} {} » {}",
-                chrono::Utc::now().format("%T%.3f"),
-                style_address(network.frame_source().unwrap()),
-                Yellow.bold().paint("Frame"),
-                message
-            );
+            if let glonax::driver::net::encoder::EncoderMessage::ProcessData(data) = message {
+                info!(
+                    "{} {} {} » {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    Yellow.bold().paint("Frame"),
+                    data
+                );
+            }
         } else if let Some(message) = network.try_accept(&mut enc3) {
-            info!(
-                "{} {} {} » {}",
-                chrono::Utc::now().format("%T%.3f"),
-                style_address(network.frame_source().unwrap()),
-                Yellow.bold().paint("Attachment"),
-                message
-            );
+            if let glonax::driver::net::encoder::EncoderMessage::ProcessData(data) = message {
+                info!(
+                    "{} {} {} » {}",
+                    chrono::Utc::now().format("%T%.3f"),
+                    style_address(network.frame_source().unwrap()),
+                    Yellow.bold().paint("Attachment"),
+                    data
+                );
+            }
         } else if let Some(message) = network.try_accept(&mut imu0) {
             info!(
                 "{} {} {} » {}",

@@ -1,4 +1,4 @@
-use j1939::{protocol, Frame, FrameBuilder, IdBuilder, PGN};
+use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PGN};
 
 use crate::{
     core::{Object, ObjectMessage},
@@ -40,11 +40,16 @@ impl std::fmt::Display for EncoderState {
     }
 }
 
+pub enum EncoderMessage {
+    ProcessData(ProcessDataMessage),
+    AddressClaim(Name),
+}
+
 // TODO: Every message should implement a trait that allows it to be converted to and from a frame.
 // TODO: Implement from_frame and to_frame for EncoderMessage.
 // TODO: Implement Display for message traits.
 #[derive(Debug, Clone)]
-pub struct EncoderMessage {
+pub struct ProcessDataMessage {
     /// Source address.
     source_address: u8,
     /// Position.
@@ -55,7 +60,7 @@ pub struct EncoderMessage {
     pub state: Option<EncoderState>,
 }
 
-impl EncoderMessage {
+impl ProcessDataMessage {
     /// Construct a new encoder message.
     pub fn new(sa: u8) -> Self {
         Self {
@@ -142,19 +147,19 @@ impl EncoderMessage {
     }
 }
 
-impl From<Frame> for EncoderMessage {
+impl From<Frame> for ProcessDataMessage {
     fn from(frame: Frame) -> Self {
         Self::from_frame(&frame)
     }
 }
 
-impl From<&Frame> for EncoderMessage {
+impl From<&Frame> for ProcessDataMessage {
     fn from(frame: &Frame) -> Self {
         Self::from_frame(frame)
     }
 }
 
-impl std::fmt::Display for EncoderMessage {
+impl std::fmt::Display for ProcessDataMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -195,14 +200,26 @@ impl Parsable<EncoderMessage> for KueblerEncoder {
             }
         }
 
-        if frame.id().pgn() == ENCODER_PGN {
-            if frame.id().source_address() != self.destination_address {
-                return None;
-            }
+        match frame.id().pgn() {
+            PGN::AddressClaimed => {
+                if frame.id().source_address() != self.destination_address {
+                    return None;
+                }
 
-            Some(frame.into())
-        } else {
-            None
+                Some(EncoderMessage::AddressClaim(Name::from_bytes(
+                    frame.pdu().try_into().unwrap(),
+                )))
+            }
+            ENCODER_PGN => {
+                if frame.id().source_address() != self.destination_address {
+                    return None;
+                }
+
+                Some(EncoderMessage::ProcessData(ProcessDataMessage::from_frame(
+                    frame,
+                )))
+            }
+            _ => None,
         }
     }
 }
@@ -244,11 +261,29 @@ impl super::J1939Unit for KueblerEncoder {
         }
 
         if let Some(message) = network.try_accept(self) {
-            ctx.rx_mark();
+            match message {
+                EncoderMessage::AddressClaim(name) => {
+                    ctx.rx_mark();
 
-            let encoder_signal = (message.source_address, message.position as f32);
-            if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::Encoder(encoder_signal))) {
-                log::error!("Failed to send encoder signal: {}", e);
+                    log::debug!(
+                        "[{}:0x{:X}] {}: Address claimed: {}",
+                        network.name(),
+                        self.destination(),
+                        self.name(),
+                        name
+                    );
+                }
+                EncoderMessage::ProcessData(process_data) => {
+                    ctx.rx_mark();
+
+                    let encoder_signal =
+                        (process_data.source_address, process_data.position as f32);
+                    if let Err(e) =
+                        ipc_tx.send(ObjectMessage::signal(Object::Encoder(encoder_signal)))
+                    {
+                        log::error!("Failed to send encoder signal: {}", e);
+                    }
+                }
             }
         }
 
@@ -262,7 +297,7 @@ mod tests {
 
     #[test]
     fn value_normal() {
-        let message_a = EncoderMessage {
+        let message_a = ProcessDataMessage {
             source_address: 0x6A,
             position: 1_620,
             speed: 0,
@@ -270,7 +305,7 @@ mod tests {
         };
 
         let frames = message_a.to_frame();
-        let messasge_b = EncoderMessage::from_frame(&frames[0]);
+        let messasge_b = ProcessDataMessage::from_frame(&frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(messasge_b.position, 1_620);
@@ -280,7 +315,7 @@ mod tests {
 
     #[test]
     fn value_error() {
-        let messasge_a = EncoderMessage {
+        let messasge_a = ProcessDataMessage {
             source_address: 0x45,
             position: 173,
             speed: 65_196,
@@ -288,7 +323,7 @@ mod tests {
         };
 
         let frames = messasge_a.to_frame();
-        let messasge_b = EncoderMessage::from_frame(&frames[0]);
+        let messasge_b = ProcessDataMessage::from_frame(&frames[0]);
 
         assert_eq!(frames.len(), 1);
         assert_eq!(messasge_b.position, 173);
