@@ -14,6 +14,8 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
     }
 
     fn init(&self, ctx: &mut ComponentContext, ipc_rx: std::rc::Rc<IPCReceiver>) {
+        ctx.machine.emergency = false;
+
         ctx.machine.vms_signal_set = false;
         ctx.machine.gnss_signal_set = false;
         ctx.machine.engine_signal_set = false;

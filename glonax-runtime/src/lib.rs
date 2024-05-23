@@ -176,4 +176,7 @@ pub struct Machine {
 
     /// Current program queue.
     pub program_command: std::collections::VecDeque<core::Target>,
+
+    /// Emergency flag.
+    pub emergency: bool,
 }

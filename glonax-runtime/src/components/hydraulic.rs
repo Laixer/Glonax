@@ -19,10 +19,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for HydraulicComponent {
         command_tx: CommandSender,
         signal_tx: std::rc::Rc<SignalSender>,
     ) {
-        // TODO: Move this to context
-        let emergency = true;
-
-        if emergency {
+        if ctx.machine.emergency {
             let motion_command = Motion::StopAll;
             if let Err(e) = command_tx.try_send(Object::Motion(motion_command)) {
                 log::error!("Failed to send motion command: {}", e);
@@ -36,8 +33,11 @@ impl<Cnf: Clone> PostComponent<Cnf> for HydraulicComponent {
                 log::error!("Failed to send motion command: {}", e);
             }
         }
-        if let Err(e) = signal_tx.send(Object::Motion(ctx.machine.motion_signal.clone())) {
-            log::error!("Failed to send engine signal: {}", e);
+
+        if ctx.machine.motion_signal_set {
+            if let Err(e) = signal_tx.send(Object::Motion(ctx.machine.motion_signal.clone())) {
+                log::error!("Failed to send engine signal: {}", e);
+            }
         }
     }
 }

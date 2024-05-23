@@ -19,10 +19,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
         command_tx: CommandSender,
         _signal_tx: std::rc::Rc<SignalSender>,
     ) {
-        // TODO: Move this to context
-        let emergency = true;
-
-        if emergency {
+        if ctx.machine.emergency {
             if ctx.machine.engine_signal.rpm > 0 {
                 let control_command = Control::HydraulicLock(true);
                 if let Err(e) = command_tx.try_send(Object::Control(control_command)) {

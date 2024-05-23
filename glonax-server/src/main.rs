@@ -9,9 +9,6 @@ use clap::{Parser, ValueHint};
 mod components;
 mod config;
 
-/// Interval for the host service.
-// const SERVICE_HOST_INTERVAL: std::time::Duration = std::time::Duration::from_millis(200);
-
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]

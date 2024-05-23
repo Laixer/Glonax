@@ -154,10 +154,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
         command_tx: CommandSender,
         signal_tx: std::rc::Rc<SignalSender>,
     ) {
-        // TODO: Move this to context
-        let emergency = true;
-
-        if emergency {
+        if ctx.machine.emergency {
             if let Err(e) = command_tx.try_send(Object::Engine(Engine::shutdown())) {
                 log::error!("Failed to send engine command: {}", e);
             }
@@ -178,15 +175,20 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
             log::error!("Failed to send engine command: {}", e);
         }
 
-        // TODO: These signals do not belong here
-        if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
-            log::error!("Failed to send engine signal: {}", e);
+        if ctx.machine.engine_signal_set {
+            if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
+                log::error!("Failed to send engine signal: {}", e);
+            }
         }
-        if let Err(e) = signal_tx.send(Object::Host(ctx.machine.vms_signal)) {
-            log::error!("Failed to send host signal: {}", e);
+        if ctx.machine.vms_signal_set {
+            if let Err(e) = signal_tx.send(Object::Host(ctx.machine.vms_signal)) {
+                log::error!("Failed to send host signal: {}", e);
+            }
         }
-        if let Err(e) = signal_tx.send(Object::GNSS(ctx.machine.gnss_signal)) {
-            log::error!("Failed to send gnss signal: {}", e);
+        if ctx.machine.gnss_signal_set {
+            if let Err(e) = signal_tx.send(Object::GNSS(ctx.machine.gnss_signal)) {
+                log::error!("Failed to send gnss signal: {}", e);
+            }
         }
     }
 }
