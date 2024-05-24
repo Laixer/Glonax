@@ -85,6 +85,7 @@ pub struct TcpServer {
 }
 
 impl TcpServer {
+    // TODO: This method is barely readable. Refactor it.
     async fn parse<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         client: &mut crate::protocol::Stream<T>,
         frame: &crate::protocol::frame::Frame,
@@ -104,7 +105,25 @@ impl TcpServer {
                     .await
                     .map_err(TcpError::Io)?;
 
-                log::info!("Session started for: {}", session.name());
+                let mut flags = Vec::new();
+                if session.is_control() {
+                    flags.push("control")
+                }
+                if session.is_command() {
+                    flags.push("command")
+                }
+                if session.is_stream() {
+                    flags.push("stream")
+                }
+                if session.is_failsafe() {
+                    flags.push("failsafe")
+                }
+
+                log::info!(
+                    "Session started for {} with {}",
+                    session.name(),
+                    flags.join(", ")
+                );
 
                 client
                     .send_packet(crate::global::instance())
@@ -204,7 +223,6 @@ impl TcpServer {
         let mut client = Stream::new(stream);
         let mut session = Session::new(0, String::new());
 
-        // TODO: If possible, move to glonax-runtime
         loop {
             tokio::select! {
                 signal = signal_rx.recv() => {
