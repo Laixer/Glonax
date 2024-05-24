@@ -135,12 +135,14 @@ async fn run(args: Args) -> anyhow::Result<()> {
     log::debug!("Runtime version: {}", glonax::consts::VERSION);
     log::debug!("Waiting for connection to {}", address);
 
-    let (mut client, instance) = glonax::protocol::client::connect_with(
+    let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(
         address.to_owned(),
         format!("{}/{}", bin_name, glonax::consts::VERSION),
-        true,
-        args.fail_safe,
     )
+    .control(true)
+    .command(true)
+    .failsafe(args.fail_safe)
+    .connect()
     .await?;
 
     log::info!("Connected to {}", address);

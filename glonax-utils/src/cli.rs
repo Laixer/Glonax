@@ -46,8 +46,6 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
-    // Connect over TCP
-
     let mut address = args.address.clone();
 
     log::debug!("Connecting to {}", address);
@@ -59,12 +57,13 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", address);
 
-    let (mut client, instance) = glonax::protocol::client::connect_with(
+    let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(
         address.to_owned(),
         format!("{}/{}", "glonax-cli", glonax::consts::VERSION),
-        true,
-        false,
     )
+    .control(true)
+    .command(true)
+    .connect()
     .await?;
 
     println!("Connected to {}", address);
