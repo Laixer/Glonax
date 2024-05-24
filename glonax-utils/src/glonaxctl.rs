@@ -45,6 +45,16 @@ enum Command {
     },
 }
 
+fn string_to_bool(s: &str) -> Option<bool> {
+    match s.to_lowercase().as_str() {
+        "on" => Some(true),
+        "true" => Some(true),
+        "off" => Some(false),
+        "false" => Some(false),
+        _ => None,
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME").to_string();
@@ -158,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
                     );
                 }
                 _ => {
-                    eprintln!("Invalid response from server");
+                    eprintln!("Unknown message type: {}", frame.message);
                 }
             }
         },
@@ -169,30 +179,33 @@ async fn main() -> anyhow::Result<()> {
             client.send_packet(&engine).await?;
         }
         Command::Lights { toggle } => {
-            println!(
-                "Setting lights: {}",
-                if toggle.parse::<bool>()? { "on" } else { "off" }
-            );
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for lights"))?;
 
-            let control = glonax::core::Control::MachineIllumination(toggle.parse::<bool>()?);
+            println!("Setting lights: {}", if toggle { "on" } else { "off" });
+
+            let control = glonax::core::Control::MachineIllumination(toggle);
             client.send_packet(&control).await?;
         }
         Command::Horn { toggle } => {
-            println!(
-                "Setting horn: {}",
-                if toggle.parse::<bool>()? { "on" } else { "off" }
-            );
+            let toggle =
+                string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
 
-            let control = glonax::core::Control::MachineHorn(toggle.parse::<bool>()?);
+            println!("Setting horn: {}", if toggle { "on" } else { "off" });
+
+            let control = glonax::core::Control::MachineHorn(toggle);
             client.send_packet(&control).await?;
         }
         Command::QuickDisconnect { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for quick disconnect"))?;
+
             println!(
                 "Setting quick disconnect: {}",
-                if toggle.parse::<bool>()? { "on" } else { "off" }
+                if toggle { "on" } else { "off" }
             );
 
-            let control = glonax::core::Control::HydraulicQuickDisconnect(toggle.parse::<bool>()?);
+            let control = glonax::core::Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
         }
     }
