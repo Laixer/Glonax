@@ -31,18 +31,23 @@ enum Command {
         /// RPM
         rpm: u16,
     },
+    /// Lights commands.
     Lights {
         /// On or off.
         toggle: String,
     },
+    /// Horn commands.
     Horn {
         /// On or off.
         toggle: String,
     },
+    /// Quick disconnect commands.
     QuickDisconnect {
         /// On or off.
         toggle: String,
     },
+    /// Ping the server.
+    Ping,
 }
 
 fn string_to_bool(s: &str) -> Option<bool> {
@@ -208,6 +213,14 @@ async fn main() -> anyhow::Result<()> {
             let control = glonax::core::Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
         }
+        Command::Ping => loop {
+            // TODO: This does not work as expected, disable stream
+            let time_elapsed = client.probe().await?;
+
+            println!("Echo response time: {} ms", time_elapsed.as_millis());
+
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        },
     }
 
     Ok(())
