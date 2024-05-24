@@ -40,11 +40,6 @@ impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
                 if let Err(e) = command_tx.try_send(Object::Control(control_command)) {
                     log::error!("Failed to send control command: {}", e);
                 }
-            } else {
-                let control_command = Control::MachineShutdown;
-                if let Err(e) = command_tx.try_send(Object::Control(control_command)) {
-                    log::error!("Failed to send control command: {}", e);
-                }
             }
 
             return;
