@@ -12,8 +12,8 @@ use crate::protocol::{frame, Stream};
 ///
 /// # Example
 ///
-/// ```rust
-/// use glonax_runtime::protocol::client::{ClientBuilder, connect};
+/// ```no_run
+/// use glonax::protocol::client::{ClientBuilder, connect};
 ///
 /// #[tokio::main]
 /// async fn main() -> std::io::Result<()> {
@@ -53,7 +53,7 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     /// # Example
     ///
     /// ```rust
-    /// use glonax_runtime::protocol::client::ClientBuilder;
+    /// use glonax::protocol::client::ClientBuilder;
     ///
     /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
@@ -80,7 +80,7 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     /// # Example
     ///
     /// ```rust
-    /// use glonax_runtime::protocol::client::ClientBuilder;
+    /// use glonax::protocol::client::ClientBuilder;
     ///
     /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
@@ -102,7 +102,7 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     /// # Example
     ///
     /// ```rust
-    /// use glonax_runtime::protocol::client::ClientBuilder;
+    /// use glonax::protocol::client::ClientBuilder;
     ///
     /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
@@ -124,7 +124,7 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     /// # Example
     ///
     /// ```rust
-    /// use glonax_runtime::protocol::client::ClientBuilder;
+    /// use glonax::protocol::client::ClientBuilder;
     ///
     /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
@@ -146,7 +146,7 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     /// # Example
     ///
     /// ```rust
-    /// use glonax_runtime::protocol::client::ClientBuilder;
+    /// use glonax::protocol::client::ClientBuilder;
     ///
     /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
@@ -167,8 +167,8 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use glonax_runtime::protocol::client::{ClientBuilder, connect};
+    /// ```no_run
+    /// use glonax::protocol::client::{ClientBuilder, connect};
     ///
     /// #[tokio::main]
     /// async fn main() -> std::io::Result<()> {
@@ -243,8 +243,8 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
 ///
 /// # Example
 ///
-/// ```rust
-/// use glonax_runtime::protocol::client::connect;
+/// ```no_run
+/// use glonax::protocol::client::connect;
 ///
 /// #[tokio::main]
 /// async fn main() -> std::io::Result<()> {
