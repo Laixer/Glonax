@@ -1,0 +1,201 @@
+// Copyright (C) 2024 Laixer Equipment B.V.
+// All rights reserved.
+//
+// This software may be modified and distributed under the terms
+// of the included license.  See the LICENSE file for details.
+
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
+#[command(version, propagate_version = true)]
+#[command(about = "Glonax input daemon", long_about = None)]
+struct Args {
+    /// Remote network address.
+    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
+    address: String,
+    /// Level of verbosity.
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    verbose: u8,
+    /// Commands.
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(clap::Subcommand)]
+enum Command {
+    /// Watch for glonax messages.
+    Watch,
+    /// Engine commands.
+    Engine {
+        /// RPM
+        rpm: u16,
+    },
+    Lights {
+        /// On or off.
+        toggle: String,
+    },
+    Horn {
+        /// On or off.
+        toggle: String,
+    },
+    QuickDisconnect {
+        /// On or off.
+        toggle: String,
+    },
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let bin_name = env!("CARGO_BIN_NAME").to_string();
+
+    use log::LevelFilter;
+
+    let args = Args::parse();
+
+    let mut log_config = simplelog::ConfigBuilder::new();
+    log_config.set_time_level(log::LevelFilter::Off);
+    log_config.set_thread_level(log::LevelFilter::Off);
+    log_config.set_target_level(log::LevelFilter::Off);
+    log_config.set_location_level(log::LevelFilter::Off);
+    log_config.add_filter_ignore_str("sled");
+    log_config.add_filter_ignore_str("mio");
+
+    let log_level = match args.verbose {
+        0 => LevelFilter::Info,
+        1 => LevelFilter::Debug,
+        _ => LevelFilter::Trace,
+    };
+
+    simplelog::TermLogger::init(
+        log_level,
+        log_config.build(),
+        simplelog::TerminalMode::Mixed,
+        simplelog::ColorChoice::Auto,
+    )?;
+
+    let mut address = args.address.clone();
+
+    log::debug!("Connecting to {}", address);
+
+    if !address.contains(':') {
+        address.push(':');
+        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
+    }
+
+    log::debug!("Waiting for connection to {}", address);
+
+    let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(
+        address.to_owned(),
+        format!("{}/{}", bin_name, glonax::consts::VERSION),
+    )
+    .control(true)
+    .command(true)
+    .stream(true)
+    .connect()
+    .await?;
+
+    println!("Connected to {}", address);
+    println!("{}", instance);
+
+    match args.command {
+        Command::Watch => loop {
+            use glonax::protocol::Packetize;
+
+            let frame = client.read_frame().await?;
+            match frame.message {
+                glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
+                    let error = client
+                        .recv_packet::<glonax::protocol::frame::SessionError>(frame.payload_length)
+                        .await?;
+
+                    eprintln!("{:?}", error);
+                }
+                glonax::core::Status::MESSAGE_TYPE => {
+                    let status = client
+                        .recv_packet::<glonax::core::Status>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", status);
+                }
+                glonax::core::Instance::MESSAGE_TYPE => {
+                    let instance = client
+                        .recv_packet::<glonax::core::Instance>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", instance);
+                }
+                glonax::core::Engine::MESSAGE_TYPE => {
+                    let engine = client
+                        .recv_packet::<glonax::core::Engine>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", engine);
+                }
+                glonax::core::Host::MESSAGE_TYPE => {
+                    let host = client
+                        .recv_packet::<glonax::core::Host>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", host);
+                }
+                glonax::core::Gnss::MESSAGE_TYPE => {
+                    let gnss = client
+                        .recv_packet::<glonax::core::Gnss>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", gnss);
+                }
+                glonax::world::Actor::MESSAGE_TYPE => {
+                    let actor = client
+                        .recv_packet::<glonax::world::Actor>(frame.payload_length)
+                        .await?;
+
+                    let bucket_world_location = actor.world_location("bucket");
+                    println!(
+                        "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
+                        bucket_world_location.x, bucket_world_location.y, bucket_world_location.z
+                    );
+                }
+                _ => {
+                    eprintln!("Invalid response from server");
+                }
+            }
+        },
+        Command::Engine { rpm } => {
+            println!("Requesting engine RPM: {}", rpm);
+
+            let engine = glonax::core::Engine::from_rpm(rpm);
+            client.send_packet(&engine).await?;
+        }
+        Command::Lights { toggle } => {
+            println!(
+                "Setting lights: {}",
+                if toggle.parse::<bool>()? { "on" } else { "off" }
+            );
+
+            let control = glonax::core::Control::MachineIllumination(toggle.parse::<bool>()?);
+            client.send_packet(&control).await?;
+        }
+        Command::Horn { toggle } => {
+            println!(
+                "Setting horn: {}",
+                if toggle.parse::<bool>()? { "on" } else { "off" }
+            );
+
+            let control = glonax::core::Control::MachineHorn(toggle.parse::<bool>()?);
+            client.send_packet(&control).await?;
+        }
+        Command::QuickDisconnect { toggle } => {
+            println!(
+                "Setting quick disconnect: {}",
+                if toggle.parse::<bool>()? { "on" } else { "off" }
+            );
+
+            let control = glonax::core::Control::HydraulicQuickDisconnect(toggle.parse::<bool>()?);
+            client.send_packet(&control).await?;
+        }
+    }
+
+    Ok(())
+}

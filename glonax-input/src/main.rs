@@ -146,7 +146,6 @@ async fn run(args: Args) -> anyhow::Result<()> {
     .await?;
 
     log::info!("Connected to {}", address);
-
     log::info!("{}", instance);
 
     loop {
