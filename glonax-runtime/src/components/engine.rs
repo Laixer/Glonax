@@ -24,7 +24,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
         &self,
         ctx: &mut ComponentContext,
         command_tx: CommandSender,
-        signal_tx: std::rc::Rc<SignalSender>,
+        _signal_tx: std::rc::Rc<SignalSender>,
     ) {
         if ctx.machine.emergency {
             if let Err(e) = command_tx.try_send(Object::Engine(Engine::shutdown())) {
@@ -45,22 +45,6 @@ impl<Cnf: Clone> PostComponent<Cnf> for EngineComponent {
 
         if let Err(e) = command_tx.try_send(Object::Engine(governor_engine)) {
             log::error!("Failed to send engine command: {}", e);
-        }
-
-        if ctx.machine.engine_signal_set {
-            if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
-                log::error!("Failed to send engine signal: {}", e);
-            }
-        }
-        if ctx.machine.vms_signal_set {
-            if let Err(e) = signal_tx.send(Object::Host(ctx.machine.vms_signal)) {
-                log::error!("Failed to send host signal: {}", e);
-            }
-        }
-        if ctx.machine.gnss_signal_set {
-            if let Err(e) = signal_tx.send(Object::GNSS(ctx.machine.gnss_signal)) {
-                log::error!("Failed to send gnss signal: {}", e);
-            }
         }
     }
 }

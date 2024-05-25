@@ -17,7 +17,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for HydraulicComponent {
         &self,
         ctx: &mut ComponentContext,
         command_tx: CommandSender,
-        signal_tx: std::rc::Rc<SignalSender>,
+        _signal_tx: std::rc::Rc<SignalSender>,
     ) {
         if ctx.machine.emergency {
             let motion_command = Motion::StopAll;
@@ -31,12 +31,6 @@ impl<Cnf: Clone> PostComponent<Cnf> for HydraulicComponent {
         if let Some(motion_command) = &ctx.machine.motion_command {
             if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
                 log::error!("Failed to send motion command: {}", e);
-            }
-        }
-
-        if ctx.machine.motion_signal_set {
-            if let Err(e) = signal_tx.send(Object::Motion(ctx.machine.motion_signal.clone())) {
-                log::error!("Failed to send engine signal: {}", e);
             }
         }
     }

@@ -42,6 +42,7 @@ pub enum ObjectType {
     Signal,
 }
 
+// TODO: Maybe add source address of sender
 pub struct ObjectMessage {
     /// Object.
     pub object: Object,

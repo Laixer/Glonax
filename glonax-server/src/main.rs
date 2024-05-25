@@ -177,6 +177,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.add_post_component::<glonax::components::EngineComponent>();
     }
 
+    pipe.add_post_component::<glonax::components::SignalComponent>();
+
     runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;
 
     log::info!("Waiting for shutdown");
