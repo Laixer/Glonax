@@ -142,6 +142,9 @@ pub struct Machine {
     pub engine_signal_instant: Option<std::time::Instant>,
     /// Engine state actual set.
     pub engine_signal_set: bool,
+    /// Engine state actual changed.
+    pub engine_signal_changed: bool,
+
     /// Engine command.
     pub engine_command: Option<core::Engine>,
     /// Engine state request instant.
@@ -153,6 +156,7 @@ pub struct Machine {
     pub motion_signal_instant: Option<std::time::Instant>,
     /// Motion signal set.
     pub motion_signal_set: bool,
+
     /// Motion command.
     pub motion_command: Option<core::Motion>,
     /// Motion command instant.

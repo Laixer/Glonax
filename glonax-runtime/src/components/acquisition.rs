@@ -22,6 +22,8 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
         ctx.machine.motion_signal_set = false;
         ctx.machine.encoders_set = false;
 
+        ctx.machine.engine_signal_changed = false;
+
         for message in ipc_rx.try_iter() {
             log::trace!("Received IPC object: {:?}", message.object);
 
@@ -37,6 +39,9 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
                         ctx.machine.engine_command = Some(engine);
                         ctx.machine.engine_command_instant = Some(message.timestamp);
                     } else if message.object_type == ObjectType::Signal {
+                        if ctx.machine.engine_signal != engine {
+                            ctx.machine.engine_signal_changed = true;
+                        }
                         ctx.machine.engine_signal = engine;
                         ctx.machine.engine_signal_instant = Some(message.timestamp);
                         ctx.machine.engine_signal_set = true;

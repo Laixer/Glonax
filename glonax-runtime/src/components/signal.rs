@@ -24,6 +24,7 @@ impl<Cnf: Clone> PostComponent<Cnf> for SignalComponent {
                 log::error!("Failed to send engine signal: {}", e);
             }
         }
+        // TODO: Check `engine_signal_changed` || ctx.iteration() % 20 == 0
         if ctx.machine.engine_signal_set {
             if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
                 log::error!("Failed to send engine signal: {}", e);
