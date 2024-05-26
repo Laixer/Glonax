@@ -85,13 +85,17 @@ impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
         })
         .await?;
 
-        let frame = self.read_frame().await?;
-        if frame.message != frame::Echo::MESSAGE_TYPE {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Invalid response from server",
-            ));
-        }
+        let frame = loop {
+            let frame = self.read_frame().await?;
+            if frame.message == frame::Echo::MESSAGE_TYPE {
+                break frame;
+            }
+
+            // FUTURE: Move this to a separate function, there are many situations in which
+            // we want to read a frame and check the message type
+            let payload_buffer = &mut vec![0u8; frame.payload_length];
+            self.inner.read_exact(payload_buffer).await?;
+        };
 
         let time_elapsed = now.elapsed();
 
