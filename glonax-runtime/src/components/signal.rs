@@ -3,7 +3,7 @@ use crate::{
     runtime::{CommandSender, ComponentContext, PostComponent, SignalSender},
 };
 
-pub struct SignalComponent {}
+pub struct SignalComponent;
 
 impl<Cnf: Clone> PostComponent<Cnf> for SignalComponent {
     fn new(_: Cnf) -> Self

@@ -54,6 +54,14 @@ pub struct ObjectMessage {
 
 impl ObjectMessage {
     /// Create a new command message.
+    ///
+    /// # Arguments
+    ///
+    /// * `object` - The object associated with the message.
+    ///
+    /// # Returns
+    ///
+    /// A new `ObjectMessage` with the specified object and message type set to `Command`.
     pub fn command(object: Object) -> Self {
         Self {
             object,
@@ -63,6 +71,14 @@ impl ObjectMessage {
     }
 
     /// Create a new signal message.
+    ///
+    /// # Arguments
+    ///
+    /// * `object` - The object associated with the message.
+    ///
+    /// # Returns
+    ///
+    /// A new `ObjectMessage` with the specified object and message type set to `Signal`.
     pub fn signal(object: Object) -> Self {
         Self {
             object,
@@ -88,6 +104,26 @@ pub enum MachineType {
     Forestry = 6,
 }
 
+/// Converts a u8 value into a `MachineType` enum variant.
+///
+/// # Arguments
+///
+/// * `value` - The u8 value to convert.
+///
+/// # Returns
+///
+/// Returns a `Result` containing the converted `MachineType` variant if the conversion is successful,
+/// or an `Err` value if the conversion fails.
+///
+/// # Examples
+///
+/// ```rust
+/// use glonax::core::MachineType;
+///
+/// let value: u8 = 1;
+/// let machine_type = MachineType::try_from(value);
+/// assert_eq!(machine_type, Ok(MachineType::Excavator));
+/// ```
 impl TryFrom<u8> for MachineType {
     type Error = ();
 
