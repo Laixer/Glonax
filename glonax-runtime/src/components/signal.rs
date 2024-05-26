@@ -13,31 +13,31 @@ impl<Cnf: Clone> PostComponent<Cnf> for SignalComponent {
         Self {}
     }
 
+    // FUTURE: This can be optimized by only sending signals that have changed.
     fn finalize(
         &self,
         ctx: &mut ComponentContext,
         _command_tx: CommandSender,
         signal_tx: std::rc::Rc<SignalSender>,
     ) {
+        let mut signal_list = Vec::new();
+
         if ctx.machine.motion_signal_set {
-            if let Err(e) = signal_tx.send(Object::Motion(ctx.machine.motion_signal.clone())) {
-                log::error!("Failed to send engine signal: {}", e);
-            }
+            signal_list.push(Object::Motion(ctx.machine.motion_signal.clone()));
         }
-        // TODO: Check `engine_signal_changed` || ctx.iteration() % 20 == 0
         if ctx.machine.engine_signal_set {
-            if let Err(e) = signal_tx.send(Object::Engine(ctx.machine.engine_signal)) {
-                log::error!("Failed to send engine signal: {}", e);
-            }
+            signal_list.push(Object::Engine(ctx.machine.engine_signal));
         }
         if ctx.machine.vms_signal_set {
-            if let Err(e) = signal_tx.send(Object::Host(ctx.machine.vms_signal)) {
-                log::error!("Failed to send host signal: {}", e);
-            }
+            signal_list.push(Object::Host(ctx.machine.vms_signal));
         }
         if ctx.machine.gnss_signal_set {
-            if let Err(e) = signal_tx.send(Object::GNSS(ctx.machine.gnss_signal)) {
-                log::error!("Failed to send gnss signal: {}", e);
+            signal_list.push(Object::GNSS(ctx.machine.gnss_signal));
+        }
+
+        for signal in signal_list.drain(..) {
+            if let Err(e) = signal_tx.send(signal) {
+                log::error!("Failed to send signal: {}", e);
             }
         }
     }

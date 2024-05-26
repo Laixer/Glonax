@@ -17,7 +17,7 @@ mod motion;
 mod status;
 mod target;
 
-// TODO: Add object for encoder
+// TODO: Add object for encoder, emerency stop
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
     /// Control.

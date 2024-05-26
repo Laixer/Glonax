@@ -161,6 +161,13 @@ async fn main() -> anyhow::Result<()> {
 
                     println!("{}", gnss);
                 }
+                glonax::core::Motion::MESSAGE_TYPE => {
+                    let motion = client
+                        .recv_packet::<glonax::core::Motion>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", motion);
+                }
                 glonax::world::Actor::MESSAGE_TYPE => {
                     let actor = client
                         .recv_packet::<glonax::world::Actor>(frame.payload_length)
@@ -173,7 +180,7 @@ async fn main() -> anyhow::Result<()> {
                     );
                 }
                 _ => {
-                    eprintln!("Unknown message type: {}", frame.message);
+                    eprintln!("Unknown message type: 0x{:X}", frame.message);
                 }
             }
         },
@@ -214,7 +221,6 @@ async fn main() -> anyhow::Result<()> {
             client.send_packet(&control).await?;
         }
         Command::Ping => loop {
-            // TODO: This does not work as expected, disable stream
             let time_elapsed = client.probe().await?;
 
             println!("Echo response time: {} ms", time_elapsed.as_millis());
