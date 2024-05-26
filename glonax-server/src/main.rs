@@ -150,6 +150,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         runtime.schedule_io_service::<service::TcpServer, _>(tcp_server);
     }
 
+    // TODO: The entire pipeline execution should be moved to a MCU
     let mut pipe = service::ComponentExecutor::default();
 
     pipe.add_init_component::<glonax::components::Acquisition>();
@@ -166,19 +167,16 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     if config.mode == config::OperationMode::Autonomous {
         pipe.add_component_default::<components::Planning>();
-        pipe.add_component_default::<components::Controller>();
-        pipe.add_post_component::<glonax::components::HydraulicComponent>(); // TODO: Rename to HydraulicControl
+        pipe.add_component_default::<components::Controller>(); // TODO: Rename to something more specific
     }
 
     if config.is_simulation {
         // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
     } else {
-        // TODO: Bind all control components to the component
-        pipe.add_post_component::<glonax::components::ControlComponent>(); // TODO: Rename to VehicleControl
-        pipe.add_post_component::<glonax::components::EngineComponent>(); // TODO: Rename to EngineControl
+        pipe.add_post_component::<glonax::components::ControlComponent>();
     }
 
-    pipe.add_post_component::<glonax::components::SignalComponent>();
+    pipe.add_post_component::<glonax::components::SignalComponent>(); // TODO: Dont need this in MCU
     pipe.add_post_component::<glonax::components::MetricComponent>();
 
     runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;
