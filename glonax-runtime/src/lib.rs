@@ -128,6 +128,8 @@ pub struct Machine {
     pub vms_signal_instant: Option<std::time::Instant>,
     /// Vehicle management system update set.
     pub vms_signal_set: bool,
+    /// Vehicle management system update changed.
+    pub vms_signal_changed: bool,
 
     /// Global navigation satellite system data.
     pub gnss_signal: core::Gnss,
@@ -135,6 +137,8 @@ pub struct Machine {
     pub gnss_signal_instant: Option<std::time::Instant>,
     /// GNSS signal update set.
     pub gnss_signal_set: bool,
+    /// GNSS signal update changed.
+    pub gnss_signal_changed: bool,
 
     /// Engine signal.
     pub engine_signal: core::Engine,
@@ -156,6 +160,8 @@ pub struct Machine {
     pub motion_signal_instant: Option<std::time::Instant>,
     /// Motion signal set.
     pub motion_signal_set: bool,
+    /// Motion signal changed.
+    pub motion_signal_changed: bool,
 
     /// Motion command.
     pub motion_command: Option<core::Motion>,
@@ -173,6 +179,8 @@ pub struct Machine {
     pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
     /// Encoder set.
     pub encoders_set: bool, // TODO: HACK: Temporary
+    /// Encoder changed.
+    pub encoders_changed: bool, // TODO: HACK: Temporary
 
     /// Current program queue.
     pub program_command: std::collections::VecDeque<core::Target>,
