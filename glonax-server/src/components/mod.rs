@@ -1,6 +1,6 @@
 pub use controller::Controller;
-pub use fusion::SensorFusion;
-pub use kinematic::Kinematic;
+pub use fusion::Perception;
+pub use kinematic::Planning;
 pub use world::WorldBuilder;
 
 #[allow(unused_imports)]

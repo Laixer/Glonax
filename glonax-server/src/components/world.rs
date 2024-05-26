@@ -43,10 +43,5 @@ impl<Cnf: Clone> Component<Cnf> for WorldBuilder {
             ctx.world.add_actor(self.actor.clone());
             self.is_actor_attached = true;
         }
-
-        // TODO: Place the target in the world as actor
-        // if ctx.target.is_none() && !state.program.is_empty() {
-        //     ctx.target = state.program.pop_front();
-        // }
     }
 }

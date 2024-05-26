@@ -159,25 +159,27 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.add_component_default::<glonax::components::EngineSimulator>();
     }
 
-    pipe.add_component_default::<glonax::components::StatusComponent>();
+    pipe.add_component_default::<glonax::components::StatusComponent>(); // TODO: Check for errors, warnings. Possibly trigger emergency stop
 
-    pipe.add_component_default::<components::WorldBuilder>();
-    pipe.add_component_default::<components::SensorFusion>();
+    pipe.add_component_default::<components::WorldBuilder>(); // TODO: Does only need to be called once
+    pipe.add_component_default::<components::Perception>();
 
     if config.mode == config::OperationMode::Autonomous {
-        pipe.add_component_default::<components::Kinematic>();
+        pipe.add_component_default::<components::Planning>();
         pipe.add_component_default::<components::Controller>();
-        pipe.add_post_component::<glonax::components::HydraulicComponent>();
+        pipe.add_post_component::<glonax::components::HydraulicComponent>(); // TODO: Rename to HydraulicControl
     }
 
     if config.is_simulation {
         // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
     } else {
-        pipe.add_post_component::<glonax::components::ControlComponent>();
-        pipe.add_post_component::<glonax::components::EngineComponent>();
+        // TODO: Bind all control components to the component
+        pipe.add_post_component::<glonax::components::ControlComponent>(); // TODO: Rename to VehicleControl
+        pipe.add_post_component::<glonax::components::EngineComponent>(); // TODO: Rename to EngineControl
     }
 
     pipe.add_post_component::<glonax::components::SignalComponent>();
+    pipe.add_post_component::<glonax::components::MetricComponent>();
 
     runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;
 

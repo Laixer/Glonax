@@ -10,15 +10,14 @@ const ATTACHMENT_ENCODER: u8 = 0x6D;
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
-// TODO: Rename to encoder?
-pub struct SensorFusion {
+pub struct Perception {
     frame_encoder_converter: EncoderConverter,
     boom_encoder_converter: EncoderConverter,
     arm_encoder_converter: EncoderConverter,
     attachment_encoder_converter: EncoderConverter,
 }
 
-impl<Cnf: Clone> Component<Cnf> for SensorFusion {
+impl<Cnf: Clone> Component<Cnf> for Perception {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
