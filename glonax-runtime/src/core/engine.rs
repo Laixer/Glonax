@@ -43,6 +43,7 @@ impl Engine {
     pub fn from_rpm(rpm: u16) -> Self {
         Self {
             rpm,
+            state: EngineState::Request,
             ..Default::default()
         }
     }
