@@ -176,7 +176,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.add_post_component::<glonax::components::ControlComponent>();
     }
 
-    pipe.add_post_component::<glonax::components::SignalComponent>(); // TODO: Dont need this in MCU
+    pipe.add_post_component::<glonax::components::SignalComponent>();
     pipe.add_post_component::<glonax::components::MetricComponent>();
 
     runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;

@@ -61,11 +61,11 @@ impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
             return;
         }
 
-        // if let Some(motion_command) = &ctx.machine.motion_command {
-        //     if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
-        //         log::error!("Failed to send motion command: {}", e);
-        //     }
-        // }
+        if let Some(motion_command) = &ctx.machine.motion_command {
+            if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
+                log::error!("Failed to send motion command: {}", e);
+            }
+        }
 
         if let Some(control_command) = ctx.machine.control_command {
             if let Err(e) = command_tx.try_send(Object::Control(control_command)) {
