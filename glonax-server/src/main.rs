@@ -146,9 +146,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         }
     }
 
-    if let Some(tcp_server) = config.tcp_server.clone() {
-        runtime.schedule_io_service::<service::TcpServer, _>(tcp_server);
-    }
+    runtime.schedule_io_service::<service::TcpServer, _>(config.tcp_server);
 
     // TODO: The entire pipeline execution should be moved to a MCU
     let mut pipe = service::ComponentExecutor::default();

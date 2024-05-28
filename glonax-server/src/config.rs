@@ -54,7 +54,7 @@ pub struct Config {
     /// Simulation configuration.
     pub simulation: Option<SimulationConfig>,
     /// TCP Server configuration.
-    pub tcp_server: Option<glonax::service::TcpServerConfig>,
+    pub tcp_server: glonax::service::TcpServerConfig,
     /// Unix socket configuration.
     pub unix_server: Option<glonax::service::UnixServerConfig>,
     /// J1939 network configuration.
