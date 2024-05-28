@@ -171,14 +171,15 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     pipe.add_component_default::<components::Perception>();
 
     if config.mode == config::OperationMode::Autonomous {
-        pipe.add_component_default::<components::Planning>();
-        pipe.add_component_default::<components::Controller>(); // TODO: Rename to something more specific
+        pipe.add_component_default::<components::Planner>();
     }
+
+    pipe.add_component_default::<components::Controller>(); // TODO: Rename to something more specific
 
     // if config.is_simulation {
     // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
     // } else {
-    pipe.add_post_component::<glonax::components::ControlComponent>();
+    pipe.add_post_component::<glonax::components::CommitComponent>();
     // }
 
     pipe.add_post_component::<glonax::components::SignalComponent>();

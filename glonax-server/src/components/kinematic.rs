@@ -6,11 +6,11 @@ const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 // TODO: Get this from config
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
 
-pub struct Planning {
+pub struct Planner {
     target: Option<glonax::core::Target>, // TOD: This is a temporary solution, get the target from the world
 }
 
-impl<Cnf: Clone> Component<Cnf> for Planning {
+impl<Cnf: Clone> Component<Cnf> for Planner {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,

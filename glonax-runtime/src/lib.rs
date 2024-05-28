@@ -149,11 +149,6 @@ pub struct Machine {
     /// Engine state actual changed.
     pub engine_signal_changed: bool,
 
-    /// Engine command.
-    pub engine_command: Option<core::Engine>,
-    /// Engine state request instant.
-    pub engine_command_instant: Option<std::time::Instant>,
-
     /// Motion signal.
     pub motion_signal: core::Motion,
     /// Motion signal instant.
@@ -162,6 +157,20 @@ pub struct Machine {
     pub motion_signal_set: bool,
     /// Motion signal changed.
     pub motion_signal_changed: bool,
+
+    /// Encoder data.
+    pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
+    /// Encoder instant.
+    pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
+    /// Encoder set.
+    pub encoders_set: bool, // TODO: HACK: Temporary
+    /// Encoder changed.
+    pub encoders_changed: bool, // TODO: HACK: Temporary
+
+    /// Engine command.
+    pub engine_command: Option<core::Engine>,
+    /// Engine state request instant.
+    pub engine_command_instant: Option<std::time::Instant>,
 
     /// Motion command.
     pub motion_command: Option<core::Motion>,
@@ -172,15 +181,6 @@ pub struct Machine {
     pub control_command: Option<core::Control>,
     /// Control command instant.
     pub control_command_instant: Option<std::time::Instant>,
-
-    /// Encoder data.
-    pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
-    /// Encoder instant.
-    pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
-    /// Encoder set.
-    pub encoders_set: bool, // TODO: HACK: Temporary
-    /// Encoder changed.
-    pub encoders_changed: bool, // TODO: HACK: Temporary
 
     /// Current program queue.
     pub program_command: std::collections::VecDeque<core::Target>,

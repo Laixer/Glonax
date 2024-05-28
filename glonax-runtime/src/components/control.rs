@@ -6,11 +6,11 @@ use crate::{
     runtime::{CommandSender, ComponentContext, PostComponent, SignalSender},
 };
 
-pub struct ControlComponent {
+pub struct CommitComponent {
     governor: Governor,
 }
 
-impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
+impl<Cnf: Clone> PostComponent<Cnf> for CommitComponent {
     fn new(_config: Cnf) -> Self
     where
         Self: Sized,
@@ -74,8 +74,6 @@ impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
         }
 
         // TODO: Move to planner or some other component
-        let engine_signal = ctx.machine.engine_signal;
-
         let engine_command = if let Some(engine_command) = &ctx.machine.engine_command {
             if engine_command.rpm > 0 {
                 Engine::from_rpm(engine_command.rpm)
@@ -83,11 +81,11 @@ impl<Cnf: Clone> PostComponent<Cnf> for ControlComponent {
                 Engine::shutdown()
             }
         } else {
-            engine_signal
+            ctx.machine.engine_signal
         };
 
         let governor_engine = self.governor.next_state(
-            &engine_signal,
+            &ctx.machine.engine_signal,
             &engine_command,
             ctx.machine.engine_command_instant,
         );

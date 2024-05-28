@@ -1,5 +1,5 @@
 pub use acquisition::Acquisition;
-pub use control::ControlComponent;
+pub use control::CommitComponent;
 pub use engine::EngineComponent;
 pub use hydraulic::HydraulicComponent;
 pub use metric::MetricComponent;

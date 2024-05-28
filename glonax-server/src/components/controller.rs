@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use glonax::{
     core::{Actuator, Motion},
     runtime::{Component, ComponentContext},
@@ -191,13 +193,13 @@ impl<Cnf: Clone> Component<Cnf> for Controller {
         if !motion.is_empty() {
             let motion_command = Motion::from_iter(motion);
             ctx.machine.motion_command = Some(motion_command);
-            ctx.machine.motion_command_instant = Some(std::time::Instant::now());
+            ctx.machine.motion_command_instant = Some(Instant::now());
 
             self.stopall = false;
         } else if !self.stopall {
             let motion_command = Motion::StopAll;
             ctx.machine.motion_command = Some(motion_command);
-            ctx.machine.motion_command_instant = Some(std::time::Instant::now());
+            ctx.machine.motion_command_instant = Some(Instant::now());
 
             self.stopall = true;
         }
