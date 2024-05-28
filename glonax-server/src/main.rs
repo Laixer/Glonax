@@ -8,6 +8,7 @@ use clap::{Parser, ValueHint};
 
 mod components;
 mod config;
+mod world;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -148,19 +149,25 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     runtime.schedule_io_service::<service::TcpServer, _>(config.tcp_server);
 
-    // TODO: The entire pipeline execution should be moved to a MCU
-    let mut pipe = service::ComponentExecutor::default();
+    //
+    // The entire pipeline execution should be moved to a MCU
+    //
+
+    let mut ctx = glonax::runtime::ComponentContext::default();
+
+    world::construct(&mut ctx);
+
+    let mut pipe = service::ComponentExecutor::new(ctx);
 
     pipe.add_init_component::<glonax::components::Acquisition>();
 
-    if config.is_simulation {
-        pipe.add_component_default::<glonax::components::EncoderSimulator>();
-        pipe.add_component_default::<glonax::components::EngineSimulator>();
-    }
+    // if config.is_simulation {
+    //     pipe.add_component_default::<glonax::components::EncoderSimulator>();
+    //     pipe.add_component_default::<glonax::components::EngineSimulator>();
+    // }
 
     pipe.add_component_default::<glonax::components::StatusComponent>(); // TODO: Check for errors, warnings. Possibly trigger emergency stop
 
-    pipe.add_component_default::<components::WorldBuilder>(); // TODO: Does only need to be called once
     pipe.add_component_default::<components::Perception>();
 
     if config.mode == config::OperationMode::Autonomous {
@@ -168,11 +175,11 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         pipe.add_component_default::<components::Controller>(); // TODO: Rename to something more specific
     }
 
-    if config.is_simulation {
-        // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
-    } else {
-        pipe.add_post_component::<glonax::components::ControlComponent>();
-    }
+    // if config.is_simulation {
+    // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
+    // } else {
+    pipe.add_post_component::<glonax::components::ControlComponent>();
+    // }
 
     pipe.add_post_component::<glonax::components::SignalComponent>();
     pipe.add_post_component::<glonax::components::MetricComponent>();
