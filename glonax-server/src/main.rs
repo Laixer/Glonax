@@ -166,8 +166,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     //     pipe.add_component_default::<glonax::components::EngineSimulator>();
     // }
 
-    pipe.add_component_default::<glonax::components::StatusComponent>(); // TODO: Check for errors, warnings. Possibly trigger emergency stop
-
     pipe.add_component_default::<components::Perception>();
 
     if config.mode == config::OperationMode::Autonomous {
