@@ -210,6 +210,8 @@ pub struct NetDriverContext {
     tx_last: Instant,
     /// Last time a message was received.
     rx_last: Instant,
+    /// Last message received.
+    rx_last_message: Option<crate::core::ObjectMessage>,
 }
 
 impl NetDriverContext {
@@ -234,6 +236,7 @@ impl Default for NetDriverContext {
         Self {
             tx_last: Instant::now(),
             rx_last: Instant::now(),
+            rx_last_message: None,
         }
     }
 }

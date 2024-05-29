@@ -312,40 +312,6 @@ impl HydraulicControlUnit {
 
         message.to_frame()
     }
-
-    async fn send_motion_command(
-        &self,
-        network: &crate::net::ControlNetwork,
-        motion: &crate::core::Motion,
-    ) -> Result<(), super::J1939UnitError> {
-        match motion {
-            crate::core::Motion::StopAll => {
-                network.send(&self.lock()).await?;
-            }
-            crate::core::Motion::ResumeAll => {
-                network.send(&self.unlock()).await?;
-            }
-            crate::core::Motion::ResetAll => {
-                network.send(&self.motion_reset()).await?;
-            }
-            crate::core::Motion::StraightDrive(value) => {
-                let frames = &self.drive_straight(*value);
-                network.send_vectored(frames).await?;
-            }
-            crate::core::Motion::Change(changes) => {
-                let frames = &self.actuator_command(
-                    changes
-                        .iter()
-                        .map(|changeset| (changeset.actuator as u8, changeset.value))
-                        .collect(),
-                );
-
-                network.send_vectored(frames).await?;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl Parsable<HydraulicMessage> for HydraulicControlUnit {
@@ -551,8 +517,18 @@ impl super::J1939Unit for HydraulicControlUnit {
                     ctx.rx_mark();
 
                     if status.locked {
+                        ctx.rx_last_message =
+                            Some(ObjectMessage::signal(Object::Motion(Motion::StopAll)));
                         if let Err(e) =
                             ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::StopAll)))
+                        {
+                            log::error!("Failed to send motion signal: {}", e);
+                        }
+                    } else {
+                        ctx.rx_last_message =
+                            Some(ObjectMessage::signal(Object::Motion(Motion::ResumeAll)));
+                        if let Err(e) =
+                            ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::ResumeAll)))
                         {
                             log::error!("Failed to send motion signal: {}", e);
                         }
@@ -575,8 +551,36 @@ impl super::J1939Unit for HydraulicControlUnit {
         if let crate::core::Object::Motion(motion) = object {
             trace!("Hydraulic: {}", motion);
 
-            self.send_motion_command(network, motion).await?;
-            ctx.tx_mark();
+            match motion {
+                crate::core::Motion::StopAll => {
+                    network.send(&self.lock()).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::Motion::ResumeAll => {
+                    network.send(&self.unlock()).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::Motion::ResetAll => {
+                    network.send(&self.motion_reset()).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::Motion::StraightDrive(value) => {
+                    let frames = &self.drive_straight(*value);
+                    network.send_vectored(frames).await?;
+                    ctx.tx_mark();
+                }
+                crate::core::Motion::Change(changes) => {
+                    let frames = &self.actuator_command(
+                        changes
+                            .iter()
+                            .map(|changeset| (changeset.actuator as u8, changeset.value))
+                            .collect(),
+                    );
+
+                    network.send_vectored(frames).await?;
+                    ctx.tx_mark();
+                }
+            }
         }
 
         Ok(())
