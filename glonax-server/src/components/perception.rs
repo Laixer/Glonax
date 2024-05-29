@@ -153,8 +153,5 @@ impl<Cnf: Clone> Component<Cnf> for Perception {
             bucket_world_location.y,
             bucket_world_location.z
         );
-
-        // TODO: This is a hack to get the actor into the state
-        // state.actor = Some(actor.clone());
     }
 }

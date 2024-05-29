@@ -72,10 +72,7 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
                     }
                 }
                 Object::Motion(motion) => {
-                    if message.object_type == ObjectType::Command {
-                        ctx.machine.motion_command = Some(motion);
-                        ctx.machine.motion_command_instant = Some(message.timestamp);
-                    } else if message.object_type == ObjectType::Signal {
+                    if message.object_type == ObjectType::Signal {
                         if ctx.machine.motion_signal != motion {
                             ctx.machine.motion_signal_changed = true;
                         }
@@ -85,7 +82,9 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
                     }
                 }
                 Object::Target(target) => {
-                    if ctx.machine.program_command.len() < 1_000 {
+                    if message.object_type == ObjectType::Command
+                        && ctx.machine.program_command.len() < 1_000
+                    {
                         ctx.machine.program_command.push_back(target);
                     }
                 }
