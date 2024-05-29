@@ -14,7 +14,6 @@ pub use net::vcu::VehicleControlUnit;
 pub use net::vms::VehicleManagementSystem;
 pub use net::volvo_ems::VolvoD7E;
 pub use r#virtual::encoder::VirtualEncoder;
-pub use r#virtual::hcu::VirtualHCU;
 
 mod error;
 mod governor;

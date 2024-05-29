@@ -126,12 +126,12 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ));
 
         for driver in config.driver.iter() {
-            drivers.push((
-                driver
-                    .to_net_driver(config.address)
-                    .expect("Failed to register driver"),
-                crate::driver::net::NetDriverContext::default(),
-            ));
+            let ctx = crate::driver::net::NetDriverContext::default();
+            let net_driver = driver
+                .to_net_driver(config.address)
+                .expect("Failed to register driver");
+
+            drivers.push((net_driver, ctx));
         }
 
         Self {
@@ -190,12 +190,12 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
 
         let mut drivers = NetDriverCollection::default();
         for driver in config.driver.iter() {
-            drivers.push((
-                driver
-                    .to_net_driver(config.address)
-                    .expect("Failed to register driver"),
-                crate::driver::net::NetDriverContext::default(),
-            ));
+            let ctx = crate::driver::net::NetDriverContext::default();
+            let net_driver = driver
+                .to_net_driver(config.address)
+                .expect("Failed to register driver");
+
+            drivers.push((net_driver, ctx));
         }
 
         Self {
@@ -209,16 +209,11 @@ impl Service<NetworkConfig> for NetworkAuthorityAtx {
         ServiceContext::with_address("authority_atx", self.interface.clone())
     }
 
+    #[rustfmt::skip]
     async fn on_command(&mut self, object: &crate::core::Object) {
         for (drv, ctx) in self.drivers.iter_mut() {
             if let Err(error) = drv.trigger(ctx, &self.network, object).await {
-                log::error!(
-                    "[{}:0x{:X}] {}: {}",
-                    self.interface,
-                    drv.destination(),
-                    drv.name(),
-                    error
-                );
+                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
             }
         }
     }
