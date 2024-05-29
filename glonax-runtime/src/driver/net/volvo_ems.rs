@@ -107,6 +107,8 @@ impl super::J1939Unit for VolvoD7E {
         use super::engine::Engine;
 
         if let crate::core::Object::Engine(engine) = object {
+            trace!("Engine: {}", engine);
+
             match engine.state {
                 crate::core::EngineState::NoRequest => {
                     network.send(&self.request(engine.rpm)).await?;

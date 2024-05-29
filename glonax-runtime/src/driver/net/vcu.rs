@@ -190,7 +190,9 @@ impl super::J1939Unit for VehicleControlUnit {
         _network: &crate::net::ControlNetwork,
         object: &Object,
     ) -> Result<(), super::J1939UnitError> {
-        if let Object::Control(_control) = object {
+        if let Object::Control(control) = object {
+            trace!("VCU: {}", control);
+
             // FUTURE: Send control message
             ctx.tx_mark();
         }

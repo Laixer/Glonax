@@ -310,8 +310,6 @@ impl HydraulicControlUnit {
             actuators,
         };
 
-        trace!("HCU: {}", message);
-
         message.to_frame()
     }
 
@@ -575,6 +573,8 @@ impl super::J1939Unit for HydraulicControlUnit {
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         if let crate::core::Object::Motion(motion) = object {
+            trace!("Hydraulic: {}", motion);
+
             self.send_motion_command(network, motion).await?;
             ctx.tx_mark();
         }
