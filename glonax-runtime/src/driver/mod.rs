@@ -21,7 +21,6 @@ mod hardware;
 pub mod net;
 mod r#virtual;
 
-// TODO: Move this to a more appropriate location.
 pub struct EncoderConverter {
     /// Encoder factor.
     factor: f32,
@@ -35,6 +34,17 @@ pub struct EncoderConverter {
 
 impl EncoderConverter {
     /// Create a new encoder converter.
+    ///
+    /// # Arguments
+    ///
+    /// * `factor` - The conversion factor to apply to the encoder position.
+    /// * `offset` - The offset to apply to the encoder position.
+    /// * `invert` - Whether to invert the encoder position.
+    /// * `axis` - The axis of rotation for the encoder position.
+    ///
+    /// # Returns
+    ///
+    /// A new `EncoderConverter` instance.
     pub fn new(factor: f32, offset: f32, invert: bool, axis: UnitVector3<f32>) -> Self {
         Self {
             factor,
@@ -45,6 +55,14 @@ impl EncoderConverter {
     }
 
     /// Convert encoder position to rotation.
+    ///
+    /// # Arguments
+    ///
+    /// * `position` - The encoder position to convert.
+    ///
+    /// # Returns
+    ///
+    /// The rotation corresponding to the encoder position.
     pub fn to_rotation(&self, position: f32) -> Rotation3<f32> {
         let position =
             ((position / self.factor) - self.offset) * if self.invert { -1.0 } else { 1.0 };
@@ -53,6 +71,15 @@ impl EncoderConverter {
     }
 
     // TODO: This is incomplete
+    /// Convert rotation to encoder position.
+    ///
+    /// # Arguments
+    ///
+    /// * `rotation` - The rotation to convert.
+    ///
+    /// # Returns
+    ///
+    /// The encoder position corresponding to the rotation.
     pub fn from_rotation(&self, rotation: Rotation3<f32>) -> u32 {
         let position = (std::f32::consts::PI * 2.0) - rotation.angle();
 

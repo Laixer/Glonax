@@ -162,13 +162,13 @@ impl TcpServer {
 
                 if session.is_command() {
                     command_tx
-                        .send(crate::core::Object::Motion(motion.clone()))
+                        .send(Object::Motion(motion.clone()))
                         .await
                         .map_err(TcpError::Command)?;
 
-                    ipc_tx
-                        .send(ObjectMessage::command(Object::Motion(motion)))
-                        .map_err(TcpError::Queue)?;
+                    // ipc_tx
+                    //     .send(ObjectMessage::command(Object::Motion(motion)))
+                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -194,9 +194,14 @@ impl TcpServer {
                     .map_err(TcpError::Io)?;
 
                 if session.is_control() {
-                    ipc_tx
-                        .send(ObjectMessage::command(Object::Control(control)))
-                        .map_err(TcpError::Queue)?;
+                    command_tx
+                        .send(Object::Control(control))
+                        .await
+                        .map_err(TcpError::Command)?;
+
+                    // ipc_tx
+                    //     .send(ObjectMessage::command(Object::Control(control)))
+                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
