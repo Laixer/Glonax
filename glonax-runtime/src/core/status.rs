@@ -1,4 +1,3 @@
-// TODO: Add all subsystem statusess
 /// Robot status.
 ///
 /// This message is sent by the robot to the host to indicate the current status of the robot.
@@ -17,12 +16,6 @@ pub enum Status {
     Faulty = 0xFA,
     /// The robot is in an emergency state and should be stopped immediately.
     Emergency = 0xFB,
-}
-
-impl Status {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        vec![*self as u8]
-    }
 }
 
 impl std::fmt::Display for Status {
@@ -63,6 +56,6 @@ impl crate::protocol::Packetize for Status {
     const MESSAGE_SIZE: Option<usize> = Some(1);
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.to_bytes()
+        vec![*self as u8]
     }
 }

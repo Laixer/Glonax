@@ -42,6 +42,28 @@ pub struct Host {
     pub status: HostStatus,
 }
 
+impl Host {
+    /// Converts the memory size in bytes to gigabytes.
+    ///
+    /// Returns a tuple containing the memory size in gigabytes for the first and second memory banks.
+    pub fn memory_as_gb(&self) -> (f64, f64) {
+        (
+            self.memory.0 as f64 / 1024.0 / 1024.0 / 1024.0,
+            self.memory.1 as f64 / 1024.0 / 1024.0 / 1024.0,
+        )
+    }
+
+    /// Converts the swap size in bytes to gigabytes.
+    ///
+    /// Returns a tuple containing the swap size in gigabytes for the first and second swap banks.
+    pub fn swap_as_gb(&self) -> (f64, f64) {
+        (
+            self.swap.0 as f64 / 1024.0 / 1024.0 / 1024.0,
+            self.swap.1 as f64 / 1024.0 / 1024.0 / 1024.0,
+        )
+    }
+}
+
 impl Default for Host {
     fn default() -> Self {
         Self {
@@ -69,13 +91,13 @@ impl std::fmt::Display for Host {
         ));
         s.push_str(&format!(
             "Memory usage: {:.2}GB / {:.2}GB; ",
-            self.memory.0 as f64 / 1024.0 / 1024.0 / 1024.0,
-            self.memory.1 as f64 / 1024.0 / 1024.0 / 1024.0
+            self.memory_as_gb().0,
+            self.memory_as_gb().1
         ));
         s.push_str(&format!(
             "Swap usage: {:.2}GB / {:.2}GB; ",
-            self.swap.0 as f64 / 1024.0 / 1024.0 / 1024.0,
-            self.swap.1 as f64 / 1024.0 / 1024.0 / 1024.0
+            self.swap_as_gb().0,
+            self.swap_as_gb().1
         ));
         s.push_str(&format!(
             "CPU load: {:.1}%, {:.1}%, {:.1}%; ",
