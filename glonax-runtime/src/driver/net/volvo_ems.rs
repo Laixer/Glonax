@@ -1,6 +1,6 @@
 use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
-use crate::{driver::EngineMessage, net::Parsable};
+use crate::{core::ObjectMessage, driver::EngineMessage, net::Parsable};
 
 use super::engine::EngineManagementSystem;
 
@@ -105,6 +105,8 @@ impl super::J1939Unit for VolvoD7E {
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
+
+        ctx.tx_last_message = Some(ObjectMessage::command(object.clone()));
 
         if let crate::core::Object::Engine(engine) = object {
             trace!("Engine: {}", engine);

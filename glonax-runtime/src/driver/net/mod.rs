@@ -208,6 +208,8 @@ impl J1939Unit for NetDriver {
 pub struct NetDriverContext {
     /// Last time a message was sent.
     tx_last: Instant,
+    /// Last message sent.
+    tx_last_message: Option<crate::core::ObjectMessage>,
     /// Last time a message was received.
     rx_last: Instant,
     /// Last message received.
@@ -235,6 +237,7 @@ impl Default for NetDriverContext {
     fn default() -> Self {
         Self {
             tx_last: Instant::now(),
+            tx_last_message: None,
             rx_last: Instant::now(),
             rx_last_message: None,
         }

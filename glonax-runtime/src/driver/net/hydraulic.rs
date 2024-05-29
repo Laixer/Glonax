@@ -551,6 +551,8 @@ impl super::J1939Unit for HydraulicControlUnit {
         if let crate::core::Object::Motion(motion) = object {
             trace!("Hydraulic: {}", motion);
 
+            ctx.tx_last_message = Some(ObjectMessage::command(object.clone()));
+
             match motion {
                 crate::core::Motion::StopAll => {
                     network.send(&self.lock()).await?;
