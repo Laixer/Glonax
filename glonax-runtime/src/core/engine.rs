@@ -40,6 +40,14 @@ pub struct Engine {
 
 impl Engine {
     /// Create a new engine with the given RPM.
+    ///
+    /// # Arguments
+    ///
+    /// * `rpm` - The revolutions per minute of the engine.
+    ///
+    /// # Returns
+    ///
+    /// A new `Engine` instance.
     pub fn from_rpm(rpm: u16) -> Self {
         Self {
             rpm,
@@ -49,11 +57,25 @@ impl Engine {
     }
 
     /// Create a new engine with the given state.
+    ///
+    /// # Returns
+    ///
+    /// A new `Engine` instance with the state set to `EngineState::NoRequest`.
     pub fn shutdown() -> Self {
         Self {
             state: EngineState::NoRequest,
             ..Default::default()
         }
+    }
+
+    /// Check if the engine is running.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the engine is running, `false` otherwise.
+    #[inline]
+    pub fn is_running(&self) -> bool {
+        self.state == EngineState::Request && (self.actual_engine > 0 || self.rpm > 0)
     }
 }
 
