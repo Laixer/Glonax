@@ -174,12 +174,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     pipe.add_component_default::<components::Controller>(); // TODO: Rename to something more specific
 
-    // if config.is_simulation {
-    // pipe.add_component_default::<glonax::components::ActuatorSimulator>();
-    // } else {
     pipe.add_post_component::<glonax::components::CommitComponent>();
-    // }
-
     pipe.add_post_component::<glonax::components::SignalComponent>();
 
     runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;

@@ -119,8 +119,22 @@ pub trait Service<Cnf> {
 }
 
 pub trait Executor {
+    /// Runs the initialization logic of the executor.
+    ///
+    /// # Arguments
+    ///
+    /// * `ipc_rx` - A reference-counted pointer to the IPC receiver.
     fn run_init(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>);
+
+    /// Runs the main tick logic of the executor.
     fn run_tick(&mut self);
+
+    /// Runs the post-processing logic of the executor.
+    ///
+    /// # Arguments
+    ///
+    /// * `command_tx` - The command sender for sending commands.
+    /// * `signal_tx` - A reference-counted pointer to the signal sender.
     fn run_post(&mut self, command_tx: CommandSender, signal_tx: std::rc::Rc<SignalSender>);
 }
 
