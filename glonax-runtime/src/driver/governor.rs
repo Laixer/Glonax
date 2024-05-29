@@ -13,6 +13,16 @@ pub struct Governor {
 
 impl Governor {
     /// Construct a new governor.
+    ///
+    /// # Arguments
+    ///
+    /// * `rpm_idle` - The idle RPM value.
+    /// * `rpm_max` - The maximum RPM value.
+    /// * `state_transition_timeout` - The timeout duration for state transitions.
+    ///
+    /// # Returns
+    ///
+    /// A new `Governor` instance.
     pub fn new(rpm_idle: u16, rpm_max: u16, state_transition_timeout: Duration) -> Self {
         Self {
             rpm_idle,
@@ -24,6 +34,14 @@ impl Governor {
     /// Reshape the torque.
     ///
     /// This method reshapes the torque based on the engine speed.
+    ///
+    /// # Arguments
+    ///
+    /// * `torque` - The torque value to reshape.
+    ///
+    /// # Returns
+    ///
+    /// The reshaped torque value.
     #[inline]
     pub fn reshape(&self, torque: u16) -> u16 {
         torque.clamp(self.rpm_idle, self.rpm_max)
@@ -33,6 +51,16 @@ impl Governor {
     ///
     /// This method determines the next engine state based on the actual and requested
     /// engine states. It returns the next engine state as an `EngineRequest`.
+    ///
+    /// # Arguments
+    ///
+    /// * `signal` - The current engine state.
+    /// * `command` - The requested engine state.
+    /// * `command_instant` - The instant when the command was issued (optional).
+    ///
+    /// # Returns
+    ///
+    /// The next engine state as an `Engine` instance.
     pub fn next_state(
         &self,
         signal: &Engine,
