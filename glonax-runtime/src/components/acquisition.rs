@@ -32,12 +32,7 @@ impl<Cnf: Clone> InitComponent<Cnf> for Acquisition {
             log::trace!("Received IPC object: {:?}", message.object);
 
             match message.object {
-                Object::Control(_control) => {
-                    // if message.object_type == ObjectType::Command {
-                    //     ctx.machine.control_command = Some(control);
-                    //     ctx.machine.control_command_instant = Some(message.timestamp);
-                    // }
-                }
+                Object::Control(_control) => {}
                 Object::Engine(engine) => {
                     if message.object_type == ObjectType::Command {
                         ctx.machine.engine_command = Some(engine);
