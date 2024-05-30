@@ -523,7 +523,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             Motion::StopAll,
                         )));
 
-                        log::debug!("Hydraulic: StopAll");
+                        // log::debug!("Hydraulic: StopAll");
 
                         if let Err(e) =
                             ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::StopAll)))
@@ -535,7 +535,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             Motion::ResumeAll,
                         )));
 
-                        log::debug!("Hydraulic: ResumeAll");
+                        // log::debug!("Hydraulic: ResumeAll");
 
                         if let Err(e) =
                             ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::ResumeAll)))
