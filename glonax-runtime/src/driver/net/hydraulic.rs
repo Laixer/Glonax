@@ -603,50 +603,52 @@ impl super::J1939Unit for HydraulicControlUnit {
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
     ) -> Result<(), super::J1939UnitError> {
-        let object = {
+        let motion_command = {
             let ctx = ctx.inner();
             if let Some(x) = &ctx.tx_last_message {
-                // log::debug!("rx_last_message: {:?}", x.object);
+                // log::debug!("tx_last_message: {:?}", x.object);
 
-                Some(x.object.clone())
+                if let crate::core::Object::Motion(motion) = &x.object {
+                    motion.clone()
+                } else {
+                    crate::core::Motion::StopAll
+                }
             } else {
-                // log::debug!("rx_last_message: None");
-                None
+                // log::debug!("tx_last_message: None");
+                crate::core::Motion::StopAll
             }
         };
 
-        if let Some(crate::core::Object::Motion(motion)) = object {
-            trace!("Hydraulic: {}", motion);
+        trace!("Hydraulic: {}", motion_command);
 
-            match &motion {
-                crate::core::Motion::StopAll => {
-                    network.send(&self.lock()).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::Motion::ResumeAll => {
-                    network.send(&self.unlock()).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::Motion::ResetAll => {
-                    network.send(&self.motion_reset()).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::Motion::StraightDrive(value) => {
-                    let frames = &self.drive_straight(*value);
-                    network.send_vectored(frames).await?;
-                    ctx.tx_mark();
-                }
-                crate::core::Motion::Change(changes) => {
-                    let frames = &self.actuator_command(
-                        changes
-                            .iter()
-                            .map(|changeset| (changeset.actuator as u8, changeset.value))
-                            .collect(),
-                    );
+        match &motion_command {
+            crate::core::Motion::StopAll => {
+                network.send(&self.lock()).await?;
+                ctx.tx_mark();
+            }
+            crate::core::Motion::ResumeAll => {
+                network.send(&self.unlock()).await?;
+                ctx.tx_mark();
+            }
+            crate::core::Motion::ResetAll => {
+                network.send(&self.motion_reset()).await?;
+                ctx.tx_mark();
+            }
+            crate::core::Motion::StraightDrive(value) => {
+                let frames = &self.drive_straight(*value);
+                network.send_vectored(frames).await?;
+                ctx.tx_mark();
+            }
+            crate::core::Motion::Change(changes) => {
+                let frames = &self.actuator_command(
+                    changes
+                        .iter()
+                        .map(|changeset| (changeset.actuator as u8, changeset.value))
+                        .collect(),
+                );
 
-                    network.send_vectored(frames).await?;
-                    ctx.tx_mark();
-                }
+                network.send_vectored(frames).await?;
+                ctx.tx_mark();
             }
         }
 
