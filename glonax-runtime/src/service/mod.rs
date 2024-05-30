@@ -1,4 +1,4 @@
-pub use authority::{NetworkAuthorityAtx, NetworkAuthorityRx, NetworkConfig};
+pub use authority::{NetworkAuthorityRx, NetworkConfig};
 pub use gnss::{Gnss, GnssConfig};
 pub use host::Host;
 pub use pipeline::ComponentExecutor;

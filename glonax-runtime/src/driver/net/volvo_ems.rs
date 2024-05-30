@@ -16,6 +16,7 @@ pub enum VolvoEngineState {
     Starting = 0b1100_0011,
 }
 
+#[derive(Clone)]
 pub struct VolvoD7E {
     /// Destination address.
     destination_address: u8,
@@ -106,7 +107,7 @@ impl super::J1939Unit for VolvoD7E {
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
-        ctx.tx_last_message = Some(ObjectMessage::command(object.clone()));
+        ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
         if let crate::core::Object::Engine(engine) = object {
             trace!("Engine: {}", engine);

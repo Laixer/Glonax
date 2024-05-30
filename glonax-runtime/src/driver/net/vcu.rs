@@ -13,6 +13,7 @@ pub enum VehicleMessage {
     Status(VecraftStatusMessage),
 }
 
+#[derive(Clone)]
 pub struct VehicleControlUnit {
     /// Destination address.
     destination_address: u8,
@@ -140,11 +141,12 @@ impl super::J1939Unit for VehicleControlUnit {
         network: &crate::net::ControlNetwork,
         _ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
-        let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        // let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        let result = Result::<(), super::J1939UnitError>::Ok(());
 
-        if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
-            result = Err(super::J1939UnitError::MessageTimeout);
-        }
+        // if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
+        //     result = Err(super::J1939UnitError::MessageTimeout);
+        // }
 
         if let Some(message) = network.try_accept(self) {
             match message {

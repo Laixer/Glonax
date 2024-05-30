@@ -4,7 +4,7 @@ use crate::{driver::EngineMessage, net::Parsable};
 
 use super::engine::EngineManagementSystem;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct BoschEngineManagementSystem {
     /// Engine management system.
     ems: EngineManagementSystem,

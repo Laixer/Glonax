@@ -36,7 +36,7 @@ pub enum EngineMessage {
 }
 
 // TODO: Implement Engine trait
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct EngineManagementSystem {
     /// Destination address.
     destination_address: u8,
@@ -325,11 +325,12 @@ impl super::J1939Unit for EngineManagementSystem {
         network: &crate::net::ControlNetwork,
         ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
-        let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        // let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        let result = Result::<(), super::J1939UnitError>::Ok(());
 
-        if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
-            result = Err(super::J1939UnitError::MessageTimeout);
-        }
+        // if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
+        //     result = Err(super::J1939UnitError::MessageTimeout);
+        // }
 
         if let Some(message) = network.try_accept(self) {
             match message {
@@ -385,6 +386,8 @@ impl super::J1939Unit for EngineManagementSystem {
                     {
                         engine_signal.state = crate::core::EngineState::NoRequest;
                     }
+
+                    ctx.set_rx_last_message(ObjectMessage::signal(Object::Engine(engine_signal)));
 
                     if let Err(e) =
                         ipc_tx.send(ObjectMessage::signal(Object::Engine(engine_signal)))

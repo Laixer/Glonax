@@ -14,6 +14,7 @@ pub mod vms;
 pub mod volvo_ems;
 mod volvo_vecu;
 
+#[derive(Clone)]
 pub enum NetDriver {
     KueblerEncoder(super::KueblerEncoder),
     KueblerInclinometer(super::KueblerInclinometer),
@@ -205,7 +206,7 @@ impl J1939Unit for NetDriver {
     }
 }
 
-pub struct NetDriverContext {
+pub struct NetDriverContextDetail {
     /// Last time a message was sent.
     tx_last: Instant,
     /// Last message sent.
@@ -216,7 +217,7 @@ pub struct NetDriverContext {
     rx_last_message: Option<crate::core::ObjectMessage>,
 }
 
-impl NetDriverContext {
+impl NetDriverContextDetail {
     /// Check if the last message was sent within a timeout.
     fn is_rx_timeout(&self, timeout: Duration) -> bool {
         self.rx_last.elapsed() > timeout
@@ -233,7 +234,7 @@ impl NetDriverContext {
     }
 }
 
-impl Default for NetDriverContext {
+impl Default for NetDriverContextDetail {
     fn default() -> Self {
         Self {
             tx_last: Instant::now(),
@@ -244,7 +245,39 @@ impl Default for NetDriverContext {
     }
 }
 
-pub type NetDriverCollection = Vec<(NetDriver, NetDriverContext)>;
+#[derive(Default, Clone)]
+pub struct NetDriverContext {
+    detail: std::sync::Arc<std::sync::Mutex<NetDriverContextDetail>>,
+}
+
+impl NetDriverContext {
+    pub fn inner(&self) -> std::sync::MutexGuard<NetDriverContextDetail> {
+        self.detail.lock().unwrap()
+    }
+
+    /// Check if the last message was sent within a timeout.
+    pub fn is_rx_timeout(&self, timeout: Duration) -> bool {
+        self.detail.lock().unwrap().is_rx_timeout(timeout)
+    }
+
+    /// Mark the last time a message was sent.
+    pub fn tx_mark(&self) {
+        self.detail.lock().unwrap().tx_mark();
+    }
+
+    /// Mark the last time a message was received.
+    pub fn rx_mark(&self) {
+        self.detail.lock().unwrap().rx_mark();
+    }
+
+    pub fn set_tx_last_message(&self, message: crate::core::ObjectMessage) {
+        self.detail.lock().unwrap().tx_last_message = Some(message);
+    }
+
+    pub fn set_rx_last_message(&self, message: crate::core::ObjectMessage) {
+        self.detail.lock().unwrap().rx_last_message = Some(message);
+    }
+}
 
 #[derive(Debug)]
 pub enum J1939UnitError {

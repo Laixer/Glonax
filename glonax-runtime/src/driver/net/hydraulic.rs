@@ -211,6 +211,7 @@ impl std::fmt::Display for MotionConfigMessage {
     }
 }
 
+#[derive(Clone)]
 pub struct HydraulicControlUnit {
     /// Destination address.
     destination_address: u8,
@@ -476,12 +477,13 @@ impl super::J1939Unit for HydraulicControlUnit {
         network: &crate::net::ControlNetwork,
         ipc_tx: crate::runtime::IPCSender,
     ) -> Result<(), super::J1939UnitError> {
-        let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        // let mut result = Result::<(), super::J1939UnitError>::Ok(());
+        let result = Result::<(), super::J1939UnitError>::Ok(());
 
         // TODO: If possible, move timeout checks to pipeline
-        if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
-            result = Err(super::J1939UnitError::MessageTimeout);
-        }
+        // if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
+        //     result = Err(super::J1939UnitError::MessageTimeout);
+        // }
 
         // TODO: Send motion signal to the pipeline
         if let Some(message) = network.try_accept(self) {
@@ -517,16 +519,24 @@ impl super::J1939Unit for HydraulicControlUnit {
                     ctx.rx_mark();
 
                     if status.locked {
-                        ctx.rx_last_message =
-                            Some(ObjectMessage::signal(Object::Motion(Motion::StopAll)));
+                        ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(
+                            Motion::StopAll,
+                        )));
+
+                        log::debug!("Hydraulic: StopAll");
+
                         if let Err(e) =
                             ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::StopAll)))
                         {
                             log::error!("Failed to send motion signal: {}", e);
                         }
                     } else {
-                        ctx.rx_last_message =
-                            Some(ObjectMessage::signal(Object::Motion(Motion::ResumeAll)));
+                        ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(
+                            Motion::ResumeAll,
+                        )));
+
+                        log::debug!("Hydraulic: ResumeAll");
+
                         if let Err(e) =
                             ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::ResumeAll)))
                         {
@@ -551,7 +561,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         if let crate::core::Object::Motion(motion) = object {
             trace!("Hydraulic: {}", motion);
 
-            ctx.tx_last_message = Some(ObjectMessage::command(object.clone()));
+            ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
             match motion {
                 crate::core::Motion::StopAll => {

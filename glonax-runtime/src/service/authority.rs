@@ -1,5 +1,5 @@
 use crate::{
-    driver::net::{J1939Unit, NetDriver, NetDriverCollection},
+    driver::net::{J1939Unit, NetDriver},
     net::ControlNetwork,
     runtime::{CommandSender, IPCSender, Service, ServiceContext, SignalReceiver},
 };
@@ -84,21 +84,63 @@ impl NetworkConfig {
     }
 }
 
+#[derive(Clone)]
+struct NetDriverItem {
+    driver: NetDriver,
+    context: crate::driver::net::NetDriverContext,
+}
+
+impl NetDriverItem {
+    fn new(driver: NetDriver) -> Self {
+        Self {
+            driver,
+            context: crate::driver::net::NetDriverContext::default(),
+        }
+    }
+}
+
+impl std::fmt::Display for NetDriverItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}:0x{:X}",
+            self.driver.name(),
+            self.driver.destination()
+        )
+    }
+}
+
 pub struct NetworkAuthorityRx {
-    interface: String,
+    interface: String, // TODO: Can we use the network interface instead?
     network: ControlNetwork,
-    drivers: NetDriverCollection,
+    drivers: Vec<NetDriverItem>,
     is_setup: bool,
 }
 
 impl NetworkAuthorityRx {
-    #[rustfmt::skip]
     async fn setup_delayed(&mut self) {
-        for (drv, ctx) in self.drivers.iter_mut() {
-            log::debug!("[{}:0x{:X}] Setup network driver '{}'", self.interface, drv.destination(), drv.name());
-            if let Err(error) = drv.setup(ctx, &self.network).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        for driver in self.drivers.iter_mut() {
+            log::debug!("[{}] Setup network driver '{}'", self.interface, driver);
+            if let Err(error) = driver
+                .driver
+                .setup(&mut driver.context, &self.network)
+                .await
+            {
+                log::error!("[{}] {}: {}", self.interface, driver, error);
             }
+        }
+    }
+}
+
+impl Clone for NetworkAuthorityRx {
+    fn clone(&self) -> Self {
+        let network = ControlNetwork::bind(self.network.interface(), self.network.name()).unwrap();
+
+        Self {
+            interface: self.interface.clone(),
+            network,
+            drivers: self.drivers.clone(),
+            is_setup: self.is_setup,
         }
     }
 }
@@ -116,22 +158,18 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             .unwrap()
             .with_filter(filter);
 
-        let mut drivers = NetDriverCollection::default();
+        let mut drivers = Vec::new();
 
-        drivers.push((
-            NetDriver::VehicleManagementSystem(crate::driver::VehicleManagementSystem::new(
-                config.address,
-            )),
-            crate::driver::net::NetDriverContext::default(),
-        ));
+        drivers.push(NetDriverItem::new(NetDriver::VehicleManagementSystem(
+            crate::driver::VehicleManagementSystem::new(config.address),
+        )));
 
         for driver in config.driver.iter() {
-            let ctx = crate::driver::net::NetDriverContext::default();
             let net_driver = driver
                 .to_net_driver(config.address)
                 .expect("Failed to register driver");
 
-            drivers.push((net_driver, ctx));
+            drivers.push(NetDriverItem::new(net_driver));
         }
 
         Self {
@@ -146,18 +184,26 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
         ServiceContext::with_address("authority_rx", self.interface.clone())
     }
 
-    #[rustfmt::skip]
     async fn teardown(&mut self) {
-        for (drv, ctx) in self.drivers.iter_mut() {
-            log::debug!("[{}:0x{:X}] Teardown network driver '{}'", self.interface, drv.destination(), drv.name());
-            if let Err(error) = drv.teardown(ctx, &self.network).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        for driver in self.drivers.iter_mut() {
+            log::debug!("[{}] Teardown network driver '{}'", self.interface, driver);
+
+            if let Err(error) = driver
+                .driver
+                .teardown(&mut driver.context, &self.network)
+                .await
+            {
+                log::error!("[{}] {}: {}", self.interface, driver, error);
             }
         }
     }
 
-    #[rustfmt::skip]
-    async fn wait_io(&mut self, ipc_tx: IPCSender, _command_tx: CommandSender, _signal_rx: SignalReceiver) {
+    async fn wait_io(
+        &mut self,
+        ipc_tx: IPCSender,
+        _command_tx: CommandSender,
+        _signal_rx: SignalReceiver,
+    ) {
         if let Err(e) = self.network.recv().await {
             log::error!("Failed to receive from router: {}", e);
         }
@@ -167,53 +213,43 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
             self.is_setup = true;
         }
 
-        for (drv, ctx) in self.drivers.iter_mut() {
-            if let Err(error) = drv.try_accept(ctx, &self.network, ipc_tx.clone()).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        for driver in self.drivers.iter_mut() {
+            if let Err(error) = driver
+                .driver
+                .try_accept(&mut driver.context, &self.network, ipc_tx.clone())
+                .await
+            {
+                log::error!("[{}] {}: {}", self.interface, driver, error);
             }
         }
-    }
-}
 
-pub struct NetworkAuthorityAtx {
-    interface: String,
-    network: ControlNetwork,
-    drivers: NetDriverCollection,
-}
+        // tokio::select! {
+        //     _ = self.network.recv() => {
+        //         for (drv, ctx) in self.drivers.iter_mut() {
+        //             if let Err(error) = drv.try_accept(ctx, &self.network, ipc_tx.clone()).await {
+        //                 log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        //             }
+        //         }
+        //     }
+        //     _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
+        //         // for (drv, ctx) in self.drivers.iter_mut() {
 
-impl Service<NetworkConfig> for NetworkAuthorityAtx {
-    fn new(config: NetworkConfig) -> Self
-    where
-        Self: Sized,
-    {
-        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
-
-        let mut drivers = NetDriverCollection::default();
-        for driver in config.driver.iter() {
-            let ctx = crate::driver::net::NetDriverContext::default();
-            let net_driver = driver
-                .to_net_driver(config.address)
-                .expect("Failed to register driver");
-
-            drivers.push((net_driver, ctx));
-        }
-
-        Self {
-            interface: config.interface,
-            network,
-            drivers,
-        }
+        //             // if let Err(error) = drv.tick(ctx, &self.network).await {
+        //             //     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        //             // }
+        //         // }
+        //     }
+        // }
     }
 
-    fn ctx(&self) -> ServiceContext {
-        ServiceContext::with_address("authority_atx", self.interface.clone())
-    }
-
-    #[rustfmt::skip]
     async fn on_command(&mut self, object: &crate::core::Object) {
-        for (drv, ctx) in self.drivers.iter_mut() {
-            if let Err(error) = drv.trigger(ctx, &self.network, object).await {
-                log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
+        for driver in self.drivers.iter_mut() {
+            if let Err(error) = driver
+                .driver
+                .trigger(&mut driver.context, &self.network, object)
+                .await
+            {
+                log::error!("[{}] {}: {}", self.interface, driver, error);
             }
         }
     }

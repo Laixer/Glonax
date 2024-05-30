@@ -2,7 +2,7 @@ use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::net::Parsable;
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct VehicleManagementSystem {
     /// Source address.
     source_address: u8,
