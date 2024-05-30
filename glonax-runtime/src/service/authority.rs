@@ -110,14 +110,14 @@ impl std::fmt::Display for NetDriverItem {
     }
 }
 
-pub struct NetworkAuthorityRx {
+pub struct NetworkAuthority {
     interface: String, // TODO: Can we use the network interface instead?
     network: ControlNetwork,
     drivers: Vec<NetDriverItem>,
     is_setup: bool,
 }
 
-impl NetworkAuthorityRx {
+impl NetworkAuthority {
     async fn setup_delayed(&mut self) {
         for driver in self.drivers.iter_mut() {
             log::debug!("[{}] Setup network driver '{}'", self.interface, driver);
@@ -132,7 +132,7 @@ impl NetworkAuthorityRx {
     }
 }
 
-impl Clone for NetworkAuthorityRx {
+impl Clone for NetworkAuthority {
     fn clone(&self) -> Self {
         let network = ControlNetwork::bind(self.network.interface(), self.network.name()).unwrap();
 
@@ -145,7 +145,7 @@ impl Clone for NetworkAuthorityRx {
     }
 }
 
-impl Service<NetworkConfig> for NetworkAuthorityRx {
+impl Service<NetworkConfig> for NetworkAuthority {
     fn new(config: NetworkConfig) -> Self
     where
         Self: Sized,

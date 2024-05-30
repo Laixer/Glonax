@@ -137,13 +137,10 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     for j1939_net_config in &config.j1939 {
-        runtime.schedule_io_service2::<service::NetworkAuthorityRx, _>(j1939_net_config.clone());
+        runtime.schedule_io_service2::<service::NetworkAuthority, _>(j1939_net_config.clone());
 
         // TODO: Why not on all J1939 units? Because there is only one command_rx
         // if j1939_net_config.authority_atx {
-        //     runtime.schedule_command_service::<service::NetworkAuthorityAtx, _>(
-        //         j1939_net_config.clone(),
-        //     );
         // }
     }
 
