@@ -187,7 +187,12 @@ async fn main() -> anyhow::Result<()> {
         Command::Engine { rpm } => {
             println!("Requesting engine RPM: {}", rpm);
 
-            let engine = glonax::core::Engine::from_rpm(rpm);
+            let engine = if rpm > 0 {
+                glonax::core::Engine::from_rpm(rpm)
+            } else {
+                glonax::core::Engine::shutdown()
+            };
+
             client.send_packet(&engine).await?;
         }
         Command::Lights { toggle } => {
