@@ -116,7 +116,7 @@ impl super::J1939Unit for VolvoD7E {
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
-        if let crate::core::Object::Engine(engine) = object {
+        if let crate::core::Object::Engine(engine_command) = object {
             ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
             let engine_signal = {
@@ -135,7 +135,17 @@ impl super::J1939Unit for VolvoD7E {
                 }
             };
 
-            let governor_engine = self.governor.next_state(&engine_signal, engine, None);
+            let engine_command = {
+                if engine_command.rpm > 0 {
+                    crate::core::Engine::from_rpm(engine_command.rpm)
+                } else {
+                    crate::core::Engine::shutdown()
+                }
+            };
+
+            let governor_engine = self
+                .governor
+                .next_state(&engine_signal, &engine_command, None);
 
             trace!("Engine: {}", governor_engine);
 
@@ -158,7 +168,6 @@ impl super::J1939Unit for VolvoD7E {
                 }
             }
         }
-        // }
 
         Ok(())
     }

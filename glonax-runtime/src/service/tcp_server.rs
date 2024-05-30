@@ -151,10 +151,6 @@ impl TcpServer {
                         .send(Object::Engine(engine))
                         .await
                         .map_err(TcpError::Command)?;
-
-                    // ipc_tx
-                    //     .send(ObjectMessage::command(Object::Engine(engine)))
-                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
@@ -170,10 +166,6 @@ impl TcpServer {
                         .send(Object::Motion(motion.clone()))
                         .await
                         .map_err(TcpError::Command)?;
-
-                    // ipc_tx
-                    //     .send(ObjectMessage::command(Object::Motion(motion)))
-                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -203,10 +195,6 @@ impl TcpServer {
                         .send(Object::Control(control))
                         .await
                         .map_err(TcpError::Command)?;
-
-                    // ipc_tx
-                    //     .send(ObjectMessage::command(Object::Control(control)))
-                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
