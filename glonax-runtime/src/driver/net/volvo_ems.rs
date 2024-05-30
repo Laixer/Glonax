@@ -1,6 +1,12 @@
+use std::time::Duration;
+
 use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
-use crate::{core::ObjectMessage, driver::EngineMessage, net::Parsable};
+use crate::{
+    core::ObjectMessage,
+    driver::{EngineMessage, Governor},
+    net::Parsable,
+};
 
 use super::engine::EngineManagementSystem;
 
@@ -24,6 +30,8 @@ pub struct VolvoD7E {
     source_address: u8,
     /// Engine management system.
     ems: EngineManagementSystem,
+    /// Governor.
+    governor: Governor,
 }
 
 impl VolvoD7E {
@@ -33,6 +41,7 @@ impl VolvoD7E {
             destination_address: da,
             source_address: sa,
             ems: EngineManagementSystem::new(da, sa),
+            governor: Governor::new(800, 2_100, Duration::from_millis(2_000)),
         }
     }
 
@@ -107,30 +116,117 @@ impl super::J1939Unit for VolvoD7E {
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
+        let engine_signal = {
+            let ctx = ctx.inner();
+            if let Some(x) = &ctx.rx_last_message {
+                // log::debug!("rx_last_message: {:?}", x.object);
+
+                if let crate::core::Object::Engine(engine) = x.object {
+                    engine
+                } else {
+                    crate::core::Engine::shutdown()
+                }
+            } else {
+                // log::debug!("rx_last_message: None");
+                crate::core::Engine::shutdown()
+            }
+        };
+
         ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
         if let crate::core::Object::Engine(engine) = object {
-            trace!("Engine: {}", engine);
+            let governor_engine = self.governor.next_state(&engine_signal, engine, None);
 
-            match engine.state {
+            trace!("Engine: {}", governor_engine);
+
+            match governor_engine.state {
                 crate::core::EngineState::NoRequest => {
-                    network.send(&self.request(engine.rpm)).await?;
+                    network.send(&self.request(governor_engine.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Starting => {
-                    network.send(&self.start(engine.rpm)).await?;
+                    network.send(&self.start(governor_engine.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Stopping => {
-                    network.send(&self.stop(engine.rpm)).await?;
+                    network.send(&self.stop(governor_engine.rpm)).await?;
                     ctx.tx_mark();
                 }
                 crate::core::EngineState::Request => {
-                    network.send(&self.request(engine.rpm)).await?;
+                    network.send(&self.request(governor_engine.rpm)).await?;
                     ctx.tx_mark();
                 }
             }
         }
+        // }
+
+        Ok(())
+    }
+
+    async fn tick(
+        &self,
+        ctx: &mut super::NetDriverContext,
+        network: &crate::net::ControlNetwork,
+    ) -> Result<(), super::J1939UnitError> {
+        use super::engine::Engine;
+
+        let engine_signal = {
+            let ctx = ctx.inner();
+            if let Some(x) = &ctx.rx_last_message {
+                // log::debug!("rx_last_message: {:?}", x.object);
+
+                if let crate::core::Object::Engine(engine) = x.object {
+                    engine
+                } else {
+                    crate::core::Engine::shutdown()
+                }
+            } else {
+                // log::debug!("rx_last_message: None");
+                crate::core::Engine::shutdown()
+            }
+        };
+
+        let engine_command = {
+            let ctx = ctx.inner();
+            if let Some(x) = &ctx.tx_last_message {
+                // log::debug!("tx_last_message: {:?}", x.object);
+
+                if let crate::core::Object::Engine(engine) = x.object {
+                    (engine, Some(x.timestamp))
+                } else {
+                    (engine_signal, None)
+                }
+            } else {
+                // log::debug!("tx_last_message: None");
+                (engine_signal, None)
+            }
+        };
+
+        let governor_engine =
+            self.governor
+                .next_state(&engine_signal, &engine_command.0, engine_command.1);
+
+        trace!("Engine: {}", governor_engine);
+
+        match governor_engine.state {
+            crate::core::EngineState::NoRequest => {
+                network.send(&self.request(governor_engine.rpm)).await?;
+                ctx.tx_mark();
+            }
+            crate::core::EngineState::Starting => {
+                network.send(&self.start(governor_engine.rpm)).await?;
+                ctx.tx_mark();
+            }
+            crate::core::EngineState::Stopping => {
+                network.send(&self.stop(governor_engine.rpm)).await?;
+                ctx.tx_mark();
+            }
+            crate::core::EngineState::Request => {
+                network.send(&self.request(governor_engine.rpm)).await?;
+                ctx.tx_mark();
+            }
+        }
+            
 
         Ok(())
     }

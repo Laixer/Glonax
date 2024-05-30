@@ -296,7 +296,7 @@ impl Runtime {
                     _ = async {
                         loop {
                             service2.tick().await;
-                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                         }
                     } => {}
                     _ = shutdown2.recv() => {}

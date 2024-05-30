@@ -147,9 +147,14 @@ impl TcpServer {
                 if session.is_control() {
                     log::debug!("Engine request RPM: {}", engine.rpm);
 
-                    ipc_tx
-                        .send(ObjectMessage::command(Object::Engine(engine)))
-                        .map_err(TcpError::Queue)?;
+                    command_tx
+                        .send(Object::Engine(engine))
+                        .await
+                        .map_err(TcpError::Command)?;
+
+                    // ipc_tx
+                    //     .send(ObjectMessage::command(Object::Engine(engine)))
+                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }

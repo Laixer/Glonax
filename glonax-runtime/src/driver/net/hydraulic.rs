@@ -606,11 +606,11 @@ impl super::J1939Unit for HydraulicControlUnit {
         let object = {
             let ctx = ctx.inner();
             if let Some(x) = &ctx.tx_last_message {
-                log::debug!("rx_last_message: {:?}", x.object);
+                // log::debug!("rx_last_message: {:?}", x.object);
 
                 Some(x.object.clone())
             } else {
-                log::debug!("rx_last_message: None");
+                // log::debug!("rx_last_message: None");
                 None
             }
         };

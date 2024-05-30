@@ -2,6 +2,7 @@ use std::time::{Duration, Instant};
 
 use crate::core::{Engine, EngineState};
 
+#[derive(Clone, Copy)]
 pub struct Governor {
     /// Default engine speed.
     rpm_idle: u16,

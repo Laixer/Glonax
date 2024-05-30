@@ -226,8 +226,6 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
 
     async fn tick(&mut self) {
         for driver in self.drivers.iter_mut() {
-            log::debug!("[{}] Tick network driver '{}'", self.interface, driver);
-
             if let Err(error) = driver.driver.tick(&mut driver.context, &self.network).await {
                 log::error!("[{}] {}: {}", self.interface, driver, error);
             }
