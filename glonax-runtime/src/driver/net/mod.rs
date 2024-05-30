@@ -291,6 +291,14 @@ impl NetDriverContext {
     pub fn set_rx_last_message(&self, message: crate::core::ObjectMessage) {
         self.detail.lock().unwrap().rx_last_message = Some(message);
     }
+
+    // pub fn tx_last_message(&self) -> Option<crate::core::ObjectMessage> {
+    //     self.detail.lock().unwrap().tx_last_message
+    // }
+
+    // pub fn rx_last_message(&self) -> Option<crate::core::ObjectMessage> {
+    //     self.detail.lock().unwrap().rx_last_message
+    // }
 }
 
 #[derive(Debug)]

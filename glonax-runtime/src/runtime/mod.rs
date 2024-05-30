@@ -101,9 +101,7 @@ pub trait Service<Cnf> {
     /// This method is called in conjunction with other services
     /// and should therefore be non-blocking. The method is optional
     /// and does not need to be implemented.
-    fn tick(
-        &mut self,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    fn tick(&mut self) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
 
