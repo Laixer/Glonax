@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use sysinfo::{Components, System};
 
 use crate::{
@@ -69,6 +71,6 @@ impl<C> Service<C> for Host {
             log::error!("Failed to send host signal: {}", e);
         }
 
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }

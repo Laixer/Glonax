@@ -116,25 +116,25 @@ impl super::J1939Unit for VolvoD7E {
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
-        let engine_signal = {
-            let ctx = ctx.inner();
-            if let Some(x) = &ctx.rx_last_message {
-                // log::debug!("rx_last_message: {:?}", x.object);
+        if let crate::core::Object::Engine(engine) = object {
+            ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
-                if let crate::core::Object::Engine(engine) = x.object {
-                    engine
+            let engine_signal = {
+                let ctx = ctx.inner();
+                if let Some(x) = &ctx.rx_last_message {
+                    // log::debug!("rx_last_message: {:?}", x.object);
+
+                    if let crate::core::Object::Engine(engine) = x.object {
+                        engine
+                    } else {
+                        crate::core::Engine::shutdown()
+                    }
                 } else {
+                    // log::debug!("rx_last_message: None");
                     crate::core::Engine::shutdown()
                 }
-            } else {
-                // log::debug!("rx_last_message: None");
-                crate::core::Engine::shutdown()
-            }
-        };
+            };
 
-        ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
-
-        if let crate::core::Object::Engine(engine) = object {
             let governor_engine = self.governor.next_state(&engine_signal, engine, None);
 
             trace!("Engine: {}", governor_engine);
@@ -226,7 +226,6 @@ impl super::J1939Unit for VolvoD7E {
                 ctx.tx_mark();
             }
         }
-            
 
         Ok(())
     }
