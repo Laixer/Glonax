@@ -103,11 +103,8 @@ pub trait Service<Cnf> {
     /// and does not need to be implemented.
     fn tick(
         &mut self,
-        _ipc_rx: std::rc::Rc<IPCReceiver>,
-        _command_tx: CommandSender,
-        _signal_tx: std::rc::Rc<SignalSender>,
-        _pre_tick: bool,
-    ) {
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
     }
 
     fn on_command(
@@ -271,9 +268,11 @@ impl Runtime {
         let signal_rx = self.signal_rx.resubscribe();
         let mut shutdown = self.shutdown.0.subscribe();
         let mut shutdown2 = self.shutdown.0.subscribe();
+        let mut shutdown3 = self.shutdown.0.subscribe();
 
         let mut service = S::new(config.clone());
         let mut service2 = service.clone();
+        let mut service3 = service.clone();
 
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
@@ -295,11 +294,23 @@ impl Runtime {
             self.spawn(async move {
                 tokio::select! {
                     _ = async {
-                        while let Some(object) = command_rx.recv().await {
-                            service2.on_command(&object).await;
+                        loop {
+                            service2.tick().await;
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                         }
                     } => {}
                     _ = shutdown2.recv() => {}
+                }
+            });
+
+            self.spawn(async move {
+                tokio::select! {
+                    _ = async {
+                        while let Some(object) = command_rx.recv().await {
+                            service3.on_command(&object).await;
+                        }
+                    } => {}
+                    _ = shutdown3.recv() => {}
                 }
             });
         }

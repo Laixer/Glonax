@@ -222,24 +222,16 @@ impl Service<NetworkConfig> for NetworkAuthorityRx {
                 log::error!("[{}] {}: {}", self.interface, driver, error);
             }
         }
+    }
 
-        // tokio::select! {
-        //     _ = self.network.recv() => {
-        //         for (drv, ctx) in self.drivers.iter_mut() {
-        //             if let Err(error) = drv.try_accept(ctx, &self.network, ipc_tx.clone()).await {
-        //                 log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
-        //             }
-        //         }
-        //     }
-        //     _ = tokio::time::sleep(std::time::Duration::from_millis(10)) => {
-        //         // for (drv, ctx) in self.drivers.iter_mut() {
+    async fn tick(&mut self) {
+        for driver in self.drivers.iter_mut() {
+            log::debug!("[{}] Tick network driver '{}'", self.interface, driver);
 
-        //             // if let Err(error) = drv.tick(ctx, &self.network).await {
-        //             //     log::error!("[{}:0x{:X}] {}: {}", self.interface, drv.destination(), drv.name(), error);
-        //             // }
-        //         // }
-        //     }
-        // }
+            if let Err(error) = driver.driver.tick(&mut driver.context, &self.network).await {
+                log::error!("[{}] {}: {}", self.interface, driver, error);
+            }
+        }
     }
 
     async fn on_command(&mut self, object: &crate::core::Object) {

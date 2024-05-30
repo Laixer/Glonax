@@ -204,6 +204,22 @@ impl J1939Unit for NetDriver {
             Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, network, object).await,
         }
     }
+
+    async fn tick(
+        &self,
+        ctx: &mut NetDriverContext,
+        network: &crate::net::ControlNetwork,
+    ) -> Result<(), J1939UnitError> {
+        match self {
+            Self::KueblerEncoder(encoder) => encoder.tick(ctx, network).await,
+            Self::KueblerInclinometer(inclinometer) => inclinometer.tick(ctx, network).await,
+            Self::VolvoD7E(volvo) => volvo.tick(ctx, network).await,
+            Self::BoschEngineManagementSystem(bosch) => bosch.tick(ctx, network).await,
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.tick(ctx, network).await,
+            Self::VehicleManagementSystem(responder) => responder.tick(ctx, network).await,
+            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, network).await,
+        }
+    }
 }
 
 pub struct NetDriverContextDetail {
@@ -383,6 +399,14 @@ pub trait J1939Unit {
         _ctx: &mut NetDriverContext,
         _network: &crate::net::ControlNetwork,
         _object: &crate::core::Object,
+    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
+        std::future::ready(Ok(()))
+    }
+
+    fn tick(
+        &self,
+        _ctx: &mut NetDriverContext,
+        _network: &crate::net::ControlNetwork,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
         std::future::ready(Ok(()))
     }
