@@ -154,7 +154,8 @@ impl std::default::Default for Runtime {
     fn default() -> Self {
         let (command_tx, command_rx) =
             tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_COMMAND);
-        let (signal_tx, signal_rx) = tokio::sync::broadcast::channel(8);
+        let (signal_tx, signal_rx) =
+            tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_SIGNAL);
 
         Self {
             command_tx,
@@ -201,7 +202,7 @@ impl Runtime {
     ///
     /// This method spawns a future onto the runtime's executor, allowing it to run in the background.
     /// The future must implement the `Future` trait with an output type of `()`, and it must also be `Send` and `'static`.
-    fn spawn<F: std::future::Future<Output = ()> + Send + 'static>(&mut self, f: F) {
+    fn spawn<F: Future<Output = ()> + Send + 'static>(&mut self, f: F) {
         self.task_pool.push(tokio::spawn(f));
     }
 

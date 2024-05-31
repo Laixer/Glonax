@@ -80,8 +80,10 @@ pub mod consts {
     pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
     /// Glonax default network port for both TCP.
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
-    /// Glonax default queue size for motion commands.
-    pub const QUEUE_SIZE_COMMAND: usize = 32;
+    /// Glonax default queue size for commands.
+    pub const QUEUE_SIZE_COMMAND: usize = 16;
+    /// Glonax default queue size for signals.
+    pub const QUEUE_SIZE_SIGNAL: usize = 16;
     /// Glonax network maximum number of clients.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
     /// Glonax component delay threshold.
