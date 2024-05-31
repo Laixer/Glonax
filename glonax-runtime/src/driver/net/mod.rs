@@ -13,191 +13,6 @@ pub mod vms;
 pub mod volvo_ems;
 mod volvo_vecu;
 
-#[derive(Clone)]
-pub enum NetDriver {
-    KueblerEncoder(super::KueblerEncoder),
-    KueblerInclinometer(super::KueblerInclinometer),
-    VolvoD7E(super::VolvoD7E),
-    HydraulicControlUnit(super::HydraulicControlUnit),
-    VehicleManagementSystem(super::VehicleManagementSystem),
-    VehicleControlUnit(super::VehicleControlUnit),
-}
-
-impl NetDriver {
-    pub(crate) fn factory(
-        vendor: &str,
-        product: &str,
-        destination: u8,
-        source: u8,
-    ) -> Result<Self, ()> {
-        match (vendor, product) {
-            (v, p)
-                if v == crate::driver::KueblerEncoder::VENDOR
-                    && p == crate::driver::KueblerEncoder::PRODUCT =>
-            {
-                Ok(NetDriver::KueblerEncoder(
-                    crate::driver::KueblerEncoder::new(destination, source),
-                ))
-            }
-            (v, p)
-                if v == crate::driver::KueblerInclinometer::VENDOR
-                    && p == crate::driver::KueblerInclinometer::PRODUCT =>
-            {
-                Ok(NetDriver::KueblerInclinometer(
-                    crate::driver::KueblerInclinometer::new(destination, source),
-                ))
-            }
-            (v, p)
-                if v == crate::driver::VolvoD7E::VENDOR
-                    && p == crate::driver::VolvoD7E::PRODUCT =>
-            {
-                Ok(NetDriver::VolvoD7E(crate::driver::VolvoD7E::new(
-                    destination,
-                    source,
-                )))
-            }
-            (v, p)
-                if v == crate::driver::HydraulicControlUnit::VENDOR
-                    && p == crate::driver::HydraulicControlUnit::PRODUCT =>
-            {
-                Ok(NetDriver::HydraulicControlUnit(
-                    crate::driver::HydraulicControlUnit::new(destination, source),
-                ))
-            }
-            (v, p)
-                if v == crate::driver::VehicleControlUnit::VENDOR
-                    && p == crate::driver::VehicleControlUnit::PRODUCT =>
-            {
-                Ok(NetDriver::VehicleControlUnit(
-                    crate::driver::VehicleControlUnit::new(destination, source),
-                ))
-            }
-            _ => Err(()),
-        }
-    }
-}
-
-impl J1939Unit for NetDriver {
-    const VENDOR: &'static str = "";
-    const PRODUCT: &'static str = "";
-
-    fn name(&self) -> String {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.name(),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.name(),
-            Self::VolvoD7E(volvo) => volvo.name(),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.name(),
-            Self::VehicleManagementSystem(responder) => responder.name(),
-            Self::VehicleControlUnit(vcu) => vcu.name(),
-        }
-    }
-
-    fn destination(&self) -> u8 {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.destination(),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.destination(),
-            Self::VolvoD7E(volvo) => volvo.destination(),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.destination(),
-            Self::VehicleManagementSystem(responder) => responder.destination(),
-            Self::VehicleControlUnit(vcu) => vcu.destination(),
-        }
-    }
-
-    fn source(&self) -> u8 {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.source(),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.source(),
-            Self::VolvoD7E(volvo) => volvo.source(),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.source(),
-            Self::VehicleManagementSystem(responder) => responder.source(),
-            Self::VehicleControlUnit(vcu) => vcu.source(),
-        }
-    }
-
-    async fn setup(
-        &self,
-        ctx: &mut NetDriverContext,
-        router: &crate::net::ControlNetwork,
-    ) -> Result<(), J1939UnitError> {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.setup(ctx, router).await,
-            Self::KueblerInclinometer(inclinometer) => inclinometer.setup(ctx, router).await,
-            Self::VolvoD7E(volvo) => volvo.setup(ctx, router).await,
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.setup(ctx, router).await,
-            Self::VehicleManagementSystem(responder) => responder.setup(ctx, router).await,
-            Self::VehicleControlUnit(vcu) => vcu.setup(ctx, router).await,
-        }
-    }
-
-    async fn teardown(
-        &self,
-        ctx: &mut NetDriverContext,
-        network: &crate::net::ControlNetwork,
-    ) -> Result<(), J1939UnitError> {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.teardown(ctx, network).await,
-            Self::KueblerInclinometer(inclinometer) => inclinometer.teardown(ctx, network).await,
-            Self::VolvoD7E(volvo) => volvo.teardown(ctx, network).await,
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.teardown(ctx, network).await,
-            Self::VehicleManagementSystem(responder) => responder.teardown(ctx, network).await,
-            Self::VehicleControlUnit(vcu) => vcu.teardown(ctx, network).await,
-        }
-    }
-
-    async fn try_accept(
-        &mut self,
-        ctx: &mut NetDriverContext,
-        network: &crate::net::ControlNetwork,
-        signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), J1939UnitError> {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.try_accept(ctx, network, signal_tx).await,
-            Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.try_accept(ctx, network, signal_tx).await
-            }
-            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, network, signal_tx).await,
-            Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.try_accept(ctx, network, signal_tx).await
-            }
-            Self::VehicleManagementSystem(responder) => {
-                responder.try_accept(ctx, network, signal_tx).await
-            }
-            Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, network, signal_tx).await,
-        }
-    }
-
-    fn trigger(
-        &self,
-        ctx: &mut NetDriverContext,
-        tx_queue: &mut Vec<j1939::Frame>,
-        object: &crate::core::Object,
-    ) -> Result<(), J1939UnitError> {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.trigger(ctx, tx_queue, object),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.trigger(ctx, tx_queue, object),
-            Self::VolvoD7E(volvo) => volvo.trigger(ctx, tx_queue, object),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.trigger(ctx, tx_queue, object),
-            Self::VehicleManagementSystem(responder) => responder.trigger(ctx, tx_queue, object),
-            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, tx_queue, object),
-        }
-    }
-
-    fn tick(
-        &self,
-        ctx: &mut NetDriverContext,
-        tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), J1939UnitError> {
-        match self {
-            Self::KueblerEncoder(encoder) => encoder.tick(ctx, tx_queue),
-            Self::KueblerInclinometer(inclinometer) => inclinometer.tick(ctx, tx_queue),
-            Self::VolvoD7E(volvo) => volvo.tick(ctx, tx_queue),
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.tick(ctx, tx_queue),
-            Self::VehicleManagementSystem(responder) => responder.tick(ctx, tx_queue),
-            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, tx_queue),
-        }
-    }
-}
-
 pub struct NetDriverContextDetail {
     /// Last message sent.
     tx_last_message: Option<crate::core::ObjectMessage>,
@@ -304,13 +119,16 @@ impl From<std::io::Error> for J1939UnitError {
 
 impl std::error::Error for J1939UnitError {}
 
-pub trait J1939Unit {
-    const VENDOR: &'static str;
-    const PRODUCT: &'static str;
+pub trait J1939Unit: Send + Sync {
+    /// Get the vendor of the unit.
+    fn vendor(&self) -> &'static str;
+
+    /// Get the product of the unit.
+    fn product(&self) -> &'static str;
 
     /// Get the name of the unit.
     fn name(&self) -> String {
-        format!("{}:{}", Self::VENDOR, Self::PRODUCT)
+        format!("{}:{}", self.vendor(), self.product())
     }
 
     /// Get the destination address of the unit.
@@ -326,9 +144,9 @@ pub trait J1939Unit {
     fn setup(
         &self,
         _ctx: &mut NetDriverContext,
-        _network: &crate::net::ControlNetwork,
-    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
-        std::future::ready(Ok(()))
+        _tx_queue: &mut Vec<j1939::Frame>,
+    ) -> Result<(), J1939UnitError> {
+        Ok(())
     }
 
     /// Teardown the unit.
@@ -338,9 +156,9 @@ pub trait J1939Unit {
     fn teardown(
         &self,
         _ctx: &mut NetDriverContext,
-        _network: &crate::net::ControlNetwork,
-    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
-        std::future::ready(Ok(()))
+        _tx_queue: &mut Vec<j1939::Frame>,
+    ) -> Result<(), J1939UnitError> {
+        Ok(())
     }
 
     /// Try to accept a message from the router.
@@ -357,7 +175,7 @@ pub trait J1939Unit {
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
         signal_tx: crate::runtime::SignalSender,
-    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send;
+    ) -> Result<(), J1939UnitError>;
 
     /// Trigger the unit manually.
     ///

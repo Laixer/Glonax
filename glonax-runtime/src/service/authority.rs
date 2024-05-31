@@ -1,6 +1,6 @@
 use crate::{
     core::Object,
-    driver::net::{J1939Unit, NetDriver},
+    driver::net::J1939Unit,
     net::ControlNetwork,
     runtime::{NetworkService, Service, ServiceContext, SignalSender},
 };
@@ -50,16 +50,16 @@ pub struct CanDriverConfig {
     pub product: String,
 }
 
-impl CanDriverConfig {
-    pub fn to_net_driver(&self, default_da: u8) -> Result<NetDriver, ()> {
-        NetDriver::factory(
-            &self.vendor,
-            &self.product,
-            self.da,
-            self.sa.unwrap_or(default_da),
-        )
-    }
-}
+// impl CanDriverConfig {
+//     pub fn to_net_driver(&self, default_da: u8) -> Result<NetDriver, ()> {
+//         NetDriver::factory(
+//             &self.vendor,
+//             &self.product,
+//             self.da,
+//             self.sa.unwrap_or(default_da),
+//         )
+//     }
+// }
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct NetworkConfig {
@@ -85,16 +85,15 @@ impl NetworkConfig {
     }
 }
 
-#[derive(Clone)]
 struct NetDriverItem {
-    driver: NetDriver,
+    driver: Box<dyn crate::driver::net::J1939Unit>,
     context: crate::driver::net::NetDriverContext,
 }
 
 impl NetDriverItem {
-    fn new(driver: NetDriver) -> Self {
+    fn new<T: J1939Unit + 'static>(driver: T) -> Self {
         Self {
-            driver,
+            driver: Box::new(driver),
             context: crate::driver::net::NetDriverContext::default(),
         }
     }
@@ -120,19 +119,21 @@ pub struct NetworkAuthority {
 impl NetworkAuthority {
     async fn setup_delayed(&mut self) {
         for driver in self.drivers.iter_mut() {
+            let mut tx_queue = Vec::new();
+
             debug!(
                 "[{}] Setup network driver '{}'",
                 self.network.interface(),
                 driver
             );
 
-            if let Err(error) = driver
-                .driver
-                .setup(&mut driver.context, &self.network)
-                .await
-            {
+            if let Err(error) = driver.driver.setup(&mut driver.context, &mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
+
+            if let Err(e) = self.network.send_vectored(&tx_queue).await {
+                error!("Failed to send vectored: {}", e);
+            };
         }
     }
 }
@@ -141,9 +142,65 @@ impl Clone for NetworkAuthority {
     fn clone(&self) -> Self {
         let network = ControlNetwork::bind(self.network.interface(), self.network.name()).unwrap();
 
+        let mut drivers = Vec::new();
+
+        for driver in &self.drivers {
+            match (driver.driver.vendor(), driver.driver.product()) {
+                ("laixer", "vcu") => {
+                    drivers.push(NetDriverItem {
+                        driver: Box::new(crate::driver::VehicleControlUnit::new(
+                            driver.driver.destination(),
+                            driver.driver.source(),
+                        )),
+                        context: driver.context.clone(),
+                    });
+                }
+                ("laixer", "hcu") => {
+                    drivers.push(NetDriverItem {
+                        driver: Box::new(crate::driver::HydraulicControlUnit::new(
+                            driver.driver.destination(),
+                            driver.driver.source(),
+                        )),
+                        context: driver.context.clone(),
+                    });
+                }
+                ("volvo", "d7e") => {
+                    drivers.push(NetDriverItem {
+                        driver: Box::new(crate::driver::VolvoD7E::new(
+                            driver.driver.destination(),
+                            driver.driver.source(),
+                        )),
+                        context: driver.context.clone(),
+                    });
+                }
+                ("kübler", "inclinometer") => {
+                    drivers.push(NetDriverItem {
+                        driver: Box::new(crate::driver::KueblerInclinometer::new(
+                            driver.driver.destination(),
+                            driver.driver.source(),
+                        )),
+                        context: driver.context.clone(),
+                    });
+                }
+                ("kübler", "encoder") => {
+                    drivers.push(NetDriverItem {
+                        driver: Box::new(crate::driver::KueblerEncoder::new(
+                            driver.driver.destination(),
+                            driver.driver.source(),
+                        )),
+                        context: driver.context.clone(),
+                    });
+                }
+                _ => {
+                    // error!("Unknown driver: {} {}", driver.vendor, driver.product);
+                    panic!()
+                }
+            }
+        }
+
         Self {
             network,
-            drivers: self.drivers.clone(),
+            drivers,
             is_setup: self.is_setup,
         }
     }
@@ -161,10 +218,10 @@ impl NetworkService for NetworkAuthority {
         }
 
         for driver in self.drivers.iter_mut() {
-            if let Err(error) = driver
-                .driver
-                .try_accept(&mut driver.context, &self.network, signal_tx.clone())
-                .await
+            if let Err(error) =
+                driver
+                    .driver
+                    .try_accept(&mut driver.context, &self.network, signal_tx.clone())
             {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
@@ -219,16 +276,56 @@ impl Service<NetworkConfig> for NetworkAuthority {
 
         let mut drivers = Vec::new();
 
-        drivers.push(NetDriverItem::new(NetDriver::VehicleManagementSystem(
-            crate::driver::VehicleManagementSystem::new(config.address),
-        )));
+        // drivers.push(NetDriverItem::new(
+        //     crate::driver::VehicleManagementSystem::new(config.address),
+        // ));
 
         for driver in config.driver.iter() {
-            let net_driver = driver
-                .to_net_driver(config.address)
-                .expect("Failed to register driver");
-
-            drivers.push(NetDriverItem::new(net_driver));
+            match (driver.vendor.as_str(), driver.product.as_str()) {
+                ("laixer", "vcu") => {
+                    drivers.push(NetDriverItem::new(crate::driver::VehicleControlUnit::new(
+                        driver.da,
+                        driver.sa.unwrap_or(config.address),
+                    )));
+                }
+                ("laixer", "hcu") => {
+                    drivers.push(NetDriverItem::new(
+                        crate::driver::HydraulicControlUnit::new(
+                            driver.da,
+                            driver.sa.unwrap_or(config.address),
+                        ),
+                    ));
+                }
+                ("volvo", "d7e") => {
+                    drivers.push(NetDriverItem::new(crate::driver::VolvoD7E::new(
+                        driver.da,
+                        driver.sa.unwrap_or(config.address),
+                    )));
+                }
+                ("kübler", "inclinometer") => {
+                    drivers.push(NetDriverItem::new(crate::driver::KueblerInclinometer::new(
+                        driver.da,
+                        driver.sa.unwrap_or(config.address),
+                    )));
+                }
+                // ("j1939", "ecm") => {
+                //     drivers.push(NetDriverItem::new(
+                //         crate::driver::EngineManagementSystem::new(
+                //             driver.da,
+                //             driver.sa.unwrap_or(config.address),
+                //         ),
+                //     ));
+                // }
+                ("kübler", "encoder") => {
+                    drivers.push(NetDriverItem::new(crate::driver::KueblerEncoder::new(
+                        driver.da,
+                        driver.sa.unwrap_or(config.address),
+                    )));
+                }
+                _ => {
+                    error!("Unknown driver: {} {}", driver.vendor, driver.product);
+                }
+            }
         }
 
         Self {
@@ -244,19 +341,21 @@ impl Service<NetworkConfig> for NetworkAuthority {
 
     async fn teardown(&mut self) {
         for driver in self.drivers.iter_mut() {
+            let mut tx_queue = Vec::new();
+
             debug!(
                 "[{}] Teardown network driver '{}'",
                 self.network.interface(),
                 driver
             );
 
-            if let Err(error) = driver
-                .driver
-                .teardown(&mut driver.context, &self.network)
-                .await
-            {
+            if let Err(error) = driver.driver.teardown(&mut driver.context, &mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
+
+            if let Err(e) = self.network.send_vectored(&tx_queue).await {
+                error!("Failed to send vectored: {}", e);
+            };
         }
     }
 
