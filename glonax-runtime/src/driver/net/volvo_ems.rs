@@ -108,10 +108,10 @@ impl super::J1939Unit for VolvoD7E {
         self.ems.try_accept(ctx, network, signal_tx).await
     }
 
-    async fn trigger(
+    fn trigger(
         &self,
         ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
         object: &crate::core::Object,
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
@@ -151,16 +151,16 @@ impl super::J1939Unit for VolvoD7E {
 
             match governor_engine.state {
                 crate::core::EngineState::NoRequest => {
-                    network.send(&self.request(governor_engine.rpm)).await?;
+                    tx_queue.push(self.request(governor_engine.rpm));
                 }
                 crate::core::EngineState::Starting => {
-                    network.send(&self.start(governor_engine.rpm)).await?;
+                    tx_queue.push(self.start(governor_engine.rpm));
                 }
                 crate::core::EngineState::Stopping => {
-                    network.send(&self.stop(governor_engine.rpm)).await?;
+                    tx_queue.push(self.stop(governor_engine.rpm));
                 }
                 crate::core::EngineState::Request => {
-                    network.send(&self.request(governor_engine.rpm)).await?;
+                    tx_queue.push(self.request(governor_engine.rpm));
                 }
             }
         }
@@ -168,10 +168,10 @@ impl super::J1939Unit for VolvoD7E {
         Ok(())
     }
 
-    async fn tick(
+    fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
@@ -215,16 +215,16 @@ impl super::J1939Unit for VolvoD7E {
 
         match governor_engine.state {
             crate::core::EngineState::NoRequest => {
-                network.send(&self.request(governor_engine.rpm)).await?;
+                tx_queue.push(self.request(governor_engine.rpm));
             }
             crate::core::EngineState::Starting => {
-                network.send(&self.start(governor_engine.rpm)).await?;
+                tx_queue.push(self.start(governor_engine.rpm));
             }
             crate::core::EngineState::Stopping => {
-                network.send(&self.stop(governor_engine.rpm)).await?;
+                tx_queue.push(self.stop(governor_engine.rpm));
             }
             crate::core::EngineState::Request => {
-                network.send(&self.request(governor_engine.rpm)).await?;
+                tx_queue.push(self.request(governor_engine.rpm));
             }
         }
 

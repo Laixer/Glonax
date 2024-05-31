@@ -1,4 +1,5 @@
 use crate::{
+    core::Object,
     driver::net::{J1939Unit, NetDriver},
     net::ControlNetwork,
     runtime::{NetworkService, Service, ServiceContext, SignalSender},
@@ -111,7 +112,6 @@ impl std::fmt::Display for NetDriverItem {
 }
 
 pub struct NetworkAuthority {
-    interface: String, // TODO: Can we use the network interface instead?
     network: ControlNetwork,
     drivers: Vec<NetDriverItem>,
     is_setup: bool,
@@ -120,14 +120,18 @@ pub struct NetworkAuthority {
 impl NetworkAuthority {
     async fn setup_delayed(&mut self) {
         for driver in self.drivers.iter_mut() {
-            debug!("[{}] Setup network driver '{}'", self.interface, driver);
+            debug!(
+                "[{}] Setup network driver '{}'",
+                self.network.interface(),
+                driver
+            );
 
             if let Err(error) = driver
                 .driver
                 .setup(&mut driver.context, &self.network)
                 .await
             {
-                error!("[{}] {}: {}", self.interface, driver, error);
+                error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
         }
     }
@@ -138,7 +142,6 @@ impl Clone for NetworkAuthority {
         let network = ControlNetwork::bind(self.network.interface(), self.network.name()).unwrap();
 
         Self {
-            interface: self.interface.clone(),
             network,
             drivers: self.drivers.clone(),
             is_setup: self.is_setup,
@@ -163,28 +166,39 @@ impl NetworkService for NetworkAuthority {
                 .try_accept(&mut driver.context, &self.network, signal_tx.clone())
                 .await
             {
-                error!("[{}] {}: {}", self.interface, driver, error);
+                error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
         }
     }
 
     async fn on_tick(&mut self) {
         for driver in self.drivers.iter_mut() {
-            if let Err(error) = driver.driver.tick(&mut driver.context, &self.network).await {
-                error!("[{}] {}: {}", self.interface, driver, error);
+            let mut tx_queue = Vec::new();
+
+            if let Err(error) = driver.driver.tick(&mut driver.context, &mut tx_queue) {
+                error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
+
+            if let Err(e) = self.network.send_vectored(&tx_queue).await {
+                error!("Failed to send vectored: {}", e);
+            };
         }
     }
 
-    async fn on_command(&mut self, object: &crate::core::Object) {
+    async fn on_command(&mut self, object: &Object) {
         for driver in self.drivers.iter_mut() {
+            let mut tx_queue = Vec::new();
+
             if let Err(error) = driver
                 .driver
-                .trigger(&mut driver.context, &self.network, object)
-                .await
+                .trigger(&mut driver.context, &mut tx_queue, object)
             {
-                error!("[{}] {}: {}", self.interface, driver, error);
+                error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
+
+            if let Err(e) = self.network.send_vectored(&tx_queue).await {
+                error!("Failed to send vectored: {}", e);
+            };
         }
     }
 }
@@ -218,7 +232,6 @@ impl Service<NetworkConfig> for NetworkAuthority {
         }
 
         Self {
-            interface: config.interface,
             network,
             drivers,
             is_setup: false,
@@ -226,19 +239,23 @@ impl Service<NetworkConfig> for NetworkAuthority {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::with_address("authority_rx", self.interface.clone())
+        ServiceContext::with_address("authority_rx", self.network.interface())
     }
 
     async fn teardown(&mut self) {
         for driver in self.drivers.iter_mut() {
-            debug!("[{}] Teardown network driver '{}'", self.interface, driver);
+            debug!(
+                "[{}] Teardown network driver '{}'",
+                self.network.interface(),
+                driver
+            );
 
             if let Err(error) = driver
                 .driver
                 .teardown(&mut driver.context, &self.network)
                 .await
             {
-                error!("[{}] {}: {}", self.interface, driver, error);
+                error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
         }
     }
@@ -251,7 +268,7 @@ impl Service<NetworkConfig> for NetworkAuthority {
         self.on_tick().await;
     }
 
-    async fn command(&mut self, object: &crate::core::Object) {
+    async fn command(&mut self, object: &Object) {
         self.on_command(object).await;
     }
 }

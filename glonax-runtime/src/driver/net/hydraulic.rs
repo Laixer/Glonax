@@ -540,32 +540,32 @@ impl super::J1939Unit for HydraulicControlUnit {
         result
     }
 
-    async fn trigger(
+    fn trigger(
         &self,
         ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
-        object: &crate::core::Object,
+        tx_queue: &mut Vec<j1939::Frame>,
+        object: &Object,
     ) -> Result<(), super::J1939UnitError> {
-        if let crate::core::Object::Motion(motion) = object {
+        if let Object::Motion(motion) = object {
             trace!("Hydraulic: {}", motion);
 
             ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
             match motion {
-                crate::core::Motion::StopAll => {
-                    network.send(&self.lock()).await?;
+                Motion::StopAll => {
+                    tx_queue.push(self.lock());
                 }
-                crate::core::Motion::ResumeAll => {
-                    network.send(&self.unlock()).await?;
+                Motion::ResumeAll => {
+                    tx_queue.push(self.unlock());
                 }
-                crate::core::Motion::ResetAll => {
-                    network.send(&self.motion_reset()).await?;
+                Motion::ResetAll => {
+                    tx_queue.push(self.motion_reset());
                 }
-                crate::core::Motion::StraightDrive(value) => {
+                Motion::StraightDrive(value) => {
                     let frames = &self.drive_straight(*value);
-                    network.send_vectored(frames).await?;
+                    tx_queue.extend_from_slice(frames);
                 }
-                crate::core::Motion::Change(changes) => {
+                Motion::Change(changes) => {
                     let frames = &self.actuator_command(
                         changes
                             .iter()
@@ -573,7 +573,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             .collect(),
                     );
 
-                    network.send_vectored(frames).await?;
+                    tx_queue.extend_from_slice(frames);
                 }
             }
         }
@@ -581,44 +581,41 @@ impl super::J1939Unit for HydraulicControlUnit {
         Ok(())
     }
 
-    async fn tick(
+    fn tick(
         &self,
         ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), super::J1939UnitError> {
         let motion_command = {
             let ctx = ctx.inner();
             if let Some(x) = &ctx.tx_last_message {
-                // log::debug!("tx_last_message: {:?}", x.object);
-
-                if let crate::core::Object::Motion(motion) = &x.object {
+                if let Object::Motion(motion) = &x.object {
                     motion.clone()
                 } else {
-                    crate::core::Motion::StopAll
+                    Motion::StopAll
                 }
             } else {
-                // log::debug!("tx_last_message: None");
-                crate::core::Motion::StopAll
+                Motion::StopAll
             }
         };
 
         trace!("Hydraulic: {}", motion_command);
 
         match &motion_command {
-            crate::core::Motion::StopAll => {
-                network.send(&self.lock()).await?;
+            Motion::StopAll => {
+                tx_queue.push(self.lock());
             }
-            crate::core::Motion::ResumeAll => {
-                network.send(&self.unlock()).await?;
+            Motion::ResumeAll => {
+                tx_queue.push(self.unlock());
             }
-            crate::core::Motion::ResetAll => {
-                network.send(&self.motion_reset()).await?;
+            Motion::ResetAll => {
+                tx_queue.push(self.motion_reset());
             }
-            crate::core::Motion::StraightDrive(value) => {
+            Motion::StraightDrive(value) => {
                 let frames = &self.drive_straight(*value);
-                network.send_vectored(frames).await?;
+                tx_queue.extend_from_slice(frames);
             }
-            crate::core::Motion::Change(changes) => {
+            Motion::Change(changes) => {
                 let frames = &self.actuator_command(
                     changes
                         .iter()
@@ -626,7 +623,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         .collect(),
                 );
 
-                network.send_vectored(frames).await?;
+                tx_queue.extend_from_slice(frames);
             }
         }
 

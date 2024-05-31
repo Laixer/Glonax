@@ -166,38 +166,34 @@ impl J1939Unit for NetDriver {
         }
     }
 
-    async fn trigger(
+    fn trigger(
         &self,
         ctx: &mut NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
         object: &crate::core::Object,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.trigger(ctx, network, object).await,
-            Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.trigger(ctx, network, object).await
-            }
-            Self::VolvoD7E(volvo) => volvo.trigger(ctx, network, object).await,
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.trigger(ctx, network, object).await,
-            Self::VehicleManagementSystem(responder) => {
-                responder.trigger(ctx, network, object).await
-            }
-            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, network, object).await,
+            Self::KueblerEncoder(encoder) => encoder.trigger(ctx, tx_queue, object),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.trigger(ctx, tx_queue, object),
+            Self::VolvoD7E(volvo) => volvo.trigger(ctx, tx_queue, object),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.trigger(ctx, tx_queue, object),
+            Self::VehicleManagementSystem(responder) => responder.trigger(ctx, tx_queue, object),
+            Self::VehicleControlUnit(vcu) => vcu.trigger(ctx, tx_queue, object),
         }
     }
 
-    async fn tick(
+    fn tick(
         &self,
         ctx: &mut NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.tick(ctx, network).await,
-            Self::KueblerInclinometer(inclinometer) => inclinometer.tick(ctx, network).await,
-            Self::VolvoD7E(volvo) => volvo.tick(ctx, network).await,
-            Self::HydraulicControlUnit(hydraulic) => hydraulic.tick(ctx, network).await,
-            Self::VehicleManagementSystem(responder) => responder.tick(ctx, network).await,
-            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, network).await,
+            Self::KueblerEncoder(encoder) => encoder.tick(ctx, tx_queue),
+            Self::KueblerInclinometer(inclinometer) => inclinometer.tick(ctx, tx_queue),
+            Self::VolvoD7E(volvo) => volvo.tick(ctx, tx_queue),
+            Self::HydraulicControlUnit(hydraulic) => hydraulic.tick(ctx, tx_queue),
+            Self::VehicleManagementSystem(responder) => responder.tick(ctx, tx_queue),
+            Self::VehicleControlUnit(vcu) => vcu.tick(ctx, tx_queue),
         }
     }
 }
@@ -372,17 +368,17 @@ pub trait J1939Unit {
     fn trigger(
         &self,
         _ctx: &mut NetDriverContext,
-        _network: &crate::net::ControlNetwork,
+        _tx_queue: &mut Vec<j1939::Frame>,
         _object: &crate::core::Object,
-    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
-        std::future::ready(Ok(()))
+    ) -> Result<(), J1939UnitError> {
+        Ok(())
     }
 
     fn tick(
         &self,
         _ctx: &mut NetDriverContext,
-        _network: &crate::net::ControlNetwork,
-    ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send {
-        std::future::ready(Ok(()))
+        _tx_queue: &mut Vec<j1939::Frame>,
+    ) -> Result<(), J1939UnitError> {
+        Ok(())
     }
 }
