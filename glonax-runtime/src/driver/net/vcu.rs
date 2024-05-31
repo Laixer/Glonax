@@ -154,10 +154,10 @@ impl super::J1939Unit for VehicleControlUnit {
                     ctx.rx_mark();
 
                     debug!(
-                        "[{}:0x{:X}] {}: Firmware version: {}.{}.{}",
+                        "[{}] {}:0x{:X}: Firmware version: {}.{}.{}",
                         network.interface(),
-                        self.destination(),
                         self.name(),
+                        self.destination(),
                         version.0,
                         version.1,
                         version.2
@@ -167,10 +167,10 @@ impl super::J1939Unit for VehicleControlUnit {
                     ctx.rx_mark();
 
                     debug!(
-                        "[{}:0x{:X}] {}: Address claimed: {}",
+                        "[{}] {}:0x{:X}: Address claimed: {}",
                         network.interface(),
-                        self.destination(),
                         self.name(),
+                        self.destination(),
                         name
                     );
                 }

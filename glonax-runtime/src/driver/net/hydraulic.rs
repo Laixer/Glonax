@@ -490,11 +490,11 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::SoftwareIdentification(version) => {
                     ctx.rx_mark();
 
-                    log::debug!(
-                        "[{}:0x{:X}] {}: Firmware version: {}.{}.{}",
+                    debug!(
+                        "[{}] {}:0x{:X}: Firmware version: {}.{}.{}",
                         network.interface(),
-                        self.destination(),
                         self.name(),
+                        self.destination(),
                         version.0,
                         version.1,
                         version.2
@@ -503,11 +503,11 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::AddressClaim(name) => {
                     ctx.rx_mark();
 
-                    log::debug!(
-                        "[{}:0x{:X}] {}: Address claimed: {}",
+                    debug!(
+                        "[{}] {}:0x{:X}: Address claimed: {}",
                         network.interface(),
-                        self.destination(),
                         self.name(),
+                        self.destination(),
                         name
                     );
                 }
@@ -520,7 +520,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         )));
 
                         if let Err(e) = signal_tx.send(Object::Motion(Motion::StopAll)) {
-                            log::error!("Failed to send motion signal: {}", e);
+                            error!("Failed to send motion signal: {}", e);
                         }
                     } else {
                         ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(
@@ -528,7 +528,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         )));
 
                         if let Err(e) = signal_tx.send(Object::Motion(Motion::ResumeAll)) {
-                            log::error!("Failed to send motion signal: {}", e);
+                            error!("Failed to send motion signal: {}", e);
                         }
                     }
 

@@ -266,11 +266,11 @@ impl super::J1939Unit for KueblerEncoder {
                 EncoderMessage::AddressClaim(name) => {
                     ctx.rx_mark();
 
-                    log::debug!(
-                        "[{}:0x{:X}] {}: Address claimed: {}",
+                    debug!(
+                        "[{}] {}:0x{:X}: Address claimed: {}",
                         network.interface(),
-                        self.destination(),
                         self.name(),
+                        self.destination(),
                         name
                     );
                 }
@@ -283,7 +283,7 @@ impl super::J1939Unit for KueblerEncoder {
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Encoder(encoder_signal)));
 
                     if let Err(e) = signal_tx.send(Object::Encoder(encoder_signal)) {
-                        log::error!("Failed to send encoder signal: {}", e);
+                        error!("Failed to send encoder signal: {}", e);
                     }
                 }
             }

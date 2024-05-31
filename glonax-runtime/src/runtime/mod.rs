@@ -1,6 +1,8 @@
 mod component;
 mod error;
 
+use std::future::Future;
+
 pub use self::error::Error;
 pub use component::{Component, ComponentContext, InitComponent, PostComponent};
 
@@ -111,7 +113,7 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
-    fn on_command(
+    fn command(
         &mut self,
         _object: &crate::core::Object,
     ) -> impl std::future::Future<Output = ()> + Send {
@@ -119,24 +121,12 @@ pub trait Service<Cnf> {
     }
 }
 
-pub trait Executor {
-    /// Runs the initialization logic of the executor.
-    ///
-    /// # Arguments
-    ///
-    /// * `ipc_rx` - A reference-counted pointer to the IPC receiver.
-    fn run_init(&mut self, ipc_rx: std::rc::Rc<IPCReceiver>);
+pub trait NetworkService {
+    fn recv(&mut self, signal_tx: SignalSender) -> impl Future<Output = ()> + Send;
 
-    /// Runs the main tick logic of the executor.
-    fn run_tick(&mut self);
+    fn on_tick(&mut self) -> impl Future<Output = ()> + Send;
 
-    /// Runs the post-processing logic of the executor.
-    ///
-    /// # Arguments
-    ///
-    /// * `command_tx` - The command sender for sending commands.
-    /// * `signal_tx` - A reference-counted pointer to the signal sender.
-    fn run_post(&mut self, command_tx: CommandSender, signal_tx: std::rc::Rc<SignalSender>);
+    fn on_command(&mut self, object: &crate::core::Object) -> impl Future<Output = ()> + Send;
 }
 
 pub struct Runtime {
@@ -145,7 +135,9 @@ pub struct Runtime {
     /// Command receiver.
     command_rx: Option<CommandReceiver>,
 
-    signal_tx: Option<SignalSender>,
+    /// Signal sender.
+    signal_tx: SignalSender,
+    /// Signal receiver.
     signal_rx: SignalReceiver,
 
     /// Runtime tasks.
@@ -166,7 +158,7 @@ impl std::default::Default for Runtime {
         Self {
             command_tx,
             command_rx: Some(command_rx),
-            signal_tx: Some(signal_tx),
+            signal_tx,
             signal_rx,
             task_pool: Vec::new(),
             shutdown: tokio::sync::broadcast::channel(1),
@@ -253,7 +245,7 @@ impl Runtime {
         S: Service<C> + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
-        let signal_tx = self.signal_tx.clone().unwrap(); // TODO: Remove unwrap
+        let signal_tx = self.signal_tx.clone();
         let mut shutdown = self.shutdown.0.subscribe();
 
         let mut service = S::new(config.clone());
@@ -285,16 +277,15 @@ impl Runtime {
     {
         let mut command_rx = self.command_rx.take().unwrap();
 
-        let signal_tx = self.signal_tx.clone().unwrap(); // TODO: Remove unwrap
-        let mut shutdown = self.shutdown.0.subscribe();
-        let mut shutdown2 = self.shutdown.0.subscribe();
-        let mut shutdown3 = self.shutdown.0.subscribe();
+        let signal_tx = self.signal_tx.clone();
 
         let mut service = S::new(config.clone());
         let mut service2 = service.clone();
         let mut service3 = service.clone();
 
         if self.shutdown.1.is_empty() {
+            let mut shutdown = self.shutdown.0.subscribe();
+
             self.spawn(async move {
                 service.setup().await;
 
@@ -310,6 +301,8 @@ impl Runtime {
                 service.teardown().await;
             });
 
+            let mut shutdown = self.shutdown.0.subscribe();
+
             self.spawn(async move {
                 tokio::select! {
                     _ = async {
@@ -318,83 +311,24 @@ impl Runtime {
                             tokio::time::sleep(duration).await;
                         }
                     } => {}
-                    _ = shutdown2.recv() => {}
+                    _ = shutdown.recv() => {}
                 }
             });
+
+            let mut shutdown = self.shutdown.0.subscribe();
 
             self.spawn(async move {
                 tokio::select! {
                     _ = async {
                         while let Some(object) = command_rx.recv().await {
-                            service3.on_command(&object).await;
+                            service3.command(&object).await;
                         }
                     } => {}
-                    _ = shutdown3.recv() => {}
+                    _ = shutdown.recv() => {}
                 }
             });
         }
     }
-
-    // / Listen for command event service in the background.
-    // /
-    // / This method will spawn a service in the background and return immediately. The service
-    // / will be provided with a copy of the runtime configuration and a reference to the runtime.
-    // pub fn schedule_command_service<S, C>(&mut self, config: C)
-    // where
-    //     S: Service<C> + Send + Sync + 'static,
-    //     C: Clone + Send + 'static,
-    // {
-    //     let mut command_rx = self.command_rx.take().unwrap();
-    //     let mut shutdown = self.shutdown.0.subscribe();
-
-    //     let mut service = S::new(config.clone());
-
-    //     log::debug!("Schedule command service: {}", service.ctx());
-
-    //     if self.shutdown.1.is_empty() {
-    //         self.spawn(async move {
-    //             tokio::select! {
-    //                 _ = async {
-    //                     while let Some(command) = command_rx.recv().await {
-    //                         service.on_command(&command).await;
-    //                     }
-    //                 } => {}
-    //                 _ = shutdown.recv() => {}
-    //             }
-    //         });
-    //     }
-    // }
-
-    // /// Run a service in the background.
-    // ///
-    // /// This method will run a service in the background. The service will be provided with a copy of
-    // /// the runtime configuration and a reference to the runtime.
-    // pub async fn run_interval(
-    //     &mut self,
-    //     mut service: impl Executor,
-    //     duration: std::time::Duration,
-    // ) {
-    //     let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
-    //     let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
-
-    //     while self.shutdown.1.is_empty() {
-    //         let tick_start = std::time::Instant::now();
-
-    //         service.run_init(ipc_rx.clone());
-    //         service.run_tick();
-
-    //         let tick_duration = tick_start.elapsed();
-    //         log::trace!("Tick loop duration: {:?}", tick_duration);
-
-    //         if tick_duration > duration {
-    //             log::warn!("Tick loop delta is too high: {:?}", tick_duration);
-    //         } else {
-    //             tokio::time::sleep(duration - tick_duration).await;
-    //         }
-
-    //         service.run_post(self.command_tx.clone(), signal_tx.clone());
-    //     }
-    // }
 
     /// Wait for the runtime to shutdown.
     ///

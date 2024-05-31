@@ -1,7 +1,7 @@
 use crate::{
     driver::net::{J1939Unit, NetDriver},
     net::ControlNetwork,
-    runtime::{Service, ServiceContext, SignalSender},
+    runtime::{NetworkService, Service, ServiceContext, SignalSender},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -104,7 +104,7 @@ impl std::fmt::Display for NetDriverItem {
         write!(
             f,
             "{}:0x{:X}",
-            self.driver.name(),
+            self.driver.name(), // TOOD: Move this further up the chain.
             self.driver.destination()
         )
     }
@@ -120,13 +120,14 @@ pub struct NetworkAuthority {
 impl NetworkAuthority {
     async fn setup_delayed(&mut self) {
         for driver in self.drivers.iter_mut() {
-            log::debug!("[{}] Setup network driver '{}'", self.interface, driver);
+            debug!("[{}] Setup network driver '{}'", self.interface, driver);
+
             if let Err(error) = driver
                 .driver
                 .setup(&mut driver.context, &self.network)
                 .await
             {
-                log::error!("[{}] {}: {}", self.interface, driver, error);
+                error!("[{}] {}: {}", self.interface, driver, error);
             }
         }
     }
@@ -145,6 +146,50 @@ impl Clone for NetworkAuthority {
     }
 }
 
+impl NetworkService for NetworkAuthority {
+    async fn recv(&mut self, signal_tx: SignalSender) {
+        if let Err(e) = self.network.recv().await {
+            error!("Failed to receive from router: {}", e);
+        }
+
+        if !self.is_setup {
+            self.setup_delayed().await;
+            self.is_setup = true;
+        }
+
+        for driver in self.drivers.iter_mut() {
+            if let Err(error) = driver
+                .driver
+                .try_accept(&mut driver.context, &self.network, signal_tx.clone())
+                .await
+            {
+                error!("[{}] {}: {}", self.interface, driver, error);
+            }
+        }
+    }
+
+    async fn on_tick(&mut self) {
+        for driver in self.drivers.iter_mut() {
+            if let Err(error) = driver.driver.tick(&mut driver.context, &self.network).await {
+                error!("[{}] {}: {}", self.interface, driver, error);
+            }
+        }
+    }
+
+    async fn on_command(&mut self, object: &crate::core::Object) {
+        for driver in self.drivers.iter_mut() {
+            if let Err(error) = driver
+                .driver
+                .trigger(&mut driver.context, &self.network, object)
+                .await
+            {
+                error!("[{}] {}: {}", self.interface, driver, error);
+            }
+        }
+    }
+}
+
+// TODO: Replace with `NetworkService`
 impl Service<NetworkConfig> for NetworkAuthority {
     fn new(config: NetworkConfig) -> Self
     where
@@ -186,56 +231,27 @@ impl Service<NetworkConfig> for NetworkAuthority {
 
     async fn teardown(&mut self) {
         for driver in self.drivers.iter_mut() {
-            log::debug!("[{}] Teardown network driver '{}'", self.interface, driver);
+            debug!("[{}] Teardown network driver '{}'", self.interface, driver);
 
             if let Err(error) = driver
                 .driver
                 .teardown(&mut driver.context, &self.network)
                 .await
             {
-                log::error!("[{}] {}: {}", self.interface, driver, error);
+                error!("[{}] {}: {}", self.interface, driver, error);
             }
         }
     }
 
     async fn wait_io_pub(&mut self, signal_tx: SignalSender) {
-        if let Err(e) = self.network.recv().await {
-            log::error!("Failed to receive from router: {}", e);
-        }
-
-        if !self.is_setup {
-            self.setup_delayed().await;
-            self.is_setup = true;
-        }
-
-        for driver in self.drivers.iter_mut() {
-            if let Err(error) = driver
-                .driver
-                .try_accept(&mut driver.context, &self.network, signal_tx.clone())
-                .await
-            {
-                log::error!("[{}] {}: {}", self.interface, driver, error);
-            }
-        }
+        self.recv(signal_tx).await;
     }
 
     async fn tick(&mut self) {
-        for driver in self.drivers.iter_mut() {
-            if let Err(error) = driver.driver.tick(&mut driver.context, &self.network).await {
-                log::error!("[{}] {}: {}", self.interface, driver, error);
-            }
-        }
+        self.on_tick().await;
     }
 
-    async fn on_command(&mut self, object: &crate::core::Object) {
-        for driver in self.drivers.iter_mut() {
-            if let Err(error) = driver
-                .driver
-                .trigger(&mut driver.context, &self.network, object)
-                .await
-            {
-                log::error!("[{}] {}: {}", self.interface, driver, error);
-            }
-        }
+    async fn command(&mut self, object: &crate::core::Object) {
+        self.on_command(object).await;
     }
 }

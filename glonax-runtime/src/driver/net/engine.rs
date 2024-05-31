@@ -389,7 +389,7 @@ impl super::J1939Unit for EngineManagementSystem {
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Engine(engine_signal)));
 
                     if let Err(e) = signal_tx.send(Object::Engine(engine_signal)) {
-                        log::error!("Failed to send signal: {}", e);
+                        error!("Failed to send signal: {}", e);
                     }
                 }
                 EngineMessage::Shutdown(_shutdown) => {
