@@ -153,7 +153,7 @@ impl super::J1939Unit for VehicleControlUnit {
                 VehicleMessage::SoftwareIdentification(version) => {
                     ctx.rx_mark();
 
-                    log::debug!(
+                    debug!(
                         "[{}:0x{:X}] {}: Firmware version: {}.{}.{}",
                         network.interface(),
                         self.destination(),
@@ -166,7 +166,7 @@ impl super::J1939Unit for VehicleControlUnit {
                 VehicleMessage::AddressClaim(name) => {
                     ctx.rx_mark();
 
-                    log::debug!(
+                    debug!(
                         "[{}:0x{:X}] {}: Address claimed: {}",
                         network.interface(),
                         self.destination(),

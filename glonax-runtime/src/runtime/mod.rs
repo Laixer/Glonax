@@ -96,7 +96,7 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
-    fn net_recv(
+    fn wait_io_pub(
         &mut self,
         _signal_tx: SignalSender,
     ) -> impl std::future::Future<Output = ()> + Send {
@@ -257,21 +257,44 @@ impl Runtime {
         }
     }
 
-    // TODO: Only the TCP Server uses `command_tx`
-    /// Listen for IO event service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
+    pub fn schedule_io_pub_service<S, C>(&mut self, config: C)
+    where
+        S: Service<C> + Send + Sync + 'static,
+        C: Clone + Send + 'static,
+    {
+        let signal_tx = self.signal_tx.clone().unwrap(); // TODO: Remove unwrap
+        let mut shutdown = self.shutdown.0.subscribe();
+
+        let mut service = S::new(config.clone());
+
+        log::debug!("Schedule IO service: {}", service.ctx());
+
+        if self.shutdown.1.is_empty() {
+            self.spawn(async move {
+                service.setup().await;
+
+                tokio::select! {
+                    _ = async {
+                        loop {
+                            service.wait_io_pub(signal_tx.clone()).await;
+                        }
+                    } => {}
+                    _ = shutdown.recv() => {}
+                }
+
+                service.teardown().await;
+            });
+        }
+    }
+
     pub fn schedule_io_service2<S, C>(&mut self, config: C)
     where
         S: Service<C> + Clone + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
         let mut command_rx = self.command_rx.take().unwrap();
-        // let command_tx = self.command_tx.clone();
-        // let ipc_tx = self.ipc_tx.clone();
-        // let signal_rx = self.signal_rx.resubscribe();
-        let signal_tx = self.signal_tx.clone().unwrap();
+
+        let signal_tx = self.signal_tx.clone().unwrap(); // TODO: Remove unwrap
         let mut shutdown = self.shutdown.0.subscribe();
         let mut shutdown2 = self.shutdown.0.subscribe();
         let mut shutdown3 = self.shutdown.0.subscribe();
@@ -287,8 +310,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service.net_recv(signal_tx.clone()).await;
-
+                            service.wait_io_pub(signal_tx.clone()).await;
                         }
                     } => {}
                     _ = shutdown.recv() => {}

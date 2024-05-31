@@ -3,8 +3,8 @@ use std::time::Duration;
 use sysinfo::{Components, System};
 
 use crate::{
-    core::{Object, ObjectMessage},
-    runtime::{CommandSender, IPCSender, Service, ServiceContext, SignalReceiver},
+    core::Object,
+    runtime::{Service, ServiceContext, SignalSender},
 };
 
 pub struct Host {
@@ -33,12 +33,7 @@ impl<C> Service<C> for Host {
         ServiceContext::new("host")
     }
 
-    async fn wait_io(
-        &mut self,
-        ipc_tx: IPCSender,
-        _command_tx: CommandSender,
-        _signal_rx: SignalReceiver,
-    ) {
+    async fn wait_io_pub(&mut self, signal_tx: SignalSender) {
         self.system.refresh_memory();
         self.system.refresh_cpu();
         self.components.refresh();
@@ -67,7 +62,7 @@ impl<C> Service<C> for Host {
             }
         }
 
-        if let Err(e) = ipc_tx.send(ObjectMessage::signal(Object::Host(vms_signal))) {
+        if let Err(e) = signal_tx.send(Object::Host(vms_signal)) {
             log::error!("Failed to send host signal: {}", e);
         }
 

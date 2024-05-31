@@ -280,6 +280,8 @@ impl super::J1939Unit for KueblerEncoder {
                     let encoder_signal =
                         (process_data.source_address, process_data.position as f32);
 
+                    ctx.set_rx_last_message(ObjectMessage::signal(Object::Encoder(encoder_signal)));
+
                     if let Err(e) = signal_tx.send(Object::Encoder(encoder_signal)) {
                         log::error!("Failed to send encoder signal: {}", e);
                     }

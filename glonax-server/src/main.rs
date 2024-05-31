@@ -6,9 +6,9 @@
 
 use clap::{Parser, ValueHint};
 
-mod components;
+// mod components;
 mod config;
-mod world;
+// mod world;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -130,10 +130,10 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     let mut runtime = glonax::Runtime::default();
     runtime.register_shutdown_signal();
 
-    runtime.schedule_io_service::<service::Host, _>(glonax::runtime::NullConfig {});
+    runtime.schedule_io_pub_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
     if let Some(gnss_config) = config.clone().gnss {
-        runtime.schedule_io_service::<service::Gnss, _>(gnss_config);
+        runtime.schedule_io_pub_service::<service::Gnss, _>(gnss_config);
     }
 
     for j1939_net_config in &config.j1939 {
@@ -146,35 +146,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     runtime.schedule_io_service::<service::TcpServer, _>(config.tcp_server);
 
-    //
-    // The entire pipeline execution should be moved to a MCU
-    //
-
-    // let mut ctx = glonax::runtime::ComponentContext::default();
-
-    // world::construct(&mut ctx);
-
-    // let mut pipe = service::ComponentExecutor::new(ctx);
-
-    // pipe.add_init_component::<glonax::components::Acquisition>();
-
-    // // if config.is_simulation {
-    // //     pipe.add_component_default::<glonax::components::EncoderSimulator>();
-    // //     pipe.add_component_default::<glonax::components::EngineSimulator>();
-    // // }
-
-    // pipe.add_component_default::<components::Perception>();
-
-    // if config.mode == config::OperationMode::Autonomous {
-    //     pipe.add_component_default::<components::Planner>();
-    // }
-
-    // pipe.add_component_default::<components::Controller>(); // TODO: Rename to something more specific
-
-    // pipe.add_post_component::<glonax::components::CommitComponent>();
-    // pipe.add_post_component::<glonax::components::SignalComponent>();
-
-    // runtime.run_interval(pipe, SERVICE_PIPELINE_INTERVAL).await;
     runtime.wait_for_shutdown().await;
 
     log::info!("Waiting for shutdown");

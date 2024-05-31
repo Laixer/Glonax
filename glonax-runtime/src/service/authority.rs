@@ -198,7 +198,7 @@ impl Service<NetworkConfig> for NetworkAuthority {
         }
     }
 
-    async fn net_recv(&mut self, signal_tx: SignalSender) {
+    async fn wait_io_pub(&mut self, signal_tx: SignalSender) {
         if let Err(e) = self.network.recv().await {
             log::error!("Failed to receive from router: {}", e);
         }
