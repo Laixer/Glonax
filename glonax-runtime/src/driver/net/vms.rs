@@ -29,8 +29,13 @@ impl Parsable<PGN> for VehicleManagementSystem {
 }
 
 impl super::J1939Unit for VehicleManagementSystem {
-    const VENDOR: &'static str = "laixer";
-    const PRODUCT: &'static str = "vms";
+    fn vendor(&self) -> &'static str {
+        "laixer"
+    }
+
+    fn product(&self) -> &'static str {
+        "vms"
+    }
 
     fn destination(&self) -> u8 {
         self.source_address
@@ -40,18 +45,18 @@ impl super::J1939Unit for VehicleManagementSystem {
         self.source_address
     }
 
-    #[rustfmt::skip]
-    async fn setup(
+    fn setup(
         &self,
         _ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        _tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), super::J1939UnitError> {
-        network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
+        // network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
+        // tx_queue.push(protocol::address_claimed(self.source_address, network.name()));
 
         Ok(())
     }
 
-    async fn try_accept(
+    fn try_accept(
         &mut self,
         _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
@@ -61,7 +66,7 @@ impl super::J1939Unit for VehicleManagementSystem {
             match pgn {
                 #[rustfmt::skip]
                 PGN::AddressClaimed => {
-                    network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
+                    // network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
                 }
                 PGN::SoftwareIdentification => {
                     let id = IdBuilder::from_pgn(PGN::SoftwareIdentification)
@@ -77,7 +82,7 @@ impl super::J1939Unit for VehicleManagementSystem {
                         .copy_from_slice(&[1, version_major, version_minor, version_patch, b'*'])
                         .build();
 
-                    network.send(&frame).await?;
+                    // network.send(&frame).await?;
                 }
                 PGN::TimeDate => {
                     use chrono::prelude::*;
@@ -100,7 +105,7 @@ impl super::J1939Unit for VehicleManagementSystem {
                         .copy_from_slice(&timedate.to_pdu())
                         .build();
 
-                    network.send(&frame).await?;
+                    // network.send(&frame).await?;
                 }
                 _ => (),
             }

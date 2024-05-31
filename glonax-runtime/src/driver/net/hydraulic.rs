@@ -413,8 +413,13 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
 }
 
 impl super::J1939Unit for HydraulicControlUnit {
-    const VENDOR: &'static str = "laixer";
-    const PRODUCT: &'static str = "hcu";
+    fn vendor(&self) -> &'static str {
+        "laixer"
+    }
+
+    fn product(&self) -> &'static str {
+        "hcu"
+    }
 
     fn destination(&self) -> u8 {
         self.destination_address
@@ -424,58 +429,51 @@ impl super::J1939Unit for HydraulicControlUnit {
         self.source_address
     }
 
-    async fn setup(
+    fn setup(
         &self,
         _ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), super::J1939UnitError> {
-        network
-            .send(&protocol::request(
-                self.destination_address,
-                self.source_address,
-                PGN::AddressClaimed,
-            ))
-            .await?;
-        network
-            .send(&protocol::request(
-                self.destination_address,
-                self.source_address,
-                PGN::SoftwareIdentification,
-            ))
-            .await?;
-        network
-            .send(&protocol::request(
-                self.destination_address,
-                self.source_address,
-                PGN::ComponentIdentification,
-            ))
-            .await?;
+        tx_queue.push(protocol::request(
+            self.destination_address,
+            self.source_address,
+            PGN::AddressClaimed,
+        ));
+        tx_queue.push(protocol::request(
+            self.destination_address,
+            self.source_address,
+            PGN::SoftwareIdentification,
+        ));
+        tx_queue.push(protocol::request(
+            self.destination_address,
+            self.source_address,
+            PGN::ComponentIdentification,
+        ));
 
-        network.send(&self.motion_reset()).await?;
-        network.send(&self.set_ident(true)).await?;
-        network.send(&self.set_ident(false)).await?;
+        tx_queue.push(self.motion_reset());
+        tx_queue.push(self.set_ident(true));
+        tx_queue.push(self.set_ident(false));
 
         Ok(())
     }
 
-    async fn teardown(
+    fn teardown(
         &self,
         _ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), super::J1939UnitError> {
-        network.send(&self.motion_reset()).await?;
+        tx_queue.push(self.motion_reset());
 
         Ok(())
     }
 
-    async fn try_accept(
+    fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
         signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
-        let result = Result::<(), super::J1939UnitError>::Ok(());
 
         // TODO: If possible, move timeout checks to pipeline
         // if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
@@ -537,7 +535,7 @@ impl super::J1939Unit for HydraulicControlUnit {
             }
         }
 
-        result
+        Ok(())
     }
 
     fn trigger(

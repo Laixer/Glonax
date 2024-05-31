@@ -199,8 +199,13 @@ impl Parsable<InclinoMessage> for KueblerInclinometer {
 }
 
 impl super::J1939Unit for KueblerInclinometer {
-    const VENDOR: &'static str = "kübler";
-    const PRODUCT: &'static str = "inclinometer";
+    fn vendor(&self) -> &'static str {
+        "kübler"
+    }
+
+    fn product(&self) -> &'static str {
+        "inclinometer"
+    }
 
     fn destination(&self) -> u8 {
         self.destination_address
@@ -210,25 +215,27 @@ impl super::J1939Unit for KueblerInclinometer {
         self.source_address
     }
 
-    #[rustfmt::skip]
-    async fn setup(
+    fn setup(
         &self,
         _ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        tx_queue: &mut Vec<j1939::Frame>,
     ) -> Result<(), super::J1939UnitError> {
-        network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
+        tx_queue.push(protocol::request(
+            self.destination_address,
+            self.source_address,
+            PGN::AddressClaimed,
+        ));
 
         Ok(())
     }
 
-    async fn try_accept(
+    fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
         _signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
-        let result = Result::<(), super::J1939UnitError>::Ok(());
 
         // if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
         //     result = Err(super::J1939UnitError::MessageTimeout);
@@ -253,6 +260,6 @@ impl super::J1939Unit for KueblerInclinometer {
             }
         }
 
-        result
+        Ok(())
     }
 }

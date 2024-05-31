@@ -88,8 +88,13 @@ impl Parsable<EngineMessage> for VolvoD7E {
 }
 
 impl super::J1939Unit for VolvoD7E {
-    const VENDOR: &'static str = "volvo";
-    const PRODUCT: &'static str = "d7e";
+    fn vendor(&self) -> &'static str {
+        "volvo"
+    }
+
+    fn product(&self) -> &'static str {
+        "d7e"
+    }
 
     fn destination(&self) -> u8 {
         self.destination_address
@@ -99,13 +104,13 @@ impl super::J1939Unit for VolvoD7E {
         self.source_address
     }
 
-    async fn try_accept(
+    fn try_accept(
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
         signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.try_accept(ctx, network, signal_tx).await
+        self.ems.try_accept(ctx, network, signal_tx)
     }
 
     fn trigger(
