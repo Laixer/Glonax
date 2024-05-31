@@ -3,8 +3,8 @@ use std::sync::Arc;
 use tokio::{net::TcpListener, sync::Semaphore};
 
 use crate::{
-    core::{Object, ObjectMessage},
-    runtime::{CommandSender, IPCSender, Service, ServiceContext, SignalReceiver},
+    core::Object,
+    runtime::{CommandSender, Service, ServiceContext, SignalReceiver},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -46,7 +46,6 @@ enum TcpError {
     Io(std::io::Error),
     UnauthorizedControl,
     UnauthorizedCommand,
-    Queue(std::sync::mpsc::SendError<ObjectMessage>),
     Command(tokio::sync::mpsc::error::SendError<Object>),
     UnknownMessage(u8),
 }
@@ -57,7 +56,6 @@ impl std::fmt::Debug for TcpError {
             TcpError::Io(e) => write!(f, "IO error: {}", e),
             TcpError::UnauthorizedControl => write!(f, "Unauthorized control"),
             TcpError::UnauthorizedCommand => write!(f, "Unauthorized command"),
-            TcpError::Queue(e) => write!(f, "Queue error: {}", e),
             TcpError::Command(e) => write!(f, "Command error: {}", e),
             TcpError::UnknownMessage(m) => write!(f, "Unknown message: {}", m),
         }
@@ -70,7 +68,6 @@ impl std::fmt::Display for TcpError {
             TcpError::Io(e) => write!(f, "IO error: {}", e),
             TcpError::UnauthorizedControl => write!(f, "Unauthorized control"),
             TcpError::UnauthorizedCommand => write!(f, "Unauthorized command"),
-            TcpError::Queue(e) => write!(f, "Queue error: {}", e),
             TcpError::Command(e) => write!(f, "Command error: {}", e),
             TcpError::UnknownMessage(m) => write!(f, "Unknown message: {}", m),
         }
@@ -89,7 +86,6 @@ impl TcpServer {
     async fn parse<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         client: &mut crate::protocol::Stream<T>,
         frame: &crate::protocol::frame::Frame,
-        ipc_tx: IPCSender,
         command_tx: CommandSender,
         session: &mut crate::protocol::frame::Session,
     ) -> Result<(), TcpError> {
@@ -177,9 +173,10 @@ impl TcpServer {
                     .map_err(TcpError::Io)?;
 
                 if session.is_command() {
-                    ipc_tx
-                        .send(ObjectMessage::command(Object::Target(target)))
-                        .map_err(TcpError::Queue)?;
+                    log::debug!("Target request: {:?}", target);
+                    // ipc_tx
+                    //     .send(ObjectMessage::command(Object::Target(target)))
+                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -209,7 +206,6 @@ impl TcpServer {
 
     async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         stream: T,
-        ipc_tx: IPCSender,
         command_tx: CommandSender,
         _permit: tokio::sync::OwnedSemaphorePermit,
         mut signal_rx: SignalReceiver,
@@ -255,7 +251,7 @@ impl TcpServer {
                 frame_rs = client.read_frame() => {
                     match frame_rs {
                         Ok(frame) => {
-                            if let Err(e) = Self::parse(&mut client, &frame, ipc_tx.clone(), command_tx.clone(), &mut session).await {
+                            if let Err(e) = Self::parse(&mut client, &frame, command_tx.clone(), &mut session).await {
                                 log::warn!("Failed to parse frame: {}", e);
                             }
                         },
@@ -326,12 +322,7 @@ impl Service<TcpServerConfig> for TcpServer {
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
     }
 
-    async fn wait_io(
-        &mut self,
-        ipc_tx: IPCSender,
-        command_tx: CommandSender,
-        signal_rx: SignalReceiver,
-    ) {
+    async fn wait_io_sub(&mut self, command_tx: CommandSender, signal_rx: SignalReceiver) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
         stream.set_nodelay(true).unwrap();
 
@@ -356,7 +347,7 @@ impl Service<TcpServerConfig> for TcpServer {
         log::debug!("Spawning client session");
 
         self.clients.push(tokio::spawn(Self::spawn_client_session(
-            stream, ipc_tx, command_tx, permit, signal_rx,
+            stream, command_tx, permit, signal_rx,
         )));
     }
 

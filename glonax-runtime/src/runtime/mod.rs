@@ -87,9 +87,8 @@ pub trait Service<Cnf> {
     /// This method is always called on a separate thread and
     /// should be used to wait for IO events. The method is optional
     /// and does not need to be implemented.
-    fn wait_io(
+    fn wait_io_sub(
         &mut self,
-        _ipc_tx: IPCSender,
         _command_tx: CommandSender,
         _signal_rx: SignalReceiver,
     ) -> impl std::future::Future<Output = ()> + Send {
@@ -141,10 +140,6 @@ pub trait Executor {
 }
 
 pub struct Runtime {
-    /// IPC sender.
-    ipc_tx: IPCSender,
-    /// IPC receiver.
-    ipc_rx: Option<IPCReceiver>,
     /// Command sender.
     command_tx: CommandSender,
     /// Command receiver.
@@ -164,14 +159,11 @@ pub struct Runtime {
 
 impl std::default::Default for Runtime {
     fn default() -> Self {
-        let (ipc_tx, ipc_rx) = std::sync::mpsc::channel();
         let (command_tx, command_rx) =
             tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_COMMAND);
         let (signal_tx, signal_rx) = tokio::sync::broadcast::channel(8);
 
         Self {
-            ipc_tx,
-            ipc_rx: Some(ipc_rx),
             command_tx,
             command_rx: Some(command_rx),
             signal_tx: Some(signal_tx),
@@ -225,13 +217,12 @@ impl Runtime {
     ///
     /// This method will spawn a service in the background and return immediately. The service
     /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_io_service<S, C>(&mut self, config: C)
+    pub fn schedule_io_sub_service<S, C>(&mut self, config: C)
     where
         S: Service<C> + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
         let command_tx = self.command_tx.clone();
-        let ipc_tx = self.ipc_tx.clone();
         let signal_rx = self.signal_rx.resubscribe();
         let mut shutdown = self.shutdown.0.subscribe();
 
@@ -246,7 +237,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service.wait_io(ipc_tx.clone(), command_tx.clone(), signal_rx.resubscribe()).await;
+                            service.wait_io_sub(command_tx.clone(), signal_rx.resubscribe()).await;
                         }
                     } => {}
                     _ = shutdown.recv() => {}
@@ -287,7 +278,7 @@ impl Runtime {
         }
     }
 
-    pub fn schedule_io_service2<S, C>(&mut self, config: C)
+    pub fn schedule_net_service<S, C>(&mut self, config: C, duration: std::time::Duration)
     where
         S: Service<C> + Clone + Send + Sync + 'static,
         C: Clone + Send + 'static,
@@ -324,7 +315,7 @@ impl Runtime {
                     _ = async {
                         loop {
                             service2.tick().await;
-                            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+                            tokio::time::sleep(duration).await;
                         }
                     } => {}
                     _ = shutdown2.recv() => {}
@@ -344,66 +335,66 @@ impl Runtime {
         }
     }
 
-    /// Listen for command event service in the background.
-    ///
-    /// This method will spawn a service in the background and return immediately. The service
-    /// will be provided with a copy of the runtime configuration and a reference to the runtime.
-    pub fn schedule_command_service<S, C>(&mut self, config: C)
-    where
-        S: Service<C> + Send + Sync + 'static,
-        C: Clone + Send + 'static,
-    {
-        let mut command_rx = self.command_rx.take().unwrap();
-        let mut shutdown = self.shutdown.0.subscribe();
+    // / Listen for command event service in the background.
+    // /
+    // / This method will spawn a service in the background and return immediately. The service
+    // / will be provided with a copy of the runtime configuration and a reference to the runtime.
+    // pub fn schedule_command_service<S, C>(&mut self, config: C)
+    // where
+    //     S: Service<C> + Send + Sync + 'static,
+    //     C: Clone + Send + 'static,
+    // {
+    //     let mut command_rx = self.command_rx.take().unwrap();
+    //     let mut shutdown = self.shutdown.0.subscribe();
 
-        let mut service = S::new(config.clone());
+    //     let mut service = S::new(config.clone());
 
-        log::debug!("Schedule command service: {}", service.ctx());
+    //     log::debug!("Schedule command service: {}", service.ctx());
 
-        if self.shutdown.1.is_empty() {
-            self.spawn(async move {
-                tokio::select! {
-                    _ = async {
-                        while let Some(command) = command_rx.recv().await {
-                            service.on_command(&command).await;
-                        }
-                    } => {}
-                    _ = shutdown.recv() => {}
-                }
-            });
-        }
-    }
+    //     if self.shutdown.1.is_empty() {
+    //         self.spawn(async move {
+    //             tokio::select! {
+    //                 _ = async {
+    //                     while let Some(command) = command_rx.recv().await {
+    //                         service.on_command(&command).await;
+    //                     }
+    //                 } => {}
+    //                 _ = shutdown.recv() => {}
+    //             }
+    //         });
+    //     }
+    // }
 
-    /// Run a service in the background.
-    ///
-    /// This method will run a service in the background. The service will be provided with a copy of
-    /// the runtime configuration and a reference to the runtime.
-    pub async fn run_interval(
-        &mut self,
-        mut service: impl Executor,
-        duration: std::time::Duration,
-    ) {
-        let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
-        let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
+    // /// Run a service in the background.
+    // ///
+    // /// This method will run a service in the background. The service will be provided with a copy of
+    // /// the runtime configuration and a reference to the runtime.
+    // pub async fn run_interval(
+    //     &mut self,
+    //     mut service: impl Executor,
+    //     duration: std::time::Duration,
+    // ) {
+    //     let ipc_rx = std::rc::Rc::new(self.ipc_rx.take().unwrap());
+    //     let signal_tx = std::rc::Rc::new(self.signal_tx.take().unwrap());
 
-        while self.shutdown.1.is_empty() {
-            let tick_start = std::time::Instant::now();
+    //     while self.shutdown.1.is_empty() {
+    //         let tick_start = std::time::Instant::now();
 
-            service.run_init(ipc_rx.clone());
-            service.run_tick();
+    //         service.run_init(ipc_rx.clone());
+    //         service.run_tick();
 
-            let tick_duration = tick_start.elapsed();
-            log::trace!("Tick loop duration: {:?}", tick_duration);
+    //         let tick_duration = tick_start.elapsed();
+    //         log::trace!("Tick loop duration: {:?}", tick_duration);
 
-            if tick_duration > duration {
-                log::warn!("Tick loop delta is too high: {:?}", tick_duration);
-            } else {
-                tokio::time::sleep(duration - tick_duration).await;
-            }
+    //         if tick_duration > duration {
+    //             log::warn!("Tick loop delta is too high: {:?}", tick_duration);
+    //         } else {
+    //             tokio::time::sleep(duration - tick_duration).await;
+    //         }
 
-            service.run_post(self.command_tx.clone(), signal_tx.clone());
-        }
-    }
+    //         service.run_post(self.command_tx.clone(), signal_tx.clone());
+    //     }
+    // }
 
     /// Wait for the runtime to shutdown.
     ///
