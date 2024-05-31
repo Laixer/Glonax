@@ -837,11 +837,6 @@ async fn main() -> anyhow::Result<()> {
                     destination_address,
                     consts::J1939_ADDRESS_VOLVO_VECU,
                 )) as Box<dyn Engine>
-            } else if driver == "bosch" {
-                Box::new(glonax::driver::BoschEngineManagementSystem::new(
-                    destination_address,
-                    consts::J1939_ADDRESS_OBDL,
-                )) as Box<dyn Engine>
             } else {
                 Box::new(glonax::driver::net::engine::EngineManagementSystem::new(
                     destination_address,

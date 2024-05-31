@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 
-pub mod bosch_ems;
 pub mod encoder;
 pub mod engine;
 pub mod fuzzer;
@@ -19,7 +18,6 @@ pub enum NetDriver {
     KueblerEncoder(super::KueblerEncoder),
     KueblerInclinometer(super::KueblerInclinometer),
     VolvoD7E(super::VolvoD7E),
-    BoschEngineManagementSystem(super::BoschEngineManagementSystem),
     HydraulicControlUnit(super::HydraulicControlUnit),
     VehicleManagementSystem(super::VehicleManagementSystem),
     VehicleControlUnit(super::VehicleControlUnit),
@@ -59,14 +57,6 @@ impl NetDriver {
                 )))
             }
             (v, p)
-                if v == crate::driver::BoschEngineManagementSystem::VENDOR
-                    && p == crate::driver::BoschEngineManagementSystem::PRODUCT =>
-            {
-                Ok(NetDriver::BoschEngineManagementSystem(
-                    crate::driver::BoschEngineManagementSystem::new(destination, source),
-                ))
-            }
-            (v, p)
                 if v == crate::driver::HydraulicControlUnit::VENDOR
                     && p == crate::driver::HydraulicControlUnit::PRODUCT =>
             {
@@ -96,7 +86,6 @@ impl J1939Unit for NetDriver {
             Self::KueblerEncoder(encoder) => encoder.name(),
             Self::KueblerInclinometer(inclinometer) => inclinometer.name(),
             Self::VolvoD7E(volvo) => volvo.name(),
-            Self::BoschEngineManagementSystem(bosch) => bosch.name(),
             Self::HydraulicControlUnit(hydraulic) => hydraulic.name(),
             Self::VehicleManagementSystem(responder) => responder.name(),
             Self::VehicleControlUnit(vcu) => vcu.name(),
@@ -108,7 +97,6 @@ impl J1939Unit for NetDriver {
             Self::KueblerEncoder(encoder) => encoder.destination(),
             Self::KueblerInclinometer(inclinometer) => inclinometer.destination(),
             Self::VolvoD7E(volvo) => volvo.destination(),
-            Self::BoschEngineManagementSystem(bosch) => bosch.destination(),
             Self::HydraulicControlUnit(hydraulic) => hydraulic.destination(),
             Self::VehicleManagementSystem(responder) => responder.destination(),
             Self::VehicleControlUnit(vcu) => vcu.destination(),
@@ -120,7 +108,6 @@ impl J1939Unit for NetDriver {
             Self::KueblerEncoder(encoder) => encoder.source(),
             Self::KueblerInclinometer(inclinometer) => inclinometer.source(),
             Self::VolvoD7E(volvo) => volvo.source(),
-            Self::BoschEngineManagementSystem(bosch) => bosch.source(),
             Self::HydraulicControlUnit(hydraulic) => hydraulic.source(),
             Self::VehicleManagementSystem(responder) => responder.source(),
             Self::VehicleControlUnit(vcu) => vcu.source(),
@@ -136,7 +123,6 @@ impl J1939Unit for NetDriver {
             Self::KueblerEncoder(encoder) => encoder.setup(ctx, router).await,
             Self::KueblerInclinometer(inclinometer) => inclinometer.setup(ctx, router).await,
             Self::VolvoD7E(volvo) => volvo.setup(ctx, router).await,
-            Self::BoschEngineManagementSystem(bosch) => bosch.setup(ctx, router).await,
             Self::HydraulicControlUnit(hydraulic) => hydraulic.setup(ctx, router).await,
             Self::VehicleManagementSystem(responder) => responder.setup(ctx, router).await,
             Self::VehicleControlUnit(vcu) => vcu.setup(ctx, router).await,
@@ -152,7 +138,6 @@ impl J1939Unit for NetDriver {
             Self::KueblerEncoder(encoder) => encoder.teardown(ctx, network).await,
             Self::KueblerInclinometer(inclinometer) => inclinometer.teardown(ctx, network).await,
             Self::VolvoD7E(volvo) => volvo.teardown(ctx, network).await,
-            Self::BoschEngineManagementSystem(bosch) => bosch.teardown(ctx, network).await,
             Self::HydraulicControlUnit(hydraulic) => hydraulic.teardown(ctx, network).await,
             Self::VehicleManagementSystem(responder) => responder.teardown(ctx, network).await,
             Self::VehicleControlUnit(vcu) => vcu.teardown(ctx, network).await,
@@ -171,9 +156,6 @@ impl J1939Unit for NetDriver {
                 inclinometer.try_accept(ctx, network, ipc_tx).await
             }
             Self::VolvoD7E(volvo) => volvo.try_accept(ctx, network, ipc_tx).await,
-            Self::BoschEngineManagementSystem(bosch) => {
-                bosch.try_accept(ctx, network, ipc_tx).await
-            }
             Self::HydraulicControlUnit(hydraulic) => {
                 hydraulic.try_accept(ctx, network, ipc_tx).await
             }
@@ -196,7 +178,6 @@ impl J1939Unit for NetDriver {
                 inclinometer.trigger(ctx, network, object).await
             }
             Self::VolvoD7E(volvo) => volvo.trigger(ctx, network, object).await,
-            Self::BoschEngineManagementSystem(bosch) => bosch.trigger(ctx, network, object).await,
             Self::HydraulicControlUnit(hydraulic) => hydraulic.trigger(ctx, network, object).await,
             Self::VehicleManagementSystem(responder) => {
                 responder.trigger(ctx, network, object).await
@@ -214,7 +195,6 @@ impl J1939Unit for NetDriver {
             Self::KueblerEncoder(encoder) => encoder.tick(ctx, network).await,
             Self::KueblerInclinometer(inclinometer) => inclinometer.tick(ctx, network).await,
             Self::VolvoD7E(volvo) => volvo.tick(ctx, network).await,
-            Self::BoschEngineManagementSystem(bosch) => bosch.tick(ctx, network).await,
             Self::HydraulicControlUnit(hydraulic) => hydraulic.tick(ctx, network).await,
             Self::VehicleManagementSystem(responder) => responder.tick(ctx, network).await,
             Self::VehicleControlUnit(vcu) => vcu.tick(ctx, network).await,
