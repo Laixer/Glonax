@@ -144,9 +144,9 @@ impl TcpServer {
                     log::debug!("Engine request RPM: {}", engine.rpm);
 
                     command_tx
-                        .send(Object::Engine(engine))
-                        .await
-                        .map_err(TcpError::Command)?;
+                        .send(Object::Engine(engine)).unwrap();
+                        // .await
+                        // .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
@@ -159,9 +159,9 @@ impl TcpServer {
 
                 if session.is_command() {
                     command_tx
-                        .send(Object::Motion(motion.clone()))
-                        .await
-                        .map_err(TcpError::Command)?;
+                        .send(Object::Motion(motion.clone())).unwrap();
+                        // .await
+                        // .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -189,9 +189,9 @@ impl TcpServer {
 
                 if session.is_control() {
                     command_tx
-                        .send(Object::Control(control))
-                        .await
-                        .map_err(TcpError::Command)?;
+                        .send(Object::Control(control)).unwrap();
+                        // .await
+                        // .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
@@ -276,7 +276,7 @@ impl TcpServer {
                                 if session.is_failsafe() {
                                     log::warn!("Enacting failsafe for: {}", session.name());
 
-                                    if let Err(e) = command_tx.send(crate::core::Object::Motion(crate::core::Motion::StopAll)).await
+                                    if let Err(e) = command_tx.send(crate::core::Object::Motion(crate::core::Motion::StopAll))
                                     {
                                         log::error!("Failed to send motion: {}", e);
                                     }

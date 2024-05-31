@@ -10,8 +10,9 @@ pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
 pub type IPCSender = std::sync::mpsc::Sender<crate::core::ObjectMessage>;
 pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::ObjectMessage>;
-pub type CommandSender = tokio::sync::mpsc::Sender<crate::core::Object>;
-pub type CommandReceiver = tokio::sync::mpsc::Receiver<crate::core::Object>;
+
+pub type CommandSender = tokio::sync::broadcast::Sender<crate::core::Object>;
+pub type CommandReceiver = tokio::sync::broadcast::Receiver<crate::core::Object>;
 pub type SignalSender = tokio::sync::broadcast::Sender<crate::core::Object>;
 pub type SignalReceiver = tokio::sync::broadcast::Receiver<crate::core::Object>;
 
@@ -133,7 +134,7 @@ pub struct Runtime {
     /// Command sender.
     command_tx: CommandSender,
     /// Command receiver.
-    command_rx: Option<CommandReceiver>,
+    command_rx: CommandReceiver,
 
     /// Signal sender.
     signal_tx: SignalSender,
@@ -152,12 +153,12 @@ pub struct Runtime {
 impl std::default::Default for Runtime {
     fn default() -> Self {
         let (command_tx, command_rx) =
-            tokio::sync::mpsc::channel(crate::consts::QUEUE_SIZE_COMMAND);
+            tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_COMMAND);
         let (signal_tx, signal_rx) = tokio::sync::broadcast::channel(8);
 
         Self {
             command_tx,
-            command_rx: Some(command_rx),
+            command_rx,
             signal_tx,
             signal_rx,
             task_pool: Vec::new(),
@@ -275,7 +276,7 @@ impl Runtime {
         S: Service<C> + Clone + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
-        let mut command_rx = self.command_rx.take().unwrap();
+        let mut command_rx = self.command_tx.subscribe();
 
         let signal_tx = self.signal_tx.clone();
 
@@ -320,7 +321,7 @@ impl Runtime {
             self.spawn(async move {
                 tokio::select! {
                     _ = async {
-                        while let Some(object) = command_rx.recv().await {
+                        while let Ok(object) = command_rx.recv().await {
                             service3.command(&object).await;
                         }
                     } => {}
