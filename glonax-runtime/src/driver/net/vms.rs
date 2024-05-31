@@ -43,11 +43,10 @@ impl super::J1939Unit for VehicleManagementSystem {
     #[rustfmt::skip]
     async fn setup(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::address_claimed(self.source_address, network.name())).await?;
-        ctx.tx_mark();
 
         Ok(())
     }

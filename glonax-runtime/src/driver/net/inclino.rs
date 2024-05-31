@@ -213,11 +213,10 @@ impl super::J1939Unit for KueblerInclinometer {
     #[rustfmt::skip]
     async fn setup(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
-        ctx.tx_mark();
 
         Ok(())
     }

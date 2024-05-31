@@ -426,7 +426,7 @@ impl super::J1939Unit for HydraulicControlUnit {
 
     async fn setup(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
     ) -> Result<(), super::J1939UnitError> {
         network
@@ -450,23 +450,20 @@ impl super::J1939Unit for HydraulicControlUnit {
                 PGN::ComponentIdentification,
             ))
             .await?;
-        ctx.tx_mark();
 
         network.send(&self.motion_reset()).await?;
         network.send(&self.set_ident(true)).await?;
         network.send(&self.set_ident(false)).await?;
-        ctx.tx_mark();
 
         Ok(())
     }
 
     async fn teardown(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&self.motion_reset()).await?;
-        ctx.tx_mark();
 
         Ok(())
     }
@@ -566,20 +563,16 @@ impl super::J1939Unit for HydraulicControlUnit {
             match motion {
                 crate::core::Motion::StopAll => {
                     network.send(&self.lock()).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::Motion::ResumeAll => {
                     network.send(&self.unlock()).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::Motion::ResetAll => {
                     network.send(&self.motion_reset()).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::Motion::StraightDrive(value) => {
                     let frames = &self.drive_straight(*value);
                     network.send_vectored(frames).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::Motion::Change(changes) => {
                     let frames = &self.actuator_command(
@@ -590,7 +583,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                     );
 
                     network.send_vectored(frames).await?;
-                    ctx.tx_mark();
                 }
             }
         }
@@ -624,20 +616,16 @@ impl super::J1939Unit for HydraulicControlUnit {
         match &motion_command {
             crate::core::Motion::StopAll => {
                 network.send(&self.lock()).await?;
-                ctx.tx_mark();
             }
             crate::core::Motion::ResumeAll => {
                 network.send(&self.unlock()).await?;
-                ctx.tx_mark();
             }
             crate::core::Motion::ResetAll => {
                 network.send(&self.motion_reset()).await?;
-                ctx.tx_mark();
             }
             crate::core::Motion::StraightDrive(value) => {
                 let frames = &self.drive_straight(*value);
                 network.send_vectored(frames).await?;
-                ctx.tx_mark();
             }
             crate::core::Motion::Change(changes) => {
                 let frames = &self.actuator_command(
@@ -648,7 +636,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 );
 
                 network.send_vectored(frames).await?;
-                ctx.tx_mark();
             }
         }
 

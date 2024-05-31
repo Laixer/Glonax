@@ -152,19 +152,15 @@ impl super::J1939Unit for VolvoD7E {
             match governor_engine.state {
                 crate::core::EngineState::NoRequest => {
                     network.send(&self.request(governor_engine.rpm)).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::EngineState::Starting => {
                     network.send(&self.start(governor_engine.rpm)).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::EngineState::Stopping => {
                     network.send(&self.stop(governor_engine.rpm)).await?;
-                    ctx.tx_mark();
                 }
                 crate::core::EngineState::Request => {
                     network.send(&self.request(governor_engine.rpm)).await?;
-                    ctx.tx_mark();
                 }
             }
         }
@@ -220,19 +216,15 @@ impl super::J1939Unit for VolvoD7E {
         match governor_engine.state {
             crate::core::EngineState::NoRequest => {
                 network.send(&self.request(governor_engine.rpm)).await?;
-                ctx.tx_mark();
             }
             crate::core::EngineState::Starting => {
                 network.send(&self.start(governor_engine.rpm)).await?;
-                ctx.tx_mark();
             }
             crate::core::EngineState::Stopping => {
                 network.send(&self.stop(governor_engine.rpm)).await?;
-                ctx.tx_mark();
             }
             crate::core::EngineState::Request => {
                 network.send(&self.request(governor_engine.rpm)).await?;
-                ctx.tx_mark();
             }
         }
 

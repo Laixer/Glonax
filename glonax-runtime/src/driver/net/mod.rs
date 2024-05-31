@@ -223,8 +223,6 @@ impl J1939Unit for NetDriver {
 }
 
 pub struct NetDriverContextDetail {
-    // /// Last time a message was sent.
-    // tx_last: Instant,
     /// Last message sent.
     tx_last_message: Option<crate::core::ObjectMessage>,
     /// Last time a message was received.
@@ -239,11 +237,6 @@ impl NetDriverContextDetail {
         self.rx_last.elapsed() > timeout
     }
 
-    /// Mark the last time a message was sent.
-    // fn tx_mark(&mut self) {
-    // self.tx_last = Instant::now();
-    // }
-
     /// Mark the last time a message was received.
     fn rx_mark(&mut self) {
         self.rx_last = Instant::now();
@@ -253,7 +246,6 @@ impl NetDriverContextDetail {
 impl Default for NetDriverContextDetail {
     fn default() -> Self {
         Self {
-            // tx_last: Instant::now(),
             tx_last_message: None,
             rx_last: Instant::now(),
             rx_last_message: None,
@@ -275,9 +267,6 @@ impl NetDriverContext {
     pub fn is_rx_timeout(&self, timeout: Duration) -> bool {
         self.detail.lock().unwrap().is_rx_timeout(timeout)
     }
-
-    /// Mark the last time a message was sent.
-    pub fn tx_mark(&self) {}
 
     /// Mark the last time a message was received.
     pub fn rx_mark(&self) {

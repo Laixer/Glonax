@@ -124,13 +124,12 @@ impl super::J1939Unit for VehicleControlUnit {
     #[rustfmt::skip]
     async fn setup(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
     ) -> Result<(), super::J1939UnitError> {
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::AddressClaimed)).await?;
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::SoftwareIdentification)).await?;
         network.send(&protocol::request(self.destination_address, self.source_address, PGN::ComponentIdentification)).await?;
-        ctx.tx_mark();
 
         Ok(())
     }
@@ -188,15 +187,12 @@ impl super::J1939Unit for VehicleControlUnit {
 
     async fn trigger(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         _network: &crate::net::ControlNetwork,
         object: &Object,
     ) -> Result<(), super::J1939UnitError> {
         if let Object::Control(control) = object {
             trace!("VCU: {}", control);
-
-            // FUTURE: Send control message
-            ctx.tx_mark();
         }
 
         Ok(())
