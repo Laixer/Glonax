@@ -141,10 +141,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             j1939_net_config.clone(),
             std::time::Duration::from_millis(10),
         );
-
-        // TODO: Why not on all J1939 units? Because there is only one command_rx
-        // if j1939_net_config.authority_atx {
-        // }
     }
 
     runtime.schedule_io_sub_service::<service::TcpServer, _>(config.tcp_server);
