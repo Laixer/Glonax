@@ -138,7 +138,7 @@ impl super::J1939Unit for VehicleControlUnit {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _ipc_tx: crate::runtime::IPCSender,
+        _signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
         let result = Result::<(), super::J1939UnitError>::Ok(());

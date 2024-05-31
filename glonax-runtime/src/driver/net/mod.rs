@@ -148,21 +148,21 @@ impl J1939Unit for NetDriver {
         &mut self,
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
-        ipc_tx: crate::runtime::IPCSender,
+        signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), J1939UnitError> {
         match self {
-            Self::KueblerEncoder(encoder) => encoder.try_accept(ctx, network, ipc_tx).await,
+            Self::KueblerEncoder(encoder) => encoder.try_accept(ctx, network, signal_tx).await,
             Self::KueblerInclinometer(inclinometer) => {
-                inclinometer.try_accept(ctx, network, ipc_tx).await
+                inclinometer.try_accept(ctx, network, signal_tx).await
             }
-            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, network, ipc_tx).await,
+            Self::VolvoD7E(volvo) => volvo.try_accept(ctx, network, signal_tx).await,
             Self::HydraulicControlUnit(hydraulic) => {
-                hydraulic.try_accept(ctx, network, ipc_tx).await
+                hydraulic.try_accept(ctx, network, signal_tx).await
             }
             Self::VehicleManagementSystem(responder) => {
-                responder.try_accept(ctx, network, ipc_tx).await
+                responder.try_accept(ctx, network, signal_tx).await
             }
-            Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, network, ipc_tx).await,
+            Self::VehicleControlUnit(vcu) => vcu.try_accept(ctx, network, signal_tx).await,
         }
     }
 
@@ -360,7 +360,7 @@ pub trait J1939Unit {
         &mut self,
         ctx: &mut NetDriverContext,
         network: &crate::net::ControlNetwork,
-        ipc_tx: crate::runtime::IPCSender,
+        signal_tx: crate::runtime::SignalSender,
     ) -> impl std::future::Future<Output = Result<(), J1939UnitError>> + Send;
 
     /// Trigger the unit manually.

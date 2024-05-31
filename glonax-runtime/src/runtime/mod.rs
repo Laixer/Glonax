@@ -96,6 +96,13 @@ pub trait Service<Cnf> {
         std::future::ready(())
     }
 
+    fn net_recv(
+        &mut self,
+        _signal_tx: SignalSender,
+    ) -> impl std::future::Future<Output = ()> + Send {
+        std::future::ready(())
+    }
+
     /// Tick the component on interval.
     ///
     /// This method is called in conjunction with other services
@@ -261,9 +268,10 @@ impl Runtime {
         C: Clone + Send + 'static,
     {
         let mut command_rx = self.command_rx.take().unwrap();
-        let command_tx = self.command_tx.clone();
-        let ipc_tx = self.ipc_tx.clone();
-        let signal_rx = self.signal_rx.resubscribe();
+        // let command_tx = self.command_tx.clone();
+        // let ipc_tx = self.ipc_tx.clone();
+        // let signal_rx = self.signal_rx.resubscribe();
+        let signal_tx = self.signal_tx.clone().unwrap();
         let mut shutdown = self.shutdown.0.subscribe();
         let mut shutdown2 = self.shutdown.0.subscribe();
         let mut shutdown3 = self.shutdown.0.subscribe();
@@ -279,7 +287,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service.wait_io(ipc_tx.clone(), command_tx.clone(), signal_rx.resubscribe()).await;
+                            service.net_recv(signal_tx.clone()).await;
 
                         }
                     } => {}

@@ -55,7 +55,7 @@ impl super::J1939Unit for VehicleManagementSystem {
         &mut self,
         _ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        _ipc_tx: crate::runtime::IPCSender,
+        _signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         if let Some(pgn) = network.try_accept(self) {
             match pgn {

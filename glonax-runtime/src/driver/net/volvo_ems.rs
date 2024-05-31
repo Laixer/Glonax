@@ -103,9 +103,9 @@ impl super::J1939Unit for VolvoD7E {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        ipc_tx: crate::runtime::IPCSender,
+        signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.try_accept(ctx, network, ipc_tx).await
+        self.ems.try_accept(ctx, network, signal_tx).await
     }
 
     async fn trigger(

@@ -472,7 +472,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        ipc_tx: crate::runtime::IPCSender,
+        signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
         let result = Result::<(), super::J1939UnitError>::Ok(());
@@ -482,7 +482,6 @@ impl super::J1939Unit for HydraulicControlUnit {
         //     result = Err(super::J1939UnitError::MessageTimeout);
         // }
 
-        // TODO: Send motion signal to the pipeline
         if let Some(message) = network.try_accept(self) {
             match message {
                 HydraulicMessage::Actuator(_actuator) => {}
@@ -520,11 +519,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             Motion::StopAll,
                         )));
 
-                        // log::debug!("Hydraulic: StopAll");
-
-                        if let Err(e) =
-                            ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::StopAll)))
-                        {
+                        if let Err(e) = signal_tx.send(Object::Motion(Motion::StopAll)) {
                             log::error!("Failed to send motion signal: {}", e);
                         }
                     } else {
@@ -532,11 +527,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                             Motion::ResumeAll,
                         )));
 
-                        // log::debug!("Hydraulic: ResumeAll");
-
-                        if let Err(e) =
-                            ipc_tx.send(ObjectMessage::signal(Object::Motion(Motion::ResumeAll)))
-                        {
+                        if let Err(e) = signal_tx.send(Object::Motion(Motion::ResumeAll)) {
                             log::error!("Failed to send motion signal: {}", e);
                         }
                     }

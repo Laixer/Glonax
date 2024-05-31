@@ -322,7 +322,7 @@ impl super::J1939Unit for EngineManagementSystem {
         &mut self,
         ctx: &mut super::NetDriverContext,
         network: &crate::net::ControlNetwork,
-        ipc_tx: crate::runtime::IPCSender,
+        signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
         let result = Result::<(), super::J1939UnitError>::Ok(());
@@ -388,10 +388,8 @@ impl super::J1939Unit for EngineManagementSystem {
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Engine(engine_signal)));
 
-                    if let Err(e) =
-                        ipc_tx.send(ObjectMessage::signal(Object::Engine(engine_signal)))
-                    {
-                        log::error!("Failed to send engine signal: {}", e);
+                    if let Err(e) = signal_tx.send(Object::Engine(engine_signal)) {
+                        log::error!("Failed to send signal: {}", e);
                     }
                 }
                 EngineMessage::Shutdown(_shutdown) => {
