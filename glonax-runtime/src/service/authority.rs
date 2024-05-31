@@ -1,3 +1,5 @@
+use j1939::protocol;
+
 use crate::{
     core::Object,
     driver::net::J1939Unit,
@@ -112,6 +114,7 @@ impl std::fmt::Display for NetDriverItem {
 
 pub struct NetworkAuthority {
     network: ControlNetwork,
+    default_address: u8,
     drivers: Vec<NetDriverItem>,
     is_setup: bool,
 }
@@ -200,6 +203,7 @@ impl Clone for NetworkAuthority {
 
         Self {
             network,
+            default_address: self.default_address,
             drivers,
             is_setup: self.is_setup,
         }
@@ -217,6 +221,9 @@ impl NetworkService for NetworkAuthority {
             self.is_setup = true;
         }
 
+        // TODO: Check here for J1939 Request PGNs and respond with message.
+
+        // TODO: Only send frames to drivers that are interested in them.
         for driver in self.drivers.iter_mut() {
             if let Err(error) =
                 driver
@@ -274,12 +281,8 @@ impl Service<NetworkConfig> for NetworkAuthority {
             .unwrap()
             .with_filter(filter);
 
+        // TODO: Move this driver thing to a factory.
         let mut drivers = Vec::new();
-
-        // drivers.push(NetDriverItem::new(
-        //     crate::driver::VehicleManagementSystem::new(config.address),
-        // ));
-
         for driver in config.driver.iter() {
             match (driver.vendor.as_str(), driver.product.as_str()) {
                 ("laixer", "vcu") => {
@@ -308,6 +311,7 @@ impl Service<NetworkConfig> for NetworkAuthority {
                         driver.sa.unwrap_or(config.address),
                     )));
                 }
+                // TODO:
                 // ("j1939", "ecm") => {
                 //     drivers.push(NetDriverItem::new(
                 //         crate::driver::EngineManagementSystem::new(
@@ -330,6 +334,7 @@ impl Service<NetworkConfig> for NetworkAuthority {
 
         Self {
             network,
+            default_address: config.address,
             drivers,
             is_setup: false,
         }
@@ -337,6 +342,16 @@ impl Service<NetworkConfig> for NetworkAuthority {
 
     fn ctx(&self) -> ServiceContext {
         ServiceContext::with_address("authority_rx", self.network.interface())
+    }
+
+    async fn setup(&mut self) {
+        self.network
+            .send(&protocol::address_claimed(
+                self.default_address,
+                self.network.name(),
+            ))
+            .await
+            .unwrap();
     }
 
     async fn teardown(&mut self) {
