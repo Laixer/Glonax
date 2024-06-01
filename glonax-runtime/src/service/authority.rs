@@ -366,13 +366,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             return;
         }
 
-        // TODO: Only send frames to drivers that are interested in them.
-        // TODO: try_accept should pass the frame to the driver.
         for driver in self.drivers.iter_mut() {
             if let Err(error) =
                 driver
                     .driver
-                    .try_accept(&mut driver.context, &self.network, signal_tx.clone())
+                    .try_recv(&mut driver.context, frame, signal_tx.clone())
             {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }

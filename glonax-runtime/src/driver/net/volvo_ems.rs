@@ -82,7 +82,7 @@ impl super::engine::Engine for VolvoD7E {
 }
 
 impl Parsable<EngineMessage> for VolvoD7E {
-    fn parse(&mut self, frame: &Frame) -> Option<EngineMessage> {
+    fn parse(&self, frame: &Frame) -> Option<EngineMessage> {
         self.ems.parse(frame)
     }
 }
@@ -104,13 +104,14 @@ impl super::J1939Unit for VolvoD7E {
         self.source_address
     }
 
-    fn try_accept(
-        &mut self,
+    fn try_recv(
+        &self,
         ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        // network: &crate::net::ControlNetwork,
+        frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
-        self.ems.try_accept(ctx, network, signal_tx)
+        self.ems.try_recv(ctx, frame, signal_tx)
     }
 
     fn trigger(

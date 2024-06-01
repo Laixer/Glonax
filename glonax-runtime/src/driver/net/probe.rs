@@ -30,7 +30,7 @@ impl Probe {
 }
 
 impl Parsable<EcuAddress> for Probe {
-    fn parse(&mut self, frame: &Frame) -> Option<EcuAddress> {
+    fn parse(&self, frame: &Frame) -> Option<EcuAddress> {
         let mut address = EcuAddress {
             destination_address: None,
             source_address: None,
@@ -38,13 +38,15 @@ impl Parsable<EcuAddress> for Probe {
 
         if !self.addresses.contains(&frame.id().source_address()) {
             address.source_address = Some(frame.id().source_address());
-            self.addresses.push(frame.id().source_address());
+            // TODO: Parse should not modify state.
+            // self.addresses.push(frame.id().source_address());
         }
 
         if let Some(destination_address) = frame.id().destination_address() {
             if destination_address != 0xff && !self.addresses.contains(&destination_address) {
                 address.destination_address = Some(destination_address);
-                self.addresses.push(destination_address);
+                // TODO: Parse should not modify state.
+                // self.addresses.push(destination_address);
             }
         }
 

@@ -90,7 +90,7 @@ impl J1939Message {
 pub struct J1939ApplicationInspector;
 
 impl Parsable<J1939Message> for J1939ApplicationInspector {
-    fn parse(&mut self, frame: &Frame) -> Option<J1939Message> {
+    fn parse(&self, frame: &Frame) -> Option<J1939Message> {
         J1939Message::from_frame(frame)
     }
 }

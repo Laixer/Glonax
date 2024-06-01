@@ -194,7 +194,7 @@ impl KueblerEncoder {
 }
 
 impl Parsable<EncoderMessage> for KueblerEncoder {
-    fn parse(&mut self, frame: &Frame) -> Option<EncoderMessage> {
+    fn parse(&self, frame: &Frame) -> Option<EncoderMessage> {
         if let Some(destination_address) = frame.id().destination_address() {
             if destination_address != self.destination_address && destination_address != 0xff {
                 return None;
@@ -256,10 +256,10 @@ impl super::J1939Unit for KueblerEncoder {
         Ok(())
     }
 
-    fn try_accept(
-        &mut self,
+    fn try_recv(
+        &self,
         ctx: &mut super::NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
@@ -268,14 +268,15 @@ impl super::J1939Unit for KueblerEncoder {
         //     result = Err(super::J1939UnitError::MessageTimeout);
         // }
 
-        if let Some(message) = network.try_accept(self) {
+        if let Some(message) = self.parse(frame) {
             match message {
                 EncoderMessage::AddressClaim(name) => {
                     ctx.rx_mark();
 
                     debug!(
                         "[{}] {}:0x{:X}: Address claimed: {}",
-                        network.interface(),
+                        // network.interface(),
+                        "kaas0",
                         self.name(),
                         self.destination(),
                         name

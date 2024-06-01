@@ -169,10 +169,10 @@ pub trait J1939Unit: Send + Sync {
     /// It is advised to use the `try_accept` method, as opposed to the `tick` method, to handle
     /// unit setup and teardown. Do not perform any actual work in the `setup` and `teardown`
     /// methods, as they can cause network congestion and slow down the system.
-    fn try_accept(
-        &mut self,
+    fn try_recv(
+        &self,
         ctx: &mut NetDriverContext,
-        network: &crate::net::ControlNetwork,
+        frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
     ) -> Result<(), J1939UnitError>;
 

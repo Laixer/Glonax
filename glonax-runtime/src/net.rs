@@ -315,7 +315,7 @@ pub trait Parsable<T>: Send + Sync {
     ///
     /// Returns `None` if the frame is not parsable. Returns `Some(T)` if the frame is parsable
     /// and the message is successfully parsed and returned.
-    fn parse(&mut self, frame: &Frame) -> Option<T>;
+    fn parse(&self, frame: &Frame) -> Option<T>;
 }
 
 /// The control network is used to accept and store incoming frames.
