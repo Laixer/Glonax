@@ -89,6 +89,13 @@ impl NetDriverItem {
         }
     }
 
+    fn setup(
+        &mut self,
+        tx_queue: &mut Vec<j1939::Frame>,
+    ) -> Result<(), crate::driver::net::J1939UnitError> {
+        self.driver.setup(&mut self.context, tx_queue)
+    }
+
     fn try_recv(
         &mut self,
         frame: &j1939::Frame,
@@ -149,12 +156,12 @@ impl NetworkAuthority {
                 driver
             );
 
-            if let Err(error) = driver.driver.setup(&mut driver.context, &mut tx_queue) {
-                error!("[{}] {}: {}", self.network.interface(), driver, error);
+            if let Err(e) = driver.setup(&mut tx_queue) {
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
-                error!("Failed to send vectored: {}", e);
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             };
         }
     }
@@ -405,12 +412,12 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
-            if let Err(error) = driver.tick(&mut tx_queue) {
-                error!("[{}] {}: {}", self.network.interface(), driver, error);
+            if let Err(e) = driver.tick(&mut tx_queue) {
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
-                error!("Failed to send vectored: {}", e);
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             };
         }
     }
@@ -419,12 +426,12 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
-            if let Err(error) = driver.trigger(&mut tx_queue, object) {
-                error!("[{}] {}: {}", self.network.interface(), driver, error);
+            if let Err(e) = driver.trigger(&mut tx_queue, object) {
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
-                error!("Failed to send vectored: {}", e);
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             };
         }
     }
@@ -439,12 +446,12 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 driver
             );
 
-            if let Err(error) = driver.teardown(&mut tx_queue) {
-                error!("[{}] {}: {}", self.network.interface(), driver, error);
+            if let Err(e) = driver.teardown(&mut tx_queue) {
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
-                error!("Failed to send vectored: {}", e);
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             };
         }
     }
