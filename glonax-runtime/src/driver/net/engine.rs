@@ -339,7 +339,7 @@ impl super::J1939Unit for EngineManagementSystem {
         ctx: &mut super::NetDriverContext,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
         // if ctx.is_rx_timeout(std::time::Duration::from_millis(250)) {
@@ -350,7 +350,6 @@ impl super::J1939Unit for EngineManagementSystem {
             match message {
                 EngineMessage::EngineController1(controller) => {
                     let mut engine_signal = crate::core::Engine::default();
-                    ctx.rx_mark();
 
                     if let Some(driver_demand) = controller.driver_demand {
                         engine_signal.driver_demand = driver_demand;
@@ -406,14 +405,20 @@ impl super::J1939Unit for EngineManagementSystem {
                     if let Err(e) = signal_tx.send(Object::Engine(engine_signal)) {
                         error!("Failed to send signal: {}", e);
                     }
+
+                    return Ok(super::J1939UnitOk::SignalQueued);
                 }
                 EngineMessage::Shutdown(_shutdown) => {
                     // TODO: Handle shutdown message, set state to stopping
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
-                _ => {}
+                _ => {
+                    return Ok(super::J1939UnitOk::FrameParsed);
+                }
             }
         }
 
-        Ok(())
+        Ok(super::J1939UnitOk::FrameIgnored)
     }
 }

@@ -155,7 +155,7 @@ impl super::J1939Unit for VehicleControlUnit {
         ctx: &mut super::NetDriverContext,
         frame: &j1939::Frame,
         _signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
         // if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
@@ -166,8 +166,6 @@ impl super::J1939Unit for VehicleControlUnit {
             match message {
                 VehicleMessage::VecraftConfig(_config) => {}
                 VehicleMessage::SoftwareIdentification(version) => {
-                    ctx.rx_mark();
-
                     debug!(
                         "[{}] {}:0x{:X}: Firmware version: {}.{}.{}",
                         // network.interface(),
@@ -178,10 +176,10 @@ impl super::J1939Unit for VehicleControlUnit {
                         version.1,
                         version.2
                     );
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
                 VehicleMessage::AddressClaim(name) => {
-                    ctx.rx_mark();
-
                     debug!(
                         "[{}] {}:0x{:X}: Address claimed: {}",
                         // network.interface(),
@@ -190,16 +188,18 @@ impl super::J1939Unit for VehicleControlUnit {
                         self.destination(),
                         name
                     );
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
                 VehicleMessage::Status(status) => {
-                    ctx.rx_mark();
-
                     status.into_error()?;
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
             }
         }
 
-        Ok(())
+        Ok(super::J1939UnitOk::FrameIgnored)
     }
 
     fn trigger(

@@ -367,12 +367,20 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         }
 
         for driver in self.drivers.iter_mut() {
-            if let Err(error) =
-                driver
-                    .driver
-                    .try_recv(&mut driver.context, frame, signal_tx.clone())
+            match driver
+                .driver
+                .try_recv(&mut driver.context, frame, signal_tx.clone())
             {
-                error!("[{}] {}: {}", self.network.interface(), driver, error);
+                Ok(crate::driver::net::J1939UnitOk::SignalQueued) => {
+                    driver.context.rx_mark();
+                }
+                Ok(crate::driver::net::J1939UnitOk::FrameParsed) => {
+                    driver.context.rx_mark();
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    error!("[{}] {}: {}", self.network.interface(), driver, e);
+                }
             }
         }
     }

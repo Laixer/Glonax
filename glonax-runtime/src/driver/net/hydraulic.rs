@@ -472,7 +472,7 @@ impl super::J1939Unit for HydraulicControlUnit {
         ctx: &mut super::NetDriverContext,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
         // TODO: If possible, move timeout checks to pipeline
@@ -486,8 +486,6 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::MotionConfig(_config) => {}
                 HydraulicMessage::VecraftConfig(_config) => {}
                 HydraulicMessage::SoftwareIdentification(version) => {
-                    ctx.rx_mark();
-
                     debug!(
                         "[{}] {}:0x{:X}: Firmware version: {}.{}.{}",
                         // network.interface(),
@@ -498,10 +496,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                         version.1,
                         version.2
                     );
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
                 HydraulicMessage::AddressClaim(name) => {
-                    ctx.rx_mark();
-
                     debug!(
                         "[{}] {}:0x{:X}: Address claimed: {}",
                         // network.interface(),
@@ -510,10 +508,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                         self.destination(),
                         name
                     );
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
                 HydraulicMessage::Status(status) => {
-                    ctx.rx_mark();
-
                     if status.locked {
                         ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(
                             Motion::StopAll,
@@ -533,11 +531,13 @@ impl super::J1939Unit for HydraulicControlUnit {
                     }
 
                     status.into_error()?;
+
+                    return Ok(super::J1939UnitOk::SignalQueued);
                 }
             }
         }
 
-        Ok(())
+        Ok(super::J1939UnitOk::FrameIgnored)
     }
 
     fn trigger(

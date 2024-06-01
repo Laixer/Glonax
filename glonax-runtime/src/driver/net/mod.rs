@@ -118,6 +118,15 @@ impl From<std::io::Error> for J1939UnitError {
 
 impl std::error::Error for J1939UnitError {}
 
+pub enum J1939UnitOk {
+    /// Unit has queued a signal.
+    SignalQueued,
+    /// Unit has parsed a frame.
+    FrameParsed,
+    /// Unit has ignored a frame.
+    FrameIgnored,
+}
+
 pub trait J1939Unit: Send + Sync {
     /// Get the vendor of the unit.
     fn vendor(&self) -> &'static str;
@@ -174,7 +183,7 @@ pub trait J1939Unit: Send + Sync {
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), J1939UnitError>;
+    ) -> Result<J1939UnitOk, J1939UnitError>;
 
     /// Trigger the unit manually.
     ///

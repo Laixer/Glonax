@@ -110,7 +110,7 @@ impl super::J1939Unit for VolvoD7E {
         // network: &crate::net::ControlNetwork,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
         self.ems.try_recv(ctx, frame, signal_tx)
     }
 

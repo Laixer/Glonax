@@ -261,7 +261,7 @@ impl super::J1939Unit for KueblerEncoder {
         ctx: &mut super::NetDriverContext,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
         // let mut result = Result::<(), super::J1939UnitError>::Ok(());
 
         // if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
@@ -271,8 +271,6 @@ impl super::J1939Unit for KueblerEncoder {
         if let Some(message) = self.parse(frame) {
             match message {
                 EncoderMessage::AddressClaim(name) => {
-                    ctx.rx_mark();
-
                     debug!(
                         "[{}] {}:0x{:X}: Address claimed: {}",
                         // network.interface(),
@@ -281,10 +279,10 @@ impl super::J1939Unit for KueblerEncoder {
                         self.destination(),
                         name
                     );
+
+                    return Ok(super::J1939UnitOk::FrameParsed);
                 }
                 EncoderMessage::ProcessData(process_data) => {
-                    ctx.rx_mark();
-
                     let encoder_signal =
                         (process_data.source_address, process_data.position as f32);
 
@@ -293,11 +291,13 @@ impl super::J1939Unit for KueblerEncoder {
                     if let Err(e) = signal_tx.send(Object::Encoder(encoder_signal)) {
                         error!("Failed to send encoder signal: {}", e);
                     }
+
+                    return Ok(super::J1939UnitOk::SignalQueued);
                 }
             }
         }
 
-        Ok(())
+        Ok(super::J1939UnitOk::FrameIgnored)
     }
 }
 
