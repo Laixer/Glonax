@@ -231,7 +231,7 @@ impl super::J1939Unit for KueblerInclinometer {
 
     fn try_recv(
         &self,
-        ctx: &mut super::NetDriverContext,
+        _ctx: &mut super::NetDriverContext,
         frame: &j1939::Frame,
         _signal_tx: crate::runtime::SignalSender,
     ) -> Result<super::J1939UnitOk, super::J1939UnitError> {

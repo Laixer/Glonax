@@ -88,6 +88,36 @@ impl NetDriverItem {
             context: crate::driver::net::NetDriverContext::default(),
         }
     }
+
+    fn try_recv(
+        &mut self,
+        frame: &j1939::Frame,
+        signal_tx: SignalSender,
+    ) -> Result<crate::driver::net::J1939UnitOk, crate::driver::net::J1939UnitError> {
+        self.driver.try_recv(&mut self.context, frame, signal_tx)
+    }
+
+    fn tick(
+        &mut self,
+        tx_queue: &mut Vec<j1939::Frame>,
+    ) -> Result<(), crate::driver::net::J1939UnitError> {
+        self.driver.tick(&mut self.context, tx_queue)
+    }
+
+    fn trigger(
+        &mut self,
+        tx_queue: &mut Vec<j1939::Frame>,
+        object: &Object,
+    ) -> Result<(), crate::driver::net::J1939UnitError> {
+        self.driver.trigger(&mut self.context, tx_queue, object)
+    }
+
+    fn teardown(
+        &mut self,
+        tx_queue: &mut Vec<j1939::Frame>,
+    ) -> Result<(), crate::driver::net::J1939UnitError> {
+        self.driver.teardown(&mut self.context, tx_queue)
+    }
 }
 
 impl std::fmt::Display for NetDriverItem {
@@ -356,10 +386,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         }
 
         for driver in self.drivers.iter_mut() {
-            match driver
-                .driver
-                .try_recv(&mut driver.context, frame, signal_tx.clone())
-            {
+            match driver.try_recv(frame, signal_tx.clone()) {
                 Ok(crate::driver::net::J1939UnitOk::SignalQueued) => {
                     driver.context.rx_mark();
                 }
@@ -378,7 +405,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
-            if let Err(error) = driver.driver.tick(&mut driver.context, &mut tx_queue) {
+            if let Err(error) = driver.tick(&mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
 
@@ -392,10 +419,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
-            if let Err(error) = driver
-                .driver
-                .trigger(&mut driver.context, &mut tx_queue, object)
-            {
+            if let Err(error) = driver.trigger(&mut tx_queue, object) {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
 
@@ -415,7 +439,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 driver
             );
 
-            if let Err(error) = driver.driver.teardown(&mut driver.context, &mut tx_queue) {
+            if let Err(error) = driver.teardown(&mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, error);
             }
 
