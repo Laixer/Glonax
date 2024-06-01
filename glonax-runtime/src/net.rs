@@ -383,6 +383,12 @@ impl ControlNetwork {
         &self.interface
     }
 
+    /// Return the current frame.
+    #[inline]
+    pub fn frame(&self) -> Option<&Frame> {
+        self.frame.as_ref()
+    }
+
     /// Send a frame.
     #[inline]
     pub async fn send(&self, frame: &Frame) -> io::Result<usize> {

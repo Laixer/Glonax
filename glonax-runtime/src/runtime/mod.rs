@@ -1,15 +1,12 @@
-mod component;
+// mod component;
 mod error;
 
 use std::future::Future;
 
 pub use self::error::Error;
-pub use component::{Component, ComponentContext, InitComponent, PostComponent};
+// pub use component::{Component, ComponentContext, InitComponent, PostComponent};
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
-
-pub type IPCSender = std::sync::mpsc::Sender<crate::core::ObjectMessage>;
-pub type IPCReceiver = std::sync::mpsc::Receiver<crate::core::ObjectMessage>;
 
 pub type CommandSender = tokio::sync::broadcast::Sender<crate::core::Object>;
 pub type CommandReceiver = tokio::sync::broadcast::Receiver<crate::core::Object>;
@@ -123,6 +120,14 @@ pub trait Service<Cnf> {
 }
 
 pub trait NetworkService {
+    fn setup2(&mut self) -> impl Future<Output = ()> + Send {
+        async {}
+    }
+
+    fn teardown2(&mut self) -> impl Future<Output = ()> + Send {
+        async {}
+    }
+
     fn recv(&mut self, signal_tx: SignalSender) -> impl Future<Output = ()> + Send;
 
     fn on_tick(&mut self) -> impl Future<Output = ()> + Send;

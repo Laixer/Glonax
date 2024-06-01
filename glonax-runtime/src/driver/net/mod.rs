@@ -9,7 +9,6 @@ pub mod inspector;
 pub mod probe;
 pub mod vcu;
 pub(super) mod vecraft;
-pub mod vms;
 pub mod volvo_ems;
 mod volvo_vecu;
 
