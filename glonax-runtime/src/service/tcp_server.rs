@@ -46,7 +46,7 @@ enum TcpError {
     Io(std::io::Error),
     UnauthorizedControl,
     UnauthorizedCommand,
-    Command(tokio::sync::mpsc::error::SendError<Object>),
+    Command(tokio::sync::broadcast::error::SendError<Object>),
     UnknownMessage(u8),
 }
 
@@ -144,9 +144,8 @@ impl TcpServer {
                     log::debug!("Engine request RPM: {}", engine.rpm);
 
                     command_tx
-                        .send(Object::Engine(engine)).unwrap();
-                        // .await
-                        // .map_err(TcpError::Command)?;
+                        .send(Object::Engine(engine))
+                        .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
@@ -159,9 +158,8 @@ impl TcpServer {
 
                 if session.is_command() {
                     command_tx
-                        .send(Object::Motion(motion.clone())).unwrap();
-                        // .await
-                        // .map_err(TcpError::Command)?;
+                        .send(Object::Motion(motion.clone()))
+                        .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -174,9 +172,6 @@ impl TcpServer {
 
                 if session.is_command() {
                     log::debug!("Target request: {:?}", target);
-                    // ipc_tx
-                    //     .send(ObjectMessage::command(Object::Target(target)))
-                    //     .map_err(TcpError::Queue)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -189,9 +184,8 @@ impl TcpServer {
 
                 if session.is_control() {
                     command_tx
-                        .send(Object::Control(control)).unwrap();
-                        // .await
-                        // .map_err(TcpError::Command)?;
+                        .send(Object::Control(control))
+                        .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }

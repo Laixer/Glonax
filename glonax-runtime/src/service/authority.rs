@@ -4,7 +4,7 @@ use crate::{
     core::Object,
     driver::net::J1939Unit,
     net::ControlNetwork,
-    runtime::{NetworkService, Service, ServiceContext, SignalSender},
+    runtime::{NetworkService, SignalSender},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -51,17 +51,6 @@ pub struct CanDriverConfig {
     /// Product.
     pub product: String,
 }
-
-// impl CanDriverConfig {
-//     pub fn to_net_driver(&self, default_da: u8) -> Result<NetDriver, ()> {
-//         NetDriver::factory(
-//             &self.vendor,
-//             &self.product,
-//             self.da,
-//             self.sa.unwrap_or(default_da),
-//         )
-//     }
-// }
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct NetworkConfig {
