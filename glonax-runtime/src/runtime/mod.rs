@@ -101,30 +101,18 @@ pub trait Service<Cnf> {
     ) -> impl std::future::Future<Output = ()> + Send {
         std::future::ready(())
     }
-
-    /// Tick the component on interval.
-    ///
-    /// This method is called in conjunction with other services
-    /// and should therefore be non-blocking. The method is optional
-    /// and does not need to be implemented.
-    fn tick(&mut self) -> impl std::future::Future<Output = ()> + Send {
-        std::future::ready(())
-    }
-
-    fn command(
-        &mut self,
-        _object: &crate::core::Object,
-    ) -> impl std::future::Future<Output = ()> + Send {
-        std::future::ready(())
-    }
 }
 
-pub trait NetworkService {
-    fn setup2(&mut self) -> impl Future<Output = ()> + Send {
+pub trait NetworkService<Cnf> {
+    fn new(config: Cnf) -> Self
+    where
+        Self: Sized;
+
+    fn setup(&mut self) -> impl Future<Output = ()> + Send {
         async {}
     }
 
-    fn teardown2(&mut self) -> impl Future<Output = ()> + Send {
+    fn teardown(&mut self) -> impl Future<Output = ()> + Send {
         async {}
     }
 
@@ -279,7 +267,7 @@ impl Runtime {
 
     pub fn schedule_net_service<S, C>(&mut self, config: C, duration: std::time::Duration)
     where
-        S: Service<C> + Clone + Send + Sync + 'static,
+        S: NetworkService<C> + Clone + Send + Sync + 'static,
         C: Clone + Send + 'static,
     {
         let mut command_rx = self.command_tx.subscribe();
@@ -299,7 +287,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service.wait_io_pub(signal_tx.clone()).await;
+                            service.recv(signal_tx.clone()).await;
                         }
                     } => {}
                     _ = shutdown.recv() => {}
@@ -314,7 +302,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service2.tick().await;
+                            service2.on_tick().await;
                             tokio::time::sleep(duration).await;
                         }
                     } => {}
@@ -328,7 +316,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         while let Ok(object) = command_rx.recv().await {
-                            service3.command(&object).await;
+                            service3.on_command(&object).await;
                         }
                     } => {}
                     _ = shutdown.recv() => {}
