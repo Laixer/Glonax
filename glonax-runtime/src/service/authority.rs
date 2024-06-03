@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use j1939::protocol;
 
 use crate::{
@@ -46,6 +48,8 @@ pub struct CanDriverConfig {
     pub da: u8,
     /// Driver source.
     pub sa: Option<u8>,
+    /// Timeout in milliseconds.
+    pub timeout: Option<u64>,
     /// Vendor.
     pub vendor: String,
     /// Product.
@@ -79,14 +83,23 @@ impl NetworkConfig {
 struct NetDriverItem {
     driver: Box<dyn crate::driver::net::J1939Unit>,
     context: crate::driver::net::NetDriverContext,
+    /// Timeout for receiving messages.
+    rx_timeout: Option<Duration>,
 }
 
 impl NetDriverItem {
     fn new<T: J1939Unit + 'static>(driver: T) -> Self {
         Self {
+            rx_timeout: None,
             driver: Box::new(driver),
             context: crate::driver::net::NetDriverContext::default(),
         }
+    }
+
+    pub fn is_rx_timeout(&self) -> bool {
+        self.rx_timeout
+            .map(|timeout| self.context.is_rx_timeout(timeout))
+            .unwrap_or(false)
     }
 
     fn setup(
@@ -182,6 +195,7 @@ impl Clone for NetworkAuthority {
                             driver.driver.source(),
                         )),
                         context: driver.context.clone(),
+                        rx_timeout: driver.rx_timeout,
                     });
                 }
                 ("laixer", "hcu") => {
@@ -191,6 +205,7 @@ impl Clone for NetworkAuthority {
                             driver.driver.source(),
                         )),
                         context: driver.context.clone(),
+                        rx_timeout: driver.rx_timeout,
                     });
                 }
                 ("volvo", "d7e") => {
@@ -200,6 +215,7 @@ impl Clone for NetworkAuthority {
                             driver.driver.source(),
                         )),
                         context: driver.context.clone(),
+                        rx_timeout: driver.rx_timeout,
                     });
                 }
                 ("kübler", "inclinometer") => {
@@ -209,6 +225,7 @@ impl Clone for NetworkAuthority {
                             driver.driver.source(),
                         )),
                         context: driver.context.clone(),
+                        rx_timeout: driver.rx_timeout,
                     });
                 }
                 ("kübler", "encoder") => {
@@ -218,6 +235,7 @@ impl Clone for NetworkAuthority {
                             driver.driver.source(),
                         )),
                         context: driver.context.clone(),
+                        rx_timeout: driver.rx_timeout,
                     });
                 }
                 _ => {
@@ -254,30 +272,55 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in config.driver.iter() {
             match (driver.vendor.as_str(), driver.product.as_str()) {
                 ("laixer", "vcu") => {
-                    drivers.push(NetDriverItem::new(crate::driver::VehicleControlUnit::new(
-                        driver.da,
-                        driver.sa.unwrap_or(config.address),
-                    )));
-                }
-                ("laixer", "hcu") => {
-                    drivers.push(NetDriverItem::new(
-                        crate::driver::HydraulicControlUnit::new(
+                    let mut net_driver =
+                        NetDriverItem::new(crate::driver::VehicleControlUnit::new(
                             driver.da,
                             driver.sa.unwrap_or(config.address),
-                        ),
-                    ));
+                        ));
+
+                    if let Some(timeout) = driver.timeout {
+                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
+                    }
+
+                    drivers.push(net_driver);
+                }
+                ("laixer", "hcu") => {
+                    let mut net_driver =
+                        NetDriverItem::new(crate::driver::HydraulicControlUnit::new(
+                            driver.da,
+                            driver.sa.unwrap_or(config.address),
+                        ));
+
+                    if let Some(timeout) = driver.timeout {
+                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
+                    }
+
+                    drivers.push(net_driver);
                 }
                 ("volvo", "d7e") => {
-                    drivers.push(NetDriverItem::new(crate::driver::VolvoD7E::new(
+                    let mut net_driver = NetDriverItem::new(crate::driver::VolvoD7E::new(
                         driver.da,
                         driver.sa.unwrap_or(config.address),
-                    )));
+                    ));
+
+                    if let Some(timeout) = driver.timeout {
+                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
+                    }
+
+                    drivers.push(net_driver);
                 }
                 ("kübler", "inclinometer") => {
-                    drivers.push(NetDriverItem::new(crate::driver::KueblerInclinometer::new(
-                        driver.da,
-                        driver.sa.unwrap_or(config.address),
-                    )));
+                    let mut net_driver =
+                        NetDriverItem::new(crate::driver::KueblerInclinometer::new(
+                            driver.da,
+                            driver.sa.unwrap_or(config.address),
+                        ));
+
+                    if let Some(timeout) = driver.timeout {
+                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
+                    }
+
+                    drivers.push(net_driver);
                 }
                 // TODO:
                 // ("j1939", "ecm") => {
@@ -289,10 +332,16 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 //     ));
                 // }
                 ("kübler", "encoder") => {
-                    drivers.push(NetDriverItem::new(crate::driver::KueblerEncoder::new(
+                    let mut net_driver = NetDriverItem::new(crate::driver::KueblerEncoder::new(
                         driver.da,
                         driver.sa.unwrap_or(config.address),
-                    )));
+                    ));
+
+                    if let Some(timeout) = driver.timeout {
+                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
+                    }
+
+                    drivers.push(net_driver);
                 }
                 _ => {
                     error!("Unknown driver: {} {}", driver.vendor, driver.product);
@@ -414,6 +463,14 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
             if let Err(e) = driver.tick(&mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
+            }
+
+            if driver.is_rx_timeout() {
+                error!(
+                    "[{}] {}: communication timeout",
+                    self.network.interface(),
+                    driver
+                );
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
