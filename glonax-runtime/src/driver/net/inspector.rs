@@ -55,20 +55,9 @@ impl J1939Message {
             ))),
             PGN::AcknowledgmentMessage => Some(Self::Acknowledged(frame.pdu()[0])),
             PGN::TimeDate => {
-                use chrono::{TimeZone, Utc};
-
                 let timedate = j1939::spn::TimeDate::from_pdu(frame.pdu());
 
-                let dt = Utc.with_ymd_and_hms(
-                    timedate.year,
-                    timedate.month,
-                    timedate.day,
-                    timedate.hour,
-                    timedate.minute,
-                    timedate.second,
-                );
-
-                Some(Self::TimeDate(dt.single().unwrap()))
+                Some(Self::TimeDate(timedate.as_date_time().single().unwrap()))
             }
             PGN::DiagnosticMessage1 => {
                 let spn = j1939::diagnostic::Message1::from_pdu(frame.pdu());

@@ -392,19 +392,9 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                         error!("Failed to send software identification: {}", e);
                     }
                 }
-                // TODO: Move this to j1939 crate
-                j1939::PGN::TimeDate => {
-                    use chrono::prelude::*;
 
-                    let utc = chrono::Utc::now();
-                    let timedate = j1939::spn::TimeDate {
-                        year: utc.year(),
-                        month: utc.month(),
-                        day: utc.day(),
-                        hour: utc.hour(),
-                        minute: utc.minute(),
-                        second: utc.second(),
-                    };
+                j1939::PGN::TimeDate => {
+                    let timedate = j1939::spn::TimeDate::from_date_time(chrono::Utc::now());
 
                     let id = j1939::IdBuilder::from_pgn(j1939::PGN::TimeDate)
                         .sa(self.default_address)
