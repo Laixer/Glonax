@@ -104,22 +104,79 @@ pub trait Service<Cnf> {
 }
 
 pub trait NetworkService<Cnf> {
+    /// Creates a new instance of the network service with the given configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `config` - The configuration for the network service.
+    ///
+    /// # Returns
+    ///
+    /// The newly created network service instance.
     fn new(config: Cnf) -> Self
     where
         Self: Sized;
 
+    /// Sets up the network service.
+    ///
+    /// This method is called during the initialization of the network service.
+    /// Implementations should perform any necessary setup operations here.
+    ///
+    /// # Returns
+    ///
+    /// A future that resolves when the setup is complete.
     fn setup(&mut self) -> impl Future<Output = ()> + Send {
         async {}
     }
 
+    /// Tears down the network service.
+    ///
+    /// This method is called during the shutdown of the network service.
+    /// Implementations should perform any necessary cleanup operations here.
+    ///
+    /// # Returns
+    ///
+    /// A future that resolves when the teardown is complete.
     fn teardown(&mut self) -> impl Future<Output = ()> + Send {
         async {}
     }
 
+    /// Receives a signal from the network.
+    ///
+    /// This method is called when a signal is received from the network.
+    /// Implementations should handle the received signal here.
+    ///
+    /// # Arguments
+    ///
+    /// * `signal_tx` - The sender for signals.
+    ///
+    /// # Returns
+    ///
+    /// A future that resolves when the signal has been processed.
     fn recv(&mut self, signal_tx: SignalSender) -> impl Future<Output = ()> + Send;
 
+    /// Performs an action on each tick of the network service.
+    ///
+    /// This method is called on each tick of the network service.
+    /// Implementations should perform any necessary actions here.
+    ///
+    /// # Returns
+    ///
+    /// A future that resolves when the action has been performed.
     fn on_tick(&mut self) -> impl Future<Output = ()> + Send;
 
+    /// Performs an action in response to a command.
+    ///
+    /// This method is called when a command is received by the network service.
+    /// Implementations should perform the necessary action based on the received command.
+    ///
+    /// # Arguments
+    ///
+    /// * `object` - The object representing the received command.
+    ///
+    /// # Returns
+    ///
+    /// A future that resolves when the action has been performed.
     fn on_command(&mut self, object: &crate::core::Object) -> impl Future<Output = ()> + Send;
 }
 
@@ -127,6 +184,7 @@ pub struct Runtime {
     /// Command sender.
     command_tx: CommandSender,
     /// Command receiver.
+    #[allow(dead_code)]
     command_rx: CommandReceiver,
 
     /// Signal sender.
