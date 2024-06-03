@@ -1,7 +1,7 @@
 // mod component;
 mod error;
 
-use std::future::Future;
+use std::{future::Future, time::Duration};
 
 pub use self::error::Error;
 // pub use component::{Component, ComponentContext, InitComponent, PostComponent};
@@ -71,14 +71,14 @@ pub trait Service<Cnf> {
     /// Setup the service.
     ///
     /// This method is called once on startup and should be used to initialize the service.
-    fn setup(&mut self) -> impl std::future::Future<Output = ()> + Send {
+    fn setup(&mut self) -> impl Future<Output = ()> + Send {
         std::future::ready(())
     }
 
     /// Teardown the service.
     ///
     /// This method is called once on shutdown and should be used to cleanup the service.
-    fn teardown(&mut self) -> impl std::future::Future<Output = ()> + Send {
+    fn teardown(&mut self) -> impl Future<Output = ()> + Send {
         std::future::ready(())
     }
 
@@ -91,14 +91,11 @@ pub trait Service<Cnf> {
         &mut self,
         _command_tx: CommandSender,
         _signal_rx: SignalReceiver,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    ) -> impl Future<Output = ()> + Send {
         std::future::ready(())
     }
 
-    fn wait_io_pub(
-        &mut self,
-        _signal_tx: SignalSender,
-    ) -> impl std::future::Future<Output = ()> + Send {
+    fn wait_io_pub(&mut self, _signal_tx: SignalSender) -> impl Future<Output = ()> + Send {
         std::future::ready(())
     }
 }
@@ -201,7 +198,7 @@ pub struct Runtime {
     ),
 }
 
-impl std::default::Default for Runtime {
+impl Default for Runtime {
     fn default() -> Self {
         let (command_tx, command_rx) =
             tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_COMMAND);
@@ -323,7 +320,7 @@ impl Runtime {
         }
     }
 
-    pub fn schedule_net_service<S, C>(&mut self, config: C, duration: std::time::Duration)
+    pub fn schedule_net_service<S, C>(&mut self, config: C, duration: Duration)
     where
         S: NetworkService<C> + Clone + Send + Sync + 'static,
         C: Clone + Send + 'static,

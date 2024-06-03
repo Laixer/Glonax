@@ -136,7 +136,13 @@ pub trait J1939Unit: Send + Sync {
 
     /// Get the name of the unit.
     fn name(&self) -> String {
-        format!("{}:{}", self.vendor(), self.product())
+        format!(
+            "{}:{}:0x{:X}:0x{:X}",
+            self.vendor(),
+            self.product(),
+            self.source(),
+            self.destination()
+        )
     }
 
     /// Get the destination address of the unit.

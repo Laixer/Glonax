@@ -130,12 +130,7 @@ impl NetDriverItem {
 
 impl std::fmt::Display for NetDriverItem {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}:0x{:X}",
-            self.driver.name(), // TOOD: Move this further up the chain.
-            self.driver.destination()
-        )
+        write!(f, "{}", self.driver.name())
     }
 }
 

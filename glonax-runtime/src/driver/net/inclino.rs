@@ -239,11 +239,10 @@ impl super::J1939Unit for KueblerInclinometer {
             match message {
                 InclinoMessage::AddressClaim(name) => {
                     debug!(
-                        "[{}] {}:0x{:X}: Address claimed: {}",
+                        "[{}] {}: Address claimed: {}",
                         // network.interface(),
                         "kaas0",
                         self.name(),
-                        self.destination(),
                         name
                     );
 

@@ -480,11 +480,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::VecraftConfig(_config) => {}
                 HydraulicMessage::SoftwareIdentification(version) => {
                     debug!(
-                        "[{}] {}:0x{:X}: Firmware version: {}.{}.{}",
+                        "[{}] {}: Firmware version: {}.{}.{}",
                         // network.interface(),
                         "kaas0", // TODO: Replace with network.interface()
                         self.name(),
-                        self.destination(),
                         version.0,
                         version.1,
                         version.2
@@ -494,11 +493,10 @@ impl super::J1939Unit for HydraulicControlUnit {
                 }
                 HydraulicMessage::AddressClaim(name) => {
                     debug!(
-                        "[{}] {}:0x{:X}: Address claimed: {}",
+                        "[{}] {}: Address claimed: {}",
                         // network.interface(),
                         "kaas0", // TODO: Replace with network.interface()
                         self.name(),
-                        self.destination(),
                         name
                     );
 
