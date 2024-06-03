@@ -266,11 +266,10 @@ impl super::J1939Unit for KueblerEncoder {
             match message {
                 EncoderMessage::AddressClaim(name) => {
                     debug!(
-                        "[{}] {}:0x{:X}: Address claimed: {}",
+                        "[{}] {}: Address claimed: {}",
                         // network.interface(),
                         "kaas0",
                         self.name(),
-                        self.destination(),
                         name
                     );
 
