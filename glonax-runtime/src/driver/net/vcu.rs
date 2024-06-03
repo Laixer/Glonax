@@ -156,12 +156,6 @@ impl super::J1939Unit for VehicleControlUnit {
         frame: &j1939::Frame,
         _signal_tx: crate::runtime::SignalSender,
     ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
-        // let mut result = Result::<(), super::J1939UnitError>::Ok(());
-
-        // if ctx.is_rx_timeout(std::time::Duration::from_millis(1_000)) {
-        //     result = Err(super::J1939UnitError::MessageTimeout);
-        // }
-
         if let Some(message) = self.parse(frame) {
             match message {
                 VehicleMessage::VecraftConfig(_config) => {}

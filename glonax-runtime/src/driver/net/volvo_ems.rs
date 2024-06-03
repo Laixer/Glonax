@@ -3,7 +3,7 @@ use std::time::Duration;
 use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::{
-    core::ObjectMessage,
+    core::{Object, ObjectMessage},
     driver::{EngineMessage, Governor},
     net::Parsable,
 };
@@ -118,25 +118,22 @@ impl super::J1939Unit for VolvoD7E {
         &self,
         ctx: &mut super::NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-        object: &crate::core::Object,
+        object: &Object,
     ) -> Result<(), super::J1939UnitError> {
         use super::engine::Engine;
 
-        if let crate::core::Object::Engine(engine_command) = object {
+        if let Object::Engine(engine_command) = object {
             ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
             let engine_signal = {
                 let ctx = ctx.inner();
                 if let Some(x) = &ctx.rx_last_message {
-                    // log::debug!("rx_last_message: {:?}", x.object);
-
-                    if let crate::core::Object::Engine(engine) = x.object {
+                    if let Object::Engine(engine) = x.object {
                         engine
                     } else {
                         crate::core::Engine::shutdown()
                     }
                 } else {
-                    // log::debug!("rx_last_message: None");
                     crate::core::Engine::shutdown()
                 }
             };
@@ -184,15 +181,12 @@ impl super::J1939Unit for VolvoD7E {
         let engine_signal = {
             let ctx = ctx.inner();
             if let Some(x) = &ctx.rx_last_message {
-                // log::debug!("rx_last_message: {:?}", x.object);
-
-                if let crate::core::Object::Engine(engine) = x.object {
+                if let Object::Engine(engine) = x.object {
                     engine
                 } else {
                     crate::core::Engine::shutdown()
                 }
             } else {
-                // log::debug!("rx_last_message: None");
                 crate::core::Engine::shutdown()
             }
         };
@@ -200,15 +194,12 @@ impl super::J1939Unit for VolvoD7E {
         let engine_command = {
             let ctx = ctx.inner();
             if let Some(x) = &ctx.tx_last_message {
-                // log::debug!("tx_last_message: {:?}", x.object);
-
-                if let crate::core::Object::Engine(engine) = x.object {
+                if let Object::Engine(engine) = x.object {
                     (engine, Some(x.timestamp))
                 } else {
                     (engine_signal, None)
                 }
             } else {
-                // log::debug!("tx_last_message: None");
                 (engine_signal, None)
             }
         };
