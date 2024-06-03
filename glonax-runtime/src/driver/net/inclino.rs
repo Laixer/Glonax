@@ -150,6 +150,8 @@ impl std::fmt::Display for ProcessDataMessage {
 
 #[derive(Clone)]
 pub struct KueblerInclinometer {
+    /// Network interface.
+    interface: String,
     /// Destination address.
     destination_address: u8,
     /// Source address.
@@ -158,8 +160,9 @@ pub struct KueblerInclinometer {
 
 impl KueblerInclinometer {
     /// Construct a new encoder service.
-    pub fn new(da: u8, sa: u8) -> Self {
+    pub fn new(interface: &str, da: u8, sa: u8) -> Self {
         Self {
+            interface: interface.to_string(),
             destination_address: da,
             source_address: sa,
         }
@@ -240,8 +243,7 @@ impl super::J1939Unit for KueblerInclinometer {
                 InclinoMessage::AddressClaim(name) => {
                     debug!(
                         "[{}] {}: Address claimed: {}",
-                        // network.interface(),
-                        "kaas0",
+                        self.interface,
                         self.name(),
                         name
                     );

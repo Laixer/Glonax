@@ -38,6 +38,9 @@ pub enum EngineMessage {
 // TODO: Implement Engine trait
 #[derive(Clone, Default)]
 pub struct EngineManagementSystem {
+    /// Network interface.
+    #[allow(dead_code)]
+    interface: String,
     /// Destination address.
     destination_address: u8,
     /// Source address.
@@ -46,8 +49,9 @@ pub struct EngineManagementSystem {
 
 impl EngineManagementSystem {
     /// Construct a new engine management system.
-    pub fn new(da: u8, sa: u8) -> Self {
+    pub fn new(interface: &str, da: u8, sa: u8) -> Self {
         Self {
+            interface: interface.to_string(),
             destination_address: da,
             source_address: sa,
         }

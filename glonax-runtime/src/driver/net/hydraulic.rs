@@ -213,6 +213,8 @@ impl std::fmt::Display for MotionConfigMessage {
 
 #[derive(Clone)]
 pub struct HydraulicControlUnit {
+    /// Network interface.
+    interface: String,
     /// Destination address.
     destination_address: u8,
     /// Source address.
@@ -221,8 +223,9 @@ pub struct HydraulicControlUnit {
 
 impl HydraulicControlUnit {
     /// Construct a new actuator service.
-    pub fn new(da: u8, sa: u8) -> Self {
+    pub fn new(interface: &str, da: u8, sa: u8) -> Self {
         Self {
+            interface: interface.to_string(),
             destination_address: da,
             source_address: sa,
         }
@@ -481,8 +484,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::SoftwareIdentification(version) => {
                     debug!(
                         "[{}] {}: Firmware version: {}.{}.{}",
-                        // network.interface(),
-                        "kaas0", // TODO: Replace with network.interface()
+                        self.interface,
                         self.name(),
                         version.0,
                         version.1,
@@ -494,8 +496,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                 HydraulicMessage::AddressClaim(name) => {
                     debug!(
                         "[{}] {}: Address claimed: {}",
-                        // network.interface(),
-                        "kaas0", // TODO: Replace with network.interface()
+                        self.interface,
                         self.name(),
                         name
                     );

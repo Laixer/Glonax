@@ -24,6 +24,9 @@ pub enum VolvoEngineState {
 
 #[derive(Clone)]
 pub struct VolvoD7E {
+    /// Network interface.
+    #[allow(dead_code)]
+    interface: String,
     /// Destination address.
     destination_address: u8,
     /// Source address.
@@ -36,11 +39,12 @@ pub struct VolvoD7E {
 
 impl VolvoD7E {
     /// Construct a new engine management system.
-    pub fn new(da: u8, sa: u8) -> Self {
+    pub fn new(interface: &str, da: u8, sa: u8) -> Self {
         Self {
+            interface: interface.to_string(),
             destination_address: da,
             source_address: sa,
-            ems: EngineManagementSystem::new(da, sa),
+            ems: EngineManagementSystem::new(interface, da, sa),
             governor: Governor::new(800, 2_100, Duration::from_millis(2_000)),
         }
     }

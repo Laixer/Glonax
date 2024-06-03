@@ -66,15 +66,46 @@ async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
 
     debug!("Print incoming frames to screen");
 
-    let mut ems0 = VolvoD7E::new(consts::J1939_ADDRESS_ENGINE0, consts::J1939_ADDRESS_OBDL);
-    let mut enc0 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER0, consts::J1939_ADDRESS_OBDL);
-    let mut enc1 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER1, consts::J1939_ADDRESS_OBDL);
-    let mut enc2 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER2, consts::J1939_ADDRESS_OBDL);
-    let mut enc3 = KueblerEncoder::new(consts::J1939_ADDRESS_ENCODER3, consts::J1939_ADDRESS_OBDL);
-    let mut imu0 = KueblerInclinometer::new(consts::J1939_ADDRESS_IMU0, consts::J1939_ADDRESS_OBDL);
-    let mut hcu0 =
-        HydraulicControlUnit::new(consts::J1939_ADDRESS_HCU0, consts::J1939_ADDRESS_OBDL);
-    let mut vcu0 = VehicleControlUnit::new(consts::J1939_ADDRESS_VCU0, consts::J1939_ADDRESS_OBDL);
+    let mut ems0 = VolvoD7E::new(
+        network.interface(),
+        consts::J1939_ADDRESS_ENGINE0,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut enc0 = KueblerEncoder::new(
+        network.interface(),
+        consts::J1939_ADDRESS_ENCODER0,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut enc1 = KueblerEncoder::new(
+        network.interface(),
+        consts::J1939_ADDRESS_ENCODER1,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut enc2 = KueblerEncoder::new(
+        network.interface(),
+        consts::J1939_ADDRESS_ENCODER2,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut enc3 = KueblerEncoder::new(
+        network.interface(),
+        consts::J1939_ADDRESS_ENCODER3,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut imu0 = KueblerInclinometer::new(
+        network.interface(),
+        consts::J1939_ADDRESS_IMU0,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut hcu0 = HydraulicControlUnit::new(
+        network.interface(),
+        consts::J1939_ADDRESS_HCU0,
+        consts::J1939_ADDRESS_OBDL,
+    );
+    let mut vcu0 = VehicleControlUnit::new(
+        network.interface(),
+        consts::J1939_ADDRESS_VCU0,
+        consts::J1939_ADDRESS_OBDL,
+    );
     let mut jis0 = J1939ApplicationInspector;
 
     loop {
@@ -707,7 +738,9 @@ async fn main() -> anyhow::Result<()> {
         Command::Hcu { address, command } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+
             let hcu0 = glonax::driver::HydraulicControlUnit::new(
+                args.interface.as_str(),
                 destination_address,
                 consts::J1939_ADDRESS_OBDL,
             );
@@ -761,8 +794,10 @@ async fn main() -> anyhow::Result<()> {
         Command::Vecraft { address, command } => {
             let destination_address = j1939_address(address)?;
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
+
             // TODO: Using HCU as Vecraft for now. Need to implement Vecraft driver.
             let hcu0 = glonax::driver::HydraulicControlUnit::new(
+                args.interface.as_str(),
                 destination_address,
                 consts::J1939_ADDRESS_OBDL,
             );
@@ -834,11 +869,13 @@ async fn main() -> anyhow::Result<()> {
             // TODO: Replace string with enum
             let ems = if driver == "volvo" {
                 Box::new(glonax::driver::VolvoD7E::new(
+                    args.interface.as_str(),
                     destination_address,
                     consts::J1939_ADDRESS_VOLVO_VECU,
                 )) as Box<dyn Engine>
             } else {
                 Box::new(glonax::driver::net::engine::EngineManagementSystem::new(
+                    args.interface.as_str(),
                     destination_address,
                     consts::J1939_ADDRESS_OBDL,
                 )) as Box<dyn Engine>

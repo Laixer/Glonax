@@ -15,6 +15,8 @@ pub enum VehicleMessage {
 
 #[derive(Clone)]
 pub struct VehicleControlUnit {
+    /// Network interface.
+    interface: String,
     /// Destination address.
     destination_address: u8,
     /// Source address.
@@ -23,8 +25,9 @@ pub struct VehicleControlUnit {
 
 impl VehicleControlUnit {
     /// Construct a new encoder service.
-    pub fn new(da: u8, sa: u8) -> Self {
+    pub fn new(interface: &str, da: u8, sa: u8) -> Self {
         Self {
+            interface: interface.to_string(),
             destination_address: da,
             source_address: sa,
         }
@@ -162,8 +165,7 @@ impl super::J1939Unit for VehicleControlUnit {
                 VehicleMessage::SoftwareIdentification(version) => {
                     debug!(
                         "[{}] {}: Firmware version: {}.{}.{}",
-                        // network.interface(),
-                        "kaas0",
+                        self.interface,
                         self.name(),
                         version.0,
                         version.1,
@@ -175,8 +177,7 @@ impl super::J1939Unit for VehicleControlUnit {
                 VehicleMessage::AddressClaim(name) => {
                     debug!(
                         "[{}] {}: Address claimed: {}",
-                        // network.interface(),
-                        "kaas0",
+                        self.interface,
                         self.name(),
                         name
                     );

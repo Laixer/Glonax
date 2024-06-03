@@ -147,7 +147,7 @@ impl NetworkAuthority {
             let mut tx_queue = Vec::new();
 
             debug!(
-                "[{}] Setup network driver '{}'",
+                "[{}] Setup network driver: {}",
                 self.network.interface(),
                 driver
             );
@@ -174,6 +174,7 @@ impl Clone for NetworkAuthority {
                 ("laixer", "vcu") => {
                     drivers.push(NetDriverItem {
                         driver: Box::new(crate::driver::VehicleControlUnit::new(
+                            self.network.interface(),
                             driver.driver.destination(),
                             driver.driver.source(),
                         )),
@@ -184,6 +185,7 @@ impl Clone for NetworkAuthority {
                 ("laixer", "hcu") => {
                     drivers.push(NetDriverItem {
                         driver: Box::new(crate::driver::HydraulicControlUnit::new(
+                            self.network.interface(),
                             driver.driver.destination(),
                             driver.driver.source(),
                         )),
@@ -194,6 +196,7 @@ impl Clone for NetworkAuthority {
                 ("volvo", "d7e") => {
                     drivers.push(NetDriverItem {
                         driver: Box::new(crate::driver::VolvoD7E::new(
+                            self.network.interface(),
                             driver.driver.destination(),
                             driver.driver.source(),
                         )),
@@ -204,6 +207,7 @@ impl Clone for NetworkAuthority {
                 ("kübler", "inclinometer") => {
                     drivers.push(NetDriverItem {
                         driver: Box::new(crate::driver::KueblerInclinometer::new(
+                            self.network.interface(),
                             driver.driver.destination(),
                             driver.driver.source(),
                         )),
@@ -214,6 +218,7 @@ impl Clone for NetworkAuthority {
                 ("kübler", "encoder") => {
                     drivers.push(NetDriverItem {
                         driver: Box::new(crate::driver::KueblerEncoder::new(
+                            self.network.interface(),
                             driver.driver.destination(),
                             driver.driver.source(),
                         )),
@@ -257,6 +262,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 ("laixer", "vcu") => {
                     let mut net_driver =
                         NetDriverItem::new(crate::driver::VehicleControlUnit::new(
+                            network.interface(),
                             driver.da,
                             driver.sa.unwrap_or(config.address),
                         ));
@@ -270,6 +276,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 ("laixer", "hcu") => {
                     let mut net_driver =
                         NetDriverItem::new(crate::driver::HydraulicControlUnit::new(
+                            network.interface(),
                             driver.da,
                             driver.sa.unwrap_or(config.address),
                         ));
@@ -282,6 +289,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 }
                 ("volvo", "d7e") => {
                     let mut net_driver = NetDriverItem::new(crate::driver::VolvoD7E::new(
+                        network.interface(),
                         driver.da,
                         driver.sa.unwrap_or(config.address),
                     ));
@@ -295,6 +303,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 ("kübler", "inclinometer") => {
                     let mut net_driver =
                         NetDriverItem::new(crate::driver::KueblerInclinometer::new(
+                            network.interface(),
                             driver.da,
                             driver.sa.unwrap_or(config.address),
                         ));
@@ -316,6 +325,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 // }
                 ("kübler", "encoder") => {
                     let mut net_driver = NetDriverItem::new(crate::driver::KueblerEncoder::new(
+                        network.interface(),
                         driver.da,
                         driver.sa.unwrap_or(config.address),
                     ));
@@ -392,7 +402,6 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                         error!("Failed to send software identification: {}", e);
                     }
                 }
-
                 j1939::PGN::TimeDate => {
                     let timedate = j1939::spn::TimeDate::from_date_time(chrono::Utc::now());
 
@@ -471,7 +480,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             let mut tx_queue = Vec::new();
 
             debug!(
-                "[{}] Teardown network driver '{}'",
+                "[{}] Teardown network driver: {}",
                 self.network.interface(),
                 driver
             );
