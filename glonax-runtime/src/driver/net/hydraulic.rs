@@ -512,22 +512,16 @@ impl super::J1939Unit for HydraulicControlUnit {
                     return Ok(super::J1939UnitOk::FrameParsed);
                 }
                 HydraulicMessage::Status(status) => {
-                    if status.locked {
-                        ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(
-                            Motion::StopAll,
-                        )));
-
-                        if let Err(e) = signal_tx.send(Object::Motion(Motion::StopAll)) {
-                            error!("Failed to send motion signal: {}", e);
-                        }
+                    let motion = if status.locked {
+                        Motion::StopAll
                     } else {
-                        ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(
-                            Motion::ResumeAll,
-                        )));
+                        Motion::ResumeAll
+                    };
 
-                        if let Err(e) = signal_tx.send(Object::Motion(Motion::ResumeAll)) {
-                            error!("Failed to send motion signal: {}", e);
-                        }
+                    ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(motion.clone())));
+
+                    if let Err(e) = signal_tx.send(Object::Motion(motion)) {
+                        error!("Failed to send motion signal: {}", e);
                     }
 
                     status.into_error()?;
