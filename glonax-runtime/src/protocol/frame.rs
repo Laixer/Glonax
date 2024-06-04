@@ -54,6 +54,7 @@ enum FrameMessage {
     Request = 0x12,
 }
 
+#[derive(Debug)]
 pub struct Frame {
     buffer: BytesMut,
     pub message: u8,
@@ -325,6 +326,74 @@ impl super::Packetize for Echo {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_frame() {
+        let frame = Frame::new(FrameMessage::Echo as u8, 4);
+        let bytes = frame.as_ref();
+
+        let frame = Frame::try_from(bytes).unwrap();
+
+        assert_eq!(frame.message, FrameMessage::Echo as u8);
+        assert_eq!(frame.payload_length, 4);
+    }
+
+    #[test]
+    fn test_frame_frame_too_small() {
+        let frame = Frame::try_from(&[0x1, 0x2, 0x3][..]);
+
+        assert_eq!(frame.unwrap_err(), FrameError::FrameTooSmall);
+    }
+
+    #[test]
+    fn test_frame_invalid_header() {
+        let frame = Frame::try_from(&[0u8; PROTO_BUFFER_SIZE][..]);
+
+        assert_eq!(frame.unwrap_err(), FrameError::InvalidHeader);
+    }
+
+    #[test]
+    fn test_frame_version_mismatch() {
+        let mut frame = Frame::new(FrameMessage::Echo as u8, 4);
+        frame.buffer[3] = 0xff;
+
+        let frame = Frame::try_from(frame.as_ref());
+
+        assert_eq!(frame.unwrap_err(), FrameError::VersionMismatch(0xff));
+    }
+
+    #[test]
+    fn test_frame_payload_empty() {
+        let mut frame = Frame::new(FrameMessage::Echo as u8, 4);
+        frame.buffer[5] = 0;
+        frame.buffer[6] = 0;
+
+        let frame = Frame::try_from(frame.as_ref());
+
+        assert_eq!(frame.unwrap_err(), FrameError::PayloadEmpty);
+    }
+
+    #[test]
+    fn test_frame_excessive_payload_length() {
+        let frame = Frame::new(FrameMessage::Echo as u8, MAX_PAYLOAD_SIZE + 1);
+
+        let frame = Frame::try_from(frame.as_ref());
+
+        assert_eq!(
+            frame.unwrap_err(),
+            FrameError::ExcessivePayloadLength(MAX_PAYLOAD_SIZE + 1)
+        );
+    }
+
+    #[test]
+    fn test_frame_invalid_padding() {
+        let mut frame = Frame::new(FrameMessage::Echo as u8, 4);
+        frame.buffer[7] = 0xff;
+
+        let frame = Frame::try_from(frame.as_ref());
+
+        assert_eq!(frame.unwrap_err(), FrameError::InvalidPadding);
+    }
 
     #[test]
     fn test_session() {
