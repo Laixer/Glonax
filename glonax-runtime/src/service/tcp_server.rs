@@ -219,16 +219,24 @@ impl TcpServer {
                         if session.is_stream() {
                             match signal {
                                 Object::Engine(engine) => {
-                                    client.send_packet(&engine).await.unwrap();
+                                    if let Err(e) = client.send_packet(&engine).await {
+                                        error!("Failed to send engine: {}", e);
+                                    }
                                 }
                                 Object::GNSS(gnss) => {
-                                    client.send_packet(&gnss).await.unwrap();
+                                    if let Err(e) = client.send_packet(&gnss).await {
+                                        error!("Failed to send GNSS: {}", e);
+                                    }
                                 }
                                 Object::Host(vms) => {
-                                    client.send_packet(&vms).await.unwrap();
+                                    if let Err(e) = client.send_packet(&vms).await {
+                                        error!("Failed to send host: {}", e);
+                                    }
                                 }
                                 Object::Motion(motion) => {
-                                    client.send_packet(&motion).await.unwrap();
+                                    if let Err(e) = client.send_packet(&motion).await {
+                                        error!("Failed to send motion: {}", e);
+                                    }
                                 }
                                 Object::Encoder(_) => {
                                     // TODO
