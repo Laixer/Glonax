@@ -21,9 +21,13 @@ StartLimitBurst=5
 [Service]
 Restart=always
 TimeoutStopSec=5
-RestartSec=1
-Nice=-15
+
+Nice=-20
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=80
+IOSchedulingClass=realtime
 IOSchedulingPriority=2
+
 DynamicUser=true
 SupplementaryGroups=tty dialout
 ExecStart=/usr/local/bin/glonaxd
@@ -38,6 +42,7 @@ ProtectControlGroups=true
 
 MemoryDenyWriteExecute=true
 SystemCallArchitectures=native
+LimitMEMLOCK=infinity
 
 [Install]
 WantedBy=multi-user.target
