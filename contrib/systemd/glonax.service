@@ -15,7 +15,8 @@
 Description=Glonax Server
 Wants=network-online.target
 After=network-online.target
-StartLimitIntervalSec=5
+
+StartLimitIntervalSec=0
 StartLimitBurst=5
 
 [Service]
