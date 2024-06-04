@@ -1,7 +1,8 @@
 use bytes::{BufMut, BytesMut};
 
-use super::{MAX_PAYLOAD_SIZE, MIN_BUFFER_SIZE, PROTO_HEADER, PROTO_VERSION};
+use super::{MAX_PAYLOAD_SIZE, PROTO_BUFFER_SIZE, PROTO_HEADER, PROTO_VERSION};
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum FrameError {
     FrameTooSmall,
     InvalidHeader,
@@ -49,7 +50,7 @@ enum FrameMessage {
     Error = 0x0,
     Echo = 0x1,
     Session = 0x10,
-    Shutdown = 0x11,
+    _Shutdown = 0x11,
     Request = 0x12,
 }
 
@@ -61,7 +62,7 @@ pub struct Frame {
 
 impl Frame {
     pub fn new(message: u8, payload_length: usize) -> Self {
-        let mut buffer = BytesMut::with_capacity(MIN_BUFFER_SIZE + payload_length);
+        let mut buffer = BytesMut::with_capacity(PROTO_BUFFER_SIZE + payload_length);
 
         buffer.put(&PROTO_HEADER[..]);
         buffer.put_u8(PROTO_VERSION);
@@ -83,7 +84,7 @@ impl Frame {
 
     #[inline]
     pub fn payload_range(&self) -> std::ops::Range<usize> {
-        MIN_BUFFER_SIZE..MIN_BUFFER_SIZE + self.payload_length
+        PROTO_BUFFER_SIZE..PROTO_BUFFER_SIZE + self.payload_length
     }
 }
 
@@ -91,7 +92,7 @@ impl TryFrom<&[u8]> for Frame {
     type Error = FrameError;
 
     fn try_from(buffer: &[u8]) -> std::result::Result<Self, Self::Error> {
-        if buffer.len() < MIN_BUFFER_SIZE {
+        if buffer.len() != PROTO_BUFFER_SIZE {
             Err(FrameError::FrameTooSmall)?
         }
 
@@ -108,7 +109,7 @@ impl TryFrom<&[u8]> for Frame {
 
         let payload_length = u16::from_be_bytes([buffer[5], buffer[6]]) as usize;
         if payload_length == 0 {
-            Err(FrameError::FrameTooSmall)?
+            Err(FrameError::PayloadEmpty)?
         }
 
         if payload_length > MAX_PAYLOAD_SIZE {
@@ -130,6 +131,7 @@ impl AsRef<[u8]> for Frame {
     }
 }
 
+#[derive(Debug)]
 pub struct Session {
     flags: u8,
     name: String,
@@ -179,6 +181,10 @@ impl TryFrom<Vec<u8>> for Session {
     type Error = FrameError;
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+        if buffer.is_empty() {
+            Err(FrameError::FrameTooSmall)?
+        }
+
         let flags = buffer[0];
 
         let mask = 0b11100000;
@@ -222,15 +228,19 @@ pub enum SessionError {
 impl SessionError {}
 
 impl TryFrom<Vec<u8>> for SessionError {
-    type Error = ();
+    type Error = FrameError;
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+        if buffer.is_empty() {
+            Err(FrameError::FrameTooSmall)?
+        }
+
         match buffer[0] {
             0x0 => Ok(Self::UnknownRequest),
             0x1 => Ok(Self::UnknownMessage),
             0x2 => Ok(Self::UnauthorizedControl),
             0x3 => Ok(Self::UnauthorizedCommand),
-            _ => Err(()),
+            _ => Err(FrameError::InvalidMessage(buffer[0])),
         }
     }
 }
@@ -268,6 +278,10 @@ impl TryFrom<Vec<u8>> for Request {
     type Error = FrameError;
 
     fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+        if buffer.is_empty() {
+            Err(FrameError::FrameTooSmall)?
+        }
+
         Ok(Self::new(buffer[0]))
     }
 }
@@ -281,31 +295,6 @@ impl super::Packetize for Request {
     }
 }
 
-pub struct Shutdown;
-
-impl Shutdown {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        vec![]
-    }
-}
-
-impl TryFrom<Vec<u8>> for Shutdown {
-    type Error = FrameError;
-
-    fn try_from(_value: Vec<u8>) -> Result<Self, Self::Error> {
-        Ok(Self)
-    }
-}
-
-impl super::Packetize for Shutdown {
-    const MESSAGE_TYPE: u8 = FrameMessage::Shutdown as u8;
-    const MESSAGE_SIZE: Option<usize> = Some(0);
-
-    fn to_bytes(&self) -> Vec<u8> {
-        vec![]
-    }
-}
-
 pub struct Echo {
     pub payload: i32,
 }
@@ -313,9 +302,13 @@ pub struct Echo {
 impl TryFrom<Vec<u8>> for Echo {
     type Error = FrameError;
 
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+    fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
+        if buffer.len() != std::mem::size_of::<i32>() {
+            Err(FrameError::FrameTooSmall)?
+        }
+
         Ok(Self {
-            payload: i32::from_be_bytes([value[0], value[1], value[2], value[3]]),
+            payload: i32::from_be_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]),
         })
     }
 }
@@ -326,5 +319,40 @@ impl super::Packetize for Echo {
 
     fn to_bytes(&self) -> Vec<u8> {
         self.payload.to_be_bytes().to_vec()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_session() {
+        use crate::protocol::Packetize;
+
+        let session = Session::new(Session::MODE_STREAM, "test".to_string());
+        let bytes = session.to_bytes();
+
+        let session = Session::try_from(bytes).unwrap();
+
+        assert!(session.is_stream());
+        assert!(!session.is_control());
+        assert!(!session.is_command());
+        assert!(!session.is_failsafe());
+        assert_eq!(session.name(), "test");
+    }
+
+    #[test]
+    fn test_session_invalid_session_flags() {
+        let session = Session::try_from(vec![0b11100000]);
+
+        assert_eq!(session.unwrap_err(), FrameError::InvalidSessionFlags);
+    }
+
+    #[test]
+    fn test_session_frame_too_small() {
+        let session = Session::try_from(Vec::new());
+
+        assert_eq!(session.unwrap_err(), FrameError::FrameTooSmall);
     }
 }

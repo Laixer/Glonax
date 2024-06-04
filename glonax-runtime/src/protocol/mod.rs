@@ -22,7 +22,7 @@ const PROTO_HEADER: [u8; 3] = [b'L', b'X', b'R'];
 const PROTO_VERSION: u8 = 0x03;
 
 /// The minimum buffer size required to read a frame.
-const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
+const PROTO_BUFFER_SIZE: usize = PROTO_HEADER.len()
     + std::mem::size_of::<u8>()
     + std::mem::size_of::<u8>()
     + std::mem::size_of::<u16>()
@@ -31,7 +31,7 @@ const MIN_BUFFER_SIZE: usize = PROTO_HEADER.len()
 /// The maximum payload size.
 ///
 /// This is the maximum size of the payload of a frame. The maximum size of a
-/// frame is `MIN_BUFFER_SIZE + MAX_PAYLOAD_SIZE`. The maximum payload size
+/// frame is `PROTO_BUFFER_SIZE + MAX_PAYLOAD_SIZE`. The maximum payload size
 /// ensures that the maximum frame size is within the maximum MTU of a network.
 ///
 /// The maximum payload size is also used to limit the maximum size of a packet
@@ -159,7 +159,7 @@ impl<T: AsyncWrite + Unpin> Stream<T> {
 
 impl<T: AsyncRead + Unpin> Stream<T> {
     pub async fn read_frame(&mut self) -> std::io::Result<frame::Frame> {
-        let mut header_buffer = [0u8; MIN_BUFFER_SIZE];
+        let mut header_buffer = [0u8; PROTO_BUFFER_SIZE];
 
         self.inner.read_exact(&mut header_buffer).await?;
 
@@ -172,13 +172,10 @@ impl<T: AsyncRead + Unpin> Stream<T> {
     }
 
     pub async fn recv_packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
-        if size < 1 {
+        if size == 0 {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
-                format!(
-                    "Invalid data, packet size too small: {}",
-                    size
-                ),
+                format!("Invalid data, packet size too small: {}", size),
             ));
         }
 
@@ -190,6 +187,13 @@ impl<T: AsyncRead + Unpin> Stream<T> {
                     P::MESSAGE_SIZE.unwrap(),
                     size
                 ),
+            ));
+        }
+
+        if size > MAX_PAYLOAD_SIZE {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("Invalid data, packet size too large: {}", size),
             ));
         }
 
@@ -222,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    fn test_min_buffer_size() {
-        assert_eq!(MIN_BUFFER_SIZE, 10);
+    fn test_proto_buffer_size() {
+        assert_eq!(PROTO_BUFFER_SIZE, 10);
     }
 }
