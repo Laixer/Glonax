@@ -7,6 +7,7 @@ pub enum FrameError {
     InvalidHeader,
     VersionMismatch(u8),
     InvalidMessage(u8),
+    PayloadEmpty,
     ExcessivePayloadLength(usize),
     InvalidPadding,
     InvalidSessionFlags,
@@ -21,6 +22,7 @@ impl std::fmt::Debug for FrameError {
             Self::InvalidHeader => write!(f, "InvalidHeader"),
             Self::VersionMismatch(got) => write!(f, "VersionMismatch({})", got),
             Self::InvalidMessage(message) => write!(f, "InvalidMessage({})", message),
+            Self::PayloadEmpty => write!(f, "PayloadEmpty"),
             Self::ExcessivePayloadLength(len) => write!(f, "ExcessivePayloadLength({})", len),
             Self::InvalidPadding => write!(f, "InvalidPadding"),
             Self::InvalidSessionFlags => write!(f, "InvalidSessionFlags"),
@@ -35,6 +37,7 @@ impl std::fmt::Display for FrameError {
             Self::InvalidHeader => write!(f, "invalid header"),
             Self::VersionMismatch(got) => write!(f, "version mismatch: {}", got),
             Self::InvalidMessage(message) => write!(f, "invalid message type: {}", message),
+            Self::PayloadEmpty => write!(f, "payload empty"),
             Self::ExcessivePayloadLength(len) => write!(f, "excessive payload length: {}", len),
             Self::InvalidPadding => write!(f, "invalid padding"),
             Self::InvalidSessionFlags => write!(f, "invalid session flags"),
@@ -104,6 +107,10 @@ impl TryFrom<&[u8]> for Frame {
         }
 
         let payload_length = u16::from_be_bytes([buffer[5], buffer[6]]) as usize;
+        if payload_length == 0 {
+            Err(FrameError::FrameTooSmall)?
+        }
+
         if payload_length > MAX_PAYLOAD_SIZE {
             Err(FrameError::ExcessivePayloadLength(payload_length))?
         }

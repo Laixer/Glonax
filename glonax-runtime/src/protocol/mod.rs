@@ -172,6 +172,16 @@ impl<T: AsyncRead + Unpin> Stream<T> {
     }
 
     pub async fn recv_packet<P: Packetize>(&mut self, size: usize) -> std::io::Result<P> {
+        if size < 1 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!(
+                    "Invalid data, packet size too small: {}",
+                    size
+                ),
+            ));
+        }
+
         if P::MESSAGE_SIZE.is_some() && size != P::MESSAGE_SIZE.unwrap() {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
