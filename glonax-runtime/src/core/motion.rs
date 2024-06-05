@@ -161,7 +161,7 @@ impl TryFrom<Vec<u8>> for Motion {
                 let mut changes = Vec::with_capacity(count as usize);
                 for _ in 0..count {
                     changes.push(ChangeSet {
-                        actuator: buf.get_u16().try_into().unwrap(),
+                        actuator: buf.get_u16().try_into()?,
                         value: buf.get_i16(),
                     });
                 }
