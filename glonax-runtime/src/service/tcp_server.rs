@@ -215,7 +215,6 @@ impl TcpServer {
             tokio::select! {
                 signal = signal_rx.recv() => {
                     if let Ok(signal) = signal {
-
                         if session.is_stream() {
                             match signal {
                                 Object::Engine(engine) => {
@@ -238,13 +237,14 @@ impl TcpServer {
                                         error!("Failed to send motion: {}", e);
                                     }
                                 }
-                                Object::Encoder(_) => {
-                                    // TODO
+                                Object::Rotator(rotator) => {
+                                    if let Err(e) = client.send_packet(&rotator).await {
+                                        error!("Failed to send rotator: {}", e);
+                                    }
                                 }
                                 _ => {}
                             }
                         }
-
                     } else if let Err(tokio::sync::broadcast::error::RecvError::Closed) = signal {
                         log::warn!("Signal channel closed");
                         break;

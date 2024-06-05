@@ -34,11 +34,6 @@ impl Default for Rotator {
 }
 
 impl Rotator {
-    /// Construct a new target
-    pub fn new(rotator: Rotation3<f32>, reference: RotationReference) -> Self {
-        Self { rotator, reference }
-    }
-
     /// Construct a new target with an absolute reference
     pub fn absolute(rotator: Rotation3<f32>) -> Self {
         Self {
@@ -78,7 +73,7 @@ impl TryFrom<Vec<u8>> for Rotator {
 }
 
 impl crate::protocol::Packetize for Rotator {
-    const MESSAGE_TYPE: u8 = 0x44;
+    const MESSAGE_TYPE: u8 = 0x46;
     const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 6) + 1);
 
     fn to_bytes(&self) -> Vec<u8> {

@@ -36,8 +36,8 @@ pub enum Object {
     Motion(Motion),
     /// Target.
     Target(Target),
-    /// Encoder.
-    Encoder((u8, f32)), // TODO: There could be a struct for this somewhere
+    /// Rotator.
+    Rotator(Rotator),
 }
 
 /// Represents the type of an object.
