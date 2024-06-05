@@ -285,7 +285,12 @@ impl J1939Unit for KueblerEncoder {
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Encoder(encoder_signal)));
 
                     if let Err(e) = signal_tx.send(Object::Encoder(encoder_signal)) {
-                        error!("Failed to send encoder signal: {}", e);
+                        error!(
+                            "[{}] {}: Failed to send signal: {}",
+                            self.interface,
+                            self.name(),
+                            e
+                        );
                     }
 
                     return Ok(J1939UnitOk::SignalQueued);

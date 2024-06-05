@@ -514,7 +514,12 @@ impl J1939Unit for HydraulicControlUnit {
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(motion.clone())));
 
                     if let Err(e) = signal_tx.send(Object::Motion(motion)) {
-                        error!("Failed to send motion signal: {}", e);
+                        error!(
+                            "[{}] {}: Failed to send motion signal: {}",
+                            self.interface,
+                            self.name(),
+                            e
+                        );
                     }
 
                     status.into_error()?;
@@ -534,7 +539,12 @@ impl J1939Unit for HydraulicControlUnit {
         object: &Object,
     ) -> Result<(), J1939UnitError> {
         if let Object::Motion(motion) = object {
-            trace!("Hydraulic: {}", motion);
+            trace!(
+                "[{}] {}: Hydraulic: {}",
+                self.interface,
+                self.name(),
+                motion
+            );
 
             ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
@@ -585,7 +595,12 @@ impl J1939Unit for HydraulicControlUnit {
             }
         };
 
-        trace!("Hydraulic: {}", motion_command);
+        trace!(
+            "[{}] {}: Hydraulic: {}",
+            self.interface,
+            self.name(),
+            motion_command
+        );
 
         match &motion_command {
             Motion::StopAll => {

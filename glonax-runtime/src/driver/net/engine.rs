@@ -1,7 +1,7 @@
 use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::{
-    core::{Object, ObjectMessage},
+    core::{EngineState, Object, ObjectMessage},
     net::Parsable,
     runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
 };
@@ -364,12 +364,12 @@ impl J1939Unit for EngineManagementSystem {
                         match starter_mode {
                             spn::EngineStarterMode::StarterActiveGearNotEngaged
                             | spn::EngineStarterMode::StarterActiveGearEngaged => {
-                                engine_signal.state = crate::core::EngineState::Starting;
+                                engine_signal.state = EngineState::Starting;
                             }
                             spn::EngineStarterMode::StartFinished => {
                                 if let Some(rpm) = controller.rpm {
                                     if rpm > 0 {
-                                        engine_signal.state = crate::core::EngineState::Request;
+                                        engine_signal.state = EngineState::Request;
                                     }
                                 }
                             }
@@ -380,29 +380,34 @@ impl J1939Unit for EngineManagementSystem {
                             | spn::EngineStarterMode::StarterInhibitedActiveImmobilizer
                             | spn::EngineStarterMode::StarterInhibitedOverHeat
                             | spn::EngineStarterMode::StarterInhibitedReasonUnknown => {
-                                engine_signal.state = crate::core::EngineState::NoRequest;
+                                engine_signal.state = EngineState::NoRequest;
                             }
                             _ => {}
                         }
                     } else if let Some(rpm) = controller.rpm {
                         if rpm == 0 {
-                            engine_signal.state = crate::core::EngineState::NoRequest;
+                            engine_signal.state = EngineState::NoRequest;
                         } else if rpm < 500 {
-                            engine_signal.state = crate::core::EngineState::Starting;
+                            engine_signal.state = EngineState::Starting;
                         } else {
-                            engine_signal.state = crate::core::EngineState::Request;
+                            engine_signal.state = EngineState::Request;
                         }
                     } else if controller.rpm.is_none()
                         || controller.actual_engine.is_none()
                         || controller.engine_torque_mode.is_none()
                     {
-                        engine_signal.state = crate::core::EngineState::NoRequest;
+                        engine_signal.state = EngineState::NoRequest;
                     }
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Engine(engine_signal)));
 
                     if let Err(e) = signal_tx.send(Object::Engine(engine_signal)) {
-                        error!("Failed to send signal: {}", e);
+                        error!(
+                            "[{}] {}: Failed to send signal: {}",
+                            self.interface,
+                            self.name(),
+                            e
+                        );
                     }
 
                     return Ok(J1939UnitOk::SignalQueued);

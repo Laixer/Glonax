@@ -152,7 +152,12 @@ impl J1939Unit for VolvoD7E {
                 .governor
                 .next_state(&engine_signal, &engine_command, None);
 
-            trace!("Engine: {}", governor_engine);
+            trace!(
+                "[{}] {}: Engine: {}",
+                self.interface,
+                self.name(),
+                governor_engine
+            );
 
             match governor_engine.state {
                 EngineState::NoRequest => {
@@ -206,7 +211,12 @@ impl J1939Unit for VolvoD7E {
             self.governor
                 .next_state(&engine_signal, &engine_command.0, engine_command.1);
 
-        trace!("Engine: {}", governor_engine);
+        trace!(
+            "[{}] {}: Engine: {}",
+            self.interface,
+            self.name(),
+            governor_engine
+        );
 
         match governor_engine.state {
             EngineState::NoRequest => {

@@ -19,6 +19,7 @@ mod hardware;
 pub mod net;
 mod r#virtual;
 
+#[derive(Debug, Clone)]
 pub struct EncoderConverter {
     /// Encoder factor.
     factor: f32,
