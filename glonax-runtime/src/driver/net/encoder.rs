@@ -2,6 +2,7 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PGN};
 
 use crate::{
     core::{Object, ObjectMessage},
+    driver::EncoderConverter,
     net::Parsable,
     runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
 };
@@ -184,15 +185,35 @@ pub struct KueblerEncoder {
     destination_address: u8,
     /// Source address.
     source_address: u8,
+    /// Converter.
+    converter: EncoderConverter,
 }
 
 impl KueblerEncoder {
     /// Construct a new encoder service.
     pub fn new(interface: &str, da: u8, sa: u8) -> Self {
+        let converter = if da == 0x6a {
+            EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::z_axis())
+        } else if da == 0x6b {
+            EncoderConverter::new(
+                1000.0,
+                60_f32.to_radians(),
+                true,
+                nalgebra::Vector3::y_axis(),
+            )
+        } else if da == 0x6c {
+            EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis())
+        } else if da == 0x6d {
+            EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis())
+        } else {
+            panic!("Unknown encoder address: {:x}", da)
+        };
+
         Self {
             interface: interface.to_string(),
             destination_address: da,
             source_address: sa,
+            converter,
         }
     }
 }
@@ -281,6 +302,10 @@ impl J1939Unit for KueblerEncoder {
                 EncoderMessage::ProcessData(process_data) => {
                     let encoder_signal =
                         (process_data.source_address, process_data.position as f32);
+
+                    let rotator = self.converter.to_rotation(process_data.position as f32);
+
+                    debug!("[{}] {}: Rotator {}", self.interface, self.name(), rotator);
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Encoder(encoder_signal)));
 
