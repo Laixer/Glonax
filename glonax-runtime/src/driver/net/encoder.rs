@@ -1,7 +1,7 @@
 use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PGN};
 
 use crate::{
-    core::{Object, ObjectMessage},
+    core::{Object, ObjectMessage, Rotator},
     driver::EncoderConverter,
     net::Parsable,
     runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
@@ -303,7 +303,8 @@ impl J1939Unit for KueblerEncoder {
                     let encoder_signal =
                         (process_data.source_address, process_data.position as f32);
 
-                    let rotator = self.converter.to_rotation(process_data.position as f32);
+                    let rotation = self.converter.to_rotation(process_data.position as f32);
+                    let rotator = Rotator::relative(rotation);
 
                     debug!("[{}] {}: Rotator {}", self.interface, self.name(), rotator);
 

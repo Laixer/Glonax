@@ -7,6 +7,7 @@ pub use self::host::{Host, HostStatus};
 pub use self::instance::Instance;
 pub use self::motion::Actuator;
 pub use self::motion::Motion;
+pub use self::rotation::Rotator;
 pub use self::status::Status;
 pub use self::target::Target;
 
@@ -16,6 +17,7 @@ mod gnss;
 mod host;
 mod instance;
 mod motion;
+mod rotation;
 mod status;
 mod target;
 
