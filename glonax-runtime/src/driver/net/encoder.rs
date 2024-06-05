@@ -304,9 +304,16 @@ impl J1939Unit for KueblerEncoder {
                         (process_data.source_address, process_data.position as f32);
 
                     let rotation = self.converter.to_rotation(process_data.position as f32);
-                    let rotator = Rotator::relative(rotation);
+                    let _rotator = Rotator::relative(rotation);
 
-                    debug!("[{}] {}: Rotator {}", self.interface, self.name(), rotator);
+                    trace!(
+                        "[{}] {}: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                        self.interface,
+                        self.name(),
+                        rotation.euler_angles().0.to_degrees(),
+                        rotation.euler_angles().1.to_degrees(),
+                        rotation.euler_angles().2.to_degrees()
+                    );
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Encoder(encoder_signal)));
 

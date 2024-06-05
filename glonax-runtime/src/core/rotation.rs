@@ -96,3 +96,29 @@ impl crate::protocol::Packetize for Rotator {
         buf.to_vec()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::Packetize;
+
+    #[test]
+    fn test_rotator() {
+        let rotator = Rotator {
+            rotator: Rotation3::from_euler_angles(0.1, 0.2, 0.3),
+            reference: RotationReference::Relative,
+        };
+
+        let bytes = rotator.to_bytes();
+
+        assert_eq!(bytes.len(), 13);
+        assert_eq!(bytes[12], 0x01);
+
+        let rotator = Rotator::try_from(bytes).unwrap();
+
+        assert!((rotator.rotator.euler_angles().0 - 0.1).abs() < f32::EPSILON);
+        assert!((rotator.rotator.euler_angles().1 - 0.2).abs() < f32::EPSILON);
+        assert!((rotator.rotator.euler_angles().2 - 0.3).abs() < f32::EPSILON);
+        assert_eq!(rotator.reference, RotationReference::Relative);
+    }
+}
