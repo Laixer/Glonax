@@ -1,5 +1,7 @@
 use j1939::{Frame, FrameBuilder, IdBuilder, PDU_NOT_AVAILABLE, PGN};
 
+use crate::runtime::J1939UnitError;
+
 // TODO: Remove the header field.
 // TODO: Add J1939 node address
 // TODO: Add CAN termination
@@ -183,12 +185,12 @@ impl VecraftStatusMessage {
         .build()
     }
 
-    pub(crate) fn into_error(self) -> Result<(), super::J1939UnitError> {
+    pub(crate) fn into_error(self) -> Result<(), J1939UnitError> {
         match self.state {
             State::Nominal => Ok(()),
             State::Ident => Ok(()),
-            State::FaultyGenericError => Err(super::J1939UnitError::BusError),
-            State::FaultyBusError => Err(super::J1939UnitError::BusError),
+            State::FaultyGenericError => Err(J1939UnitError::BusError),
+            State::FaultyBusError => Err(J1939UnitError::BusError),
         }
     }
 }

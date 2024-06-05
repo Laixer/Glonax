@@ -3,6 +3,7 @@ use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 use crate::{
     core::{Object, ObjectMessage},
     net::Parsable,
+    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
 };
 
 pub trait Engine {
@@ -297,7 +298,7 @@ impl Parsable<EngineMessage> for EngineManagementSystem {
     }
 }
 
-impl super::J1939Unit for EngineManagementSystem {
+impl J1939Unit for EngineManagementSystem {
     fn vendor(&self) -> &'static str {
         "kübler"
     }
@@ -316,9 +317,9 @@ impl super::J1939Unit for EngineManagementSystem {
 
     fn setup(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         tx_queue.push(protocol::request(
             self.destination_address,
             self.source_address,
@@ -340,10 +341,10 @@ impl super::J1939Unit for EngineManagementSystem {
 
     fn try_recv(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
+    ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 EngineMessage::EngineController1(controller) => {
@@ -404,19 +405,19 @@ impl super::J1939Unit for EngineManagementSystem {
                         error!("Failed to send signal: {}", e);
                     }
 
-                    return Ok(super::J1939UnitOk::SignalQueued);
+                    return Ok(J1939UnitOk::SignalQueued);
                 }
                 EngineMessage::Shutdown(_shutdown) => {
                     // TODO: Handle shutdown message, set state to stopping
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
                 _ => {
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
             }
         }
 
-        Ok(super::J1939UnitOk::FrameIgnored)
+        Ok(J1939UnitOk::FrameIgnored)
     }
 }

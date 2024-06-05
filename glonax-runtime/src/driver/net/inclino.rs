@@ -1,6 +1,9 @@
 use j1939::{protocol, Frame, Name, PGN};
 
-use crate::net::Parsable;
+use crate::{
+    net::Parsable,
+    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+};
 
 const _CONFIG_PGN: PGN = PGN::ProprietaryA;
 const INCLINOMETER_PGN: PGN = PGN::ProprietaryB(65_451);
@@ -201,7 +204,7 @@ impl Parsable<InclinoMessage> for KueblerInclinometer {
     }
 }
 
-impl super::J1939Unit for KueblerInclinometer {
+impl J1939Unit for KueblerInclinometer {
     fn vendor(&self) -> &'static str {
         "kübler"
     }
@@ -220,9 +223,9 @@ impl super::J1939Unit for KueblerInclinometer {
 
     fn setup(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         tx_queue.push(protocol::request(
             self.destination_address,
             self.source_address,
@@ -234,10 +237,10 @@ impl super::J1939Unit for KueblerInclinometer {
 
     fn try_recv(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         _signal_tx: crate::runtime::SignalSender,
-    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
+    ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 InclinoMessage::AddressClaim(name) => {
@@ -248,14 +251,14 @@ impl super::J1939Unit for KueblerInclinometer {
                         name
                     );
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
                 InclinoMessage::ProcessData(_process_data) => {
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
             }
         }
 
-        Ok(super::J1939UnitOk::FrameIgnored)
+        Ok(J1939UnitOk::FrameIgnored)
     }
 }

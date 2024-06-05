@@ -3,9 +3,10 @@ use std::time::Duration;
 use j1939::{Frame, FrameBuilder, IdBuilder, PGN};
 
 use crate::{
-    core::{Object, ObjectMessage},
-    driver::{EngineMessage, Governor},
+    core::{EngineState, Object, ObjectMessage},
+    driver::{net::engine::Engine, EngineMessage, Governor},
     net::Parsable,
+    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
 };
 
 use super::engine::EngineManagementSystem;
@@ -91,7 +92,7 @@ impl Parsable<EngineMessage> for VolvoD7E {
     }
 }
 
-impl super::J1939Unit for VolvoD7E {
+impl J1939Unit for VolvoD7E {
     fn vendor(&self) -> &'static str {
         "volvo"
     }
@@ -110,29 +111,26 @@ impl super::J1939Unit for VolvoD7E {
 
     fn try_recv(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         // network: &crate::net::ControlNetwork,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
+    ) -> Result<J1939UnitOk, J1939UnitError> {
         self.ems.try_recv(ctx, frame, signal_tx)
     }
 
     fn trigger(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
         object: &Object,
-    ) -> Result<(), super::J1939UnitError> {
-        use super::engine::Engine;
-
+    ) -> Result<(), J1939UnitError> {
         if let Object::Engine(engine_command) = object {
             ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
             let engine_signal = {
-                let ctx = ctx.inner();
-                if let Some(x) = &ctx.rx_last_message {
-                    if let Object::Engine(engine) = x.object {
+                if let Some(message) = &ctx.rx_last_message() {
+                    if let Object::Engine(engine) = message.object {
                         engine
                     } else {
                         crate::core::Engine::shutdown()
@@ -157,16 +155,16 @@ impl super::J1939Unit for VolvoD7E {
             trace!("Engine: {}", governor_engine);
 
             match governor_engine.state {
-                crate::core::EngineState::NoRequest => {
+                EngineState::NoRequest => {
                     tx_queue.push(self.request(governor_engine.rpm));
                 }
-                crate::core::EngineState::Starting => {
+                EngineState::Starting => {
                     tx_queue.push(self.start(governor_engine.rpm));
                 }
-                crate::core::EngineState::Stopping => {
+                EngineState::Stopping => {
                     tx_queue.push(self.stop(governor_engine.rpm));
                 }
-                crate::core::EngineState::Request => {
+                EngineState::Request => {
                     tx_queue.push(self.request(governor_engine.rpm));
                 }
             }
@@ -177,15 +175,12 @@ impl super::J1939Unit for VolvoD7E {
 
     fn tick(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
-        use super::engine::Engine;
-
+    ) -> Result<(), J1939UnitError> {
         let engine_signal = {
-            let ctx = ctx.inner();
-            if let Some(x) = &ctx.rx_last_message {
-                if let Object::Engine(engine) = x.object {
+            if let Some(message) = &ctx.rx_last_message() {
+                if let Object::Engine(engine) = message.object {
                     engine
                 } else {
                     crate::core::Engine::shutdown()
@@ -196,10 +191,9 @@ impl super::J1939Unit for VolvoD7E {
         };
 
         let engine_command = {
-            let ctx = ctx.inner();
-            if let Some(x) = &ctx.tx_last_message {
-                if let Object::Engine(engine) = x.object {
-                    (engine, Some(x.timestamp))
+            if let Some(message) = &ctx.tx_last_message() {
+                if let Object::Engine(engine) = message.object {
+                    (engine, Some(message.timestamp))
                 } else {
                     (engine_signal, None)
                 }
@@ -215,16 +209,16 @@ impl super::J1939Unit for VolvoD7E {
         trace!("Engine: {}", governor_engine);
 
         match governor_engine.state {
-            crate::core::EngineState::NoRequest => {
+            EngineState::NoRequest => {
                 tx_queue.push(self.request(governor_engine.rpm));
             }
-            crate::core::EngineState::Starting => {
+            EngineState::Starting => {
                 tx_queue.push(self.start(governor_engine.rpm));
             }
-            crate::core::EngineState::Stopping => {
+            EngineState::Stopping => {
                 tx_queue.push(self.stop(governor_engine.rpm));
             }
-            crate::core::EngineState::Request => {
+            EngineState::Request => {
                 tx_queue.push(self.request(governor_engine.rpm));
             }
         }

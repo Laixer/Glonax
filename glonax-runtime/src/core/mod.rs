@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 pub use self::control::Control;
 pub use self::engine::{Engine, EngineState};
 pub use self::gnss::{Gnss, GnssStatus};
@@ -43,13 +45,14 @@ pub enum ObjectType {
 }
 
 // TODO: Maybe add source address of sender
+#[derive(Clone, Debug)]
 pub struct ObjectMessage {
     /// Object.
     pub object: Object,
     /// Object type.
     pub object_type: ObjectType,
     /// Timestamp of queueing.
-    pub timestamp: std::time::Instant,
+    pub timestamp: Instant,
 }
 
 impl ObjectMessage {
@@ -66,7 +69,7 @@ impl ObjectMessage {
         Self {
             object,
             object_type: ObjectType::Command,
-            timestamp: std::time::Instant::now(),
+            timestamp: Instant::now(),
         }
     }
 
@@ -83,7 +86,7 @@ impl ObjectMessage {
         Self {
             object,
             object_type: ObjectType::Signal,
-            timestamp: std::time::Instant::now(),
+            timestamp: Instant::now(),
         }
     }
 }

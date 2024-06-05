@@ -1,6 +1,10 @@
 use j1939::{protocol, Frame, Name, PGN};
 
-use crate::{core::Object, net::Parsable};
+use crate::{
+    core::Object,
+    net::Parsable,
+    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+};
 
 use super::vecraft::{VecraftConfigMessage, VecraftStatusMessage};
 
@@ -112,7 +116,7 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
     }
 }
 
-impl super::J1939Unit for VehicleControlUnit {
+impl J1939Unit for VehicleControlUnit {
     fn vendor(&self) -> &'static str {
         "laixer"
     }
@@ -131,9 +135,9 @@ impl super::J1939Unit for VehicleControlUnit {
 
     fn setup(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         tx_queue.push(protocol::request(
             self.destination_address,
             self.source_address,
@@ -155,10 +159,10 @@ impl super::J1939Unit for VehicleControlUnit {
 
     fn try_recv(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         _signal_tx: crate::runtime::SignalSender,
-    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
+    ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 VehicleMessage::VecraftConfig(_config) => {}
@@ -172,7 +176,7 @@ impl super::J1939Unit for VehicleControlUnit {
                         version.2
                     );
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
                 VehicleMessage::AddressClaim(name) => {
                     debug!(
@@ -182,27 +186,27 @@ impl super::J1939Unit for VehicleControlUnit {
                         name
                     );
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
                 VehicleMessage::Status(status) => {
                     status.into_error()?;
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
             }
         }
 
-        Ok(super::J1939UnitOk::FrameIgnored)
+        Ok(J1939UnitOk::FrameIgnored)
     }
 
     fn trigger(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         _tx_queue: &mut Vec<j1939::Frame>,
         object: &Object,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         if let Object::Control(control) = object {
-            trace!("VCU: {}", control);
+            trace!("[{}] {}: Control: {}", self.interface, self.name(), control);
         }
 
         Ok(())

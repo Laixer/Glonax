@@ -5,6 +5,7 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PDU_NOT_AVAILABLE, P
 use crate::{
     core::{Motion, Object, ObjectMessage},
     net::Parsable,
+    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
 };
 
 use super::vecraft::{VecraftConfigMessage, VecraftFactoryResetMessage, VecraftStatusMessage};
@@ -415,7 +416,7 @@ impl Parsable<HydraulicMessage> for HydraulicControlUnit {
     }
 }
 
-impl super::J1939Unit for HydraulicControlUnit {
+impl J1939Unit for HydraulicControlUnit {
     fn vendor(&self) -> &'static str {
         "laixer"
     }
@@ -434,9 +435,9 @@ impl super::J1939Unit for HydraulicControlUnit {
 
     fn setup(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         tx_queue.push(protocol::request(
             self.destination_address,
             self.source_address,
@@ -462,9 +463,9 @@ impl super::J1939Unit for HydraulicControlUnit {
 
     fn teardown(
         &self,
-        _ctx: &mut super::NetDriverContext,
+        _ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         tx_queue.push(self.motion_reset());
 
         Ok(())
@@ -472,10 +473,10 @@ impl super::J1939Unit for HydraulicControlUnit {
 
     fn try_recv(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
-    ) -> Result<super::J1939UnitOk, super::J1939UnitError> {
+    ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 HydraulicMessage::Actuator(_actuator) => {}
@@ -491,7 +492,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         version.2
                     );
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
                 HydraulicMessage::AddressClaim(name) => {
                     debug!(
@@ -501,7 +502,7 @@ impl super::J1939Unit for HydraulicControlUnit {
                         name
                     );
 
-                    return Ok(super::J1939UnitOk::FrameParsed);
+                    return Ok(J1939UnitOk::FrameParsed);
                 }
                 HydraulicMessage::Status(status) => {
                     let motion = if status.locked {
@@ -518,20 +519,20 @@ impl super::J1939Unit for HydraulicControlUnit {
 
                     status.into_error()?;
 
-                    return Ok(super::J1939UnitOk::SignalQueued);
+                    return Ok(J1939UnitOk::SignalQueued);
                 }
             }
         }
 
-        Ok(super::J1939UnitOk::FrameIgnored)
+        Ok(J1939UnitOk::FrameIgnored)
     }
 
     fn trigger(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
         object: &Object,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         if let Object::Motion(motion) = object {
             trace!("Hydraulic: {}", motion);
 
@@ -569,13 +570,12 @@ impl super::J1939Unit for HydraulicControlUnit {
 
     fn tick(
         &self,
-        ctx: &mut super::NetDriverContext,
+        ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), super::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         let motion_command = {
-            let ctx = ctx.inner();
-            if let Some(x) = &ctx.tx_last_message {
-                if let Object::Motion(motion) = &x.object {
+            if let Some(message) = &ctx.tx_last_message() {
+                if let Object::Motion(motion) = &message.object {
                     motion.clone()
                 } else {
                     Motion::StopAll

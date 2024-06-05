@@ -4,9 +4,10 @@ use j1939::protocol;
 
 use crate::{
     core::Object,
-    driver::net::J1939Unit,
     net::ControlNetwork,
-    runtime::{NetworkService, SignalSender},
+    runtime::{
+        J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext, NetworkService, SignalSender,
+    },
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -69,8 +70,8 @@ pub struct NetworkConfig {
 }
 
 struct NetDriverItem {
-    driver: Box<dyn crate::driver::net::J1939Unit>,
-    context: crate::driver::net::NetDriverContext,
+    driver: Box<dyn J1939Unit>,
+    context: NetDriverContext,
     /// Timeout for receiving messages.
     rx_timeout: Option<Duration>,
 }
@@ -80,7 +81,7 @@ impl NetDriverItem {
         Self {
             rx_timeout: None,
             driver: Box::new(driver),
-            context: crate::driver::net::NetDriverContext::default(),
+            context: NetDriverContext::default(),
         }
     }
 
@@ -90,10 +91,7 @@ impl NetDriverItem {
             .unwrap_or(false)
     }
 
-    fn setup(
-        &mut self,
-        tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), crate::driver::net::J1939UnitError> {
+    fn setup(&mut self, tx_queue: &mut Vec<j1939::Frame>) -> Result<(), J1939UnitError> {
         self.driver.setup(&mut self.context, tx_queue)
     }
 
@@ -101,14 +99,11 @@ impl NetDriverItem {
         &mut self,
         frame: &j1939::Frame,
         signal_tx: SignalSender,
-    ) -> Result<crate::driver::net::J1939UnitOk, crate::driver::net::J1939UnitError> {
+    ) -> Result<J1939UnitOk, J1939UnitError> {
         self.driver.try_recv(&mut self.context, frame, signal_tx)
     }
 
-    fn tick(
-        &mut self,
-        tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), crate::driver::net::J1939UnitError> {
+    fn tick(&mut self, tx_queue: &mut Vec<j1939::Frame>) -> Result<(), J1939UnitError> {
         self.driver.tick(&mut self.context, tx_queue)
     }
 
@@ -116,14 +111,11 @@ impl NetDriverItem {
         &mut self,
         tx_queue: &mut Vec<j1939::Frame>,
         object: &Object,
-    ) -> Result<(), crate::driver::net::J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         self.driver.trigger(&mut self.context, tx_queue, object)
     }
 
-    fn teardown(
-        &mut self,
-        tx_queue: &mut Vec<j1939::Frame>,
-    ) -> Result<(), crate::driver::net::J1939UnitError> {
+    fn teardown(&mut self, tx_queue: &mut Vec<j1939::Frame>) -> Result<(), J1939UnitError> {
         self.driver.teardown(&mut self.context, tx_queue)
     }
 }
@@ -425,10 +417,10 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
         for driver in self.drivers.iter_mut() {
             match driver.try_recv(frame, signal_tx.clone()) {
-                Ok(crate::driver::net::J1939UnitOk::SignalQueued) => {
+                Ok(J1939UnitOk::SignalQueued) => {
                     driver.context.rx_mark();
                 }
-                Ok(crate::driver::net::J1939UnitOk::FrameParsed) => {
+                Ok(J1939UnitOk::FrameParsed) => {
                     driver.context.rx_mark();
                 }
                 Ok(_) => {}
