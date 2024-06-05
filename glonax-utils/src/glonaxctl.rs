@@ -168,6 +168,13 @@ async fn main() -> anyhow::Result<()> {
 
                     println!("{}", motion);
                 }
+                glonax::core::Rotator::MESSAGE_TYPE => {
+                    let rotator = client
+                        .recv_packet::<glonax::core::Rotator>(frame.payload_length)
+                        .await?;
+
+                    println!("{}", rotator);
+                }
                 glonax::world::Actor::MESSAGE_TYPE => {
                     let actor = client
                         .recv_packet::<glonax::world::Actor>(frame.payload_length)

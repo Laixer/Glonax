@@ -53,7 +53,14 @@ impl Rotator {
 
 impl std::fmt::Display for Rotator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} {:?}", self.rotator, self.reference)
+        write!(
+            f,
+            "{:?} Roll={:.2} Pitch={:.2} Yaw={:.2}",
+            self.reference,
+            self.rotator.euler_angles().0.to_degrees(),
+            self.rotator.euler_angles().1.to_degrees(),
+            self.rotator.euler_angles().2.to_degrees()
+        )
     }
 }
 
@@ -74,7 +81,7 @@ impl TryFrom<Vec<u8>> for Rotator {
 
 impl crate::protocol::Packetize for Rotator {
     const MESSAGE_TYPE: u8 = 0x46;
-    const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 6) + 1);
+    const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 3) + 1);
 
     fn to_bytes(&self) -> Vec<u8> {
         use bytes::BufMut;
