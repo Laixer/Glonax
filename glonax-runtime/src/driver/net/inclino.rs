@@ -61,19 +61,19 @@ pub struct ProcessDataMessage {
     /// Source address.
     _source_address: u8,
     /// Slope long (Z-axis).
-    pub slope_long: u16,
+    slope_long: u16,
     /// Slope lat (X-axis).
-    pub slope_lat: u16,
+    slope_lat: u16,
     /// Temperature.
-    pub temperature: f32,
+    temperature: f32,
     /// Sensor is upside down.
-    pub upside_down: bool,
+    upside_down: bool,
     /// Sensor overflow.
-    pub overflow: Overflow,
+    overflow: Overflow,
     /// Sensor orientation.
-    pub orientation: SensorOrientation,
+    orientation: SensorOrientation,
     /// Sensor status.
-    pub status: InclinometerStatus,
+    status: InclinometerStatus,
 }
 
 impl ProcessDataMessage {

@@ -54,11 +54,11 @@ pub struct ProcessDataMessage {
     /// Source address.
     source_address: u8,
     /// Position.
-    pub position: u32,
+    position: u32,
     /// Speed.
-    pub speed: u16,
+    speed: u16,
     /// State.
-    pub state: Option<EncoderState>,
+    state: Option<EncoderState>,
 }
 
 impl ProcessDataMessage {

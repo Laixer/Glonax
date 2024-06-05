@@ -461,6 +461,14 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
+            if driver.is_rx_timeout() {
+                error!(
+                    "[{}] {}: communication timeout",
+                    self.network.interface(),
+                    driver
+                );
+            }
+
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
             };

@@ -19,7 +19,7 @@ mod motion;
 mod status;
 mod target;
 
-// TODO: Add object for encoder, emerency stop
+/// Represents an object in the system.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Object {
     /// Control.
@@ -38,20 +38,23 @@ pub enum Object {
     Encoder((u8, f32)), // TODO: There could be a struct for this somewhere
 }
 
+/// Represents the type of an object.
 #[derive(Clone, Debug, PartialEq)]
 pub enum ObjectType {
+    /// Command object.
     Command,
+    /// Signal object.
     Signal,
 }
 
-// TODO: Maybe add source address of sender
+/// Represents a message containing an object.
 #[derive(Clone, Debug)]
 pub struct ObjectMessage {
-    /// Object.
+    /// The object associated with the message.
     pub object: Object,
-    /// Object type.
+    /// The type of the object.
     pub object_type: ObjectType,
-    /// Timestamp of queueing.
+    /// The timestamp of when the message was queued.
     pub timestamp: Instant,
 }
 
@@ -91,6 +94,7 @@ impl ObjectMessage {
     }
 }
 
+/// Represents the type of a machine.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, serde_derive::Deserialize)]
 pub enum MachineType {
     /// Excavator.
