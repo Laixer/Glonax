@@ -179,7 +179,6 @@ impl Runtime {
         self.task_pool.push(tokio::spawn(f));
     }
 
-    // TODO: Only the TCP Server uses `command_tx`
     /// Listen for IO event service in the background.
     ///
     /// This method will spawn a service in the background and return immediately. The service
@@ -252,29 +251,29 @@ impl Runtime {
     {
         let mut command_rx = self.command_tx.subscribe();
 
-        let signal_tx = self.signal_tx.clone();
+        let signal1_tx = self.signal_tx.clone();
         let signal2_tx = self.signal_tx.clone();
 
-        let mut service = S::new(config.clone());
-        let mut service2 = service.clone();
-        let mut service3 = service.clone();
+        let mut service1 = S::new(config.clone());
+        let mut service2 = service1.clone();
+        let mut service3 = service1.clone();
 
         if self.shutdown.1.is_empty() {
             let mut shutdown = self.shutdown.0.subscribe();
 
             self.spawn(async move {
-                service.setup().await;
+                service1.setup().await;
 
                 tokio::select! {
                     _ = async {
                         loop {
-                            service.recv(signal_tx.clone()).await;
+                            service1.recv(signal1_tx.clone()).await;
                         }
                     } => {}
                     _ = shutdown.recv() => {}
                 }
 
-                service.teardown().await;
+                service1.teardown().await;
             });
 
             let mut shutdown = self.shutdown.0.subscribe();
