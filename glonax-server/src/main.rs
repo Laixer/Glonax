@@ -144,6 +144,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     }
 
     runtime.schedule_io_sub_service::<service::TcpServer, _>(config.tcp_server);
+    runtime.schedule_io_sub_service::<service::Pilot, _>(glonax::runtime::NullConfig {});
 
     runtime.wait_for_shutdown().await;
 
