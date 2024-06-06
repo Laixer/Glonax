@@ -161,7 +161,7 @@ impl J1939Unit for VehicleControlUnit {
         &self,
         _ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        _signal_tx: crate::runtime::SignalSender,
+        _rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {

@@ -475,7 +475,7 @@ impl J1939Unit for HydraulicControlUnit {
         &self,
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        signal_tx: crate::runtime::SignalSender,
+        rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
@@ -513,14 +513,7 @@ impl J1939Unit for HydraulicControlUnit {
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Motion(motion.clone())));
 
-                    if let Err(e) = signal_tx.send(Object::Motion(motion)) {
-                        error!(
-                            "[{}] {}: Failed to send motion signal: {}",
-                            self.interface,
-                            self.name(),
-                            e
-                        );
-                    }
+                    rx_queue.push(Object::Motion(motion.clone()));
 
                     status.into_error()?;
 

@@ -99,9 +99,9 @@ impl NetDriverItem {
     fn try_recv(
         &mut self,
         frame: &j1939::Frame,
-        signal_tx: SignalSender,
+        rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError> {
-        self.driver.try_recv(&mut self.context, frame, signal_tx)
+        self.driver.try_recv(&mut self.context, frame, rx_queue)
     }
 
     fn tick(&mut self, tx_queue: &mut Vec<j1939::Frame>) -> Result<(), J1939UnitError> {
@@ -425,7 +425,9 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         }
 
         for driver in self.drivers.iter_mut() {
-            match driver.try_recv(frame, signal_tx.clone()) {
+            let mut rx_queue = Vec::new();
+
+            match driver.try_recv(frame, &mut rx_queue) {
                 Ok(J1939UnitOk::SignalQueued) => {
                     driver.context.rx_mark();
                 }
@@ -435,6 +437,17 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 Ok(_) => {}
                 Err(e) => {
                     error!("[{}] {}: {}", self.network.interface(), driver, e);
+                }
+            }
+
+            for object in rx_queue {
+                if let Err(e) = signal_tx.send(object) {
+                    error!(
+                        "[{}] {}: Failed to send signal: {}",
+                        self.network.interface(),
+                        driver,
+                        e
+                    );
                 }
             }
         }

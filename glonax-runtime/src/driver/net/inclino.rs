@@ -1,6 +1,7 @@
 use j1939::{protocol, Frame, Name, PGN};
 
 use crate::{
+    core::Object,
     net::Parsable,
     runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
 };
@@ -239,7 +240,7 @@ impl J1939Unit for KueblerInclinometer {
         &self,
         _ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        _signal_tx: crate::runtime::SignalSender,
+        _rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {

@@ -283,7 +283,7 @@ impl J1939Unit for KueblerEncoder {
         &self,
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        signal_tx: crate::runtime::SignalSender,
+        rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
@@ -312,14 +312,7 @@ impl J1939Unit for KueblerEncoder {
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Rotator(rotator)));
 
-                    if let Err(e) = signal_tx.send(Object::Rotator(rotator)) {
-                        error!(
-                            "[{}] {}: Failed to send signal: {}",
-                            self.interface,
-                            self.name(),
-                            e
-                        );
-                    }
+                    rx_queue.push(Object::Rotator(rotator));
 
                     return Ok(J1939UnitOk::SignalQueued);
                 }

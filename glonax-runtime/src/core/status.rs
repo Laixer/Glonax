@@ -73,15 +73,6 @@ pub struct ModuleStatus {
 }
 
 impl ModuleStatus {
-    /// Construct a new module status.
-    pub fn new(name: String, state: ModuleState, error: ModuleError) -> Self {
-        Self {
-            name,
-            state,
-            error: Some(error),
-        }
-    }
-
     /// Construct a new healthy module status.
     pub fn healthy(name: String) -> Self {
         Self {
@@ -142,6 +133,7 @@ impl crate::protocol::Packetize for ModuleStatus {
 
         buf.put_u8(self.state as u8);
 
+        // TODO: Replace with something more stable
         if let Some(error) = &self.error {
             buf.put_u8(1);
             buf.put_u8(match error {

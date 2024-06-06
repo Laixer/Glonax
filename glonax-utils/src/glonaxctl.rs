@@ -118,6 +118,7 @@ async fn main() -> anyhow::Result<()> {
             use glonax::protocol::Packetize;
 
             let frame = client.read_frame().await?;
+            // TODO: If possible, convert back into an object
             match frame.message {
                 glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
                     let error = client

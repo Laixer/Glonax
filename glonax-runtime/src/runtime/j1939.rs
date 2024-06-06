@@ -188,7 +188,7 @@ pub trait J1939Unit: Send + Sync {
         &self,
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        signal_tx: crate::runtime::SignalSender,
+        rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError>;
 
     /// Trigger the unit manually.

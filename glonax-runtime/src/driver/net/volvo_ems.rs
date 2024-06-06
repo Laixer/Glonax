@@ -113,9 +113,9 @@ impl J1939Unit for VolvoD7E {
         &self,
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        signal_tx: crate::runtime::SignalSender,
+        rx_queue: &mut Vec<Object>,
     ) -> Result<J1939UnitOk, J1939UnitError> {
-        self.ems.try_recv(ctx, frame, signal_tx)
+        self.ems.try_recv(ctx, frame, rx_queue)
     }
 
     fn trigger(
