@@ -72,6 +72,16 @@ pub enum DirectorOperation {
     Autonomous,
 }
 
+impl std::fmt::Display for DirectorOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DirectorOperation::Disabled => write!(f, "disabled"),
+            DirectorOperation::Supervised => write!(f, "supervised"),
+            DirectorOperation::Autonomous => write!(f, "autonomous"),
+        }
+    }
+}
+
 pub struct Director {
     actor: Actor,
     operation: DirectorOperation,
@@ -166,6 +176,10 @@ impl Service<NullConfig> for Director {
 
     fn ctx(&self) -> ServiceContext {
         ServiceContext::new("vehicle director")
+    }
+
+    async fn setup(&mut self) {
+        info!("Vehicle director is running in {} mode", self.operation);
     }
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
