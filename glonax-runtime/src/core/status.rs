@@ -82,6 +82,15 @@ impl ModuleStatus {
         }
     }
 
+    /// Construct a new healthy module status.
+    pub fn healthy(name: String) -> Self {
+        Self {
+            name,
+            state: ModuleState::Healthy,
+            error: None,
+        }
+    }
+
     /// Construct a new faulty module status.
     pub fn faulty(name: String, error: ModuleError) -> Self {
         Self {

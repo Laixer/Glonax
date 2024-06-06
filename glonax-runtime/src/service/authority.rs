@@ -72,8 +72,8 @@ pub struct NetworkConfig {
 struct NetDriverItem {
     driver: Box<dyn J1939Unit>,
     context: NetDriverContext,
-    /// Timeout for receiving messages.
     rx_timeout: Option<Duration>,
+    // error: Option<J1939UnitError>,
 }
 
 impl NetDriverItem {
@@ -82,6 +82,7 @@ impl NetDriverItem {
             rx_timeout: None,
             driver: Box::new(driver),
             context: NetDriverContext::default(),
+            // error: None,
         }
     }
 
@@ -130,6 +131,7 @@ pub struct NetworkAuthority {
     network: ControlNetwork,
     default_address: u8,
     drivers: Vec<NetDriverItem>,
+    tick: u64,
     is_setup: bool,
 }
 
@@ -172,6 +174,7 @@ impl Clone for NetworkAuthority {
                         )),
                         context: driver.context.clone(),
                         rx_timeout: driver.rx_timeout,
+                        // error: None,
                     });
                 }
                 ("laixer", "hcu") => {
@@ -183,6 +186,7 @@ impl Clone for NetworkAuthority {
                         )),
                         context: driver.context.clone(),
                         rx_timeout: driver.rx_timeout,
+                        // error: None,
                     });
                 }
                 ("volvo", "d7e") => {
@@ -194,6 +198,7 @@ impl Clone for NetworkAuthority {
                         )),
                         context: driver.context.clone(),
                         rx_timeout: driver.rx_timeout,
+                        // error: None,
                     });
                 }
                 ("kübler", "inclinometer") => {
@@ -205,6 +210,7 @@ impl Clone for NetworkAuthority {
                         )),
                         context: driver.context.clone(),
                         rx_timeout: driver.rx_timeout,
+                        // error: None,
                     });
                 }
                 ("kübler", "encoder") => {
@@ -216,6 +222,7 @@ impl Clone for NetworkAuthority {
                         )),
                         context: driver.context.clone(),
                         rx_timeout: driver.rx_timeout,
+                        // error: None,
                     });
                 }
                 _ => {
@@ -229,6 +236,7 @@ impl Clone for NetworkAuthority {
             network,
             default_address: self.default_address,
             drivers,
+            tick: 0,
             is_setup: self.is_setup,
         }
     }
@@ -338,6 +346,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             network,
             default_address: config.address,
             drivers,
+            tick: 0,
             is_setup: false,
         }
     }
@@ -434,53 +443,54 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
     async fn on_tick(&mut self, signal_tx: SignalSender) {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
+            let mut error = None;
 
             if let Err(e) = driver.tick(&mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
+                error = Some(e);
             }
 
             if driver.is_rx_timeout() {
-                error!(
-                    "[{}] {}: communication timeout",
-                    self.network.interface(),
-                    driver
-                );
+                let e = J1939UnitError::MessageTimeout;
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
+                error = Some(e);
+            }
 
-                let module_status = crate::core::ModuleStatus {
-                    name: driver.driver.name(),
-                    state: crate::core::ModuleState::Faulty,
-                    error: Some(crate::core::ModuleError::CommunicationTimeout),
-                };
-
-                if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
-                    error!(
-                        "[{}] {}: Failed to send signal: {}",
-                        self.network.interface(),
-                        driver,
-                        e
+            if self.tick % 10 == 0 {
+                if let Some(_e) = error {
+                    let module_status = crate::core::ModuleStatus::faulty(
+                        driver.driver.name(),
+                        crate::core::ModuleError::CommunicationTimeout,
                     );
-                }
-            } else {
-                let _module_status = crate::core::ModuleStatus {
-                    name: driver.driver.name(),
-                    state: crate::core::ModuleState::Healthy,
-                    error: None,
-                };
 
-                // if let Err(e) = signal_tx.send(Object::Motion(module_status)) {
-                //     error!(
-                //         "[{}] {}: Failed to send motion signal: {}",
-                //         self.interface,
-                //         self.name(),
-                //         e
-                //     );
-                // }
+                    if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
+                        error!(
+                            "[{}] {}: Failed to send signal: {}",
+                            self.network.interface(),
+                            driver,
+                            e
+                        );
+                    }
+                } else {
+                    let module_status = crate::core::ModuleStatus::healthy(driver.driver.name());
+
+                    if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
+                        error!(
+                            "[{}] {}: Failed to send signal: {}",
+                            self.network.interface(),
+                            driver,
+                            e
+                        );
+                    }
+                }
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
             };
         }
+
+        self.tick = self.tick.wrapping_add(1);
     }
 
     async fn on_command(&mut self, object: &Object) {
@@ -492,11 +502,8 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             }
 
             if driver.is_rx_timeout() {
-                error!(
-                    "[{}] {}: communication timeout",
-                    self.network.interface(),
-                    driver
-                );
+                let e = J1939UnitError::MessageTimeout;
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
