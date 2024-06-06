@@ -6,6 +6,8 @@ const MOTION_TYPE_RESET_ALL: u8 = 0x02;
 const MOTION_TYPE_STRAIGHT_DRIVE: u8 = 0x05;
 const MOTION_TYPE_CHANGE: u8 = 0x10;
 
+const MOTION_MAX_CHANGE_SET_COUNT: usize = 32;
+
 // FUTURE: Move to glonax-server or an excatavator module
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Actuator {
@@ -153,7 +155,15 @@ impl TryFrom<Vec<u8>> for Motion {
                 use std::mem::size_of;
                 const CHANGESET_SIZE: usize = size_of::<u16>() + size_of::<i16>();
 
+                if buf.len() > size_of::<u8>() {
+                    return Err(());
+                }
+
                 let count = buf.get_u8();
+                if count as usize > MOTION_MAX_CHANGE_SET_COUNT {
+                    return Err(());
+                }
+
                 if buf.len() != count as usize * CHANGESET_SIZE {
                     return Err(());
                 }
