@@ -253,6 +253,7 @@ impl Runtime {
         let mut command_rx = self.command_tx.subscribe();
 
         let signal_tx = self.signal_tx.clone();
+        let signal2_tx = self.signal_tx.clone();
 
         let mut service = S::new(config.clone());
         let mut service2 = service.clone();
@@ -282,7 +283,7 @@ impl Runtime {
                 tokio::select! {
                     _ = async {
                         loop {
-                            service2.on_tick().await;
+                            service2.on_tick(signal2_tx.clone()).await;
                             tokio::time::sleep(duration).await;
                         }
                     } => {}

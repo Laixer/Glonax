@@ -431,7 +431,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         }
     }
 
-    async fn on_tick(&mut self) {
+    async fn on_tick(&mut self, signal_tx: SignalSender) {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
@@ -445,6 +445,36 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                     self.network.interface(),
                     driver
                 );
+
+                let module_status = crate::core::ModuleStatus {
+                    name: driver.driver.name(),
+                    state: crate::core::ModuleState::Faulty,
+                    error: Some(crate::core::ModuleError::CommunicationTimeout),
+                };
+
+                if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
+                    error!(
+                        "[{}] {}: Failed to send signal: {}",
+                        self.network.interface(),
+                        driver,
+                        e
+                    );
+                }
+            } else {
+                let _module_status = crate::core::ModuleStatus {
+                    name: driver.driver.name(),
+                    state: crate::core::ModuleState::Healthy,
+                    error: None,
+                };
+
+                // if let Err(e) = signal_tx.send(Object::Motion(module_status)) {
+                //     error!(
+                //         "[{}] {}: Failed to send motion signal: {}",
+                //         self.interface,
+                //         self.name(),
+                //         e
+                //     );
+                // }
             }
 
             if let Err(e) = self.network.send_vectored(&tx_queue).await {

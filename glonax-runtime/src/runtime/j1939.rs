@@ -280,10 +280,14 @@ pub trait NetworkService<Cnf> {
     /// This method is called on each tick of the network service.
     /// Implementations should perform any necessary actions here.
     ///
+    /// # Arguments
+    ///
+    /// * `signal_tx` - The sender for signals.
+    ///
     /// # Returns
     ///
     /// A future that resolves when the action has been performed.
-    fn on_tick(&mut self) -> impl Future<Output = ()> + Send;
+    fn on_tick(&mut self, signal_tx: SignalSender) -> impl Future<Output = ()> + Send;
 
     /// Performs an action in response to a command.
     ///
