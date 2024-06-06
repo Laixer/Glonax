@@ -1,7 +1,8 @@
 use nalgebra::Vector3;
 
 use crate::{
-    core::{Control, Engine, MachineType, Motion, Object},
+    core::{Actuator, Control, Engine, MachineType, Motion, Object, Target},
+    math::Linear,
     runtime::{CommandSender, NullConfig, Service, ServiceContext, SignalReceiver},
     world::{Actor, ActorBuilder, ActorSegment},
 };
@@ -13,6 +14,57 @@ const ENCODER_BOOM: u8 = 0x6B;
 const ENCODER_ARM: u8 = 0x6C;
 const ENCODER_ATTACHMENT: u8 = 0x6D;
 
+mod experimental {
+    use crate::{
+        core::{Actuator, Motion},
+        math::Linear,
+    };
+
+    pub(super) struct ActuatorMotionEvent {
+        pub actuator: Actuator,
+        pub error: f32,
+        pub value: i16,
+    }
+
+    pub(super) struct ActuatorState {
+        profile: Linear,
+        actuator: Actuator,
+        stop: bool,
+    }
+
+    impl ActuatorState {
+        pub(super) fn bind(actuator: Actuator, profile: Linear) -> Self {
+            Self {
+                profile,
+                actuator,
+                stop: false,
+            }
+        }
+
+        pub(super) fn update(&mut self, error: Option<f32>) -> Option<ActuatorMotionEvent> {
+            if let Some(error) = error {
+                self.stop = false;
+
+                Some(ActuatorMotionEvent {
+                    actuator: self.actuator,
+                    error,
+                    value: self.profile.update(error) as i16,
+                })
+            } else if !self.stop {
+                self.stop = true;
+
+                Some(ActuatorMotionEvent {
+                    actuator: self.actuator,
+                    error: 0.0,
+                    value: Motion::POWER_NEUTRAL,
+                })
+            } else {
+                None
+            }
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DirectorOperation {
     Disabled,
@@ -23,6 +75,11 @@ pub enum DirectorOperation {
 pub struct Director {
     actor: Actor,
     operation: DirectorOperation,
+    target: Vec<Target>,
+    frame_state: experimental::ActuatorState,
+    boom_state: experimental::ActuatorState,
+    arm_state: experimental::ActuatorState,
+    attachment_state: experimental::ActuatorState,
 }
 
 impl Director {
@@ -84,14 +141,31 @@ impl Service<NullConfig> for Director {
             )
             .build();
 
+        // TODO: Build the profile from configuration
+        let frame_profile = Linear::new(7_000.0, 12_000.0, false);
+        let boom_profile = Linear::new(15_000.0, 12_000.0, false);
+        let arm_profile = Linear::new(15_000.0, 12_000.0, true);
+        let attachment_profile = Linear::new(15_000.0, 12_000.0, false);
+
+        let frame_state = experimental::ActuatorState::bind(Actuator::Slew, frame_profile);
+        let boom_state = experimental::ActuatorState::bind(Actuator::Boom, boom_profile);
+        let arm_state = experimental::ActuatorState::bind(Actuator::Arm, arm_profile);
+        let attachment_state =
+            experimental::ActuatorState::bind(Actuator::Attachment, attachment_profile);
+
         Self {
             actor,
             operation: DirectorOperation::Supervised,
+            target: Vec::new(),
+            frame_state,
+            boom_state,
+            arm_state,
+            attachment_state,
         }
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::new("pilot")
+        ServiceContext::new("vehicle director")
     }
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
@@ -123,7 +197,74 @@ impl Service<NullConfig> for Director {
 
                     if self.operation == DirectorOperation::Autonomous {
                         // TODO: Invoke the planner
-                        // TODO: Invoke the controller
+
+                        // Controller
+                        {
+                            let frame_error = 0.0;
+                            let boom_error = 0.0;
+                            let arm_error = 0.0;
+                            let attachment_error = 0.0;
+
+                            let mut motion = vec![];
+
+                            if let Some(event) = self.frame_state.update(Some(frame_error)) {
+                                log::debug!(
+                                    "{:?} error: {}, value: {}",
+                                    event.actuator,
+                                    event.error,
+                                    event.value
+                                );
+
+                                motion.push((event.actuator, event.value));
+                            }
+
+                            if let Some(event) = self.boom_state.update(Some(boom_error)) {
+                                log::debug!(
+                                    "{:?} error: {}, value: {}",
+                                    event.actuator,
+                                    event.error,
+                                    event.value
+                                );
+
+                                motion.push((event.actuator, event.value));
+                            }
+
+                            if let Some(event) = self.arm_state.update(Some(arm_error)) {
+                                log::debug!(
+                                    "{:?} error: {}, value: {}",
+                                    event.actuator,
+                                    event.error,
+                                    event.value
+                                );
+
+                                motion.push((event.actuator, event.value));
+                            }
+
+                            if let Some(event) =
+                                self.attachment_state.update(Some(attachment_error))
+                            {
+                                log::debug!(
+                                    "{:?} error: {}, value: {}",
+                                    event.actuator,
+                                    event.error,
+                                    event.value
+                                );
+
+                                motion.push((event.actuator, event.value));
+                            }
+
+                            if !motion.is_empty() {
+                                let motion_command = Motion::from_iter(motion);
+                                if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                                    log::error!("Failed to send motion command: {}", e);
+                                }
+                            } else {
+                                let motion_command = Motion::StopAll;
+                                if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                                    log::error!("Failed to send motion command: {}", e);
+                                }
+                            }
+                        }
                     }
                 }
                 Object::Engine(engine) => {
@@ -131,6 +272,9 @@ impl Service<NullConfig> for Director {
                     if in_emergency && engine.is_running() {
                         Self::command_emergency_stop(&command_tx);
                     }
+                }
+                Object::Target(target) => {
+                    self.target.push(target);
                 }
                 _ => {}
             }
