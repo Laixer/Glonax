@@ -124,56 +124,56 @@ async fn main() -> anyhow::Result<()> {
                         .recv_packet::<glonax::protocol::frame::SessionError>(frame.payload_length)
                         .await?;
 
-                    eprintln!("{:?}", error);
+                    log::error!("{:?}", error);
                 }
                 glonax::core::ModuleStatus::MESSAGE_TYPE => {
                     let status = client
                         .recv_packet::<glonax::core::ModuleStatus>(frame.payload_length)
                         .await?;
 
-                    println!("{}", status);
+                    log::info!("{}", status);
                 }
                 glonax::core::Instance::MESSAGE_TYPE => {
                     let instance = client
                         .recv_packet::<glonax::core::Instance>(frame.payload_length)
                         .await?;
 
-                    println!("{}", instance);
+                    log::info!("{}", instance);
                 }
                 glonax::core::Engine::MESSAGE_TYPE => {
                     let engine = client
                         .recv_packet::<glonax::core::Engine>(frame.payload_length)
                         .await?;
 
-                    println!("{}", engine);
+                    log::info!("{}", engine);
                 }
                 glonax::core::Host::MESSAGE_TYPE => {
                     let host = client
                         .recv_packet::<glonax::core::Host>(frame.payload_length)
                         .await?;
 
-                    println!("{}", host);
+                    log::info!("{}", host);
                 }
                 glonax::core::Gnss::MESSAGE_TYPE => {
                     let gnss = client
                         .recv_packet::<glonax::core::Gnss>(frame.payload_length)
                         .await?;
 
-                    println!("{}", gnss);
+                    log::info!("{}", gnss);
                 }
                 glonax::core::Motion::MESSAGE_TYPE => {
                     let motion = client
                         .recv_packet::<glonax::core::Motion>(frame.payload_length)
                         .await?;
 
-                    println!("{}", motion);
+                    log::info!("{}", motion);
                 }
                 glonax::core::Rotator::MESSAGE_TYPE => {
                     let rotator = client
                         .recv_packet::<glonax::core::Rotator>(frame.payload_length)
                         .await?;
 
-                    println!("{}", rotator);
+                    log::info!("{}", rotator);
                 }
                 glonax::world::Actor::MESSAGE_TYPE => {
                     let actor = client
@@ -181,18 +181,20 @@ async fn main() -> anyhow::Result<()> {
                         .await?;
 
                     let bucket_world_location = actor.world_location("bucket");
-                    println!(
+                    log::info!(
                         "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
-                        bucket_world_location.x, bucket_world_location.y, bucket_world_location.z
+                        bucket_world_location.x,
+                        bucket_world_location.y,
+                        bucket_world_location.z
                     );
                 }
                 _ => {
-                    eprintln!("Unknown message type: 0x{:X}", frame.message);
+                    log::error!("Unknown message type: 0x{:X}", frame.message);
                 }
             }
         },
         Command::Engine { rpm } => {
-            println!("Requesting engine RPM: {}", rpm);
+            log::info!("Requesting engine RPM: {}", rpm);
 
             let engine = if rpm > 0 {
                 glonax::core::Engine::from_rpm(rpm)
@@ -206,7 +208,7 @@ async fn main() -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for lights"))?;
 
-            println!("Setting lights: {}", if toggle { "on" } else { "off" });
+            log::info!("Setting lights: {}", if toggle { "on" } else { "off" });
 
             let control = glonax::core::Control::MachineIllumination(toggle);
             client.send_packet(&control).await?;
@@ -215,7 +217,7 @@ async fn main() -> anyhow::Result<()> {
             let toggle =
                 string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
 
-            println!("Setting horn: {}", if toggle { "on" } else { "off" });
+            log::info!("Setting horn: {}", if toggle { "on" } else { "off" });
 
             let control = glonax::core::Control::MachineHorn(toggle);
             client.send_packet(&control).await?;
@@ -224,7 +226,7 @@ async fn main() -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for quick disconnect"))?;
 
-            println!(
+            log::info!(
                 "Setting quick disconnect: {}",
                 if toggle { "on" } else { "off" }
             );
@@ -235,7 +237,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Ping => loop {
             let time_elapsed = client.probe().await?;
 
-            println!("Echo response time: {} ms", time_elapsed.as_millis());
+            log::info!("Echo response time: {} ms", time_elapsed.as_millis());
 
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         },
