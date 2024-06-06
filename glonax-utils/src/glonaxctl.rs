@@ -126,9 +126,9 @@ async fn main() -> anyhow::Result<()> {
 
                     eprintln!("{:?}", error);
                 }
-                glonax::core::Status::MESSAGE_TYPE => {
+                glonax::core::ModuleStatus::MESSAGE_TYPE => {
                     let status = client
-                        .recv_packet::<glonax::core::Status>(frame.payload_length)
+                        .recv_packet::<glonax::core::ModuleStatus>(frame.payload_length)
                         .await?;
 
                     println!("{}", status);

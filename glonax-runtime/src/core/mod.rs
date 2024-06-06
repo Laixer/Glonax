@@ -8,7 +8,7 @@ pub use self::instance::Instance;
 pub use self::motion::Actuator;
 pub use self::motion::Motion;
 pub use self::rotation::Rotator;
-pub use self::status::Status;
+pub use self::status::{ModuleError, ModuleState, ModuleStatus};
 pub use self::target::Target;
 
 mod control;
@@ -38,6 +38,8 @@ pub enum Object {
     Target(Target),
     /// Rotator.
     Rotator(Rotator),
+    /// Module status.
+    ModuleStatus(ModuleStatus),
 }
 
 /// Represents the type of an object.

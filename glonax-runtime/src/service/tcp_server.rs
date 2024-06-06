@@ -242,6 +242,11 @@ impl TcpServer {
                                         error!("Failed to send rotator: {}", e);
                                     }
                                 }
+                                Object::ModuleStatus(status) => {
+                                    if let Err(e) = client.send_packet(&status).await {
+                                        error!("Failed to send status: {}", e);
+                                    }
+                                }
                                 _ => {}
                             }
                         }
