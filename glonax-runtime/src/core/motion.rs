@@ -155,7 +155,7 @@ impl TryFrom<Vec<u8>> for Motion {
                 use std::mem::size_of;
                 const CHANGESET_SIZE: usize = size_of::<u16>() + size_of::<i16>();
 
-                if buf.len() > size_of::<u8>() {
+                if buf.len() < size_of::<u8>() {
                     return Err(());
                 }
 
