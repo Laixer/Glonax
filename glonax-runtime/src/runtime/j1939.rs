@@ -3,15 +3,17 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::core::{Object, ObjectMessage};
+
 use super::SignalSender;
 
 pub struct NetDriverContextDetail {
     /// Last message sent.
-    tx_last_message: Option<crate::core::ObjectMessage>,
+    tx_last_message: Option<ObjectMessage>,
     /// Last time a message was received.
     rx_last: Instant,
     /// Last message received.
-    rx_last_message: Option<crate::core::ObjectMessage>,
+    rx_last_message: Option<ObjectMessage>,
 }
 
 impl NetDriverContextDetail {
@@ -56,19 +58,19 @@ impl NetDriverContext {
         self.detail.lock().unwrap().rx_mark();
     }
 
-    pub fn set_tx_last_message(&self, message: crate::core::ObjectMessage) {
+    pub fn set_tx_last_message(&self, message: ObjectMessage) {
         self.detail.lock().unwrap().tx_last_message = Some(message);
     }
 
-    pub fn set_rx_last_message(&self, message: crate::core::ObjectMessage) {
+    pub fn set_rx_last_message(&self, message: ObjectMessage) {
         self.detail.lock().unwrap().rx_last_message = Some(message);
     }
 
-    pub fn tx_last_message(&self) -> Option<crate::core::ObjectMessage> {
+    pub fn tx_last_message(&self) -> Option<ObjectMessage> {
         self.detail.lock().unwrap().tx_last_message.clone()
     }
 
-    pub fn rx_last_message(&self) -> Option<crate::core::ObjectMessage> {
+    pub fn rx_last_message(&self) -> Option<ObjectMessage> {
         self.detail.lock().unwrap().rx_last_message.clone()
     }
 }
@@ -200,7 +202,7 @@ pub trait J1939Unit: Send + Sync {
         &self,
         ctx: &mut NetDriverContext,
         tx_queue: &mut Vec<j1939::Frame>,
-        object: &crate::core::Object,
+        object: &Object,
     ) -> Result<(), J1939UnitError> {
         Ok(())
     }
@@ -295,5 +297,5 @@ pub trait NetworkService<Cnf> {
     /// # Returns
     ///
     /// A future that resolves when the action has been performed.
-    fn on_command(&mut self, object: &crate::core::Object) -> impl Future<Output = ()> + Send;
+    fn on_command(&mut self, object: &Object) -> impl Future<Output = ()> + Send;
 }

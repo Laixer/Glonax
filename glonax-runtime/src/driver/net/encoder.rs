@@ -201,9 +201,7 @@ impl KueblerEncoder {
                 true,
                 nalgebra::Vector3::y_axis(),
             )
-        } else if da == 0x6c {
-            EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis())
-        } else if da == 0x6d {
+        } else if da == 0x6c || da == 0x6d {
             EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis())
         } else {
             panic!("Unknown encoder address: {:x}", da)
@@ -300,8 +298,6 @@ impl J1939Unit for KueblerEncoder {
                     return Ok(J1939UnitOk::FrameParsed);
                 }
                 EncoderMessage::ProcessData(process_data) => {
-                    // let encoder_signal = (process_data.source_address, process_data.position as f32);
-
                     let rotation = self.converter.to_rotation(process_data.position as f32);
                     let rotator = Rotator::relative(process_data.source_address, rotation);
 

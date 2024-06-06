@@ -18,10 +18,14 @@ impl TryFrom<u8> for RotationReference {
     }
 }
 
+/// Represents a rotator that stores rotation information.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Rotator {
+    /// The source of the rotation.
     pub source: u8,
+    /// The actual rotation.
     pub rotator: Rotation3<f32>,
+    /// The reference for the rotation.
     pub reference: RotationReference,
 }
 
