@@ -460,7 +460,9 @@ pub struct Filter {
     accept: bool,
 }
 
+/// Represents a filter used for accepting or rejecting items.
 impl Filter {
+    /// Creates a new filter that accepts items.
     pub fn accept() -> Self {
         Self {
             items: vec![],
@@ -468,6 +470,7 @@ impl Filter {
         }
     }
 
+    /// Creates a new filter that rejects items.
     pub fn reject() -> Self {
         Self {
             items: vec![],
@@ -475,10 +478,14 @@ impl Filter {
         }
     }
 
+    /// Pushes a filter item to the filter.
     pub fn push(&mut self, item: FilterItem) {
         self.items.push(item);
     }
 
+    /// Checks if the filter matches the given ID.
+    ///
+    /// Returns `true` if the filter matches the ID, `false` otherwise.
     pub fn matches(&self, id: &Id) -> bool {
         let match_items = self.items.iter().all(|item| item.matches(id));
         if self.accept {

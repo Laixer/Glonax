@@ -72,6 +72,26 @@ pub struct ModuleStatus {
     pub error: Option<ModuleError>,
 }
 
+impl ModuleStatus {
+    /// Construct a new module status.
+    pub fn new(name: String, state: ModuleState, error: ModuleError) -> Self {
+        Self {
+            name,
+            state,
+            error: Some(error),
+        }
+    }
+
+    /// Construct a new faulty module status.
+    pub fn faulty(name: String, error: ModuleError) -> Self {
+        Self {
+            name,
+            state: ModuleState::Faulty,
+            error: Some(error),
+        }
+    }
+}
+
 impl TryFrom<Vec<u8>> for ModuleStatus {
     type Error = ();
 
