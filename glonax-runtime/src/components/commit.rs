@@ -61,39 +61,39 @@ impl<Cnf: Clone> PostComponent<Cnf> for CommitComponent {
             return;
         }
 
-        if let Some(motion_command) = &ctx.machine.motion_command {
-            if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
-                log::error!("Failed to send motion command: {}", e);
-            }
-        }
+        // if let Some(motion_command) = &ctx.machine.motion_command {
+        //     if let Err(e) = command_tx.try_send(Object::Motion(motion_command.clone())) {
+        //         log::error!("Failed to send motion command: {}", e);
+        //     }
+        // }
 
-        if let Some(control_command) = ctx.machine.control_command {
-            if let Err(e) = command_tx.try_send(Object::Control(control_command)) {
-                log::error!("Failed to send control command: {}", e);
-            }
-        }
+        // if let Some(control_command) = ctx.machine.control_command {
+        //     if let Err(e) = command_tx.try_send(Object::Control(control_command)) {
+        //         log::error!("Failed to send control command: {}", e);
+        //     }
+        // }
 
-        // TODO: Move to planner or some other component
-        let engine_command = if let Some(engine_command) = &ctx.machine.engine_command {
-            if engine_command.rpm > 0 {
-                Engine::from_rpm(engine_command.rpm)
-            } else {
-                Engine::shutdown()
-            }
-        } else {
-            ctx.machine.engine_signal
-        };
+        // // TODO: Move to planner or some other component
+        // let engine_command = if let Some(engine_command) = &ctx.machine.engine_command {
+        //     if engine_command.rpm > 0 {
+        //         Engine::from_rpm(engine_command.rpm)
+        //     } else {
+        //         Engine::shutdown()
+        //     }
+        // } else {
+        //     ctx.machine.engine_signal
+        // };
 
-        let governor_engine = self.governor.next_state(
-            &ctx.machine.engine_signal,
-            &engine_command,
-            ctx.machine.engine_command_instant,
-        );
+        // let governor_engine = self.governor.next_state(
+        //     &ctx.machine.engine_signal,
+        //     &engine_command,
+        //     ctx.machine.engine_command_instant,
+        // );
 
-        log::trace!("Engine governor: {:?}", governor_engine);
+        // log::trace!("Engine governor: {:?}", governor_engine);
 
-        if let Err(e) = command_tx.try_send(Object::Engine(governor_engine)) {
-            log::error!("Failed to send engine command: {}", e);
-        }
+        // if let Err(e) = command_tx.try_send(Object::Engine(governor_engine)) {
+        //     log::error!("Failed to send engine command: {}", e);
+        // }
     }
 }
