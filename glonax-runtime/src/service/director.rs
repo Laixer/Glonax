@@ -13,8 +13,16 @@ const ENCODER_BOOM: u8 = 0x6B;
 const ENCODER_ARM: u8 = 0x6C;
 const ENCODER_ATTACHMENT: u8 = 0x6D;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum DirectorOperation {
+    Disabled,
+    Supervised,
+    Autonomous,
+}
+
 pub struct Director {
     actor: Actor,
+    operation: DirectorOperation,
 }
 
 impl Director {
@@ -76,7 +84,10 @@ impl Service<NullConfig> for Director {
             )
             .build();
 
-        Self { actor }
+        Self {
+            actor,
+            operation: DirectorOperation::Supervised,
+        }
     }
 
     fn ctx(&self) -> ServiceContext {
@@ -87,21 +98,32 @@ impl Service<NullConfig> for Director {
         if let Ok(signal) = signal_rx.recv().await {
             match signal {
                 Object::Rotator(rotator) => {
-                    if rotator.source == ENCODER_FRAME {
-                        self.actor.set_relative_rotation("frame", rotator.rotator);
+                    match rotator.source {
+                        ENCODER_FRAME => {
+                            self.actor.set_relative_rotation("frame", rotator.rotator);
+                        }
+                        ENCODER_BOOM => {
+                            self.actor.set_relative_rotation("boom", rotator.rotator);
+                        }
+                        ENCODER_ARM => {
+                            self.actor.set_relative_rotation("arm", rotator.rotator);
+                        }
+                        ENCODER_ATTACHMENT => {
+                            self.actor
+                                .set_relative_rotation("attachment", rotator.rotator);
+                        }
+                        _ => {}
                     }
 
-                    if rotator.source == ENCODER_BOOM {
-                        self.actor.set_relative_rotation("boom", rotator.rotator);
+                    if self.operation == DirectorOperation::Supervised
+                        || self.operation == DirectorOperation::Autonomous
+                    {
+                        // TODO: Invoke supervisor
                     }
 
-                    if rotator.source == ENCODER_ARM {
-                        self.actor.set_relative_rotation("arm", rotator.rotator);
-                    }
-
-                    if rotator.source == ENCODER_ATTACHMENT {
-                        self.actor
-                            .set_relative_rotation("attachment", rotator.rotator);
+                    if self.operation == DirectorOperation::Autonomous {
+                        // TODO: Invoke the planner
+                        // TODO: Invoke the controller
                     }
                 }
                 Object::Engine(engine) => {
@@ -113,6 +135,15 @@ impl Service<NullConfig> for Director {
                 _ => {}
             }
         }
+
+        // log::trace!("Frame encoder: {}", value);
+
+        // log::trace!(
+        //     "Frame: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+        //     rotator.euler_angles().0.to_degrees(),
+        //     rotator.euler_angles().1.to_degrees(),
+        //     rotator.euler_angles().2.to_degrees()
+        // );
 
         // let body_world_location = self.actor.world_location("frame");
         // trace!(
