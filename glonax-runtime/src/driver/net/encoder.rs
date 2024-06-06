@@ -303,7 +303,7 @@ impl J1939Unit for KueblerEncoder {
                     // let encoder_signal = (process_data.source_address, process_data.position as f32);
 
                     let rotation = self.converter.to_rotation(process_data.position as f32);
-                    let rotator = Rotator::relative(rotation);
+                    let rotator = Rotator::relative(process_data.source_address, rotation);
 
                     trace!(
                         "[{}] {}: Roll={:.2} Pitch={:.2} Yaw={:.2}",
@@ -314,17 +314,8 @@ impl J1939Unit for KueblerEncoder {
                         rotation.euler_angles().2.to_degrees()
                     );
 
-                    // ctx.set_rx_last_message(ObjectMessage::signal(Object::Encoder(encoder_signal)));
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Rotator(rotator)));
 
-                    // if let Err(e) = signal_tx.send(Object::Encoder(encoder_signal)) {
-                    //     error!(
-                    //         "[{}] {}: Failed to send signal: {}",
-                    //         self.interface,
-                    //         self.name(),
-                    //         e
-                    //     );
-                    // }
                     if let Err(e) = signal_tx.send(Object::Rotator(rotator)) {
                         error!(
                             "[{}] {}: Failed to send signal: {}",

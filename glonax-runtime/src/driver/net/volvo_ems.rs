@@ -112,7 +112,6 @@ impl J1939Unit for VolvoD7E {
     fn try_recv(
         &self,
         ctx: &mut NetDriverContext,
-        // network: &crate::net::ControlNetwork,
         frame: &j1939::Frame,
         signal_tx: crate::runtime::SignalSender,
     ) -> Result<J1939UnitOk, J1939UnitError> {
