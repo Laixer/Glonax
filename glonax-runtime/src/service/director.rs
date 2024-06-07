@@ -207,10 +207,16 @@ impl Service<NullConfig> for Director {
                         || self.operation == DirectorOperation::Autonomous
                     {
                         // TODO: Invoke supervisor
+                        // TODO: Supervisor should check:
+                        // - If the actor is in a safe state (e.g. not in an emergency stop)
+                        // - If the actor has all the necessary components (encoders, sensors, etc.)
+                        // - If the actor is in a safe environment (e.g. not in a collision course)
                     }
 
                     if self.operation == DirectorOperation::Autonomous {
                         // Planner
+
+                        // TODO: Before we call the planner, we need to check the supervisor status
 
                         let mut actuator_error = Vec::new();
 
@@ -220,14 +226,16 @@ impl Service<NullConfig> for Director {
                             // TODO: Calculate this from the actor
                             const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 
-                            if let Some(target) = &target {
-                                log::debug!("Objective target: {}", target);
-
+                            {
                                 let actor_world_distance = nalgebra::distance(
                                     &self.actor.location(),
                                     &Point3::new(0.0, 0.0, 0.0),
                                 );
                                 log::debug!("Actor origin distance: {:.2}", actor_world_distance);
+                            }
+
+                            if let Some(target) = &target {
+                                log::debug!("Objective target: {}", target);
 
                                 let actor_target_distance =
                                     nalgebra::distance(&self.actor.location(), &target.point);
