@@ -4,7 +4,7 @@ use crate::{
     core::{Object, ObjectMessage, Rotator},
     driver::EncoderConverter,
     net::Parsable,
-    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+    runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
 const _CONFIG_PGN: PGN = PGN::ProprietaryA;
@@ -284,7 +284,7 @@ impl J1939Unit for KueblerEncoder {
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         rx_queue: &mut Vec<Object>,
-    ) -> Result<J1939UnitOk, J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 EncoderMessage::AddressClaim(name) => {
@@ -295,7 +295,7 @@ impl J1939Unit for KueblerEncoder {
                         name
                     );
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
                 EncoderMessage::ProcessData(process_data) => {
                     let rotation = self.converter.to_rotation(process_data.position as f32);
@@ -314,12 +314,12 @@ impl J1939Unit for KueblerEncoder {
 
                     rx_queue.push(Object::Rotator(rotator));
 
-                    return Ok(J1939UnitOk::SignalQueued);
+                    return Ok(());
                 }
             }
         }
 
-        Ok(J1939UnitOk::FrameIgnored)
+        Ok(())
     }
 }
 

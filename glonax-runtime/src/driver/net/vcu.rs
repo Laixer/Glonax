@@ -3,7 +3,7 @@ use j1939::{protocol, Frame, Name, PGN};
 use crate::{
     core::Object,
     net::Parsable,
-    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+    runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
 use super::vecraft::{VecraftConfigMessage, VecraftStatusMessage};
@@ -162,7 +162,7 @@ impl J1939Unit for VehicleControlUnit {
         _ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         _rx_queue: &mut Vec<Object>,
-    ) -> Result<J1939UnitOk, J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 VehicleMessage::VecraftConfig(_config) => {}
@@ -176,7 +176,7 @@ impl J1939Unit for VehicleControlUnit {
                         version.2
                     );
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
                 VehicleMessage::AddressClaim(name) => {
                     debug!(
@@ -186,17 +186,17 @@ impl J1939Unit for VehicleControlUnit {
                         name
                     );
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
                 VehicleMessage::Status(status) => {
                     status.into_error()?;
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
             }
         }
 
-        Ok(J1939UnitOk::FrameIgnored)
+        Ok(())
     }
 
     fn trigger(

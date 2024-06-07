@@ -6,7 +6,7 @@ use crate::{
     core::{EngineState, Object, ObjectMessage},
     driver::{net::engine::Engine, EngineMessage, Governor},
     net::Parsable,
-    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+    runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
 use super::engine::EngineManagementSystem;
@@ -114,7 +114,7 @@ impl J1939Unit for VolvoD7E {
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         rx_queue: &mut Vec<Object>,
-    ) -> Result<J1939UnitOk, J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         self.ems.try_recv(ctx, frame, rx_queue)
     }
 

@@ -3,7 +3,7 @@ use j1939::{protocol, spn, Frame, FrameBuilder, IdBuilder, PGN};
 use crate::{
     core::{EngineState, Object, ObjectMessage},
     net::Parsable,
-    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+    runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
 pub trait Engine {
@@ -344,7 +344,7 @@ impl J1939Unit for EngineManagementSystem {
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         rx_queue: &mut Vec<Object>,
-    ) -> Result<J1939UnitOk, J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 EngineMessage::EngineController1(controller) => {
@@ -403,19 +403,19 @@ impl J1939Unit for EngineManagementSystem {
 
                     rx_queue.push(Object::Engine(engine_signal));
 
-                    return Ok(J1939UnitOk::SignalQueued);
+                    return Ok(());
                 }
                 EngineMessage::Shutdown(_shutdown) => {
                     // TODO: Handle shutdown message, set state to stopping
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
                 _ => {
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
             }
         }
 
-        Ok(J1939UnitOk::FrameIgnored)
+        Ok(())
     }
 }

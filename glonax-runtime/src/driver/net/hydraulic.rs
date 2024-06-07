@@ -5,7 +5,7 @@ use j1939::{protocol, Frame, FrameBuilder, IdBuilder, Name, PDU_NOT_AVAILABLE, P
 use crate::{
     core::{Motion, Object, ObjectMessage},
     net::Parsable,
-    runtime::{J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext},
+    runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
 use super::vecraft::{VecraftConfigMessage, VecraftFactoryResetMessage, VecraftStatusMessage};
@@ -476,7 +476,7 @@ impl J1939Unit for HydraulicControlUnit {
         ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         rx_queue: &mut Vec<Object>,
-    ) -> Result<J1939UnitOk, J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
                 HydraulicMessage::Actuator(_actuator) => {}
@@ -492,7 +492,7 @@ impl J1939Unit for HydraulicControlUnit {
                         version.2
                     );
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
                 HydraulicMessage::AddressClaim(name) => {
                     debug!(
@@ -502,7 +502,7 @@ impl J1939Unit for HydraulicControlUnit {
                         name
                     );
 
-                    return Ok(J1939UnitOk::FrameParsed);
+                    return Ok(());
                 }
                 HydraulicMessage::Status(status) => {
                     let motion = if status.locked {
@@ -517,12 +517,12 @@ impl J1939Unit for HydraulicControlUnit {
 
                     status.into_error()?;
 
-                    return Ok(J1939UnitOk::SignalQueued);
+                    return Ok(());
                 }
             }
         }
 
-        Ok(J1939UnitOk::FrameIgnored)
+        Ok(())
     }
 
     fn trigger(

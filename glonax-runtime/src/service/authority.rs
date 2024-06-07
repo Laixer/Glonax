@@ -5,9 +5,7 @@ use j1939::protocol;
 use crate::{
     core::Object,
     net::ControlNetwork,
-    runtime::{
-        J1939Unit, J1939UnitError, J1939UnitOk, NetDriverContext, NetworkService, SignalSender,
-    },
+    runtime::{J1939Unit, J1939UnitError, NetDriverContext, NetworkService, SignalSender},
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -100,7 +98,7 @@ impl NetDriverItem {
         &mut self,
         frame: &j1939::Frame,
         rx_queue: &mut Vec<Object>,
-    ) -> Result<J1939UnitOk, J1939UnitError> {
+    ) -> Result<(), J1939UnitError> {
         self.driver.try_recv(&mut self.context, frame, rx_queue)
     }
 
@@ -427,21 +425,12 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut rx_queue = Vec::new();
 
-            match driver.try_recv(frame, &mut rx_queue) {
-                Ok(J1939UnitOk::SignalQueued) => {
-                    driver.context.rx_mark();
-                }
-                Ok(J1939UnitOk::FrameParsed) => {
-                    driver.context.rx_mark();
-                }
-                Ok(_) => {}
-                Err(e) => {
-                    error!("[{}] {}: {}", self.network.interface(), driver, e);
-                }
+            if let Err(e) = driver.try_recv(frame, &mut rx_queue) {
+                error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
-            for object in rx_queue {
-                if let Err(e) = signal_tx.send(object) {
+            for object in &rx_queue {
+                if let Err(e) = signal_tx.send(object.clone()) {
                     error!(
                         "[{}] {}: Failed to send signal: {}",
                         self.network.interface(),
@@ -449,6 +438,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                         e
                     );
                 }
+            }
+
+            if !rx_queue.is_empty() {
+                driver.context.rx_mark();
+                break;
             }
         }
     }
