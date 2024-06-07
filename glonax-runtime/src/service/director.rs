@@ -1,4 +1,4 @@
-use nalgebra::Vector3;
+use nalgebra::{Point3, Vector3};
 
 use crate::{
     core::{Actuator, Control, Engine, MachineType, Motion, Object, Target},
@@ -210,18 +210,129 @@ impl Service<NullConfig> for Director {
                     }
 
                     if self.operation == DirectorOperation::Autonomous {
-                        // TODO: Invoke the planner
+                        // Planner
+
+                        let mut actuator_error = Vec::new();
+
+                        {
+                            let target = self.target.pop();
+
+                            // TODO: Calculate this from the actor
+                            const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
+
+                            if let Some(target) = &target {
+                                log::debug!("Objective target: {}", target);
+
+                                let actor_world_distance = nalgebra::distance(
+                                    &self.actor.location(),
+                                    &Point3::new(0.0, 0.0, 0.0),
+                                );
+                                log::debug!("Actor origin distance: {:.2}", actor_world_distance);
+
+                                let actor_target_distance =
+                                    nalgebra::distance(&self.actor.location(), &target.point);
+                                log::debug!("Actor target distance: {:.2}", actor_target_distance);
+
+                                let boom_point = self.actor.relative_location("boom").unwrap();
+                                let kinematic_target_distance = nalgebra::distance(
+                                    &self.actor.location(),
+                                    &(target.point - boom_point.coords),
+                                );
+                                log::debug!(
+                                    "Kinematic target distance: {:.2}",
+                                    kinematic_target_distance
+                                );
+
+                                if kinematic_target_distance > MAX_KINEMATIC_DISTANCE {
+                                    log::warn!("Target is out of reach");
+                                }
+                            }
+
+                            if let Some(target) = &target {
+                                let boom_length = self.actor.relative_location("arm").unwrap().x;
+                                // log::debug!("Boom length: {:?}", boom_length);
+
+                                let arm_length =
+                                    self.actor.relative_location("attachment").unwrap().x;
+                                // log::debug!("Arm length: {:?}", arm_length);
+
+                                let boom_world_location = self.actor.world_location("boom");
+
+                                let target_distance =
+                                    nalgebra::distance(&boom_world_location, &target.point);
+                                log::debug!("Tri-Arm target distance: {:.2}", target_distance);
+
+                                let target_direction =
+                                    (target.point.coords - boom_world_location.coords).normalize();
+
+                                /////////////// SLEW YAW ANGLE ///////////////
+
+                                let slew_angle = target_direction.y.atan2(target_direction.x);
+                                log::debug!(
+                                    "  Slew angle: {:.3}rad {:.2}deg",
+                                    slew_angle,
+                                    slew_angle.to_degrees()
+                                );
+
+                                // ctx.actuators.insert(crate::core::Actuator::Slew as u16, slew_angle);
+                                actuator_error.push((Actuator::Slew, slew_angle));
+
+                                /////////////// BOOM PITCH ANGLE ///////////////
+
+                                let pitch = target_direction.z.atan2(
+                                    (target_direction.x.powi(2) + target_direction.y.powi(2))
+                                        .sqrt(),
+                                );
+                                // log::debug!("Pitch: {}deg", pitch.to_degrees());
+
+                                let theta1 = crate::math::law_of_cosines(
+                                    boom_length,
+                                    target_distance,
+                                    arm_length,
+                                );
+                                // log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
+
+                                let boom_angle = theta1 + pitch;
+                                log::debug!(
+                                    "  Boom angle: {:.3}rad {:.2}deg",
+                                    boom_angle,
+                                    boom_angle.to_degrees()
+                                );
+
+                                // ctx.actuators.insert(crate::core::Actuator::Boom as u16, boom_angle);
+                                actuator_error.push((Actuator::Boom, boom_angle));
+
+                                /////////////// ARM PITCH ANGLE ///////////////
+
+                                let theta0 = crate::math::law_of_cosines(
+                                    boom_length,
+                                    arm_length,
+                                    target_distance,
+                                );
+                                // log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
+
+                                let arm_angle = -(std::f32::consts::PI - theta0);
+                                log::debug!(
+                                    "  Arm angle: {:.3}rad {:.2}deg",
+                                    arm_angle,
+                                    arm_angle.to_degrees()
+                                );
+
+                                // ctx.actuators.insert(crate::core::Actuator::Arm as u16, arm_angle);
+                                actuator_error.push((Actuator::Arm, arm_angle));
+                            }
+                        }
 
                         // Controller
                         {
-                            let frame_error = 0.0;
-                            let boom_error = 0.0;
-                            let arm_error = 0.0;
-                            let attachment_error = 0.0;
-
                             let mut motion = vec![];
 
-                            if let Some(event) = self.frame_state.update(Some(frame_error)) {
+                            let frame_error = actuator_error
+                                .iter()
+                                .find(|(actuator, _)| *actuator == Actuator::Slew)
+                                .map(|(_, error)| *error);
+
+                            if let Some(event) = self.frame_state.update(frame_error) {
                                 log::debug!(
                                     "{:?} error: {}, value: {}",
                                     event.actuator,
@@ -232,7 +343,12 @@ impl Service<NullConfig> for Director {
                                 motion.push((event.actuator, event.value));
                             }
 
-                            if let Some(event) = self.boom_state.update(Some(boom_error)) {
+                            let boom_error = actuator_error
+                                .iter()
+                                .find(|(actuator, _)| *actuator == Actuator::Boom)
+                                .map(|(_, error)| *error);
+
+                            if let Some(event) = self.boom_state.update(boom_error) {
                                 log::debug!(
                                     "{:?} error: {}, value: {}",
                                     event.actuator,
@@ -243,7 +359,12 @@ impl Service<NullConfig> for Director {
                                 motion.push((event.actuator, event.value));
                             }
 
-                            if let Some(event) = self.arm_state.update(Some(arm_error)) {
+                            let arm_error = actuator_error
+                                .iter()
+                                .find(|(actuator, _)| *actuator == Actuator::Arm)
+                                .map(|(_, error)| *error);
+
+                            if let Some(event) = self.arm_state.update(arm_error) {
                                 log::debug!(
                                     "{:?} error: {}, value: {}",
                                     event.actuator,
@@ -254,9 +375,12 @@ impl Service<NullConfig> for Director {
                                 motion.push((event.actuator, event.value));
                             }
 
-                            if let Some(event) =
-                                self.attachment_state.update(Some(attachment_error))
-                            {
+                            let attachment_error = actuator_error
+                                .iter()
+                                .find(|(actuator, _)| *actuator == Actuator::Attachment)
+                                .map(|(_, error)| *error);
+
+                            if let Some(event) = self.attachment_state.update(attachment_error) {
                                 log::debug!(
                                     "{:?} error: {}, value: {}",
                                     event.actuator,

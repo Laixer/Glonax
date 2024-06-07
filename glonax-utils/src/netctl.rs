@@ -929,6 +929,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Send { interval, id, data } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
+            // TODO: Allow zero interval
             let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
 
             let frame = glonax::j1939::FrameBuilder::new(glonax::j1939::Id::new(
@@ -976,6 +977,7 @@ async fn main() -> anyhow::Result<()> {
                 16,
             )?));
 
+            // TODO: Allow zero interval
             let mut tick = tokio::time::interval(std::time::Duration::from_millis(
                 interval.unwrap_or_else(|| glonax::rand::thread_rng().gen_range(1..=50)),
             ));
