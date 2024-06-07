@@ -1,4 +1,4 @@
-use glonax::core::{Actuator, Motion};
+use glonax::core::{Actuator, Motion, Object};
 
 /// Level trait.
 pub trait Level {
@@ -94,35 +94,35 @@ impl InputState {
     /// Each individual scancode is mapped to its own motion
     /// structure. This way an input scancode can be more or
     /// less sensitive based on the actuator (and input control).
-    pub(super) fn try_from(&mut self, input: Scancode) -> Option<Motion> {
+    pub(super) fn try_from(&mut self, input: Scancode) -> Option<Object> {
         match input {
             Scancode::Slew(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(Actuator::Slew, value).into()
+                Some(Object::Motion(Motion::new(Actuator::Slew, value)))
             }
             Scancode::Arm(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(Actuator::Arm, value).into()
+                Some(Object::Motion(Motion::new(Actuator::Arm, value)))
             }
             Scancode::Attachment(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(Actuator::Attachment, value).into()
+                Some(Object::Motion(Motion::new(Actuator::Attachment, value)))
             }
             Scancode::Boom(value) => {
                 if self.motion_lock {
                     return None;
                 }
 
-                Motion::new(Actuator::Boom, value).into()
+                Some(Object::Motion(Motion::new(Actuator::Boom, value)))
             }
             Scancode::LeftTrack(value) => {
                 if self.motion_lock {
@@ -130,9 +130,9 @@ impl InputState {
                 }
 
                 if self.drive_lock {
-                    Motion::StraightDrive(value).into()
+                    Some(Object::Motion(Motion::StraightDrive(value)))
                 } else {
-                    Motion::new(Actuator::LimpLeft, value).into()
+                    Some(Object::Motion(Motion::new(Actuator::LimpLeft, value)))
                 }
             }
             Scancode::RightTrack(value) => {
@@ -141,18 +141,18 @@ impl InputState {
                 }
 
                 if self.drive_lock {
-                    Motion::StraightDrive(value).into()
+                    Some(Object::Motion(Motion::StraightDrive(value)))
                 } else {
-                    Motion::new(Actuator::LimpRight, value).into()
+                    Some(Object::Motion(Motion::new(Actuator::LimpRight, value)))
                 }
             }
             Scancode::Abort(ButtonState::Pressed) => {
                 self.motion_lock = true;
-                Motion::StopAll.into()
+                Some(Object::Motion(Motion::StopAll))
             }
             Scancode::Abort(ButtonState::Released) => {
                 self.motion_lock = false;
-                Motion::ResumeAll.into()
+                Some(Object::Motion(Motion::ResumeAll))
             }
             Scancode::DriveLock(ButtonState::Pressed) => {
                 self.drive_lock = true;
@@ -160,7 +160,7 @@ impl InputState {
             }
             Scancode::DriveLock(ButtonState::Released) => {
                 self.drive_lock = false;
-                Motion::StraightDrive(Motion::POWER_NEUTRAL).into()
+                Some(Object::Motion(Motion::StraightDrive(Motion::POWER_NEUTRAL)))
             }
             _ => None,
         }

@@ -71,6 +71,11 @@ impl InputDevice for XboxController {
                 ((((event.value as i32 - i16::MAX as i32) / 2) as i16).abs()).ramp(2_000)
             })),
             Event {
+                ty: EventType::Button(0),
+                value,
+                ..
+            } => Some(Scancode::Confirm(ButtonState::from(value))),
+            Event {
                 ty: EventType::Button(1),
                 value,
                 ..

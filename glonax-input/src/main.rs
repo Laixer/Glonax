@@ -151,10 +151,14 @@ async fn run(args: Args) -> anyhow::Result<()> {
     loop {
         let event = joystick.next_event().await?;
         if let Some(code) = input_device.map(&event) {
-            if let Some(motion) = input_state.try_from(code) {
-                log::trace!("{}", motion);
+            if let Some(object) = input_state.try_from(code) {
+                log::trace!("{:?}", object);
 
-                client.send_packet(&motion).await?
+                match object {
+                    glonax::core::Object::Motion(motion) => client.send_packet(&motion).await?,
+                    glonax::core::Object::Engine(engine) => client.send_packet(&engine).await?,
+                    _ => {}
+                }
             }
         }
     }
