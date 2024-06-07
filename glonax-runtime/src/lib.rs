@@ -70,6 +70,8 @@ pub mod global {
 
 /// Glonax runtime module containing various constants.
 pub mod consts {
+    use std::time::Duration;
+
     /// Glonax runtime version.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");
     /// Glonax runtime major version.
@@ -87,9 +89,9 @@ pub mod consts {
     /// Glonax network maximum number of clients.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
     /// Glonax component delay threshold.
-    pub const COMPONENT_DELAY_THRESHOLD: std::time::Duration = std::time::Duration::from_millis(1);
+    pub const COMPONENT_DELAY_THRESHOLD: Duration = Duration::from_millis(1);
     /// Glonax service pipeline interval.
-    pub const SERVICE_PIPELINE_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
+    pub const SERVICE_PIPELINE_INTERVAL: Duration = Duration::from_millis(10);
 }
 
 /// Log system information.
@@ -118,75 +120,9 @@ pub fn log_system() {
     );
 }
 
-/// Represents the state of a machine.
-///
-/// The project refers to the machine as the entire system including
-/// hardware, software, sensors and actuators.
-#[derive(Default)]
-pub struct Machine {
-    /// Vehicle management system data.
-    pub vms_signal: core::Host,
-    /// Vehicle management system update.
-    pub vms_signal_instant: Option<std::time::Instant>,
-    /// Vehicle management system update set.
-    pub vms_signal_set: bool,
-    /// Vehicle management system update changed.
-    pub vms_signal_changed: bool,
+pub fn is_compatibile(version: (u8, u8, u8)) -> bool {
+    let (major, minor, _) = version;
 
-    /// Global navigation satellite system data.
-    pub gnss_signal: core::Gnss,
-    /// GNSS signal update.
-    pub gnss_signal_instant: Option<std::time::Instant>,
-    /// GNSS signal update set.
-    pub gnss_signal_set: bool,
-    /// GNSS signal update changed.
-    pub gnss_signal_changed: bool,
-
-    /// Engine signal.
-    pub engine_signal: core::Engine,
-    /// Engine state actual instant.
-    pub engine_signal_instant: Option<std::time::Instant>,
-    /// Engine state actual set.
-    pub engine_signal_set: bool,
-    /// Engine state actual changed.
-    pub engine_signal_changed: bool,
-
-    /// Motion signal.
-    pub motion_signal: core::Motion,
-    /// Motion signal instant.
-    pub motion_signal_instant: Option<std::time::Instant>,
-    /// Motion signal set.
-    pub motion_signal_set: bool,
-    /// Motion signal changed.
-    pub motion_signal_changed: bool,
-
-    /// Encoder data.
-    pub encoders: std::collections::HashMap<u8, f32>, // TODO: HACK: Temporary
-    /// Encoder instant.
-    pub encoders_instant: Option<std::time::Instant>, // TODO: HACK: Temporary
-    /// Encoder set.
-    pub encoders_set: bool, // TODO: HACK: Temporary
-    /// Encoder changed.
-    pub encoders_changed: bool, // TODO: HACK: Temporary
-
-    /// Engine command.
-    pub engine_command: Option<core::Engine>,
-    /// Engine state request instant.
-    pub engine_command_instant: Option<std::time::Instant>,
-
-    /// Motion command.
-    pub motion_command: Option<core::Motion>,
-    /// Motion command instant.
-    pub motion_command_instant: Option<std::time::Instant>,
-
-    /// Control command.
-    pub control_command: Option<core::Control>,
-    /// Control command instant.
-    pub control_command_instant: Option<std::time::Instant>,
-
-    /// Current program queue.
-    pub program_command: std::collections::VecDeque<core::Target>,
-
-    /// Emergency flag.
-    pub emergency: bool,
+    major == consts::VERSION_MAJOR.parse().unwrap()
+        && minor == consts::VERSION_MINOR.parse().unwrap()
 }

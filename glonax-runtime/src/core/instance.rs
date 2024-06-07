@@ -35,6 +35,12 @@ impl Instance {
         }
     }
 
+    /// Retrieve the instance version.
+    #[inline]
+    pub fn version(&self) -> (u8, u8, u8) {
+        self.version
+    }
+
     /// Retrieve the instance unique identifier.
     #[inline]
     pub fn id(&self) -> &uuid::Uuid {

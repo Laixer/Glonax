@@ -149,6 +149,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
     log::info!("Connected to {}", address);
     log::info!("{}", instance);
 
+    if !glonax::is_compatibile(instance.version()) {
+        return Err(anyhow::anyhow!("Incompatible runtime version"));
+    }
+
     loop {
         let event = joystick.next_event().await?;
         if let Some(code) = input_device.map(&event) {

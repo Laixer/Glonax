@@ -69,6 +69,10 @@ pub(crate) enum Scancode {
     Up(ButtonState),
     /// Down button.
     Down(ButtonState),
+    /// Left button.
+    Left(ButtonState),
+    /// Right button.
+    Right(ButtonState),
 }
 
 pub(crate) struct InputState {
