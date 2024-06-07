@@ -158,6 +158,10 @@ impl InputState {
                 }
             }
             Scancode::Up(ButtonState::Pressed) => {
+                if !self.motion_lock {
+                    return None;
+                }
+
                 // TODO: Move somwhere else
                 let rpm_new = (self.engine_rpm + 100).clamp(900, 2_100);
                 self.engine_rpm = rpm_new;
@@ -167,6 +171,10 @@ impl InputState {
                 )))
             }
             Scancode::Down(ButtonState::Pressed) => {
+                if !self.motion_lock {
+                    return None;
+                }
+
                 // TODO: Move somwhere else
                 if self.engine_rpm <= 900 {
                     self.engine_rpm = 0;
