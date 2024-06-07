@@ -113,6 +113,10 @@ async fn main() -> anyhow::Result<()> {
     println!("Connected to {}", address);
     println!("{}", instance);
 
+    if !glonax::is_compatibile(instance.version()) {
+        return Err(anyhow::anyhow!("Incompatible runtime version"));
+    }
+
     match args.command {
         Command::Watch => loop {
             use glonax::protocol::Packetize;
