@@ -105,7 +105,7 @@ pub struct Runtime {
     command_tx: CommandSender,
     /// Command receiver.
     #[allow(dead_code)]
-    command_rx: CommandReceiver,
+    command_rx: CommandReceiver, // TODO: Drop this receiver. We can always clone the sender.
 
     /// Signal sender.
     signal_tx: SignalSender,
