@@ -76,7 +76,7 @@ impl InputDevice for XboxController {
             } => match event.value {
                 value if value > 0 => Some(Scancode::Up(ButtonState::Pressed)),
                 value if value < 0 => Some(Scancode::Down(ButtonState::Pressed)),
-                _ => Some(Scancode::Up(ButtonState::Released)),
+                _ => None,
             },
             Event {
                 ty: EventType::Button(0),
