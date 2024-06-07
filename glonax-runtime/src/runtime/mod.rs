@@ -1,4 +1,3 @@
-// mod component;
 mod error;
 mod j1939;
 
@@ -6,7 +5,6 @@ use std::{future::Future, time::Duration};
 
 pub use self::error::Error;
 pub use self::j1939::{J1939Unit, J1939UnitError, NetDriverContext, NetworkService};
-// pub use component::{Component, ComponentContext, InitComponent, PostComponent};
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 

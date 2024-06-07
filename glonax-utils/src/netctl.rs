@@ -57,6 +57,30 @@ fn j1939_address(address: String) -> Result<u8, std::num::ParseIntError> {
     }
 }
 
+struct Interval {
+    interval: Option<tokio::time::Interval>,
+}
+
+impl Interval {
+    fn new(interval: u64) -> Self {
+        if interval == 0 {
+            Self { interval: None }
+        } else {
+            Self {
+                interval: Some(tokio::time::interval(std::time::Duration::from_millis(
+                    interval,
+                ))),
+            }
+        }
+    }
+
+    async fn tick(&mut self) {
+        if let Some(interval) = &mut self.interval {
+            interval.tick().await;
+        }
+    }
+}
+
 /// Analyze incoming frames and print their contents to the screen.
 async fn analyze_frames(mut network: ControlNetwork) -> anyhow::Result<()> {
     use glonax::driver::{
@@ -929,8 +953,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Send { interval, id, data } => {
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
-            // TODO: Allow zero interval
-            let mut tick = tokio::time::interval(std::time::Duration::from_millis(interval));
+            let mut tick = Interval::new(interval);
 
             let frame = glonax::j1939::FrameBuilder::new(glonax::j1939::Id::new(
                 u32::from_str_radix(id.as_str(), 16)?,
@@ -977,10 +1000,9 @@ async fn main() -> anyhow::Result<()> {
                 16,
             )?));
 
-            // TODO: Allow zero interval
-            let mut tick = tokio::time::interval(std::time::Duration::from_millis(
-                interval.unwrap_or_else(|| glonax::rand::thread_rng().gen_range(1..=50)),
-            ));
+            let mut tick = Interval::new(
+                interval.unwrap_or_else(|| glonax::rand::thread_rng().gen_range(0..=50)),
+            );
 
             loop {
                 tick.tick().await;
