@@ -120,6 +120,7 @@ async fn run(args: Args) -> anyhow::Result<()> {
         drive_lock: false,
         motion_lock: true,
         limit_motion: !args.full_motion,
+        engine_rpm: 0,
     };
 
     if input_state.limit_motion {

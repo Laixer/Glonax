@@ -65,6 +65,10 @@ pub(crate) enum Scancode {
     Confirm(ButtonState),
     /// Drive lock button.
     DriveLock(ButtonState),
+    /// Up button.
+    Up(ButtonState),
+    /// Down button.
+    Down(ButtonState),
 }
 
 pub(crate) struct InputState {
@@ -86,6 +90,8 @@ pub(crate) struct InputState {
     /// This prevents accidental damage by limiting the motion to lower
     /// values of the actuator.
     pub(crate) limit_motion: bool,
+
+    pub(crate) engine_rpm: i16,
 }
 
 impl InputState {
@@ -145,6 +151,28 @@ impl InputState {
                 } else {
                     Some(Object::Motion(Motion::new(Actuator::LimpRight, value)))
                 }
+            }
+            Scancode::Up(ButtonState::Pressed) => {
+                let rpm_new = (self.engine_rpm + 100).clamp(900, 2_100);
+                self.engine_rpm = rpm_new;
+
+                Some(Object::Engine(glonax::core::Engine::from_rpm(
+                    self.engine_rpm as u16,
+                )))
+            }
+            Scancode::Down(ButtonState::Pressed) => {
+                if self.engine_rpm <= 900 {
+                    self.engine_rpm = 0;
+
+                    return Some(Object::Engine(glonax::core::Engine::shutdown()));
+                }
+
+                let rpm_new = (self.engine_rpm - 100).clamp(900, 2_100);
+                self.engine_rpm = rpm_new;
+
+                Some(Object::Engine(glonax::core::Engine::from_rpm(
+                    self.engine_rpm as u16,
+                )))
             }
             Scancode::Abort(ButtonState::Pressed) => {
                 self.motion_lock = true;
