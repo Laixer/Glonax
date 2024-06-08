@@ -62,6 +62,27 @@ impl ActorBuilder {
         self
     }
 
+    pub fn with_location(mut self, location: Vector3<f32>) -> Self {
+        if self.segments.is_empty() {
+            self.segments
+                .push(("root".to_string(), ActorSegment::new(location)));
+        } else {
+            self.segments[0].1.set_location(location);
+        }
+        self
+    }
+
+    pub fn with_rotation(mut self, rotation: Rotation3<f32>) -> Self {
+        if self.segments.is_empty() {
+            self.segments.push((
+                "root".to_string(),
+                ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
+            ));
+        }
+        self.segments[0].1.set_rotation(rotation);
+        self
+    }
+
     /// Build actor.
     pub fn build(self) -> Actor {
         Actor {
