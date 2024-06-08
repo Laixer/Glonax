@@ -4,7 +4,7 @@ use crate::{
     core::{Actuator, Control, Engine, MachineType, Motion, Object, Target},
     math::Linear,
     runtime::{CommandSender, NullConfig, Service, ServiceContext, SignalReceiver},
-    world::{Actor, ActorBuilder, ActorSegment},
+    world::{ActorBuilder, ActorSegment, World},
 };
 
 const ROBOT_ACTOR_NAME: &str = "volvo_ec240cl";
@@ -65,6 +65,7 @@ mod experimental {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DirectorOperation {
     Disabled,
@@ -83,7 +84,7 @@ impl std::fmt::Display for DirectorOperation {
 }
 
 pub struct Director {
-    actor: Actor,
+    world: World,
     operation: DirectorOperation,
     target: Vec<Target>,
     frame_state: experimental::ActuatorState,
@@ -136,6 +137,8 @@ impl Service<NullConfig> for Director {
     where
         Self: Sized,
     {
+        let mut world = World::default();
+
         // TODO: Build the actor from configuration and machine instance
         let actor = ActorBuilder::new(ROBOT_ACTOR_NAME, MachineType::Excavator)
             .attach_segment(
@@ -151,6 +154,8 @@ impl Service<NullConfig> for Director {
             )
             .build();
 
+        world.add_actor(actor);
+
         // TODO: Build the profile from configuration
         let frame_profile = Linear::new(7_000.0, 12_000.0, false);
         let boom_profile = Linear::new(15_000.0, 12_000.0, false);
@@ -164,7 +169,7 @@ impl Service<NullConfig> for Director {
             experimental::ActuatorState::bind(Actuator::Attachment, attachment_profile);
 
         Self {
-            actor,
+            world,
             operation: DirectorOperation::Supervised,
             target: Vec::new(),
             frame_state,
@@ -186,19 +191,20 @@ impl Service<NullConfig> for Director {
         if let Ok(signal) = signal_rx.recv().await {
             match signal {
                 Object::Rotator(rotator) => {
+                    let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
+
                     match rotator.source {
                         ENCODER_FRAME => {
-                            self.actor.set_relative_rotation("frame", rotator.rotator);
+                            actor.set_relative_rotation("frame", rotator.rotator);
                         }
                         ENCODER_BOOM => {
-                            self.actor.set_relative_rotation("boom", rotator.rotator);
+                            actor.set_relative_rotation("boom", rotator.rotator);
                         }
                         ENCODER_ARM => {
-                            self.actor.set_relative_rotation("arm", rotator.rotator);
+                            actor.set_relative_rotation("arm", rotator.rotator);
                         }
                         ENCODER_ATTACHMENT => {
-                            self.actor
-                                .set_relative_rotation("attachment", rotator.rotator);
+                            actor.set_relative_rotation("attachment", rotator.rotator);
                         }
                         _ => {}
                     }
@@ -228,7 +234,7 @@ impl Service<NullConfig> for Director {
 
                             {
                                 let actor_world_distance = nalgebra::distance(
-                                    &self.actor.location(),
+                                    &actor.location(),
                                     &Point3::new(0.0, 0.0, 0.0),
                                 );
                                 log::debug!("Actor origin distance: {:.2}", actor_world_distance);
@@ -238,12 +244,12 @@ impl Service<NullConfig> for Director {
                                 log::debug!("Objective target: {}", target);
 
                                 let actor_target_distance =
-                                    nalgebra::distance(&self.actor.location(), &target.point);
+                                    nalgebra::distance(&actor.location(), &target.point);
                                 log::debug!("Actor target distance: {:.2}", actor_target_distance);
 
-                                let boom_point = self.actor.relative_location("boom").unwrap();
+                                let boom_point = actor.relative_location("boom").unwrap();
                                 let kinematic_target_distance = nalgebra::distance(
-                                    &self.actor.location(),
+                                    &actor.location(),
                                     &(target.point - boom_point.coords),
                                 );
                                 log::debug!(
@@ -257,14 +263,13 @@ impl Service<NullConfig> for Director {
                             }
 
                             if let Some(target) = &target {
-                                let boom_length = self.actor.relative_location("arm").unwrap().x;
+                                let boom_length = actor.relative_location("arm").unwrap().x;
                                 // log::debug!("Boom length: {:?}", boom_length);
 
-                                let arm_length =
-                                    self.actor.relative_location("attachment").unwrap().x;
+                                let arm_length = actor.relative_location("attachment").unwrap().x;
                                 // log::debug!("Arm length: {:?}", arm_length);
 
-                                let boom_world_location = self.actor.world_location("boom");
+                                let boom_world_location = actor.world_location("boom");
 
                                 let target_distance =
                                     nalgebra::distance(&boom_world_location, &target.point);
