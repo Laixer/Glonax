@@ -1,10 +1,8 @@
 use nalgebra::{Matrix4, Point3, Rotation3, Translation3, Vector3};
 
-use crate::core::MachineType;
-
 #[derive(Default)]
 pub struct World {
-    actors: Vec<Actor>,
+    actors: Vec<Actor>, // TODO: Use Vec<Rc<Actor>>?
 }
 
 impl World {
@@ -45,33 +43,31 @@ impl World {
 pub struct ActorBuilder {
     /// Actor name.
     name: String,
-    /// Actor type.
-    ty: MachineType,
     /// Actor segments.
     segments: Vec<(String, ActorSegment)>,
 }
 
 impl ActorBuilder {
-    pub fn new(name: impl ToString, ty: MachineType) -> Self {
+    /// Construct a new actor builder.
+    pub fn new(name: impl ToString) -> Self {
         Self {
             name: name.to_string(),
-            ty,
             segments: Vec::new(),
         }
     }
 
+    /// Attach segment to actor.
     pub fn attach_segment(mut self, name: impl ToString, segment: ActorSegment) -> Self {
         self.segments.push((name.to_string(), segment));
         self
     }
 
+    /// Build actor.
     pub fn build(self) -> Actor {
-        let root = ActorSegment::new(Vector3::new(0.0, 0.0, 0.0));
-
         Actor {
             name: self.name,
-            ty: self.ty,
             segments: if self.segments.is_empty() {
+                let root = ActorSegment::new(Vector3::new(0.0, 0.0, 0.0));
                 vec![("root".to_string(), root)]
             } else {
                 self.segments
@@ -80,13 +76,10 @@ impl ActorBuilder {
     }
 }
 
-// TODO: Convert to and from bytes
 #[derive(Clone)]
 pub struct Actor {
     /// Actor name.
     name: String,
-    /// Actor type.
-    ty: MachineType,
     /// Actor segments.
     segments: Vec<(String, ActorSegment)>,
 }
@@ -96,12 +89,6 @@ impl Actor {
     #[inline]
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    /// Actor type.
-    #[inline]
-    pub fn ty(&self) -> MachineType {
-        self.ty
     }
 
     /// Actor root location.
@@ -177,7 +164,7 @@ impl Actor {
 
         let mut buf = bytes::BytesMut::with_capacity(64);
 
-        buf.put_u8(self.ty as u8);
+        // buf.put_u8(self.ty as u8);
 
         let name_bytes = self.name.as_bytes();
         buf.put_u16(name_bytes.len() as u16);
@@ -205,7 +192,7 @@ impl TryFrom<Vec<u8>> for Actor {
 
         let mut buf = bytes::Bytes::copy_from_slice(&value);
 
-        let ty = buf.get_u8();
+        // let ty = buf.get_u8();
         let name_len = buf.get_u16() as usize;
         let name = String::from_utf8_lossy(&buf[..name_len]).to_string();
         buf.advance(name_len);
@@ -233,11 +220,7 @@ impl TryFrom<Vec<u8>> for Actor {
         //     log::debug!("segment: {} R={} P={} Y={}", name, roll, pitch, yaw);
         // });
 
-        Ok(Self {
-            name,
-            ty: MachineType::try_from(ty)?,
-            segments,
-        })
+        Ok(Self { name, segments })
     }
 }
 

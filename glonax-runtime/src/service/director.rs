@@ -1,7 +1,7 @@
 use nalgebra::{Point3, Vector3};
 
 use crate::{
-    core::{Actuator, Control, Engine, MachineType, Motion, Object, Target},
+    core::{Actuator, Control, Engine, Motion, Object, Target},
     math::Linear,
     runtime::{CommandSender, NullConfig, Service, ServiceContext, SignalReceiver},
     world::{ActorBuilder, ActorSegment, World},
@@ -140,7 +140,7 @@ impl Service<NullConfig> for Director {
         let mut world = World::default();
 
         // TODO: Build the actor from configuration and machine instance
-        let actor = ActorBuilder::new(ROBOT_ACTOR_NAME, MachineType::Excavator)
+        let actor = ActorBuilder::new(ROBOT_ACTOR_NAME)
             .attach_segment(
                 "undercarriage",
                 ActorSegment::new(Vector3::new(0.0, 0.0, 0.0)),
@@ -154,6 +154,7 @@ impl Service<NullConfig> for Director {
             )
             .build();
 
+        // TODO: Return weak reference to the actor
         world.add_actor(actor);
 
         // TODO: Build the profile from configuration
