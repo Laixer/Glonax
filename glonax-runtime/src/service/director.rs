@@ -86,7 +86,6 @@ impl std::fmt::Display for DirectorOperation {
 pub struct Director {
     world: World,
     operation: DirectorOperation,
-    target: Vec<Target>,
     frame_state: experimental::ActuatorState,
     boom_state: experimental::ActuatorState,
     arm_state: experimental::ActuatorState,
@@ -172,7 +171,6 @@ impl Service<NullConfig> for Director {
         Self {
             world,
             operation: DirectorOperation::Supervised,
-            target: Vec::new(),
             frame_state,
             boom_state,
             arm_state,
@@ -192,22 +190,24 @@ impl Service<NullConfig> for Director {
         if let Ok(signal) = signal_rx.recv().await {
             match signal {
                 Object::Rotator(rotator) => {
-                    let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
+                    {
+                        let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
 
-                    match rotator.source {
-                        ENCODER_FRAME => {
-                            actor.set_relative_rotation("frame", rotator.rotator);
+                        match rotator.source {
+                            ENCODER_FRAME => {
+                                actor.set_relative_rotation("frame", rotator.rotator);
+                            }
+                            ENCODER_BOOM => {
+                                actor.set_relative_rotation("boom", rotator.rotator);
+                            }
+                            ENCODER_ARM => {
+                                actor.set_relative_rotation("arm", rotator.rotator);
+                            }
+                            ENCODER_ATTACHMENT => {
+                                actor.set_relative_rotation("attachment", rotator.rotator);
+                            }
+                            _ => {}
                         }
-                        ENCODER_BOOM => {
-                            actor.set_relative_rotation("boom", rotator.rotator);
-                        }
-                        ENCODER_ARM => {
-                            actor.set_relative_rotation("arm", rotator.rotator);
-                        }
-                        ENCODER_ATTACHMENT => {
-                            actor.set_relative_rotation("attachment", rotator.rotator);
-                        }
-                        _ => {}
                     }
 
                     if self.operation == DirectorOperation::Supervised
@@ -228,7 +228,8 @@ impl Service<NullConfig> for Director {
                         let mut actuator_error = Vec::new();
 
                         {
-                            let target = self.target.pop();
+                            let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
+                            let target = self.world.get_actor_by_name("target0");
 
                             // TODO: Calculate this from the actor
                             const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
@@ -241,17 +242,17 @@ impl Service<NullConfig> for Director {
                                 log::debug!("Actor origin distance: {:.2}", actor_world_distance);
                             }
 
-                            if let Some(target) = &target {
-                                log::debug!("Objective target: {}", target);
+                            if let Some(target) = target {
+                                log::debug!("Objective target: {}", target.location());
 
                                 let actor_target_distance =
-                                    nalgebra::distance(&actor.location(), &target.point);
+                                    nalgebra::distance(&actor.location(), &target.location());
                                 log::debug!("Actor target distance: {:.2}", actor_target_distance);
 
                                 let boom_point = actor.relative_location("boom").unwrap();
                                 let kinematic_target_distance = nalgebra::distance(
                                     &actor.location(),
-                                    &(target.point - boom_point.coords),
+                                    &(target.location() - boom_point.coords),
                                 );
                                 log::debug!(
                                     "Kinematic target distance: {:.2}",
@@ -263,7 +264,7 @@ impl Service<NullConfig> for Director {
                                 }
                             }
 
-                            if let Some(target) = &target {
+                            if let Some(target) = target {
                                 let boom_length = actor.relative_location("arm").unwrap().x;
                                 // log::debug!("Boom length: {:?}", boom_length);
 
@@ -273,11 +274,12 @@ impl Service<NullConfig> for Director {
                                 let boom_world_location = actor.world_location("boom");
 
                                 let target_distance =
-                                    nalgebra::distance(&boom_world_location, &target.point);
+                                    nalgebra::distance(&boom_world_location, &target.location());
                                 log::debug!("Tri-Arm target distance: {:.2}", target_distance);
 
-                                let target_direction =
-                                    (target.point.coords - boom_world_location.coords).normalize();
+                                let target_direction = (target.location().coords
+                                    - boom_world_location.coords)
+                                    .normalize();
 
                                 /////////////// SLEW YAW ANGLE ///////////////
 
@@ -425,8 +427,10 @@ impl Service<NullConfig> for Director {
                         Self::command_emergency_stop(&command_tx);
                     }
                 }
-                Object::Target(target) => {
-                    self.target.push(target);
+                Object::Target(_target) => {
+                    let target = ActorBuilder::new("target0").build();
+                    // actor.set_location(target.point);
+                    self.world.add_actor(target);
                 }
                 _ => {}
             }
