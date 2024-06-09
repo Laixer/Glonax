@@ -123,6 +123,7 @@ async fn main() -> anyhow::Result<()> {
 
             let frame = client.read_frame().await?;
             // TODO: If possible, convert back into an object
+            // TODO: Offer: async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
             match frame.message {
                 glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
                     let error = client
