@@ -263,24 +263,99 @@ impl ControlNetwork {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum FilterItem {
+pub struct FilterItem {
     /// Filter by priority.
-    Priority(u8),
+    pub priority: Option<u8>,
     /// Filter by PGN.
-    Pgn(u32),
+    pub pgn: Option<u32>,
     /// Filter by source address.
-    SourceAddress(u8),
+    pub source_address: Option<u8>,
     /// Filter by destination address.
-    DestinationAddress(u8),
+    pub destination_address: Option<u8>,
 }
 
 impl FilterItem {
+    pub fn with_priority(priority: u8) -> Self {
+        Self {
+            priority: Some(priority),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_pgn(pgn: u32) -> Self {
+        Self {
+            pgn: Some(pgn),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_source_address(source_address: u8) -> Self {
+        Self {
+            source_address: Some(source_address),
+            ..Default::default()
+        }
+    }
+
+    pub fn with_destination_address(destination_address: u8) -> Self {
+        Self {
+            destination_address: Some(destination_address),
+            ..Default::default()
+        }
+    }
+
+    pub fn set_priority(mut self, priority: u8) -> Self {
+        self.priority = Some(priority);
+        self
+    }
+
+    pub fn set_pgn(mut self, pgn: u32) -> Self {
+        self.pgn = Some(pgn);
+        self
+    }
+
+    pub fn set_source_address(mut self, source_address: u8) -> Self {
+        self.source_address = Some(source_address);
+        self
+    }
+
+    pub fn set_destination_address(mut self, destination_address: u8) -> Self {
+        self.destination_address = Some(destination_address);
+        self
+    }
+
     fn matches(&self, id: &Id) -> bool {
-        match self {
-            FilterItem::Priority(priority) => *priority == id.priority(),
-            FilterItem::Pgn(pgn) => *pgn == id.pgn_raw(),
-            FilterItem::SourceAddress(address) => *address == id.source_address(),
-            FilterItem::DestinationAddress(address) => Some(*address) == id.destination_address(),
+        if let Some(priority) = self.priority {
+            if priority != id.priority() {
+                return false;
+            }
+        }
+        if let Some(pgn) = self.pgn {
+            if pgn != id.pgn_raw() {
+                return false;
+            }
+        }
+        if let Some(source_address) = self.source_address {
+            if source_address != id.source_address() {
+                return false;
+            }
+        }
+        if let Some(destination_address) = self.destination_address {
+            if Some(destination_address) != id.destination_address() {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl Default for FilterItem {
+    fn default() -> Self {
+        Self {
+            priority: None,
+            pgn: None,
+            source_address: None,
+            destination_address: None,
         }
     }
 }
@@ -319,7 +394,7 @@ impl Filter {
     ///
     /// Returns `true` if the filter matches the ID, `false` otherwise.
     pub fn matches(&self, id: &Id) -> bool {
-        let match_items = self.items.iter().all(|item| item.matches(id));
+        let match_items = self.items.iter().any(|item| item.matches(id));
         if self.accept {
             if !self.items.is_empty() {
                 match_items
@@ -352,10 +427,10 @@ mod tests {
             .da(0x02)
             .build();
 
-        let priority = FilterItem::Priority(5);
-        let pgn = FilterItem::Pgn(59_904);
-        let source_address = FilterItem::SourceAddress(0x01);
-        let destination_address = FilterItem::DestinationAddress(0x02);
+        let priority = FilterItem::with_priority(5);
+        let pgn = FilterItem::with_pgn(59_904);
+        let source_address = FilterItem::with_source_address(0x01);
+        let destination_address = FilterItem::with_destination_address(0x02);
 
         assert!(priority.matches(&id));
         assert!(pgn.matches(&id));
@@ -371,40 +446,62 @@ mod tests {
             .da(0xDA)
             .build();
 
-        let priority = FilterItem::Priority(3);
-        let pgn = FilterItem::Pgn(65_276);
-        let source_address = FilterItem::SourceAddress(0x7E);
-        let destination_address = FilterItem::DestinationAddress(0xDA);
+        let filter0 = FilterItem::default()
+            .set_priority(3)
+            .set_pgn(65_276)
+            .set_source_address(0x7E);
+        let filter1 = FilterItem::default()
+            .set_priority(3)
+            .set_pgn(65_276)
+            .set_destination_address(0xDA);
+        let filter2 = FilterItem::with_pgn(65_277);
 
-        assert!(priority.matches(&id));
-        assert!(pgn.matches(&id));
-        assert!(source_address.matches(&id));
-        assert!(!destination_address.matches(&id));
+        assert!(filter0.matches(&id));
+        assert!(!filter1.matches(&id));
+        assert!(!filter2.matches(&id));
     }
 
     #[test]
-    fn test_filter_item_matches_3() {
+    fn test_filter_1() {
         let id = IdBuilder::from_pgn(PGN::ProprietaryB(65_282))
             .sa(0x29)
             .build();
 
         let mut filter = Filter::accept();
-        filter.push(FilterItem::Pgn(65_282));
-        filter.push(FilterItem::SourceAddress(0x29));
+        filter.push(FilterItem::with_pgn(65_282));
+        filter.push(FilterItem::with_source_address(0x29));
 
         assert!(filter.matches(&id));
     }
 
     #[test]
-    fn test_filter_item_matches_4() {
-        let id = IdBuilder::from_pgn(PGN::CruiseControlVehicleSpeed)
+    fn test_filter_2() {
+        let id0 = IdBuilder::from_pgn(PGN::CruiseControlVehicleSpeed)
             .sa(0x30)
             .build();
 
-        let mut filter = Filter::accept();
-        filter.push(FilterItem::Pgn(PGN::CruiseControlVehicleSpeed.into()));
-        filter.push(FilterItem::SourceAddress(0x81));
+        let id1 = IdBuilder::from_pgn(PGN::AddressClaimed).sa(0x30).build();
 
-        assert!(!filter.matches(&id));
+        let mut filter = Filter::accept();
+        filter.push(FilterItem::with_pgn(PGN::CruiseControlVehicleSpeed.into()));
+        filter.push(FilterItem::with_source_address(0x81));
+
+        assert!(filter.matches(&id0));
+        assert!(!filter.matches(&id1));
+    }
+
+    #[test]
+    fn test_filter_3() {
+        let id0 = IdBuilder::from_pgn(PGN::CruiseControlVehicleSpeed)
+            .sa(0x99)
+            .build();
+
+        let id1 = IdBuilder::from_pgn(PGN::AddressClaimed).sa(0x27).build();
+
+        let mut filter = Filter::reject();
+        filter.push(FilterItem::with_source_address(0x27));
+
+        assert!(filter.matches(&id0));
+        assert!(!filter.matches(&id1));
     }
 }

@@ -1046,17 +1046,17 @@ async fn main() -> anyhow::Result<()> {
             };
 
             for pgn in pgn {
-                filter.push(FilterItem::Pgn(pgn));
+                filter.push(FilterItem::with_pgn(pgn));
             }
             for priority in priority {
-                filter.push(FilterItem::Priority(priority));
+                filter.push(FilterItem::with_priority(priority));
             }
             for addr in address
                 .iter()
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                filter.push(FilterItem::SourceAddress(addr?));
+                filter.push(FilterItem::with_source_address(addr?));
             }
 
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
@@ -1076,17 +1076,17 @@ async fn main() -> anyhow::Result<()> {
             };
 
             for pgn in pgn {
-                filter.push(FilterItem::Pgn(pgn));
+                filter.push(FilterItem::with_pgn(pgn));
             }
             for priority in priority {
-                filter.push(FilterItem::Priority(priority));
+                filter.push(FilterItem::with_priority(priority));
             }
             for addr in address
                 .iter()
                 .map(|s| j1939_address(s.to_owned()))
                 .filter(|a| a.is_ok())
             {
-                filter.push(FilterItem::SourceAddress(addr?));
+                filter.push(FilterItem::with_source_address(addr?));
             }
 
             let name = glonax::j1939::NameBuilder::default()

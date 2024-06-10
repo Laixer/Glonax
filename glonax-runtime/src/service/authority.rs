@@ -247,7 +247,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
     {
         let mut filter = crate::net::Filter::reject();
 
-        filter.push(crate::net::FilterItem::SourceAddress(config.address));
+        filter.push(crate::net::FilterItem::with_source_address(config.address));
 
         let network = ControlNetwork::bind(&config.interface, &config.name.into())
             .unwrap()
