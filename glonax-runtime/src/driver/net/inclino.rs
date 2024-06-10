@@ -114,11 +114,7 @@ impl ProcessDataMessage {
                 _ => Overflow::Other,
             };
 
-            message.upside_down = match frame.pdu()[6] >> 2 & 0b11 {
-                0 => false,
-                1 => true,
-                _ => false,
-            };
+            message.upside_down = matches!(frame.pdu()[6] >> 2 & 0b11, 0);
 
             message.status = match frame.pdu()[6] >> 4 {
                 0x0 => InclinometerStatus::NoError,
@@ -146,8 +142,16 @@ impl std::fmt::Display for ProcessDataMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Slope Long: {:>5}; Slope Lat: {:>5}; Temperature: {:>5.2}°; Overflow: {:?}; Orientation: {:?}; Status: {}",
-            self.slope_long, self.slope_lat, self.temperature, self.overflow, self.orientation, self.status
+            "Slope Long: {:>5} {:>6.2}°; Slope Lat: {:>5} {:>6.2}°; Temperature: {:>5.2}°; Overflow: {:?}; Upside Down: {}; Orientation: {:?}; Status: {}",
+            self.slope_long as i16,
+            (self.slope_long as i16) as f32 / 10.0,
+            self.slope_lat as i16,
+            (self.slope_lat as i16) as f32 / 10.0,
+            self.temperature,
+            self.overflow,
+            self.upside_down,
+            self.orientation,
+            self.status
         )
     }
 }
