@@ -130,9 +130,7 @@ impl Director {
         }
     }
 
-    fn update_local_actor(&mut self, rotator: &crate::core::Rotator) {
-        let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
-
+    fn update_actor(actor: &mut Actor, rotator: &crate::core::Rotator) {
         match rotator.source {
             ENCODER_FRAME => {
                 actor.set_relative_rotation("frame", rotator.rotator);
@@ -186,12 +184,15 @@ impl Director {
         debug!("Actor origin distance: {:.2}", actor_world_distance);
     }
 
-    fn update_local_state(&mut self) {
+    // TODO: Returns a state, for example Nominal, Warning, EmergencyStop, etc.
+    fn elect_local_state(&self) -> bool {
         // TODO: Invoke supervisor
         // TODO: Supervisor should check:
         // - If the actor is in a safe state (e.g. not in an emergency stop)
         // - If the actor has all the necessary components (encoders, sensors, etc.)
         // - If the actor is in a safe environment (e.g. not in a collision course)
+
+        false
     }
 
     // TODO: Returns a state, for example TargetOutOfRange, TargetOutOfReach, TargetInReach, etc.
@@ -357,8 +358,15 @@ impl Director {
     fn on_event(&mut self, event: &Object, command_tx: &CommandSender) {
         match event {
             Object::Rotator(rotator) => {
-                self.update_local_actor(rotator);
-                self.update_local_state();
+                let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
+
+                Self::update_actor(actor, rotator);
+
+                let in_emergency = self.elect_local_state();
+                if in_emergency {
+                    Self::command_emergency_stop(command_tx); // TODO: Return motion command
+                    return;
+                }
 
                 let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
                 let target = self.world.get_actor_by_name("target0");
@@ -384,7 +392,7 @@ impl Director {
                 }
             }
             Object::Engine(engine) => {
-                let in_emergency = false;
+                let in_emergency = self.elect_local_state();
                 if in_emergency && engine.is_running() {
                     Self::command_emergency_stop(command_tx); // TODO: Return motion command
                 }
