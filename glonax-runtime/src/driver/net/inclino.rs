@@ -10,6 +10,20 @@ const _CONFIG_PGN: PGN = PGN::ProprietaryA;
 const INCLINOMETER_PGN: PGN = PGN::ProprietaryB(65_451);
 
 // TODO: Add configuration message.
+//
+// Current configuration (Send via destination_specific):
+// INCLIN_CFG_Resolution 64 00
+// INCLIN_CFG_LongOperatingPar 00
+// INCLIN_CFG_SlopeLongPreset_Activate 00
+// INCLIN_CFG_SlopeLongPresetValue 00 00
+// INCLIN_CFG_LatOperatingPar 00
+// INCLIN_CFG_SlopeLatPreset_Activate 00
+// INCLIN_CFG_SlopeLatPresetValue 00 00
+// INCLIN_CFG_TxCycleTime 32 00
+// INCLIN_CFG_NodeID FF
+// INCLIN_CFG_BitRate FF
+// INCLIN_CFG_CAN_Termination 00
+// INCLIN_CFG_FilterConfig 06
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum InclinometerStatus {
@@ -60,7 +74,7 @@ pub enum InclinoMessage {
 #[derive(Debug, Clone)]
 pub struct ProcessDataMessage {
     /// Source address.
-    _source_address: u8,
+    source_address: u8,
     /// Slope long (Z-axis).
     slope_long: u16,
     /// Slope lat (X-axis).
@@ -81,7 +95,7 @@ impl ProcessDataMessage {
     /// Construct a new encoder message from a frame.
     pub fn from_frame(frame: &Frame) -> Self {
         let mut message = Self {
-            _source_address: frame.id().source_address(),
+            source_address: frame.id().source_address(),
             slope_long: 0,
             slope_lat: 0,
             temperature: 0.0,
@@ -259,8 +273,8 @@ impl J1939Unit for KueblerInclinometer {
                     return Ok(());
                 }
                 InclinoMessage::ProcessData(process_data) => {
-                    let long = (process_data.slope_long as f32) / 10.0;
-                    let lat = (process_data.slope_lat as f32) / 10.0;
+                    let long = ((process_data.slope_long as i16) as f32) / 10.0;
+                    let lat = ((process_data.slope_lat as i16) as f32) / 10.0;
 
                     let rotation = nalgebra::Rotation3::from_euler_angles(
                         long.to_radians(),
@@ -277,18 +291,20 @@ impl J1939Unit for KueblerInclinometer {
                         rotation.euler_angles().2.to_degrees()
                     );
 
-                    let rotator = Rotator::absolute(0x7a, rotation);
+                    let rotator = Rotator::absolute(process_data.source_address, rotation);
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Rotator(rotator)));
 
                     rx_queue.push(Object::Rotator(rotator));
+
+                    // TODO: push temperature
 
                     return match process_data.status {
                         InclinometerStatus::InvalidConfiguration => {
                             Err(J1939UnitError::InvalidConfiguration)
                         }
                         InclinometerStatus::GeneralSensorError => Err(J1939UnitError::SensorError),
-                        InclinometerStatus::Other => return Err(J1939UnitError::HardwareError),
+                        InclinometerStatus::Other => Err(J1939UnitError::HardwareError),
                         _ => Ok(()),
                     };
                 }
