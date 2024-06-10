@@ -163,8 +163,9 @@ impl InputState {
                     return None;
                 }
 
+                self.engine_rpm = (self.engine_rpm + 100).clamp(900, 2_100);
                 Some(Object::Engine(glonax::core::Engine::from_rpm(
-                    (self.engine_rpm + 100).clamp(900, 2_100),
+                    self.engine_rpm,
                 )))
             }
             Scancode::Down(ButtonState::Pressed) => {
@@ -175,8 +176,9 @@ impl InputState {
                     return Some(Object::Engine(glonax::core::Engine::shutdown()));
                 }
 
+                self.engine_rpm = (self.engine_rpm - 100).clamp(900, 2_100);
                 Some(Object::Engine(glonax::core::Engine::from_rpm(
-                    (self.engine_rpm - 100).clamp(900, 2_100),
+                    self.engine_rpm,
                 )))
             }
             Scancode::Abort(ButtonState::Pressed) => {
