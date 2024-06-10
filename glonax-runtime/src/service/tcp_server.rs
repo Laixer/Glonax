@@ -374,8 +374,7 @@ impl Service<TcpServerConfig> for TcpServer {
             active_client_count
         );
 
-        // TODO: Inform clients of shutdown
-
+        // FUTURE: Inform clients of shutdown
         // for client in self.clients.drain(..) {
         //     if let Err(e) = client.await {
         //         log::error!("Client session failed: {}", e);

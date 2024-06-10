@@ -999,7 +999,6 @@ async fn main() -> anyhow::Result<()> {
                 let frame = bam.next_frame();
                 socket.send(&frame).await?;
 
-                debug!("Send frame: {}", frame);
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
         }

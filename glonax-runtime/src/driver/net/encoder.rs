@@ -189,6 +189,7 @@ pub struct KueblerEncoder {
 impl KueblerEncoder {
     /// Construct a new encoder service.
     pub fn new(interface: &str, da: u8, sa: u8) -> Self {
+        // TODO: Load converter from configuration.
         let converter = if da == 0x6a {
             EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::z_axis())
         } else if da == 0x6b {

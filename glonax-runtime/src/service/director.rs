@@ -1,7 +1,7 @@
 use nalgebra::{Point3, Vector3};
 
 use crate::{
-    core::{Actuator, Control, Engine, Motion, Object, Target},
+    core::{Actuator, Control, Engine, Motion, Object},
     math::Linear,
     runtime::{CommandSender, NullConfig, Service, ServiceContext, SignalReceiver},
     world::{ActorBuilder, ActorSegment, World},
@@ -427,10 +427,15 @@ impl Service<NullConfig> for Director {
                         Self::command_emergency_stop(&command_tx);
                     }
                 }
-                Object::Target(_target) => {
-                    let target = ActorBuilder::new("target0").build();
-                    // actor.set_location(target.point);
-                    self.world.add_actor(target);
+                Object::Target(target) => {
+                    if self.operation == DirectorOperation::Autonomous {
+                        let actor = ActorBuilder::new("target0")
+                            .with_location(target.point.coords)
+                            .with_rotation(target.orientation.into())
+                            .build();
+
+                        self.world.add_actor(actor);
+                    }
                 }
                 _ => {}
             }
