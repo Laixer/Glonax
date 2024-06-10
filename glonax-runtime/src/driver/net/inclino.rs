@@ -1,7 +1,7 @@
 use j1939::{protocol, Frame, Name, PGN};
 
 use crate::{
-    core::Object,
+    core::{Object, ObjectMessage, Rotator},
     net::Parsable,
     runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
@@ -242,9 +242,9 @@ impl J1939Unit for KueblerInclinometer {
 
     fn try_recv(
         &self,
-        _ctx: &mut NetDriverContext,
+        ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
-        _rx_queue: &mut Vec<Object>,
+        rx_queue: &mut Vec<Object>,
     ) -> Result<(), J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
@@ -258,8 +258,39 @@ impl J1939Unit for KueblerInclinometer {
 
                     return Ok(());
                 }
-                InclinoMessage::ProcessData(_process_data) => {
-                    return Ok(());
+                InclinoMessage::ProcessData(process_data) => {
+                    let long = (process_data.slope_long as f32) / 10.0;
+                    let lat = (process_data.slope_lat as f32) / 10.0;
+
+                    let rotation = nalgebra::Rotation3::from_euler_angles(
+                        long.to_radians(),
+                        lat.to_radians(),
+                        0.0,
+                    );
+
+                    trace!(
+                        "[{}] {}: Roll={:.2} Pitch={:.2} Yaw={:.2}",
+                        self.interface,
+                        self.name(),
+                        rotation.euler_angles().0.to_degrees(),
+                        rotation.euler_angles().1.to_degrees(),
+                        rotation.euler_angles().2.to_degrees()
+                    );
+
+                    let rotator = Rotator::absolute(0x7a, rotation);
+
+                    ctx.set_rx_last_message(ObjectMessage::signal(Object::Rotator(rotator)));
+
+                    rx_queue.push(Object::Rotator(rotator));
+
+                    return match process_data.status {
+                        InclinometerStatus::InvalidConfiguration => {
+                            Err(J1939UnitError::InvalidConfiguration)
+                        }
+                        InclinometerStatus::GeneralSensorError => Err(J1939UnitError::SensorError),
+                        InclinometerStatus::Other => return Err(J1939UnitError::HardwareError),
+                        _ => Ok(()),
+                    };
                 }
             }
         }
