@@ -973,9 +973,6 @@ async fn main() -> anyhow::Result<()> {
 
             let pgn = PGN::from(pgn);
 
-            let mut bam = BroadcastTransport::new(consts::J1939_ADDRESS_OBDL, pgn)
-                .with_data(&hex::decode(data)?);
-
             // let frames = destination_specific(
             //     destination_address,
             //     consts::J1939_ADDRESS_OBDL,
@@ -985,6 +982,9 @@ async fn main() -> anyhow::Result<()> {
             //         0x00, 0x01, 0x06,
             //     ],
             // );
+
+            let mut bam = BroadcastTransport::new(consts::J1939_ADDRESS_OBDL, pgn)
+                .with_data(&hex::decode(data)?);
 
             for _ in 0..bam.packets() + 1 {
                 socket.send(&bam.next_frame()).await?;

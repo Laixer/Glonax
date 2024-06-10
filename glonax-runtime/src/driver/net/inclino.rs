@@ -273,6 +273,7 @@ impl J1939Unit for KueblerInclinometer {
                     return Ok(());
                 }
                 InclinoMessage::ProcessData(process_data) => {
+                    // TODO: Have process data return long lat as degrees.
                     let long = ((process_data.slope_long as i16) as f32) / 10.0;
                     let lat = ((process_data.slope_lat as i16) as f32) / 10.0;
 
@@ -281,6 +282,7 @@ impl J1939Unit for KueblerInclinometer {
                         lat.to_radians(),
                         0.0,
                     );
+                    let rotator = Rotator::absolute(process_data.source_address, rotation);
 
                     trace!(
                         "[{}] {}: Roll={:.2} Pitch={:.2} Yaw={:.2}",
@@ -290,8 +292,12 @@ impl J1939Unit for KueblerInclinometer {
                         rotation.euler_angles().1.to_degrees(),
                         rotation.euler_angles().2.to_degrees()
                     );
-
-                    let rotator = Rotator::absolute(process_data.source_address, rotation);
+                    trace!(
+                        "[{}] {}: Temperature={:.2}",
+                        self.interface,
+                        self.name(),
+                        process_data.temperature
+                    );
 
                     ctx.set_rx_last_message(ObjectMessage::signal(Object::Rotator(rotator)));
 
@@ -305,7 +311,7 @@ impl J1939Unit for KueblerInclinometer {
                         }
                         InclinometerStatus::GeneralSensorError => Err(J1939UnitError::SensorError),
                         InclinometerStatus::Other => Err(J1939UnitError::HardwareError),
-                        _ => Ok(()),
+                        InclinometerStatus::NoError => Ok(()),
                     };
                 }
             }

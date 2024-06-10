@@ -89,6 +89,8 @@ pub enum J1939UnitError {
     SensorError,
     /// Hardware has an error.
     HardwareError,
+    /// Unknown state.
+    UnknownState,
     /// Unit has an i/o error.
     IOError(std::io::Error),
 }
@@ -105,6 +107,7 @@ impl std::fmt::Display for J1939UnitError {
                 Self::BusError => "bus error",
                 Self::SensorError => "sensor error",
                 Self::HardwareError => "hardware error",
+                Self::UnknownState => "unknown state",
                 Self::IOError(error) => return write!(f, "i/o error: {}", error),
             }
         )
