@@ -514,9 +514,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "j1939"
-version = "0.1.32"
+version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9b48dbc580d2c3927ce00e93665895b83ae17e6d888f7876bceb144429406a1"
+checksum = "5957dff6450e0fc510791e8c7e290f827625479c8fb233aac6e4e624a25d59c7"
 dependencies = [
  "chrono",
 ]

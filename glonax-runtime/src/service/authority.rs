@@ -402,7 +402,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                     }
                 }
                 j1939::PGN::TimeDate => {
-                    let timedate = j1939::spn::TimeDate::from_date_time(chrono::Utc::now());
+                    let timedate = j1939::spn::TimeDate::from_date_time(&chrono::Utc::now());
 
                     let id = j1939::IdBuilder::from_pgn(j1939::PGN::TimeDate)
                         .sa(self.default_address)

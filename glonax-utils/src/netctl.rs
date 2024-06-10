@@ -866,11 +866,14 @@ async fn main() -> anyhow::Result<()> {
                     );
 
                     socket
-                        .send_vectored(&commanded_address(
-                            consts::J1939_ADDRESS_OBDL,
-                            &name,
-                            destination_address_new,
-                        ))
+                        .send_vectored(
+                            &glonax::j1939::protocol::commanded_address(
+                                consts::J1939_ADDRESS_OBDL,
+                                &name,
+                                destination_address_new,
+                            )
+                            .into(),
+                        )
                         .await?;
                 }
                 VCUCommand::FactoryReset => {
@@ -969,6 +972,11 @@ async fn main() -> anyhow::Result<()> {
         Command::Broadcast { pgn, data } => {
             use glonax::j1939::PGN;
 
+            let data = hex::decode(data)?;
+            if data.len() <= glonax::j1939::PDU_MAX_LENGTH {
+                return Err(anyhow::anyhow!("Data length is too short"));
+            }
+
             let socket = CANSocket::bind(&SockAddrCAN::new(args.interface.as_str()))?;
 
             let pgn = PGN::from(pgn);
@@ -983,11 +991,15 @@ async fn main() -> anyhow::Result<()> {
             //     ],
             // );
 
-            let mut bam = BroadcastTransport::new(consts::J1939_ADDRESS_OBDL, pgn)
-                .with_data(&hex::decode(data)?);
+            let mut bam =
+                glonax::j1939::transport::BroadcastTransport::new(consts::J1939_ADDRESS_OBDL, pgn)
+                    .with_data(&data);
 
-            for _ in 0..bam.packets() + 1 {
-                socket.send(&bam.next_frame()).await?;
+            for _ in 0..bam.packet_count() + 1 {
+                let frame = bam.next_frame();
+                socket.send(&frame).await?;
+
+                debug!("Send frame: {}", frame);
                 tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             }
         }
