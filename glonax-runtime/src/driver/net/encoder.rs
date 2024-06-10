@@ -314,7 +314,17 @@ impl J1939Unit for KueblerEncoder {
 
                     rx_queue.push(Object::Rotator(rotator));
 
-                    return Ok(());
+                    // TODO: Can state be None?
+                    return match process_data.state {
+                        Some(EncoderState::GeneralSensorError) => Err(J1939UnitError::SensorError),
+                        Some(EncoderState::InvalidMUR) => Err(J1939UnitError::InvalidConfiguration),
+                        Some(EncoderState::InvalidTMR) => Err(J1939UnitError::InvalidConfiguration),
+                        Some(EncoderState::InvalidPreset) => {
+                            Err(J1939UnitError::InvalidConfiguration)
+                        }
+                        Some(EncoderState::Other) => Err(J1939UnitError::HardwareError),
+                        _ => Ok(()),
+                    };
                 }
             }
         }

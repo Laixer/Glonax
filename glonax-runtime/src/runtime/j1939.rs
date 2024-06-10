@@ -85,6 +85,10 @@ pub enum J1939UnitError {
     VersionMismatch,
     /// Unit communication error.
     BusError,
+    /// Sensor has an error.
+    SensorError,
+    /// Hardware has an error.
+    HardwareError,
     /// Unit has an i/o error.
     IOError(std::io::Error),
 }
@@ -99,6 +103,8 @@ impl std::fmt::Display for J1939UnitError {
                 Self::InvalidConfiguration => "invalid configuration",
                 Self::VersionMismatch => "version mismatch",
                 Self::BusError => "bus error",
+                Self::SensorError => "sensor error",
+                Self::HardwareError => "hardware error",
                 Self::IOError(error) => return write!(f, "i/o error: {}", error),
             }
         )
