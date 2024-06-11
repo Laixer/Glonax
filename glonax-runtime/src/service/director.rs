@@ -133,16 +133,32 @@ impl Director {
     fn update_actor(actor: &mut Actor, rotator: &crate::core::Rotator) {
         match rotator.source {
             ENCODER_FRAME => {
-                actor.set_relative_rotation("frame", rotator.rotator);
+                if rotator.reference == crate::core::RotationReference::Relative {
+                    actor.set_relative_rotation("frame", rotator.rotator);
+                } else {
+                    // actor.set_absolute_rotation("frame", rotator.rotator);
+                }
             }
             ENCODER_BOOM => {
-                actor.set_relative_rotation("boom", rotator.rotator);
+                if rotator.reference == crate::core::RotationReference::Relative {
+                    actor.set_relative_rotation("boom", rotator.rotator);
+                } else {
+                    // actor.set_absolute_rotation("boom", rotator.rotator);
+                }
             }
             ENCODER_ARM => {
-                actor.set_relative_rotation("arm", rotator.rotator);
+                if rotator.reference == crate::core::RotationReference::Relative {
+                    actor.set_relative_rotation("arm", rotator.rotator);
+                } else {
+                    // actor.set_absolute_rotation("arm", rotator.rotator);
+                }
             }
             ENCODER_ATTACHMENT => {
-                actor.set_relative_rotation("attachment", rotator.rotator);
+                if rotator.reference == crate::core::RotationReference::Relative {
+                    actor.set_relative_rotation("attachment", rotator.rotator);
+                } else {
+                    // actor.set_absolute_rotation("attachment", rotator.rotator);
+                }
             }
             _ => {}
         }
@@ -187,24 +203,30 @@ impl Director {
     // TODO: Returns a state, for example Nominal, Warning, EmergencyStop, etc.
     fn elect_local_state(&self, rotator: &crate::core::Rotator) -> bool {
         match rotator.source {
-            ENCODER_FRAME => {
-                // TODO: Check out of range
-            }
+            ENCODER_FRAME => {}
             ENCODER_BOOM => {
-                // TODO: Check out of range
+                let rotation = rotator.rotator;
+
+                if rotation.euler_angles().1 > 60.0_f32.to_radians() {
+                    log::warn!("Boom pitch angle is out of range");
+                } else if rotation.euler_angles().1 < -60.0_f32.to_radians() {
+                    log::warn!("Boom pitch angle is out of range");
+                }
             }
             ENCODER_ARM => {
                 // TODO: Check out of range
             }
             ENCODER_ATTACHMENT => {
-                // TODO: Check out of range
+                let rotation = rotator.rotator;
+
+                if rotation.euler_angles().1 > 175.0_f32.to_radians() {
+                    log::warn!("Attachment pitch angle is out of range");
+                }
             }
             _ => {}
         }
 
-        // TODO: Invoke supervisor
-        // TODO: Supervisor should check:
-        // - If the actor is in a safe state (e.g. not in an emergency stop)
+        // TODO: Check:
         // - If the actor has all the necessary components (encoders, sensors, etc.)
         // - If the actor is in a safe environment (e.g. not in a collision course)
 
