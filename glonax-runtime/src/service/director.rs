@@ -181,7 +181,7 @@ impl Director {
 
         let actor_world_distance =
             nalgebra::distance(&actor.location(), &Point3::new(0.0, 0.0, 0.0));
-        debug!("Actor origin distance: {:.2}", actor_world_distance);
+        trace!("Actor origin distance: {:.2}", actor_world_distance);
     }
 
     // TODO: Returns a state, for example Nominal, Warning, EmergencyStop, etc.

@@ -16,7 +16,7 @@ const INCLINOMETER_PGN: PGN = PGN::ProprietaryB(65_451);
 // INCLIN_CFG_LongOperatingPar 00
 // INCLIN_CFG_SlopeLongPreset_Activate 00
 // INCLIN_CFG_SlopeLongPresetValue 00 00
-// INCLIN_CFG_LatOperatingPar 00
+// INCLIN_CFG_LatOperatingPar 01
 // INCLIN_CFG_SlopeLatPreset_Activate 00
 // INCLIN_CFG_SlopeLatPresetValue 00 00
 // INCLIN_CFG_TxCycleTime 32 00
