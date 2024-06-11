@@ -262,7 +262,7 @@ impl ControlNetwork {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct FilterItem {
     /// Filter by priority.
     pub priority: Option<u8>,
@@ -346,17 +346,6 @@ impl FilterItem {
         }
 
         true
-    }
-}
-
-impl Default for FilterItem {
-    fn default() -> Self {
-        Self {
-            priority: None,
-            pgn: None,
-            source_address: None,
-            destination_address: None,
-        }
     }
 }
 
