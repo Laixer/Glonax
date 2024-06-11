@@ -185,7 +185,23 @@ impl Director {
     }
 
     // TODO: Returns a state, for example Nominal, Warning, EmergencyStop, etc.
-    fn elect_local_state(&self) -> bool {
+    fn elect_local_state(&self, rotator: &crate::core::Rotator) -> bool {
+        match rotator.source {
+            ENCODER_FRAME => {
+                // TODO: Check out of range
+            }
+            ENCODER_BOOM => {
+                // TODO: Check out of range
+            }
+            ENCODER_ARM => {
+                // TODO: Check out of range
+            }
+            ENCODER_ATTACHMENT => {
+                // TODO: Check out of range
+            }
+            _ => {}
+        }
+
         // TODO: Invoke supervisor
         // TODO: Supervisor should check:
         // - If the actor is in a safe state (e.g. not in an emergency stop)
@@ -358,15 +374,14 @@ impl Director {
     fn on_event(&mut self, event: &Object, command_tx: &CommandSender) {
         match event {
             Object::Rotator(rotator) => {
-                let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
-
-                Self::update_actor(actor, rotator);
-
-                let in_emergency = self.elect_local_state();
+                let in_emergency = self.elect_local_state(rotator);
                 if in_emergency {
                     Self::command_emergency_stop(command_tx); // TODO: Return motion command
                     return;
                 }
+
+                let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
+                Self::update_actor(actor, rotator);
 
                 let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
                 let target = self.world.get_actor_by_name("target0");
@@ -391,11 +406,12 @@ impl Director {
                     }
                 }
             }
-            Object::Engine(engine) => {
-                let in_emergency = self.elect_local_state();
-                if in_emergency && engine.is_running() {
-                    Self::command_emergency_stop(command_tx); // TODO: Return motion command
-                }
+            Object::Engine(_engine) => {
+                // let in_emergency = self.elect_local_state();
+                // if in_emergency && engine.is_running() {
+                //     Self::command_emergency_stop(command_tx); // TODO: Return motion command
+                // }
+                //
             }
             Object::Target(target) => {
                 if self.operation == DirectorOperation::Autonomous {
