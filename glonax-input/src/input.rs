@@ -265,4 +265,63 @@ mod tests {
         assert_eq!(-(10_i16.ramp(3_072)), 0);
         assert_eq!(-(5960_i16.ramp(3_072)), -5960);
     }
+
+    #[test]
+    fn input_state_1() {
+        let mut state = InputState {
+            drive_lock: false,
+            motion_lock: false,
+            limit_motion: false,
+            engine_rpm: 1_000,
+        };
+
+        assert_eq!(
+            state.try_from(Scancode::Slew(120)),
+            Some(Object::Motion(Motion::new(Actuator::Slew, 0_i16)))
+        );
+        assert_eq!(
+            state.try_from(Scancode::Slew(-16_200)),
+            Some(Object::Motion(Motion::new(Actuator::Slew, -16_200_i16)))
+        );
+
+        assert_eq!(
+            state.try_from(Scancode::Attachment(12_000)),
+            Some(Object::Motion(Motion::new(
+                Actuator::Attachment,
+                12_000_i16
+            )))
+        );
+        assert_eq!(
+            state.try_from(Scancode::Attachment(3_000)),
+            Some(Object::Motion(Motion::new(Actuator::Attachment, 0_i16)))
+        );
+    }
+
+    #[test]
+    fn input_state_2() {
+        let mut state = InputState {
+            drive_lock: false,
+            motion_lock: false,
+            limit_motion: true,
+            engine_rpm: 1_000,
+        };
+
+        assert_eq!(
+            state.try_from(Scancode::Slew(120)),
+            Some(Object::Motion(Motion::new(Actuator::Slew, 0_i16)))
+        );
+        assert_eq!(
+            state.try_from(Scancode::Slew(-16_200)),
+            Some(Object::Motion(Motion::new(Actuator::Slew, -8_100_i16)))
+        );
+
+        assert_eq!(
+            state.try_from(Scancode::Boom(22_000)),
+            Some(Object::Motion(Motion::new(Actuator::Boom, 11_000_i16)))
+        );
+        assert_eq!(
+            state.try_from(Scancode::Boom(-3_000)),
+            Some(Object::Motion(Motion::new(Actuator::Boom, 0_i16)))
+        );
+    }
 }
