@@ -120,6 +120,7 @@ pub fn log_system() {
     );
 }
 
+/// Check if the runtime version is compatible.
 pub fn is_compatibile(version: (u8, u8, u8)) -> bool {
     let (major, minor, _) = version;
 

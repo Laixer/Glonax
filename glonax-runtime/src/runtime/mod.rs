@@ -103,15 +103,10 @@ pub trait Service<Cnf> {
 pub struct Runtime {
     /// Command sender.
     command_tx: CommandSender,
-    /// Command receiver.
-    #[allow(dead_code)]
-    command_rx: CommandReceiver, // TODO: Drop this receiver. We can always clone the sender.
-
     /// Signal sender.
     signal_tx: SignalSender,
     /// Signal receiver.
     signal_rx: SignalReceiver,
-
     /// Runtime tasks.
     task_pool: Vec<tokio::task::JoinHandle<()>>,
     /// Runtime event bus.
@@ -123,14 +118,12 @@ pub struct Runtime {
 
 impl Default for Runtime {
     fn default() -> Self {
-        let (command_tx, command_rx) =
-            tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_COMMAND);
+        let (command_tx, _) = tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_COMMAND);
         let (signal_tx, signal_rx) =
             tokio::sync::broadcast::channel(crate::consts::QUEUE_SIZE_SIGNAL);
 
         Self {
             command_tx,
-            command_rx,
             signal_tx,
             signal_rx,
             task_pool: Vec::new(),
