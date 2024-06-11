@@ -125,6 +125,8 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
     if input_state.limit_motion {
         log::info!("Motion range is limited");
+    } else {
+        log::info!("Full motion range is enabled");
     }
     if input_state.motion_lock {
         log::info!("Motion is locked on startup");

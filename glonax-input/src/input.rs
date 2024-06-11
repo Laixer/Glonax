@@ -65,6 +65,8 @@ pub(crate) enum Scancode {
     Confirm(ButtonState),
     /// Drive lock button.
     DriveLock(ButtonState),
+    /// Limit motion button.
+    LimitMotion(ButtonState),
     /// Up button.
     Up(ButtonState),
     /// Down button.
@@ -112,12 +114,24 @@ impl InputState {
                     return None;
                 }
 
+                let value = if self.limit_motion {
+                    (value / 2).ramp(1_000)
+                } else {
+                    value.ramp(1_000)
+                };
+
                 Some(Object::Motion(Motion::new(Actuator::Slew, value)))
             }
             Scancode::Arm(value) => {
                 if self.motion_lock {
                     return None;
                 }
+
+                let value = if self.limit_motion {
+                    (value / 2).ramp(1_500)
+                } else {
+                    value.ramp(1_500)
+                };
 
                 Some(Object::Motion(Motion::new(Actuator::Arm, value)))
             }
@@ -126,6 +140,16 @@ impl InputState {
                     return None;
                 }
 
+                let value = if value.is_negative() {
+                    if self.limit_motion {
+                        (value / 2).ramp(2_000)
+                    } else {
+                        value.ramp(2_000)
+                    }
+                } else {
+                    value.ramp(4_000)
+                };
+
                 Some(Object::Motion(Motion::new(Actuator::Attachment, value)))
             }
             Scancode::Boom(value) => {
@@ -133,12 +157,26 @@ impl InputState {
                     return None;
                 }
 
+                let value = if value.is_negative() {
+                    value.ramp(3_500)
+                } else if self.limit_motion {
+                    (value / 2).ramp(1_750)
+                } else {
+                    value.ramp(1_750)
+                };
+
                 Some(Object::Motion(Motion::new(Actuator::Boom, value)))
             }
             Scancode::LeftTrack(value) => {
                 if self.motion_lock {
                     return None;
                 }
+
+                let value = if self.limit_motion {
+                    (value / 2).ramp(2_000)
+                } else {
+                    value.ramp(2_000)
+                };
 
                 if self.drive_lock {
                     Some(Object::Motion(Motion::StraightDrive(value)))
@@ -150,6 +188,12 @@ impl InputState {
                 if self.motion_lock {
                     return None;
                 }
+
+                let value = if self.limit_motion {
+                    (value / 2).ramp(2_000)
+                } else {
+                    value.ramp(2_000)
+                };
 
                 if self.drive_lock {
                     Some(Object::Motion(Motion::StraightDrive(value)))
@@ -196,6 +240,14 @@ impl InputState {
             Scancode::DriveLock(ButtonState::Released) => {
                 self.drive_lock = false;
                 Some(Object::Motion(Motion::StraightDrive(Motion::POWER_NEUTRAL)))
+            }
+            Scancode::LimitMotion(ButtonState::Pressed) => {
+                self.limit_motion = false;
+                None
+            }
+            Scancode::LimitMotion(ButtonState::Released) => {
+                self.limit_motion = true;
+                None
             }
             _ => None,
         }
