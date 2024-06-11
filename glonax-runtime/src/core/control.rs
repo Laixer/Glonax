@@ -3,6 +3,9 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 const CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT: u8 = 0x5;
 const CONTROL_TYPE_HYDRAULIC_LOCK: u8 = 0x6;
 const CONTROL_TYPE_HYDRAULIC_BOOST: u8 = 0x7;
+const CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX: u8 = 0x8;
+const CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX: u8 = 0x9;
+const CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT: u8 = 0xA;
 const CONTROL_TYPE_MACHINE_SHUTDOWN: u8 = 0x1B;
 const CONTROL_TYPE_MACHINE_ILLUMINATION: u8 = 0x1C;
 const CONTROL_TYPE_MACHINE_LIGHTS: u8 = 0x2D;
@@ -18,6 +21,12 @@ pub enum Control {
     HydraulicLock(bool),
     /// Hydraulic boost.
     HydraulicBoost(bool),
+    /// Hydraulic boom conflux.
+    HydraulicBoomConflux(bool),
+    /// Hydraulic arm conflux.
+    HydraulicArmConflux(bool),
+    /// Hydraulic boom float.
+    HydraulicBoomFloat(bool),
     /// Machine shutdown.
     MachineShutdown,
     /// Machine illumination.
@@ -40,6 +49,9 @@ impl std::fmt::Display for Control {
             }
             Control::HydraulicLock(on) => write!(f, "Hydraulic lock: {}", on),
             Control::HydraulicBoost(on) => write!(f, "Hydraulic boost: {}", on),
+            Control::HydraulicBoomConflux(on) => write!(f, "Hydraulic boom conflux: {}", on),
+            Control::HydraulicArmConflux(on) => write!(f, "Hydraulic arm conflux: {}", on),
+            Control::HydraulicBoomFloat(on) => write!(f, "Hydraulic boom float: {}", on),
             Control::MachineShutdown => write!(f, "Robot shutdown"),
             Control::MachineIllumination(on) => write!(f, "Machine illumination: {}", on),
             Control::MachineLights(on) => write!(f, "Machine lights: {}", on),
@@ -62,6 +74,13 @@ impl TryFrom<Vec<u8>> for Control {
             }
             CONTROL_TYPE_HYDRAULIC_LOCK => Ok(Control::HydraulicLock(buf.get_u8() != 0)),
             CONTROL_TYPE_HYDRAULIC_BOOST => Ok(Control::HydraulicBoost(buf.get_u8() != 0)),
+            CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX => {
+                Ok(Control::HydraulicBoomConflux(buf.get_u8() != 0))
+            }
+            CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX => {
+                Ok(Control::HydraulicArmConflux(buf.get_u8() != 0))
+            }
+            CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT => Ok(Control::HydraulicBoomFloat(buf.get_u8() != 0)),
             CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::MachineShutdown),
             CONTROL_TYPE_MACHINE_ILLUMINATION => {
                 Ok(Control::MachineIllumination(buf.get_u8() != 0))
@@ -92,6 +111,18 @@ impl crate::protocol::Packetize for Control {
             }
             Control::HydraulicBoost(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOST);
+                buf.put_u8(if *on { 1 } else { 0 });
+            }
+            Control::HydraulicBoomConflux(on) => {
+                buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX);
+                buf.put_u8(if *on { 1 } else { 0 });
+            }
+            Control::HydraulicArmConflux(on) => {
+                buf.put_u8(CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX);
+                buf.put_u8(if *on { 1 } else { 0 });
+            }
+            Control::HydraulicBoomFloat(on) => {
+                buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT);
                 buf.put_u8(if *on { 1 } else { 0 });
             }
             Control::MachineShutdown => {

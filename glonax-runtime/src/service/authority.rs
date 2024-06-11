@@ -312,15 +312,15 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
                     drivers.push(net_driver);
                 }
-                // TODO:
-                // ("j1939", "ecm") => {
-                //     drivers.push(NetDriverItem::new(
-                //         crate::driver::EngineManagementSystem::new(
-                //             driver.da,
-                //             driver.sa.unwrap_or(config.address),
-                //         ),
-                //     ));
-                // }
+                ("j1939", "ecm") => {
+                    drivers.push(NetDriverItem::new(
+                        crate::driver::EngineManagementSystem::new(
+                            network.interface(),
+                            driver.da,
+                            driver.sa.unwrap_or(config.address),
+                        ),
+                    ));
+                }
                 ("kübler", "encoder") => {
                     let mut net_driver = NetDriverItem::new(crate::driver::KueblerEncoder::new(
                         network.interface(),

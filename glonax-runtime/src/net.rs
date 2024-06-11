@@ -275,6 +275,15 @@ pub struct FilterItem {
 }
 
 impl FilterItem {
+    /// Creates a new filter item with the specified priority.
+    ///
+    /// # Arguments
+    ///
+    /// * `priority` - The priority value to match.
+    ///
+    /// # Returns
+    ///
+    /// A new `FilterItem` with the specified priority.
     pub fn with_priority(priority: u8) -> Self {
         Self {
             priority: Some(priority),
@@ -282,6 +291,15 @@ impl FilterItem {
         }
     }
 
+    /// Creates a new filter item with the specified PGN (Parameter Group Number).
+    ///
+    /// # Arguments
+    ///
+    /// * `pgn` - The PGN value to match.
+    ///
+    /// # Returns
+    ///
+    /// A new `FilterItem` with the specified PGN.
     pub fn with_pgn(pgn: u32) -> Self {
         Self {
             pgn: Some(pgn),
@@ -289,6 +307,15 @@ impl FilterItem {
         }
     }
 
+    /// Creates a new filter item with the specified source address.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_address` - The source address value to match.
+    ///
+    /// # Returns
+    ///
+    /// A new `FilterItem` with the specified source address.
     pub fn with_source_address(source_address: u8) -> Self {
         Self {
             source_address: Some(source_address),
@@ -296,6 +323,15 @@ impl FilterItem {
         }
     }
 
+    /// Creates a new filter item with the specified destination address.
+    ///
+    /// # Arguments
+    ///
+    /// * `destination_address` - The destination address value to match.
+    ///
+    /// # Returns
+    ///
+    /// A new `FilterItem` with the specified destination address.
     pub fn with_destination_address(destination_address: u8) -> Self {
         Self {
             destination_address: Some(destination_address),
@@ -303,26 +339,71 @@ impl FilterItem {
         }
     }
 
+    /// Sets the priority value for the filter item.
+    ///
+    /// # Arguments
+    ///
+    /// * `priority` - The priority value to set.
+    ///
+    /// # Returns
+    ///
+    /// The modified `FilterItem` with the updated priority value.
     pub fn set_priority(mut self, priority: u8) -> Self {
         self.priority = Some(priority);
         self
     }
 
+    /// Sets the PGN (Parameter Group Number) value for the filter item.
+    ///
+    /// # Arguments
+    ///
+    /// * `pgn` - The PGN value to set.
+    ///
+    /// # Returns
+    ///
+    /// The modified `FilterItem` with the updated PGN value.
     pub fn set_pgn(mut self, pgn: u32) -> Self {
         self.pgn = Some(pgn);
         self
     }
 
+    /// Sets the source address value for the filter item.
+    ///
+    /// # Arguments
+    ///
+    /// * `source_address` - The source address value to set.
+    ///
+    /// # Returns
+    ///
+    /// The modified `FilterItem` with the updated source address value.
     pub fn set_source_address(mut self, source_address: u8) -> Self {
         self.source_address = Some(source_address);
         self
     }
 
+    /// Sets the destination address value for the filter item.
+    ///
+    /// # Arguments
+    ///
+    /// * `destination_address` - The destination address value to set.
+    ///
+    /// # Returns
+    ///
+    /// The modified `FilterItem` with the updated destination address value.
     pub fn set_destination_address(mut self, destination_address: u8) -> Self {
         self.destination_address = Some(destination_address);
         self
     }
 
+    /// Checks if the filter item matches the given ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The ID to match against.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the filter item matches the ID, `false` otherwise.
     fn matches(&self, id: &Id) -> bool {
         if let Some(priority) = self.priority {
             if priority != id.priority() {

@@ -51,6 +51,7 @@ pub struct ChangeSet {
     pub value: MotionValueType,
 }
 
+// FUTURE: Replace Vec with a fixed size array
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Motion {
     /// Stop all motion until resumed.
