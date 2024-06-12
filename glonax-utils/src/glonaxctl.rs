@@ -48,6 +48,8 @@ enum Command {
     },
     /// Ping the server.
     Ping,
+    /// Queue target.
+    Target { x: f32, y: f32, z: f32 },
 }
 
 fn string_to_bool(s: &str) -> Option<bool> {
@@ -247,6 +249,13 @@ async fn main() -> anyhow::Result<()> {
 
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         },
+        Command::Target { x, y, z } => {
+            let target = glonax::core::Target::from_point(x, y, z);
+
+            log::info!("Queue target: {}", target);
+
+            client.send_packet(&target).await?;
+        }
     }
 
     Ok(())

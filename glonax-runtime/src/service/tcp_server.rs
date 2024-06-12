@@ -171,7 +171,9 @@ impl TcpServer {
                     .map_err(TcpError::Io)?;
 
                 if session.is_command() {
-                    log::debug!("Target request: {:?}", target);
+                    command_tx
+                        .send(Object::Target(target))
+                        .map_err(TcpError::Command)?;
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
