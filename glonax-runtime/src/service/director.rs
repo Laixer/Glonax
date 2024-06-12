@@ -83,6 +83,10 @@ impl std::fmt::Display for DirectorOperation {
     }
 }
 
+// TODO:
+// - max kinematic reach from the actor
+// - motion rules
+
 pub struct Director {
     world: World,
     operation: DirectorOperation,
@@ -199,19 +203,26 @@ impl Director {
             ENCODER_BOOM => {
                 let rotation = rotator.rotator;
 
-                if rotation.euler_angles().1 > 60.0_f32.to_radians() {
+                let (roll, pitch, yaw) = rotation.euler_angles();
+                if roll == 0.0 && pitch > 60.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
-                } else if rotation.euler_angles().1 < -60.0_f32.to_radians() {
+                } else if roll == 0.0 && pitch < -45.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
                 }
             }
             ENCODER_ARM => {
-                // TODO: Check out of range
+                let rotation = rotator.rotator;
+
+                let (roll, pitch, yaw) = rotation.euler_angles();
+                if roll == 0.0 && pitch > -40.0_f32.to_radians() && yaw == 0.0 {
+                    log::warn!("Arm pitch angle is out of range");
+                }
             }
             ENCODER_ATTACHMENT => {
                 let rotation = rotator.rotator;
 
-                if rotation.euler_angles().1 > 175.0_f32.to_radians() {
+                // TODO: Not going to work
+                if rotation.euler_angles().1 > 178.0_f32.to_radians() {
                     log::warn!("Attachment pitch angle is out of range");
                 }
             }
@@ -498,7 +509,7 @@ impl Service<NullConfig> for Director {
     }
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
-        if let Ok(signal) = signal_rx.recv().await {
+        while let Ok(signal) = signal_rx.recv().await {
             self.on_event(&signal, &command_tx);
         }
     }

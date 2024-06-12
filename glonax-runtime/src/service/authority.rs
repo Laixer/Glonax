@@ -362,6 +362,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             error!("Failed to receive from router: {}", e);
         }
 
+        // TODO: If no packets are received, setup is not called.
         if !self.is_setup {
             self.setup_delayed().await;
             self.is_setup = true;

@@ -124,6 +124,6 @@ pub fn log_system() {
 pub fn is_compatibile(version: (u8, u8, u8)) -> bool {
     let (major, minor, _) = version;
 
-    major == consts::VERSION_MAJOR.parse().unwrap()
-        && minor == consts::VERSION_MINOR.parse().unwrap()
+    major == consts::VERSION_MAJOR.parse().unwrap_or(0)
+        && minor == consts::VERSION_MINOR.parse().unwrap_or(0)
 }
