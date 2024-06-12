@@ -134,30 +134,22 @@ impl Director {
         match rotator.source {
             ENCODER_FRAME => {
                 if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_relative_rotation("frame", rotator.rotator);
-                } else {
-                    // actor.set_absolute_rotation("frame", rotator.rotator);
+                    actor.set_segment_rotation("frame", rotator.rotator);
                 }
             }
             ENCODER_BOOM => {
                 if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_relative_rotation("boom", rotator.rotator);
-                } else {
-                    // actor.set_absolute_rotation("boom", rotator.rotator);
+                    actor.set_segment_rotation("boom", rotator.rotator);
                 }
             }
             ENCODER_ARM => {
                 if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_relative_rotation("arm", rotator.rotator);
-                } else {
-                    // actor.set_absolute_rotation("arm", rotator.rotator);
+                    actor.set_segment_rotation("arm", rotator.rotator);
                 }
             }
             ENCODER_ATTACHMENT => {
                 if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_relative_rotation("attachment", rotator.rotator);
-                } else {
-                    // actor.set_absolute_rotation("attachment", rotator.rotator);
+                    actor.set_segment_rotation("attachment", rotator.rotator);
                 }
             }
             _ => {}
@@ -243,7 +235,7 @@ impl Director {
         let actor_target_distance = nalgebra::distance(&actor.location(), &target.location());
         log::debug!("Actor target distance: {:.2}", actor_target_distance);
 
-        let boom_point = actor.relative_location("boom").unwrap();
+        let boom_point = actor.segment_location("boom").unwrap();
         let kinematic_target_distance =
             nalgebra::distance(&actor.location(), &(target.location() - boom_point.coords));
         log::debug!(
@@ -262,10 +254,10 @@ impl Director {
         target: &Actor,
         actuator_error: &mut Vec<(Actuator, f32)>,
     ) {
-        let boom_length = actor.relative_location("arm").unwrap().x;
+        let boom_length = actor.segment_location("arm").unwrap().x;
         // log::debug!("Boom length: {:?}", boom_length);
 
-        let arm_length = actor.relative_location("attachment").unwrap().x;
+        let arm_length = actor.segment_location("attachment").unwrap().x;
         // log::debug!("Arm length: {:?}", arm_length);
 
         let boom_world_location = actor.world_location("boom");

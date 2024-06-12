@@ -136,7 +136,7 @@ impl Actor {
         self.segments[0].1.set_rotation(rotation);
     }
 
-    pub fn set_relative_rotation(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
+    pub fn set_segment_rotation(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
         for (sname, segment) in self.segments.iter_mut() {
             if sname == &name.to_string() {
                 segment.set_rotation(rotation);
@@ -145,7 +145,7 @@ impl Actor {
         }
     }
 
-    pub fn add_relative_rotation(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
+    pub fn add_segment_rotation(&mut self, name: impl ToString, rotation: Rotation3<f32>) {
         for (sname, segment) in self.segments.iter_mut() {
             if sname == &name.to_string() {
                 segment.add_rotation(rotation);
@@ -154,7 +154,7 @@ impl Actor {
         }
     }
 
-    pub fn relative_location(&self, name: impl ToString) -> Option<Point3<f32>> {
+    pub fn segment_location(&self, name: impl ToString) -> Option<Point3<f32>> {
         for (sname, segment) in &self.segments {
             if sname == &name.to_string() {
                 return Some(segment.location());
