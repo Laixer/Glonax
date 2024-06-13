@@ -4,7 +4,7 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
@@ -22,10 +22,34 @@ struct Args {
     command: Command,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum ObjectFilter {
+    /// Control.
+    Control,
+    /// Engine.
+    Engine,
+    /// GNSS.
+    Gnss,
+    /// Host.
+    Host,
+    /// Motion.
+    Motion,
+    /// Target.
+    Target,
+    /// Rotator.
+    Rotator,
+    /// Module status.
+    Status,
+}
+
 #[derive(clap::Subcommand)]
 enum Command {
     /// Watch for glonax messages.
-    Watch,
+    Watch {
+        /// Filter messages.
+        #[arg(short, long)]
+        filter: Option<ObjectFilter>,
+    },
     /// Engine commands.
     Engine {
         /// RPM
@@ -120,13 +144,16 @@ async fn main() -> anyhow::Result<()> {
     }
 
     match args.command {
-        Command::Watch => loop {
+        Command::Watch { filter } => loop {
             use glonax::protocol::Packetize;
 
             let frame = client.read_frame().await?;
+
+            // TODO: Filter objects
             // TODO: If possible, convert back into an object
             // TODO: Offer: async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
             match frame.message {
+                // TODO: Error messages are never sent
                 glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
                     let error = client
                         .recv_packet::<glonax::protocol::frame::SessionError>(frame.payload_length)
@@ -139,7 +166,13 @@ async fn main() -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::ModuleStatus>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", status);
+                    if let Some(filter) = filter {
+                        if filter == ObjectFilter::Status {
+                            log::info!("{}", status);
+                        }
+                    } else {
+                        log::info!("{}", status);
+                    }
                 }
                 glonax::core::Instance::MESSAGE_TYPE => {
                     let instance = client
@@ -153,35 +186,65 @@ async fn main() -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::Engine>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", engine);
+                    if let Some(filter) = filter {
+                        if filter == ObjectFilter::Engine {
+                            log::info!("{}", engine);
+                        }
+                    } else {
+                        log::info!("{}", engine);
+                    }
                 }
                 glonax::core::Host::MESSAGE_TYPE => {
                     let host = client
                         .recv_packet::<glonax::core::Host>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", host);
+                    if let Some(filter) = filter {
+                        if filter == ObjectFilter::Host {
+                            log::info!("{}", host);
+                        }
+                    } else {
+                        log::info!("{}", host);
+                    }
                 }
                 glonax::core::Gnss::MESSAGE_TYPE => {
                     let gnss = client
                         .recv_packet::<glonax::core::Gnss>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", gnss);
+                    if let Some(filter) = filter {
+                        if filter == ObjectFilter::Gnss {
+                            log::info!("{}", gnss);
+                        }
+                    } else {
+                        log::info!("{}", gnss);
+                    }
                 }
                 glonax::core::Motion::MESSAGE_TYPE => {
                     let motion = client
                         .recv_packet::<glonax::core::Motion>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", motion);
+                    if let Some(filter) = filter {
+                        if filter == ObjectFilter::Motion {
+                            log::info!("{}", motion);
+                        }
+                    } else {
+                        log::info!("{}", motion);
+                    }
                 }
                 glonax::core::Rotator::MESSAGE_TYPE => {
                     let rotator = client
                         .recv_packet::<glonax::core::Rotator>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", rotator);
+                    if let Some(filter) = filter {
+                        if filter == ObjectFilter::Rotator {
+                            log::info!("{}", rotator);
+                        }
+                    } else {
+                        log::info!("{}", rotator);
+                    }
                 }
                 glonax::world::Actor::MESSAGE_TYPE => {
                     let actor = client
