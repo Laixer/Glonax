@@ -9,6 +9,7 @@ const JS_EVENT_TYPE_AXIS: u8 = 0x2;
 /// Initial state of device.
 const JS_EVENT_INIT: u8 = 0x80;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub enum EventType {
     /// Button pressed/released.
@@ -21,6 +22,7 @@ pub enum EventType {
     AxisInit(u8),
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Event {
     /// Event timestamp in milliseconds.

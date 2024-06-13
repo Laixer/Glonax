@@ -51,12 +51,8 @@ pub struct Config {
     pub machine: MachineConfig,
     /// NMEA configuration.
     pub gnss: Option<glonax::service::GnssConfig>,
-    /// Simulation configuration.
-    pub simulation: Option<SimulationConfig>,
     /// TCP Server configuration.
     pub tcp_server: glonax::service::TcpServerConfig,
-    /// Unix socket configuration.
-    pub unix_server: Option<glonax::service::UnixServerConfig>,
     /// J1939 network configuration.
     #[serde(default)]
     pub j1939: Vec<glonax::service::NetworkConfig>,
