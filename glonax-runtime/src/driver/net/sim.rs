@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use crate::{
     core::{Object, Rotator},
     driver::{EncoderConverter, VirtualEncoder},
@@ -16,9 +18,9 @@ pub struct Simulator {
     /// List of encoders.
     encoder_list: [(u8, crate::core::Actuator, VirtualEncoder, EncoderConverter); 4],
     /// List of encoder velocities.
-    velocity_list: [std::cell::RefCell<i16>; 4],
+    velocity_list: [RefCell<i16>; 4],
     /// List of encoder positions.
-    position_list: [std::cell::RefCell<u32>; 4],
+    position_list: [RefCell<u32>; 4],
 }
 
 impl Simulator {
@@ -67,7 +69,6 @@ impl Simulator {
             destination_address: da,
             source_address: sa,
             encoder_list,
-
             velocity_list: Default::default(),
             position_list: Default::default(),
         }
@@ -135,6 +136,7 @@ impl J1939Unit for Simulator {
             _ => {}
         }
 
+        // TOOD: Run this on every tick
         for (idx, encoder) in self.encoder_list.iter().enumerate() {
             let current_velocity = self.velocity_list[idx].borrow();
             let mut current_position = self.position_list[idx].borrow_mut();
