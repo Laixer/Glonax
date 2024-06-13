@@ -19,10 +19,9 @@ impl Linear {
 
     /// Method to update the linear controller based on the current error
     pub fn update(&self, error: f32) -> f32 {
-        let value = (error * self.kp).clamp(
-            std::i16::MIN as f32 + self.offset,
-            std::i16::MAX as f32 - self.offset,
-        ) + (self.offset * error.signum());
+        let value = (error * self.kp)
+            .clamp(i16::MIN as f32 + self.offset, i16::MAX as f32 - self.offset)
+            + (self.offset * error.signum());
 
         if self.inverse {
             value

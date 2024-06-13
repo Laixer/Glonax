@@ -52,7 +52,7 @@ pub fn linear_motion(
     }
 
     let delta_normal =
-        ((delta.abs() * scale).min(std::i16::MAX as f32 - offset) + offset).round() as i16;
+        ((delta.abs() * scale).min(i16::MAX as f32 - offset) + offset).round() as i16;
 
     let value = if delta.is_sign_negative() {
         delta_normal
