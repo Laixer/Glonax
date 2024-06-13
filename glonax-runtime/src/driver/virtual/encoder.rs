@@ -1,5 +1,6 @@
 use rand::Rng;
 
+#[derive(Clone)]
 pub struct VirtualEncoder {
     rng: rand::rngs::OsRng,
     position: u32,
@@ -58,7 +59,7 @@ impl VirtualEncoder {
     }
 
     // TODO: Add optional jitter
-    pub fn position(&self, possie: u32, velocity: i16) -> u32 {
+    pub fn position(&self, position: u32, velocity: i16) -> u32 {
         let velocity_norm = velocity / self.factor;
         let velocity_norm = if self.invert {
             -velocity_norm
@@ -67,13 +68,14 @@ impl VirtualEncoder {
         };
 
         if self.multiturn {
-            let mut position = (possie as i16 + velocity_norm) % self.bounds.1;
+            let mut position = (position as i16 + velocity_norm) % self.bounds.1;
             if position < 0 {
                 position += self.bounds.1;
             }
             position as u32
         } else {
-            let mut position = (possie as i16 + velocity_norm).clamp(self.bounds.0, self.bounds.1);
+            let mut position =
+                (position as i16 + velocity_norm).clamp(self.bounds.0, self.bounds.1);
             if position < 0 {
                 position += self.bounds.1;
             }

@@ -29,7 +29,7 @@ pub struct ActuatorMessage {
     /// Source address
     source_address: u8,
     /// Actuator values
-    actuators: [Option<i16>; 8],
+    pub actuators: [Option<i16>; 8],
 }
 
 impl ActuatorMessage {

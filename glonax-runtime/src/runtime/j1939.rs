@@ -123,7 +123,7 @@ impl From<std::io::Error> for J1939UnitError {
 impl std::error::Error for J1939UnitError {}
 
 /// Represents a J1939 unit.
-pub trait J1939Unit: Send + Sync {
+pub trait J1939Unit: Send {
     /// Get the vendor of the unit.
     fn vendor(&self) -> &'static str;
 

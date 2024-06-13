@@ -237,7 +237,7 @@ impl Runtime {
 
     pub fn schedule_net_service<S, C>(&mut self, config: C, duration: Duration)
     where
-        S: NetworkService<C> + Clone + Send + Sync + 'static,
+        S: NetworkService<C> + Clone + Send + 'static,
         C: Clone + Send + 'static,
     {
         let mut command_rx = self.command_tx.subscribe();
