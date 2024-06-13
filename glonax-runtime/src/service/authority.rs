@@ -75,16 +75,14 @@ struct NetDriverItem {
     driver: Box<dyn J1939Unit>,
     context: NetDriverContext,
     rx_timeout: Option<Duration>,
-    // error: Option<J1939UnitError>,
 }
 
 impl NetDriverItem {
-    fn new<T: J1939Unit + 'static>(driver: T) -> Self {
+    fn new(driver: Box<dyn J1939Unit>, rx_timeout: Option<Duration>) -> Self {
         Self {
-            rx_timeout: None,
-            driver: Box::new(driver),
+            driver,
             context: NetDriverContext::default(),
-            // error: None,
+            rx_timeout,
         }
     }
 
@@ -164,86 +162,20 @@ impl Clone for NetworkAuthority {
         let network = ControlNetwork::bind(self.network.interface(), self.network.name()).unwrap();
 
         let mut drivers = Vec::new();
-
         for driver in &self.drivers {
-            match (driver.driver.vendor(), driver.driver.product()) {
-                ("laixer", "vcu") => {
-                    drivers.push(NetDriverItem {
-                        driver: Box::new(crate::driver::VehicleControlUnit::new(
-                            self.network.interface(),
-                            driver.driver.destination(),
-                            driver.driver.source(),
-                        )),
-                        context: driver.context.clone(),
-                        rx_timeout: driver.rx_timeout,
-                        // error: None,
-                    });
-                }
-                ("laixer", "hcu") => {
-                    drivers.push(NetDriverItem {
-                        driver: Box::new(crate::driver::HydraulicControlUnit::new(
-                            self.network.interface(),
-                            driver.driver.destination(),
-                            driver.driver.source(),
-                        )),
-                        context: driver.context.clone(),
-                        rx_timeout: driver.rx_timeout,
-                        // error: None,
-                    });
-                }
-                ("laixer", "simulator") => {
-                    drivers.push(NetDriverItem {
-                        driver: Box::new(crate::driver::net::sim::Simulator::new(
-                            self.network.interface(),
-                            driver.driver.destination(),
-                            driver.driver.source(),
-                        )),
-                        context: driver.context.clone(),
-                        rx_timeout: driver.rx_timeout,
-                        // error: None,
-                    });
-                }
-                ("volvo", "d7e") => {
-                    drivers.push(NetDriverItem {
-                        driver: Box::new(crate::driver::VolvoD7E::new(
-                            self.network.interface(),
-                            driver.driver.destination(),
-                            driver.driver.source(),
-                        )),
-                        context: driver.context.clone(),
-                        rx_timeout: driver.rx_timeout,
-                        // error: None,
-                    });
-                }
-                ("kübler", "inclinometer") => {
-                    drivers.push(NetDriverItem {
-                        driver: Box::new(crate::driver::KueblerInclinometer::new(
-                            self.network.interface(),
-                            driver.driver.destination(),
-                            driver.driver.source(),
-                        )),
-                        context: driver.context.clone(),
-                        rx_timeout: driver.rx_timeout,
-                        // error: None,
-                    });
-                }
-                ("kübler", "encoder") => {
-                    drivers.push(NetDriverItem {
-                        driver: Box::new(crate::driver::KueblerEncoder::new(
-                            self.network.interface(),
-                            driver.driver.destination(),
-                            driver.driver.source(),
-                        )),
-                        context: driver.context.clone(),
-                        rx_timeout: driver.rx_timeout,
-                        // error: None,
-                    });
-                }
-                _ => {
-                    // error!("Unknown driver: {} {}", driver.vendor, driver.product);
-                    panic!()
-                }
-            }
+            let net_driver = crate::driver::net::driver_factory(
+                driver.driver.vendor(),
+                driver.driver.product(),
+                network.interface(),
+                driver.driver.destination(),
+                driver.driver.source(),
+            );
+
+            drivers.push(NetDriverItem {
+                driver: net_driver.unwrap(),
+                context: driver.context.clone(),
+                rx_timeout: driver.rx_timeout,
+            });
         }
 
         Self {
@@ -263,104 +195,23 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
     {
         let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
-        // TODO: Move this driver thing to a factory.
         let mut drivers = Vec::new();
         for driver in config.driver.iter() {
-            match (driver.vendor.as_str(), driver.product.as_str()) {
-                ("laixer", "vcu") => {
-                    let mut net_driver =
-                        NetDriverItem::new(crate::driver::VehicleControlUnit::new(
-                            network.interface(),
-                            driver.da,
-                            driver.sa.unwrap_or(config.address),
-                        ));
+            let net_driver = crate::driver::net::driver_factory(
+                &driver.vendor,
+                &driver.product,
+                network.interface(),
+                driver.da,
+                driver.sa.unwrap_or(config.address),
+            );
 
-                    if let Some(timeout) = driver.timeout {
-                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
-                    }
-
-                    drivers.push(net_driver);
-                }
-                ("laixer", "hcu") => {
-                    let mut net_driver =
-                        NetDriverItem::new(crate::driver::HydraulicControlUnit::new(
-                            network.interface(),
-                            driver.da,
-                            driver.sa.unwrap_or(config.address),
-                        ));
-
-                    if let Some(timeout) = driver.timeout {
-                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
-                    }
-
-                    drivers.push(net_driver);
-                }
-                ("laixer", "simulator") => {
-                    let mut net_driver =
-                        NetDriverItem::new(crate::driver::net::sim::Simulator::new(
-                            network.interface(),
-                            driver.da,
-                            driver.sa.unwrap_or(config.address),
-                        ));
-
-                    if let Some(timeout) = driver.timeout {
-                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
-                    }
-
-                    drivers.push(net_driver);
-                }
-                ("volvo", "d7e") => {
-                    let mut net_driver = NetDriverItem::new(crate::driver::VolvoD7E::new(
-                        network.interface(),
-                        driver.da,
-                        driver.sa.unwrap_or(config.address),
-                    ));
-
-                    if let Some(timeout) = driver.timeout {
-                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
-                    }
-
-                    drivers.push(net_driver);
-                }
-                ("kübler", "inclinometer") => {
-                    let mut net_driver =
-                        NetDriverItem::new(crate::driver::KueblerInclinometer::new(
-                            network.interface(),
-                            driver.da,
-                            driver.sa.unwrap_or(config.address),
-                        ));
-
-                    if let Some(timeout) = driver.timeout {
-                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
-                    }
-
-                    drivers.push(net_driver);
-                }
-                ("j1939", "ecm") => {
-                    drivers.push(NetDriverItem::new(
-                        crate::driver::EngineManagementSystem::new(
-                            network.interface(),
-                            driver.da,
-                            driver.sa.unwrap_or(config.address),
-                        ),
-                    ));
-                }
-                ("kübler", "encoder") => {
-                    let mut net_driver = NetDriverItem::new(crate::driver::KueblerEncoder::new(
-                        network.interface(),
-                        driver.da,
-                        driver.sa.unwrap_or(config.address),
-                    ));
-
-                    if let Some(timeout) = driver.timeout {
-                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
-                    }
-
-                    drivers.push(net_driver);
-                }
-                _ => {
-                    error!("Unknown driver: {} {}", driver.vendor, driver.product);
-                }
+            if let Some(net_driver) = net_driver {
+                drivers.push(NetDriverItem::new(
+                    net_driver,
+                    driver.timeout.map(Duration::from_millis),
+                ));
+            } else {
+                error!("Unknown driver: {} {}", driver.vendor, driver.product);
             }
         }
 
