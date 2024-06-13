@@ -8,6 +8,10 @@ use crate::{
     runtime::{J1939Unit, J1939UnitError, NetDriverContext, NetworkService, SignalSender},
 };
 
+fn interval_decimation(interval: Duration, tick: u64, decimation: u64) -> bool {
+    tick as u128 % (decimation as u128 / interval.as_millis()) == 0
+}
+
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct J1939Name {
     /// Manufacturer code.
@@ -471,45 +475,29 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
     async fn on_tick(&mut self, signal_tx: SignalSender) {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
-            let mut error = None;
+            let mut module_status = crate::core::ModuleStatus::healthy(driver.driver.name());
 
             if let Err(e) = driver.tick(&mut tx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
-                error = Some(e);
+
+                module_status = crate::core::ModuleStatus::faulty(driver.driver.name(), e.into());
             }
 
             if driver.is_rx_timeout() {
                 let e = J1939UnitError::MessageTimeout;
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
-                error = Some(e);
+
+                module_status = crate::core::ModuleStatus::faulty(driver.driver.name(), e.into());
             }
 
-            if self.tick % 10 == 0 {
-                if let Some(_e) = error {
-                    let module_status = crate::core::ModuleStatus::faulty(
-                        driver.driver.name(),
-                        crate::core::ModuleError::CommunicationTimeout,
+            if interval_decimation(Duration::from_millis(10), self.tick, 100) {
+                if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
+                    error!(
+                        "[{}] {}: Failed to send signal: {}",
+                        self.network.interface(),
+                        driver,
+                        e
                     );
-
-                    if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
-                        error!(
-                            "[{}] {}: Failed to send signal: {}",
-                            self.network.interface(),
-                            driver,
-                            e
-                        );
-                    }
-                } else {
-                    let module_status = crate::core::ModuleStatus::healthy(driver.driver.name());
-
-                    if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
-                        error!(
-                            "[{}] {}: Failed to send signal: {}",
-                            self.network.interface(),
-                            driver,
-                            e
-                        );
-                    }
                 }
             }
 

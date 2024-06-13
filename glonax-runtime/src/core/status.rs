@@ -62,6 +62,7 @@ impl std::fmt::Display for ModuleError {
     }
 }
 
+// TODO: Split name into vendor and product
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ModuleStatus {
     /// Name of the module.
@@ -189,7 +190,7 @@ mod tests {
     fn test_module_status_2() {
         let status = ModuleStatus {
             name: "Test".to_string(),
-            state: ModuleState::Healthy,
+            state: ModuleState::Degraded,
             error: Some(ModuleError::InvalidConfiguration),
         };
 

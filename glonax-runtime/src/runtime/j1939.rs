@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::core::{Object, ObjectMessage};
+use crate::core::{ModuleError, Object, ObjectMessage};
 
 use super::SignalSender;
 
@@ -117,6 +117,21 @@ impl std::fmt::Display for J1939UnitError {
 impl From<std::io::Error> for J1939UnitError {
     fn from(error: std::io::Error) -> Self {
         Self::IOError(error)
+    }
+}
+
+impl From<J1939UnitError> for ModuleError {
+    fn from(error: J1939UnitError) -> Self {
+        match error {
+            J1939UnitError::MessageTimeout => ModuleError::CommunicationTimeout,
+            J1939UnitError::InvalidConfiguration => ModuleError::InvalidConfiguration,
+            J1939UnitError::VersionMismatch => ModuleError::VersionMismatch,
+            J1939UnitError::BusError => ModuleError::GenericCommunicationError,
+            J1939UnitError::SensorError => ModuleError::GenericCommunicationError,
+            J1939UnitError::HardwareError => ModuleError::GenericCommunicationError,
+            J1939UnitError::UnknownState => ModuleError::GenericCommunicationError,
+            J1939UnitError::IOError(_) => ModuleError::IOError,
+        }
     }
 }
 
