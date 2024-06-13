@@ -1,7 +1,9 @@
 use std::cell::RefCell;
 
+use nalgebra::Vector3;
+
 use crate::{
-    core::{Object, Rotator},
+    core::{Actuator, Object, Rotator},
     driver::{EncoderConverter, VirtualEncoder},
     net::Parsable,
     runtime::{J1939Unit, J1939UnitError, NetDriverContext},
@@ -16,7 +18,7 @@ pub struct Simulator {
     /// Source address.
     source_address: u8,
     /// List of encoders.
-    encoder_list: [(u8, crate::core::Actuator, VirtualEncoder, EncoderConverter); 4],
+    encoder_list: [(u8, Actuator, VirtualEncoder, EncoderConverter); 4],
     /// List of encoder velocities.
     velocity_list: [RefCell<i16>; 4],
     /// List of encoder positions.
@@ -31,34 +33,19 @@ impl Simulator {
         let encoder_arm = VirtualEncoder::new(5_000, (685, 2_760), false, true);
         let encoder_attachment = VirtualEncoder::new(5_000, (0, 3_100), false, false);
 
-        let decoder_frame = EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::z_axis());
-        let decoder_boom = EncoderConverter::new(
-            1000.0,
-            60_f32.to_radians(),
-            true,
-            nalgebra::Vector3::y_axis(),
-        );
-        let decoder_arm = EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis());
-        let decoder_attachment =
-            EncoderConverter::new(1000.0, 0.0, true, nalgebra::Vector3::y_axis());
+        let decoder_frame = EncoderConverter::new(1000.0, 0.0, true, Vector3::z_axis());
+        let decoder_boom =
+            EncoderConverter::new(1000.0, 60_f32.to_radians(), true, Vector3::y_axis());
+        let decoder_arm = EncoderConverter::new(1000.0, 0.0, true, Vector3::y_axis());
+        let decoder_attachment = EncoderConverter::new(1000.0, 0.0, true, Vector3::y_axis());
 
         let encoder_list = [
-            (
-                0x6A,
-                crate::core::Actuator::Slew,
-                encoder_frame,
-                decoder_frame,
-            ),
-            (
-                0x6B,
-                crate::core::Actuator::Boom,
-                encoder_boom,
-                decoder_boom,
-            ),
-            (0x6C, crate::core::Actuator::Arm, encoder_arm, decoder_arm),
+            (0x6A, Actuator::Slew, encoder_frame, decoder_frame),
+            (0x6B, Actuator::Boom, encoder_boom, decoder_boom),
+            (0x6C, Actuator::Arm, encoder_arm, decoder_arm),
             (
                 0x6D,
-                crate::core::Actuator::Attachment,
+                Actuator::Attachment,
                 encoder_attachment,
                 decoder_attachment,
             ),
