@@ -187,6 +187,18 @@ impl Clone for NetworkAuthority {
                         // error: None,
                     });
                 }
+                ("laixer", "simulator") => {
+                    drivers.push(NetDriverItem {
+                        driver: Box::new(crate::driver::net::sim::Simulator::new(
+                            self.network.interface(),
+                            driver.driver.destination(),
+                            driver.driver.source(),
+                        )),
+                        context: driver.context.clone(),
+                        rx_timeout: driver.rx_timeout,
+                        // error: None,
+                    });
+                }
                 ("volvo", "d7e") => {
                     drivers.push(NetDriverItem {
                         driver: Box::new(crate::driver::VolvoD7E::new(
@@ -245,13 +257,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
     where
         Self: Sized,
     {
-        let mut filter = crate::net::Filter::reject();
-
-        filter.push(crate::net::FilterItem::with_source_address(config.address));
-
-        let network = ControlNetwork::bind(&config.interface, &config.name.into())
-            .unwrap()
-            .with_filter(filter);
+        let network = ControlNetwork::bind(&config.interface, &config.name.into()).unwrap();
 
         // TODO: Move this driver thing to a factory.
         let mut drivers = Vec::new();
@@ -274,6 +280,20 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 ("laixer", "hcu") => {
                     let mut net_driver =
                         NetDriverItem::new(crate::driver::HydraulicControlUnit::new(
+                            network.interface(),
+                            driver.da,
+                            driver.sa.unwrap_or(config.address),
+                        ));
+
+                    if let Some(timeout) = driver.timeout {
+                        net_driver.rx_timeout = Some(Duration::from_millis(timeout));
+                    }
+
+                    drivers.push(net_driver);
+                }
+                ("laixer", "simulator") => {
+                    let mut net_driver =
+                        NetDriverItem::new(crate::driver::net::sim::Simulator::new(
                             network.interface(),
                             driver.da,
                             driver.sa.unwrap_or(config.address),

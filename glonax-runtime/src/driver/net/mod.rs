@@ -5,6 +5,7 @@ pub mod hydraulic;
 pub mod inclino;
 pub mod inspector;
 pub mod probe;
+pub mod sim;
 pub mod vcu;
 pub(super) mod vecraft;
 pub mod volvo_ems;
