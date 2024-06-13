@@ -237,12 +237,6 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             error!("Failed to receive from router: {}", e);
         }
 
-        // TODO: If no packets are received, setup is not called.
-        if !self.is_setup {
-            self.setup_delayed().await;
-            self.is_setup = true;
-        }
-
         let frame = self.network.frame().unwrap();
         if frame.id().pgn() == j1939::PGN::Request {
             if frame.id().destination_address() != Some(self.default_address) {
@@ -324,6 +318,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
     }
 
     async fn on_tick(&mut self, signal_tx: SignalSender) {
+        if !self.is_setup {
+            self.setup_delayed().await;
+            self.is_setup = true;
+        }
+
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
             let mut module_status = crate::core::ModuleStatus::healthy(driver.driver.name());
