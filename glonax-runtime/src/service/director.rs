@@ -97,6 +97,13 @@ pub struct Director {
     attachment_state: experimental::ActuatorState,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum DirectorLocslState {
+    Nominal,
+    UnusualAttitude,
+    EmergencyStop,
+}
+
 impl Director {
     /// Sends a series of control commands to perform an emergency stop.
     ///
@@ -202,7 +209,7 @@ impl Director {
     }
 
     // TODO: Returns a state, for example Nominal, Warning, EmergencyStop, etc.
-    fn elect_local_state(&self, rotator: &crate::core::Rotator) -> bool {
+    fn elect_local_state(&self, rotator: &crate::core::Rotator) -> DirectorLocslState {
         match rotator.source {
             ENCODER_FRAME => {}
             ENCODER_BOOM => {
@@ -211,8 +218,10 @@ impl Director {
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if roll == 0.0 && pitch > 60.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
+                    return DirectorLocslState::UnusualAttitude;
                 } else if roll == 0.0 && pitch < -45.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
+                    return DirectorLocslState::UnusualAttitude;
                 }
             }
             ENCODER_ARM => {
@@ -221,6 +230,7 @@ impl Director {
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if roll == 0.0 && pitch > -40.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Arm pitch angle is out of range");
+                    return DirectorLocslState::UnusualAttitude;
                 }
             }
             ENCODER_ATTACHMENT => {
@@ -229,6 +239,7 @@ impl Director {
                 // TODO: Not going to work
                 if rotation.euler_angles().1 > 178.0_f32.to_radians() {
                     log::warn!("Attachment pitch angle is out of range");
+                    return DirectorLocslState::UnusualAttitude;
                 }
             }
             _ => {}
@@ -238,7 +249,7 @@ impl Director {
         // - If the actor has all the necessary components (encoders, sensors, etc.)
         // - If the actor is in a safe environment (e.g. not in a collision course)
 
-        false
+        DirectorLocslState::Nominal
     }
 
     // TODO: Returns a state, for example TargetOutOfRange, TargetOutOfReach, TargetInReach, etc.
@@ -404,8 +415,8 @@ impl Director {
     fn on_event(&mut self, event: &Object, command_tx: &CommandSender) {
         match event {
             Object::Rotator(rotator) => {
-                let in_emergency = self.elect_local_state(rotator);
-                if in_emergency {
+                let local_state = self.elect_local_state(rotator);
+                if local_state == DirectorLocslState::EmergencyStop {
                     Self::command_emergency_stop(command_tx); // TODO: Return motion command
                     return;
                 }
