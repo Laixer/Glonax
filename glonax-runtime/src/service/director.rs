@@ -13,6 +13,7 @@ const ENCODER_FRAME: u8 = 0x6A;
 const ENCODER_BOOM: u8 = 0x6B;
 const ENCODER_ARM: u8 = 0x6C;
 const ENCODER_ATTACHMENT: u8 = 0x6D;
+const INCLINOMETER: u8 = 0x7A;
 
 mod experimental {
     use crate::{
@@ -138,6 +139,7 @@ impl Director {
         match rotator.source {
             ENCODER_FRAME => {
                 if rotator.reference == crate::core::RotationReference::Relative {
+                    // TODO: We only set the yaw angle for the frame
                     actor.set_segment_rotation("frame", rotator.rotator);
                 }
             }
@@ -155,6 +157,9 @@ impl Director {
                 if rotator.reference == crate::core::RotationReference::Relative {
                     actor.set_segment_rotation("attachment", rotator.rotator);
                 }
+            }
+            INCLINOMETER => {
+                actor.set_rotation(rotator.rotator);
             }
             _ => {}
         }
