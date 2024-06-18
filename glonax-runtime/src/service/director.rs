@@ -437,7 +437,9 @@ impl Director {
                 }
 
                 if self.operation == DirectorOperation::Autonomous {
-                    let motion_command = if actuator_motion.is_empty() {
+                    let motion_command = if actuator_motion.is_empty()
+                        || local_state == DirectorLocslState::UnusualAttitude
+                    {
                         Motion::StopAll
                     } else {
                         Motion::from_iter(actuator_motion)
