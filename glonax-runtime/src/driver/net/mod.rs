@@ -18,6 +18,19 @@ pub(super) mod vecraft;
 pub mod volvo_ems;
 mod volvo_vecu;
 
+/// Creates a driver instance based on the provided vendor, product, interface, destination address (da), and source address (sa).
+///
+/// # Arguments
+///
+/// * `vendor` - The vendor name.
+/// * `product` - The product name.
+/// * `interface` - The interface name.
+/// * `da` - The destination address.
+/// * `sa` - The source address.
+///
+/// # Returns
+///
+/// Returns an `Option` containing a boxed instance of `J1939Unit` trait, or `None` if the vendor and product combination is not supported.
 pub(crate) fn driver_factory(
     vendor: &str,
     product: &str,

@@ -44,9 +44,6 @@ pub struct MachineConfig {
 pub struct Config {
     /// Mode of operation.
     pub mode: OperationMode,
-    /// Enable simulation mode.
-    #[serde(default)]
-    pub is_simulation: bool,
     /// Machine instance.
     pub machine: MachineConfig,
     /// NMEA configuration.

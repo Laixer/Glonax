@@ -25,9 +25,6 @@ struct Args {
         value_hint = ValueHint::FilePath
     )]
     config: std::path::PathBuf,
-    /// Enable simulation mode.
-    #[arg(long, default_value_t = false)]
-    simulation: bool,
     /// Enable pilot mode only.
     #[arg(long, default_value_t = false)]
     pilot_only: bool,
@@ -50,9 +47,6 @@ async fn main() -> anyhow::Result<()> {
 
     let mut config: config::Config = glonax::from_file(args.config)?;
 
-    if args.simulation {
-        config.is_simulation = true;
-    }
     if args.pilot_only {
         config.mode = config::OperationMode::PilotRestrict;
     }
@@ -119,10 +113,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     if instance.id().is_nil() {
         log::warn!("Instance ID is not set or invalid");
-    }
-
-    if config.is_simulation {
-        log::info!("Running in simulation mode");
     }
 
     glonax::global::set_instance(instance);
