@@ -6,9 +6,7 @@
 
 use clap::{Parser, ValueHint};
 
-// mod components;
 mod config;
-// mod world;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]

@@ -2,6 +2,7 @@ use nalgebra::{Point3, Vector3};
 
 use crate::{
     core::{Actuator, Control, Engine, Motion, Object},
+    driver::ActuatorState,
     math::Linear,
     runtime::{CommandSender, NullConfig, Service, ServiceContext, SignalReceiver},
     world::{Actor, ActorBuilder, ActorSegment, World},
@@ -14,57 +15,6 @@ const ENCODER_BOOM: u8 = 0x6B;
 const ENCODER_ARM: u8 = 0x6C;
 const ENCODER_ATTACHMENT: u8 = 0x6D;
 const INCLINOMETER: u8 = 0x7A;
-
-mod experimental {
-    use crate::{
-        core::{Actuator, Motion},
-        math::Linear,
-    };
-
-    pub(super) struct ActuatorMotionEvent {
-        pub actuator: Actuator,
-        pub error: f32,
-        pub value: i16,
-    }
-
-    pub(super) struct ActuatorState {
-        profile: Linear,
-        actuator: Actuator,
-        stop: bool,
-    }
-
-    impl ActuatorState {
-        pub(super) fn bind(actuator: Actuator, profile: Linear) -> Self {
-            Self {
-                profile,
-                actuator,
-                stop: false,
-            }
-        }
-
-        pub(super) fn update(&mut self, error: Option<f32>) -> Option<ActuatorMotionEvent> {
-            if let Some(error) = error {
-                self.stop = false;
-
-                Some(ActuatorMotionEvent {
-                    actuator: self.actuator,
-                    error,
-                    value: self.profile.update(error) as i16,
-                })
-            } else if !self.stop {
-                self.stop = true;
-
-                Some(ActuatorMotionEvent {
-                    actuator: self.actuator,
-                    error: 0.0,
-                    value: Motion::POWER_NEUTRAL,
-                })
-            } else {
-                None
-            }
-        }
-    }
-}
 
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -91,10 +41,10 @@ impl std::fmt::Display for DirectorOperation {
 pub struct Director {
     world: World,
     operation: DirectorOperation,
-    frame_state: experimental::ActuatorState,
-    boom_state: experimental::ActuatorState,
-    arm_state: experimental::ActuatorState,
-    attachment_state: experimental::ActuatorState,
+    frame_state: ActuatorState,
+    boom_state: ActuatorState,
+    arm_state: ActuatorState,
+    attachment_state: ActuatorState,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -502,11 +452,10 @@ impl Service<NullConfig> for Director {
         let arm_profile = Linear::new(15_000.0, 12_000.0, true);
         let attachment_profile = Linear::new(15_000.0, 12_000.0, false);
 
-        let frame_state = experimental::ActuatorState::bind(Actuator::Slew, frame_profile);
-        let boom_state = experimental::ActuatorState::bind(Actuator::Boom, boom_profile);
-        let arm_state = experimental::ActuatorState::bind(Actuator::Arm, arm_profile);
-        let attachment_state =
-            experimental::ActuatorState::bind(Actuator::Attachment, attachment_profile);
+        let frame_state = ActuatorState::bind(Actuator::Slew, frame_profile);
+        let boom_state = ActuatorState::bind(Actuator::Boom, boom_profile);
+        let arm_state = ActuatorState::bind(Actuator::Arm, arm_profile);
+        let attachment_state = ActuatorState::bind(Actuator::Attachment, attachment_profile);
 
         Self {
             world,

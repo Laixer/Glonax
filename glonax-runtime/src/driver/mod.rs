@@ -1,5 +1,6 @@
 use nalgebra::{Rotation3, UnitVector3};
 
+pub use actuator::{ActuatorMotionEvent, ActuatorState};
 pub use error::{DeviceError, ErrorKind, Result};
 pub use governor::Governor;
 pub use hardware::nmea::Nmea;
@@ -13,6 +14,7 @@ pub use net::vcu::VehicleControlUnit;
 pub use net::volvo_ems::VolvoD7E;
 pub use r#virtual::encoder::VirtualEncoder;
 
+mod actuator;
 mod error;
 mod governor;
 mod hardware;
