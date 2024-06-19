@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
@@ -31,15 +31,6 @@ impl TcpServerConfig {
 pub struct UnixServerConfig {
     /// Unix domain socket path to listen on.
     pub path: std::path::PathBuf,
-    /// Maximum number of connections.
-    #[serde(default = "UnixServerConfig::default_max_connections")]
-    pub max_connections: usize,
-}
-
-impl UnixServerConfig {
-    fn default_max_connections() -> usize {
-        10
-    }
 }
 
 enum TcpError {
@@ -74,11 +65,12 @@ impl std::fmt::Display for TcpError {
     }
 }
 
+// TODO: Rename to Server
 pub struct TcpServer {
     config: TcpServerConfig,
     semaphore: Arc<Semaphore>,
     listener: Option<TcpListener>,
-    clients: Vec<tokio::task::JoinHandle<()>>,
+    listener2: tokio::net::UnixListener,
 }
 
 impl TcpServer {
@@ -312,11 +304,18 @@ impl Service<TcpServerConfig> for TcpServer {
     {
         let semaphore = Arc::new(Semaphore::new(config.max_connections));
 
+        let socket_path = std::path::Path::new("/run/glonax/glonax.sock"); // TODO: Get from config
+        if socket_path.exists() {
+            std::fs::remove_file(socket_path).unwrap();
+        }
+
+        let listener2 = tokio::net::UnixListener::bind(socket_path).unwrap();
+
         Self {
             config,
             semaphore,
             listener: None,
-            clients: Vec::new(),
+            listener2,
         }
     }
 
@@ -326,6 +325,7 @@ impl Service<TcpServerConfig> for TcpServer {
 
     async fn setup(&mut self) {
         log::debug!("Listening on: {}", self.config.listen);
+        // log::debug!("Listening on: {:?}", self.listener2.local_addr().unwrap());
 
         // FUTURE: This is a bit of a hack, but there is no obvious way to create async constructors
         self.listener = Some(TcpListener::bind(self.config.listen.clone()).await.unwrap());
@@ -333,15 +333,7 @@ impl Service<TcpServerConfig> for TcpServer {
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, signal_rx: SignalReceiver) {
         let (stream, addr) = self.listener.as_ref().unwrap().accept().await.unwrap();
-
-        let sock_ref = socket2::SockRef::from(&stream);
-
-        let mut keep_alive = socket2::TcpKeepalive::new();
-        keep_alive = keep_alive.with_time(Duration::from_secs(2));
-        keep_alive = keep_alive.with_interval(Duration::from_secs(2));
-
-        sock_ref.set_tcp_keepalive(&keep_alive).unwrap();
-        sock_ref.set_nodelay(true).unwrap();
+        // let (stream, _) = self.listener2.accept().await.unwrap();
 
         log::debug!("Accepted connection from: {}", addr);
 
@@ -363,24 +355,8 @@ impl Service<TcpServerConfig> for TcpServer {
 
         log::debug!("Spawning client session");
 
-        self.clients.push(tokio::spawn(Self::spawn_client_session(
+        tokio::spawn(Self::spawn_client_session(
             stream, command_tx, permit, signal_rx,
-        )));
-    }
-
-    async fn teardown(&mut self) {
-        let active_client_count = self.config.max_connections - self.semaphore.available_permits();
-
-        log::debug!(
-            "Waiting for {} connected clients to shutdown",
-            active_client_count
-        );
-
-        // FUTURE: Inform clients of shutdown
-        // for client in self.clients.drain(..) {
-        //     if let Err(e) = client.await {
-        //         log::error!("Client session failed: {}", e);
-        //     }
-        // }
+        ));
     }
 }
