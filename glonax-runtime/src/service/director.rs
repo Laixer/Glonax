@@ -145,12 +145,12 @@ impl Director {
             arm_world_location.z
         );
 
-        let bucket_world_location = actor.world_location("attachment");
+        let attachment_world_location = actor.world_location("attachment");
         trace!(
             "Attachment: X={:.2} Y={:.2} Z={:.2}",
-            bucket_world_location.x,
-            bucket_world_location.y,
-            bucket_world_location.z
+            attachment_world_location.x,
+            attachment_world_location.y,
+            attachment_world_location.z
         );
 
         let actor_world_distance =
@@ -366,36 +366,41 @@ impl Director {
         match event {
             Object::Rotator(rotator) => {
                 let local_state = self.elect_local_state(rotator);
-                if local_state == DirectorLocslState::EmergencyStop {
-                    Self::command_emergency_stop(command_tx); // TODO: Return motion command
-                    return;
-                }
 
                 let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
                 Self::update_actor(actor, rotator);
 
-                let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
-                let target = self.world.get_actor_by_name("target0");
+                match local_state {
+                    DirectorLocslState::EmergencyStop => {
+                        Self::command_emergency_stop(command_tx);
+                    }
+                    DirectorLocslState::UnusualAttitude => {
+                        if self.operation == DirectorOperation::Autonomous {
+                            let motion_command = Motion::StopAll;
+                            if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                                log::error!("Failed to send motion command: {}", e);
+                            }
+                        }
+                    }
+                    DirectorLocslState::Nominal => {
+                        let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
+                        let target = self.world.get_actor_by_name("target0");
 
-                let mut actuator_error = Vec::new();
-                let mut actuator_motion = Vec::new();
+                        let mut actuator_error = Vec::new();
+                        let mut actuator_motion = Vec::new();
 
-                if let Some(target) = target {
-                    self.calculate_target_properties(actor, target);
-                    self.calculate_target_trajectory(actor, target, &mut actuator_error);
-                    self.calculate_motion_control(&actuator_error, &mut actuator_motion);
-                }
+                        if let Some(target) = target {
+                            self.calculate_target_properties(actor, target);
+                            self.calculate_target_trajectory(actor, target, &mut actuator_error);
+                            self.calculate_motion_control(&actuator_error, &mut actuator_motion);
+                        }
 
-                if self.operation == DirectorOperation::Autonomous {
-                    let motion_command = if actuator_motion.is_empty()
-                        || local_state == DirectorLocslState::UnusualAttitude
-                    {
-                        Motion::StopAll
-                    } else {
-                        Motion::from_iter(actuator_motion)
-                    };
-                    if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                        log::error!("Failed to send motion command: {}", e);
+                        if self.operation == DirectorOperation::Autonomous {
+                            let motion_command = Motion::from_iter(actuator_motion);
+                            if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                                log::error!("Failed to send motion command: {}", e);
+                            }
+                        }
                     }
                 }
             }
