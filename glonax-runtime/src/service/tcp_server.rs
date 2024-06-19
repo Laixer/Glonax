@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
@@ -30,7 +30,7 @@ impl TcpServerConfig {
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct UnixServerConfig {
     /// Unix domain socket path to listen on.
-    pub path: std::path::PathBuf,
+    pub path: PathBuf,
 }
 
 enum TcpError {
@@ -70,7 +70,7 @@ pub struct TcpServer {
     config: TcpServerConfig,
     semaphore: Arc<Semaphore>,
     listener: Option<TcpListener>,
-    listener2: tokio::net::UnixListener,
+    // listener2: tokio::net::UnixListener,
 }
 
 impl TcpServer {
@@ -309,13 +309,13 @@ impl Service<TcpServerConfig> for TcpServer {
             std::fs::remove_file(socket_path).unwrap();
         }
 
-        let listener2 = tokio::net::UnixListener::bind(socket_path).unwrap();
+        let _listener2 = tokio::net::UnixListener::bind(socket_path).unwrap();
 
         Self {
             config,
             semaphore,
             listener: None,
-            listener2,
+            // listener2,
         }
     }
 
