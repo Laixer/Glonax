@@ -304,12 +304,12 @@ impl Service<TcpServerConfig> for TcpServer {
     {
         let semaphore = Arc::new(Semaphore::new(config.max_connections));
 
-        let socket_path = std::path::Path::new("/run/glonax/glonax.sock"); // TODO: Get from config
-        if socket_path.exists() {
-            std::fs::remove_file(socket_path).unwrap();
-        }
+        // let socket_path = std::path::Path::new("/run/glonax/glonax.sock"); // TODO: Get from config
+        // if socket_path.exists() {
+        //     std::fs::remove_file(socket_path).unwrap();
+        // }
 
-        let _listener2 = tokio::net::UnixListener::bind(socket_path).unwrap();
+        // let _listener2 = tokio::net::UnixListener::bind(socket_path).unwrap();
 
         Self {
             config,
