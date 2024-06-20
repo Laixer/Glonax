@@ -1,3 +1,4 @@
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use nalgebra::{Point3, UnitQuaternion};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -173,9 +174,7 @@ impl TryFrom<Vec<u8>> for Target {
     type Error = ();
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        use bytes::Buf;
-
-        let mut buf = bytes::Bytes::copy_from_slice(value.as_slice());
+        let mut buf = Bytes::copy_from_slice(value.as_slice());
 
         let point = Point3::new(buf.get_f32(), buf.get_f32(), buf.get_f32());
         let orientation =
@@ -194,9 +193,7 @@ impl crate::protocol::Packetize for Target {
     const MESSAGE_SIZE: Option<usize> = Some((std::mem::size_of::<f32>() * 6) + 1);
 
     fn to_bytes(&self) -> Vec<u8> {
-        use bytes::BufMut;
-
-        let mut buf = bytes::BytesMut::with_capacity((std::mem::size_of::<f32>() * 6) + 1);
+        let mut buf = BytesMut::with_capacity((std::mem::size_of::<f32>() * 6) + 1);
 
         buf.put_f32(self.point.coords[0]);
         buf.put_f32(self.point.coords[1]);

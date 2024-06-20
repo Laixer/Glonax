@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde_derive::Deserialize;
 
 use super::MachineType;
@@ -67,29 +67,26 @@ impl std::fmt::Display for Instance {
 impl TryFrom<Vec<u8>> for Instance {
     type Error = ();
 
-    // TODO: Use BytesMut
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        // let mut buf = Bytes::copy_from_slice(value);
+        let mut buf = Bytes::copy_from_slice(&value);
 
-        if value.len() < 6 {
-            log::warn!("Invalid buffer size");
-            return Err(());
-        }
+        let id = uuid::Uuid::from_slice(&buf.copy_to_bytes(16)).map_err(|_| ())?;
+        let ty = MachineType::try_from(buf.get_u8()).map_err(|_| ())?;
+        let version = (buf.get_u8(), buf.get_u8(), buf.get_u8());
 
-        let id = uuid::Uuid::from_slice(&value[..16]).unwrap();
-        let ty = MachineType::try_from(value[16]).unwrap();
-        let version = (value[17], value[18], value[19]);
+        let model_len = buf.get_u16() as usize;
+        let model = buf.copy_to_bytes(model_len);
 
-        let model_length = u16::from_be_bytes([value[20], value[21]]) as usize;
-        let model = String::from_utf8_lossy(&value[22..22 + model_length]).to_string();
+        let serial_len = buf.get_u16() as usize;
+        let serial_number = buf.copy_to_bytes(serial_len);
 
-        let serial_length =
-            u16::from_be_bytes([value[22 + model_length], value[23 + model_length]]) as usize;
-        let serial_number =
-            String::from_utf8_lossy(&value[24 + model_length..24 + model_length + serial_length])
-                .to_string();
-
-        Ok(Self::new(id, model, ty, version, serial_number))
+        Ok(Instance {
+            id,
+            ty,
+            version,
+            model: String::from_utf8_lossy(&model).to_string(),
+            serial_number: String::from_utf8_lossy(&serial_number).to_string(),
+        })
     }
 }
 
