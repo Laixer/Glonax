@@ -172,12 +172,7 @@ impl InputState {
                     return None;
                 }
 
-                let value = if self.limit_motion {
-                    (value / 2).ramp(2_000)
-                } else {
-                    value.ramp(2_000)
-                };
-
+                let value = value.ramp(2_000);
                 if self.drive_lock {
                     Some(Object::Motion(Motion::StraightDrive(value)))
                 } else {
@@ -189,12 +184,7 @@ impl InputState {
                     return None;
                 }
 
-                let value = if self.limit_motion {
-                    (value / 2).ramp(2_000)
-                } else {
-                    value.ramp(2_000)
-                };
-
+                let value = value.ramp(2_000);
                 if self.drive_lock {
                     Some(Object::Motion(Motion::StraightDrive(value)))
                 } else {
