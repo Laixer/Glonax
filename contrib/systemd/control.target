@@ -1,3 +1,0 @@
-[Unit]
-Description=Control System
-After=network.target

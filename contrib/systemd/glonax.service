@@ -13,8 +13,6 @@
 
 [Unit]
 Description=Glonax Server
-#Wants=network-online.target
-#After=network-online.target
 BindsTo=sys-subsystem-net-devices-can0.device sys-subsystem-net-devices-can1.device
 After=sys-subsystem-net-devices-can0.device sys-subsystem-net-devices-can1.device
 
