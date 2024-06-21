@@ -192,6 +192,15 @@ impl Director {
                     return DirectorLocslState::UnusualAttitude;
                 }
             }
+            INCLINOMETER => {
+                let rotation = rotator.rotator;
+
+                let (roll, pitch, _) = rotation.euler_angles();
+                if roll > 45.0_f32.to_radians() || pitch > 45.0_f32.to_radians() {
+                    log::warn!("Machine is in an unusual attitude");
+                    return DirectorLocslState::UnusualAttitude;
+                }
+            }
             _ => {}
         }
 
