@@ -118,6 +118,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     let mut runtime = glonax::Runtime::default();
     runtime.register_shutdown_signal();
 
+    runtime.schedule_io_sub_service::<service::TcpServer, _>(config.clone().tcp_server);
+    runtime.schedule_io_sub_service::<service::Director, _>(glonax::runtime::NullConfig {});
+
     runtime.schedule_io_pub_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
     if let Some(gnss_config) = config.clone().gnss {
@@ -130,9 +133,6 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
             std::time::Duration::from_millis(10),
         );
     }
-
-    runtime.schedule_io_sub_service::<service::TcpServer, _>(config.tcp_server);
-    runtime.schedule_io_sub_service::<service::Director, _>(glonax::runtime::NullConfig {});
 
     runtime.wait_for_shutdown().await;
 
