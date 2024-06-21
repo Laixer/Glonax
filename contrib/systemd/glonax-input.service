@@ -13,6 +13,7 @@
 
 [Unit]
 Description=Glonax Input Event Handler
+BindsTo=glonax.service
 After=glonax.service
 ConditionPathExists=/dev/input/js0
 
@@ -29,7 +30,7 @@ IOSchedulingPriority=0
 ExecStart=/usr/local/bin/glonax-input /dev/input/js0 --mode xbox
 PrivateTmp=true
 
-ProtectClock=true
+#ProtectClock=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectKernelLogs=true
