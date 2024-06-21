@@ -158,8 +158,7 @@ impl Director {
         trace!("Actor origin distance: {:.2}", actor_world_distance);
     }
 
-    // TODO: Returns a state, for example Nominal, Warning, EmergencyStop, etc.
-    fn elect_local_state(&self, rotator: &crate::core::Rotator) -> DirectorLocslState {
+    fn elect_rotator_state(&self, rotator: &crate::core::Rotator) -> DirectorLocslState {
         match rotator.source {
             ENCODER_FRAME => {}
             ENCODER_BOOM => {
@@ -377,54 +376,14 @@ impl Director {
     }
 
     fn on_event(&mut self, event: &Object, command_tx: &CommandSender) {
-        match event {
+        let local_state = match event {
             Object::Rotator(rotator) => {
-                let local_state = self.elect_local_state(rotator);
-
                 let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
                 Self::update_actor(actor, rotator);
 
-                match local_state {
-                    DirectorLocslState::EmergencyStop => {
-                        Self::command_emergency_stop(command_tx);
-                    }
-                    DirectorLocslState::UnusualAttitude => {
-                        if self.operation == DirectorOperation::Autonomous {
-                            let motion_command = Motion::StopAll;
-                            if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                                log::error!("Failed to send motion command: {}", e);
-                            }
-                        }
-                    }
-                    DirectorLocslState::Nominal => {
-                        let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
-                        let target = self.world.get_actor_by_name("target0");
-
-                        let mut actuator_error = Vec::new();
-                        let mut actuator_motion = Vec::new();
-
-                        if let Some(target) = target {
-                            self.calculate_target_properties(actor, target);
-                            self.calculate_target_trajectory(actor, target, &mut actuator_error);
-                            self.calculate_motion_control(&actuator_error, &mut actuator_motion);
-                        }
-
-                        if self.operation == DirectorOperation::Autonomous {
-                            let motion_command = Motion::from_iter(actuator_motion);
-                            if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                                log::error!("Failed to send motion command: {}", e);
-                            }
-                        }
-                    }
-                }
+                self.elect_rotator_state(rotator)
             }
-            Object::Engine(_engine) => {
-                // let in_emergency = self.elect_local_state();
-                // if in_emergency && engine.is_running() {
-                //     Self::command_emergency_stop(command_tx); // TODO: Return motion command
-                // }
-                //
-            }
+            Object::Engine(_engine) => DirectorLocslState::Nominal,
             Object::Target(target) => {
                 if self.operation == DirectorOperation::Autonomous {
                     let actor = ActorBuilder::new("target0")
@@ -434,8 +393,44 @@ impl Director {
 
                     self.world.add_actor(actor);
                 }
+
+                DirectorLocslState::Nominal
             }
-            _ => {}
+            _ => DirectorLocslState::Nominal,
+        };
+
+        match local_state {
+            DirectorLocslState::EmergencyStop => {
+                Self::command_emergency_stop(command_tx);
+            }
+            DirectorLocslState::UnusualAttitude => {
+                if self.operation == DirectorOperation::Autonomous {
+                    let motion_command = Motion::StopAll;
+                    if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                        log::error!("Failed to send motion command: {}", e);
+                    }
+                }
+            }
+            DirectorLocslState::Nominal => {
+                let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
+                let target = self.world.get_actor_by_name("target0");
+
+                let mut actuator_error = Vec::new();
+                let mut actuator_motion = Vec::new();
+
+                if let Some(target) = target {
+                    self.calculate_target_properties(actor, target);
+                    self.calculate_target_trajectory(actor, target, &mut actuator_error);
+                    self.calculate_motion_control(&actuator_error, &mut actuator_motion);
+                }
+
+                if self.operation == DirectorOperation::Autonomous {
+                    let motion_command = Motion::from_iter(actuator_motion);
+                    if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                        log::error!("Failed to send motion command: {}", e);
+                    }
+                }
+            }
         }
     }
 }
