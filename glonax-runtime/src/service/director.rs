@@ -195,10 +195,15 @@ impl Director {
             INCLINOMETER => {
                 let rotation = rotator.rotator;
 
-                let (roll, pitch, _) = rotation.euler_angles();
-                if roll > 45.0_f32.to_radians() || pitch > 45.0_f32.to_radians() {
+                let (roll, pitch, yaw) = rotation.euler_angles();
+                if (roll > 35.0_f32.to_radians() || pitch > 35.0_f32.to_radians()) && yaw == 0.0 {
                     log::warn!("Machine is in an unusual attitude");
                     return DirectorLocslState::UnusualAttitude;
+                }
+
+                if (roll > 45.0_f32.to_radians() || pitch > 45.0_f32.to_radians()) && yaw == 0.0 {
+                    log::warn!("Machine is in an emergency stop condition");
+                    return DirectorLocslState::EmergencyStop;
                 }
             }
             _ => {}
