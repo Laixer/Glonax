@@ -41,17 +41,19 @@ impl std::fmt::Display for DirectorOperation {
 pub struct Director {
     world: World,
     operation: DirectorOperation,
+    state: std::collections::HashMap<i32, DirectorLocslState>,
     frame_state: ActuatorState,
     boom_state: ActuatorState,
     arm_state: ActuatorState,
     attachment_state: ActuatorState,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum DirectorLocslState {
-    Nominal,
-    UnusualAttitude,
-    EmergencyStop,
+    Inhibited = 0,
+    Nominal = 1,
+    UnboundKinematics = 20,
+    Emergency = 100,
 }
 
 impl Director {
@@ -60,7 +62,7 @@ impl Director {
     /// # Arguments
     ///
     /// * `command_tx` - The command sender used to send control commands.
-    fn command_emergency_stop(command_tx: &CommandSender) {
+    fn command_emergency(command_tx: &CommandSender) {
         let control_command = Control::HydraulicLock(true);
         if let Err(e) = command_tx.send(Object::Control(control_command)) {
             log::error!("Failed to send control command: {}", e);
@@ -167,10 +169,10 @@ impl Director {
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if roll == 0.0 && pitch > 60.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
-                    return DirectorLocslState::UnusualAttitude;
+                    return DirectorLocslState::UnboundKinematics;
                 } else if roll == 0.0 && pitch < -45.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
-                    return DirectorLocslState::UnusualAttitude;
+                    return DirectorLocslState::UnboundKinematics;
                 }
             }
             ENCODER_ARM => {
@@ -179,16 +181,16 @@ impl Director {
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if roll == 0.0 && pitch > -40.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Arm pitch angle is out of range");
-                    return DirectorLocslState::UnusualAttitude;
+                    return DirectorLocslState::UnboundKinematics;
                 }
             }
             ENCODER_ATTACHMENT => {
                 let rotation = rotator.rotator;
 
-                // TODO: Not going to work
+                // TODO: Not going to work, quaternion will roll over
                 if rotation.euler_angles().1 > 178.0_f32.to_radians() {
                     log::warn!("Attachment pitch angle is out of range");
-                    return DirectorLocslState::UnusualAttitude;
+                    return DirectorLocslState::UnboundKinematics;
                 }
             }
             INCLINOMETER => {
@@ -197,12 +199,12 @@ impl Director {
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if (roll > 35.0_f32.to_radians() || pitch > 35.0_f32.to_radians()) && yaw == 0.0 {
                     log::warn!("Machine is in an unusual attitude");
-                    return DirectorLocslState::UnusualAttitude;
-                }
-
-                if (roll > 45.0_f32.to_radians() || pitch > 45.0_f32.to_radians()) && yaw == 0.0 {
+                    return DirectorLocslState::UnboundKinematics;
+                } else if (roll > 45.0_f32.to_radians() || pitch > 45.0_f32.to_radians())
+                    && yaw == 0.0
+                {
                     log::warn!("Machine is in an emergency stop condition");
-                    return DirectorLocslState::EmergencyStop;
+                    return DirectorLocslState::Emergency;
                 }
             }
             _ => {}
@@ -211,6 +213,17 @@ impl Director {
         // TODO: Check:
         // - If the actor has all the necessary components (encoders, sensors, etc.)
         // - If the actor is in a safe environment (e.g. not in a collision course)
+
+        DirectorLocslState::Nominal
+    }
+
+    fn elect_engine_state(&self, engine: &crate::core::Engine) -> DirectorLocslState {
+        if engine.rpm < 900 {
+            return DirectorLocslState::Inhibited;
+        } else if engine.rpm > 2_200 {
+            log::warn!("Engine RPM is too high");
+            return DirectorLocslState::Emergency;
+        }
 
         DirectorLocslState::Nominal
     }
@@ -375,15 +388,17 @@ impl Director {
         }
     }
 
-    fn on_event(&mut self, event: &Object, command_tx: &CommandSender) {
-        let local_state = match event {
+    fn on_event(&mut self, event: &Object, _command_tx: &CommandSender) {
+        match event {
             Object::Rotator(rotator) => {
                 let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
                 Self::update_actor(actor, rotator);
 
-                self.elect_rotator_state(rotator)
+                self.state.insert(0, self.elect_rotator_state(rotator));
             }
-            Object::Engine(_engine) => DirectorLocslState::Nominal,
+            Object::Engine(engine) => {
+                self.state.insert(1, self.elect_engine_state(engine));
+            }
             Object::Target(target) => {
                 if self.operation == DirectorOperation::Autonomous {
                     let actor = ActorBuilder::new("target0")
@@ -393,44 +408,8 @@ impl Director {
 
                     self.world.add_actor(actor);
                 }
-
-                DirectorLocslState::Nominal
             }
-            _ => DirectorLocslState::Nominal,
-        };
-
-        match local_state {
-            DirectorLocslState::EmergencyStop => {
-                Self::command_emergency_stop(command_tx);
-            }
-            DirectorLocslState::UnusualAttitude => {
-                if self.operation == DirectorOperation::Autonomous {
-                    let motion_command = Motion::StopAll;
-                    if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                        log::error!("Failed to send motion command: {}", e);
-                    }
-                }
-            }
-            DirectorLocslState::Nominal => {
-                let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
-                let target = self.world.get_actor_by_name("target0");
-
-                let mut actuator_error = Vec::new();
-                let mut actuator_motion = Vec::new();
-
-                if let Some(target) = target {
-                    self.calculate_target_properties(actor, target);
-                    self.calculate_target_trajectory(actor, target, &mut actuator_error);
-                    self.calculate_motion_control(&actuator_error, &mut actuator_motion);
-                }
-
-                if self.operation == DirectorOperation::Autonomous {
-                    let motion_command = Motion::from_iter(actuator_motion);
-                    if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                        log::error!("Failed to send motion command: {}", e);
-                    }
-                }
-            }
+            _ => {}
         }
     }
 }
@@ -474,6 +453,7 @@ impl Service<NullConfig> for Director {
         Self {
             world,
             operation: DirectorOperation::Supervised,
+            state: std::collections::HashMap::new(),
             frame_state,
             boom_state,
             arm_state,
@@ -492,6 +472,63 @@ impl Service<NullConfig> for Director {
     async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
         while let Ok(signal) = signal_rx.recv().await {
             self.on_event(&signal, &command_tx);
+
+            let max_state = self
+                .state
+                .values()
+                .copied()
+                .max()
+                .unwrap_or(DirectorLocslState::Nominal);
+
+            match max_state {
+                DirectorLocslState::Emergency => {
+                    if self.operation == DirectorOperation::Supervised {
+                        Self::command_emergency(&command_tx);
+                    }
+                }
+                DirectorLocslState::Inhibited | DirectorLocslState::UnboundKinematics => {
+                    if self.operation == DirectorOperation::Autonomous {
+                        let motion_command = Motion::StopAll;
+                        if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                            log::error!("Failed to send motion command: {}", e);
+                        }
+                    }
+                }
+                DirectorLocslState::Nominal => {
+                    let actor = self.world.get_actor_by_name(ROBOT_ACTOR_NAME).unwrap();
+                    let target = self.world.get_actor_by_name("target0");
+
+                    let mut actuator_error = Vec::new();
+                    let mut actuator_motion = Vec::new();
+
+                    if let Some(target) = target {
+                        self.calculate_target_properties(actor, target);
+                        self.calculate_target_trajectory(actor, target, &mut actuator_error);
+                        self.calculate_motion_control(&actuator_error, &mut actuator_motion);
+                    }
+
+                    if self.operation == DirectorOperation::Autonomous
+                        && !actuator_motion.is_empty()
+                    {
+                        let motion_command = Motion::from_iter(actuator_motion);
+                        if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
+                            log::error!("Failed to send motion command: {}", e);
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn director_local_state() {
+        assert!(DirectorLocslState::Nominal > DirectorLocslState::Inhibited);
+        assert!(DirectorLocslState::Nominal < DirectorLocslState::UnboundKinematics);
+        assert!(DirectorLocslState::Nominal < DirectorLocslState::Emergency);
     }
 }
