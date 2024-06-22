@@ -32,7 +32,7 @@ IOSchedulingPriority=2
 DynamicUser=true
 SupplementaryGroups=tty dialout
 ExecStart=/usr/local/bin/glonaxd
-ExecStartPost=/bin/sleep 5
+ExecStartPost=/bin/sleep 1
 RuntimeDirectory=glonax
 ConfigurationDirectory=glonax
 
