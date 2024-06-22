@@ -94,35 +94,7 @@ impl Director {
         }
     }
 
-    fn update_actor(actor: &mut Actor, rotator: &crate::core::Rotator) {
-        match rotator.source {
-            ENCODER_FRAME => {
-                if rotator.reference == crate::core::RotationReference::Relative {
-                    // TODO: We only set the yaw angle for the frame
-                    actor.set_segment_rotation("frame", rotator.rotator);
-                }
-            }
-            ENCODER_BOOM => {
-                if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_segment_rotation("boom", rotator.rotator);
-                }
-            }
-            ENCODER_ARM => {
-                if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_segment_rotation("arm", rotator.rotator);
-                }
-            }
-            ENCODER_ATTACHMENT => {
-                if rotator.reference == crate::core::RotationReference::Relative {
-                    actor.set_segment_rotation("attachment", rotator.rotator);
-                }
-            }
-            INCLINOMETER => {
-                actor.set_rotation(rotator.rotator);
-            }
-            _ => {}
-        }
-
+    fn dump_actor(actor: &Actor) {
         let body_world_location = actor.world_location("frame");
         trace!(
             "Frame: X={:.2} Y={:.2} Z={:.2}",
@@ -229,7 +201,7 @@ impl Director {
     }
 
     // TODO: Returns a state, for example TargetOutOfRange, TargetOutOfReach, TargetInReach, etc.
-    fn calculate_target_properties(&self, actor: &Actor, target: &Actor) {
+    fn calculate_target_properties(actor: &Actor, target: &Actor) {
         // TODO: Calculate this from the actor
         const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 
@@ -252,7 +224,6 @@ impl Director {
     }
 
     fn calculate_target_trajectory(
-        &self,
         actor: &Actor,
         target: &Actor,
         actuator_error: &mut Vec<(Actuator, f32)>,
@@ -388,11 +359,38 @@ impl Director {
         }
     }
 
-    fn on_event(&mut self, event: &Object, _command_tx: &CommandSender) {
+    fn on_event(&mut self, event: &Object) {
         match event {
             Object::Rotator(rotator) => {
                 let actor = self.world.get_actor_by_name_mut(ROBOT_ACTOR_NAME).unwrap();
-                Self::update_actor(actor, rotator);
+
+                match rotator.source {
+                    ENCODER_FRAME => {
+                        if rotator.reference == crate::core::RotationReference::Relative {
+                            // TODO: We only set the yaw angle for the frame
+                            actor.set_segment_rotation("frame", rotator.rotator);
+                        }
+                    }
+                    ENCODER_BOOM => {
+                        if rotator.reference == crate::core::RotationReference::Relative {
+                            actor.set_segment_rotation("boom", rotator.rotator);
+                        }
+                    }
+                    ENCODER_ARM => {
+                        if rotator.reference == crate::core::RotationReference::Relative {
+                            actor.set_segment_rotation("arm", rotator.rotator);
+                        }
+                    }
+                    ENCODER_ATTACHMENT => {
+                        if rotator.reference == crate::core::RotationReference::Relative {
+                            actor.set_segment_rotation("attachment", rotator.rotator);
+                        }
+                    }
+                    INCLINOMETER => {
+                        actor.set_rotation(rotator.rotator);
+                    }
+                    _ => {}
+                }
 
                 self.state.insert(0, self.elect_rotator_state(rotator));
             }
@@ -471,7 +469,7 @@ impl Service<NullConfig> for Director {
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
         while let Ok(signal) = signal_rx.recv().await {
-            self.on_event(&signal, &command_tx);
+            self.on_event(&signal);
 
             let max_state = self
                 .state
@@ -482,6 +480,7 @@ impl Service<NullConfig> for Director {
 
             match max_state {
                 DirectorLocslState::Emergency => {
+                    // FUTURE: If this works then we can remove the `supervised` mode
                     if self.operation == DirectorOperation::Supervised {
                         Self::command_emergency(&command_tx);
                     }
@@ -501,9 +500,11 @@ impl Service<NullConfig> for Director {
                     let mut actuator_error = Vec::new();
                     let mut actuator_motion = Vec::new();
 
+                    Self::dump_actor(actor);
+
                     if let Some(target) = target {
-                        self.calculate_target_properties(actor, target);
-                        self.calculate_target_trajectory(actor, target, &mut actuator_error);
+                        Self::calculate_target_properties(actor, target);
+                        Self::calculate_target_trajectory(actor, target, &mut actuator_error);
                         self.calculate_motion_control(&actuator_error, &mut actuator_motion);
                     }
 
