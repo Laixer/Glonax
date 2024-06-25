@@ -141,7 +141,7 @@ impl Runtime {
     pub fn register_shutdown_signal(&self) {
         use tokio::signal::unix;
 
-        debug!("Enable shutdown signal");
+        debug!("Register shutdown signal");
 
         let sender = self.shutdown.0.clone();
 
