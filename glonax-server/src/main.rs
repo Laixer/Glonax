@@ -121,7 +121,7 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     runtime.schedule_io_sub_service::<service::TcpServer, _>(config.clone().tcp_server);
     runtime.schedule_io_sub_service::<service::Director, _>(glonax::runtime::NullConfig {});
 
-    runtime.schedule_io_pub_service::<service::Host, _>(glonax::runtime::NullConfig {});
+    // runtime.schedule_io_pub_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
     if let Some(gnss_config) = config.clone().gnss {
         runtime.schedule_io_pub_service::<service::Gnss, _>(gnss_config);

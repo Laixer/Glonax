@@ -31,7 +31,7 @@ pub enum Object {
     /// GNSS.
     GNSS(Gnss),
     /// Host.
-    Host(Host),
+    Host(Host), // TODO: Remove, moved ouside of glonax
     /// Motion.
     Motion(Motion),
     /// Target.
