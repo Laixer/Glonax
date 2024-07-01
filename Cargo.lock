@@ -370,7 +370,6 @@ version = "3.5.9"
 dependencies = [
  "bytes",
  "chrono",
- "glonax-serial",
  "j1939",
  "libc",
  "log",
