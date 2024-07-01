@@ -221,11 +221,11 @@ impl TcpServer {
                                         error!("Failed to send GNSS: {}", e);
                                     }
                                 }
-                                Object::Host(vms) => {
-                                    if let Err(e) = client.send_packet(&vms).await {
-                                        error!("Failed to send host: {}", e);
-                                    }
-                                }
+                                // Object::Host(vms) => {
+                                //     if let Err(e) = client.send_packet(&vms).await {
+                                //         error!("Failed to send host: {}", e);
+                                //     }
+                                // }
                                 Object::Motion(motion) => {
                                     if let Err(e) = client.send_packet(&motion).await {
                                         error!("Failed to send motion: {}", e);

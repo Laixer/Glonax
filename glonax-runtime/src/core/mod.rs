@@ -3,7 +3,7 @@ use std::time::Instant;
 pub use self::control::Control;
 pub use self::engine::{Engine, EngineState};
 pub use self::gnss::{Gnss, GnssStatus};
-pub use self::host::{Host, HostStatus};
+// pub use self::host::{Host, HostStatus};
 pub use self::instance::Instance;
 pub use self::motion::Actuator;
 pub use self::motion::Motion;
@@ -14,7 +14,7 @@ pub use self::target::Target;
 mod control;
 mod engine;
 mod gnss;
-mod host;
+// mod host;
 mod instance;
 mod motion;
 mod rotation;
@@ -31,7 +31,7 @@ pub enum Object {
     /// GNSS.
     GNSS(Gnss),
     /// Host.
-    Host(Host), // TODO: Remove, moved ouside of glonax
+    // Host(Host), // TODO: Remove, moved ouside of glonax
     /// Motion.
     Motion(Motion),
     /// Target.
