@@ -123,9 +123,9 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
 
     // runtime.schedule_io_pub_service::<service::Host, _>(glonax::runtime::NullConfig {});
 
-    if let Some(gnss_config) = config.clone().gnss {
-        runtime.schedule_io_pub_service::<service::Gnss, _>(gnss_config);
-    }
+    // if let Some(gnss_config) = config.clone().gnss {
+    //     runtime.schedule_io_pub_service::<service::Gnss, _>(gnss_config);
+    // }
 
     for j1939_net_config in &config.j1939 {
         runtime.schedule_net_service::<service::NetworkAuthority, _>(
