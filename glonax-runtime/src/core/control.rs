@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-const CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT: u8 = 0x5;
+const CONTROL_TYPE_HYDRAULIC_QUICK_DISCONNECT: u8 = 0x5;
 const CONTROL_TYPE_HYDRAULIC_LOCK: u8 = 0x6;
 const CONTROL_TYPE_HYDRAULIC_BOOST: u8 = 0x7;
 const CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX: u8 = 0x8;
@@ -90,27 +90,22 @@ impl TryFrom<Vec<u8>> for Control {
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         let mut buf = Bytes::copy_from_slice(&value);
 
-        match buf.get_u8() {
-            CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT => {
-                Ok(Control::HydraulicQuickDisconnect(buf.get_u8() != 0))
-            }
-            CONTROL_TYPE_HYDRAULIC_LOCK => Ok(Control::HydraulicLock(buf.get_u8() != 0)),
-            CONTROL_TYPE_HYDRAULIC_BOOST => Ok(Control::HydraulicBoost(buf.get_u8() != 0)),
-            CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX => {
-                Ok(Control::HydraulicBoomConflux(buf.get_u8() != 0))
-            }
-            CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX => {
-                Ok(Control::HydraulicArmConflux(buf.get_u8() != 0))
-            }
-            CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT => Ok(Control::HydraulicBoomFloat(buf.get_u8() != 0)),
+        let control_type = buf.get_u8();
+        let on = buf.get_u8() == 1;
+
+        match control_type {
+            CONTROL_TYPE_HYDRAULIC_QUICK_DISCONNECT => Ok(Control::HydraulicQuickDisconnect(on)),
+            CONTROL_TYPE_HYDRAULIC_LOCK => Ok(Control::HydraulicLock(on)),
+            CONTROL_TYPE_HYDRAULIC_BOOST => Ok(Control::HydraulicBoost(on)),
+            CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX => Ok(Control::HydraulicBoomConflux(on)),
+            CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX => Ok(Control::HydraulicArmConflux(on)),
+            CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT => Ok(Control::HydraulicBoomFloat(on)),
             CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::MachineShutdown),
-            CONTROL_TYPE_MACHINE_ILLUMINATION => {
-                Ok(Control::MachineIllumination(buf.get_u8() != 0))
-            }
-            CONTROL_TYPE_MACHINE_LIGHTS => Ok(Control::MachineLights(buf.get_u8() != 0)),
-            CONTROL_TYPE_MACHINE_HORN => Ok(Control::MachineHorn(buf.get_u8() != 0)),
-            CONTROL_TYPE_MACHINE_STROBE_LIGHT => Ok(Control::MachineStrobeLight(buf.get_u8() != 0)),
-            CONTROL_TYPE_MACHINE_TRAVEL_ALARM => Ok(Control::MachineTravelAlarm(buf.get_u8() != 0)),
+            CONTROL_TYPE_MACHINE_ILLUMINATION => Ok(Control::MachineIllumination(on)),
+            CONTROL_TYPE_MACHINE_LIGHTS => Ok(Control::MachineLights(on)),
+            CONTROL_TYPE_MACHINE_HORN => Ok(Control::MachineHorn(on)),
+            CONTROL_TYPE_MACHINE_STROBE_LIGHT => Ok(Control::MachineStrobeLight(on)),
+            CONTROL_TYPE_MACHINE_TRAVEL_ALARM => Ok(Control::MachineTravelAlarm(on)),
             _ => Err(()),
         }
     }
@@ -118,13 +113,14 @@ impl TryFrom<Vec<u8>> for Control {
 
 impl crate::protocol::Packetize for Control {
     const MESSAGE_TYPE: u8 = 0x45;
+    const MESSAGE_SIZE: Option<usize> = Some(2);
 
     fn to_bytes(&self) -> Vec<u8> {
         let mut buf = BytesMut::with_capacity(2);
 
         match self {
             Control::HydraulicQuickDisconnect(on) => {
-                buf.put_u8(CONTROL_TYPE_HYDRAULIC_QUICK_DISONNECT);
+                buf.put_u8(CONTROL_TYPE_HYDRAULIC_QUICK_DISCONNECT);
                 buf.put_u8(if *on { 1 } else { 0 });
             }
             Control::HydraulicLock(on) => {
@@ -149,6 +145,7 @@ impl crate::protocol::Packetize for Control {
             }
             Control::MachineShutdown => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_SHUTDOWN);
+                buf.put_u8(1);
             }
             Control::MachineIllumination(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_ILLUMINATION);
