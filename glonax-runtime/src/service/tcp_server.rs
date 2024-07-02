@@ -133,11 +133,11 @@ impl TcpServer {
                     .map_err(TcpError::Io)?;
 
                 if session.is_control() {
-                    log::debug!("Engine request RPM: {}", engine.rpm);
-
                     command_tx
                         .send(Object::Engine(engine))
                         .map_err(TcpError::Command)?;
+
+                    log::debug!("Engine request RPM: {}", engine.rpm);
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
@@ -166,6 +166,8 @@ impl TcpServer {
                     command_tx
                         .send(Object::Target(target))
                         .map_err(TcpError::Command)?;
+
+                    log::debug!("Target request: {}", target);
                 } else {
                     return Err(TcpError::UnauthorizedCommand);
                 }
@@ -181,7 +183,7 @@ impl TcpServer {
                         .send(Object::Control(control))
                         .map_err(TcpError::Command)?;
 
-                    log::debug!("{}", control);
+                    log::debug!("Control request: {}", control);
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }
