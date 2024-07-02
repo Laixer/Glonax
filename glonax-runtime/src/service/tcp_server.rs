@@ -180,6 +180,8 @@ impl TcpServer {
                     command_tx
                         .send(Object::Control(control))
                         .map_err(TcpError::Command)?;
+
+                    log::debug!("{}", control);
                 } else {
                     return Err(TcpError::UnauthorizedControl);
                 }

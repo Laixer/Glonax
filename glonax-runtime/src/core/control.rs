@@ -43,21 +43,43 @@ pub enum Control {
 
 impl std::fmt::Display for Control {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: Use a macro to avoid repeating this code.
+        // TOOD: Move
+        fn bool_to_on_off(b: bool) -> &'static str {
+            if b {
+                "on"
+            } else {
+                "off"
+            }
+        }
+
         match self {
             Control::HydraulicQuickDisconnect(on) => {
-                write!(f, "Hydraulic quick disconnect: {}", on)
+                write!(f, "Hydraulic quick disconnect: {}", bool_to_on_off(*on))
             }
-            Control::HydraulicLock(on) => write!(f, "Hydraulic lock: {}", on),
-            Control::HydraulicBoost(on) => write!(f, "Hydraulic boost: {}", on),
-            Control::HydraulicBoomConflux(on) => write!(f, "Hydraulic boom conflux: {}", on),
-            Control::HydraulicArmConflux(on) => write!(f, "Hydraulic arm conflux: {}", on),
-            Control::HydraulicBoomFloat(on) => write!(f, "Hydraulic boom float: {}", on),
+            Control::HydraulicLock(on) => write!(f, "Hydraulic lock: {}", bool_to_on_off(*on)),
+            Control::HydraulicBoost(on) => write!(f, "Hydraulic boost: {}", bool_to_on_off(*on)),
+            Control::HydraulicBoomConflux(on) => {
+                write!(f, "Hydraulic boom conflux: {}", bool_to_on_off(*on))
+            }
+            Control::HydraulicArmConflux(on) => {
+                write!(f, "Hydraulic arm conflux: {}", bool_to_on_off(*on))
+            }
+            Control::HydraulicBoomFloat(on) => {
+                write!(f, "Hydraulic boom float: {}", bool_to_on_off(*on))
+            }
             Control::MachineShutdown => write!(f, "Robot shutdown"),
-            Control::MachineIllumination(on) => write!(f, "Machine illumination: {}", on),
-            Control::MachineLights(on) => write!(f, "Machine lights: {}", on),
-            Control::MachineHorn(on) => write!(f, "Machine horn: {}", on),
-            Control::MachineStrobeLight(on) => write!(f, "Machine strobe light: {}", on),
-            Control::MachineTravelAlarm(on) => write!(f, "Machine travel alarm: {}", on),
+            Control::MachineIllumination(on) => {
+                write!(f, "Machine illumination: {}", bool_to_on_off(*on))
+            }
+            Control::MachineLights(on) => write!(f, "Machine lights: {}", bool_to_on_off(*on)),
+            Control::MachineHorn(on) => write!(f, "Machine horn: {}", bool_to_on_off(*on)),
+            Control::MachineStrobeLight(on) => {
+                write!(f, "Machine strobe light: {}", bool_to_on_off(*on))
+            }
+            Control::MachineTravelAlarm(on) => {
+                write!(f, "Machine travel alarm: {}", bool_to_on_off(*on))
+            }
         }
     }
 }
