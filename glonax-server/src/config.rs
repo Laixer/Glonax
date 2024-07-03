@@ -46,8 +46,6 @@ pub struct Config {
     pub mode: OperationMode,
     /// Machine instance.
     pub machine: MachineConfig,
-    // /// NMEA configuration.
-    // pub gnss: Option<glonax::service::GnssConfig>,
     /// TCP Server configuration.
     pub tcp_server: glonax::service::TcpServerConfig,
     /// J1939 network configuration.
