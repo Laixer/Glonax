@@ -289,6 +289,7 @@ impl Runtime {
                         while let Ok(object) = command_rx.recv().await {
                             service3.on_command(&object).await;
                         }
+                        log::error!("Command receiver closed");
                     } => {}
                     _ = shutdown.recv() => {}
                 }
