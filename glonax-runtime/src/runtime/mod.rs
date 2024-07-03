@@ -3,15 +3,17 @@ mod j1939;
 
 use std::{future::Future, time::Duration};
 
+use tokio::sync::broadcast::{error::RecvError, Receiver, Sender};
+
 pub use self::error::Error;
 pub use self::j1939::{J1939Unit, J1939UnitError, NetDriverContext, NetworkService};
 
 pub type Result<T = ()> = std::result::Result<T, error::Error>;
 
-pub type CommandSender = tokio::sync::broadcast::Sender<crate::core::Object>;
-pub type CommandReceiver = tokio::sync::broadcast::Receiver<crate::core::Object>;
-pub type SignalSender = tokio::sync::broadcast::Sender<crate::core::Object>;
-pub type SignalReceiver = tokio::sync::broadcast::Receiver<crate::core::Object>;
+pub type CommandSender = Sender<crate::core::Object>;
+pub type CommandReceiver = Receiver<crate::core::Object>;
+pub type SignalSender = Sender<crate::core::Object>;
+pub type SignalReceiver = Receiver<crate::core::Object>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NullConfig;
@@ -286,10 +288,19 @@ impl Runtime {
             self.spawn(async move {
                 tokio::select! {
                     _ = async {
-                        while let Ok(object) = command_rx.recv().await {
-                            service3.on_command(&object).await;
+                        loop {
+                            match command_rx.recv().await {
+                                Ok(object) => {
+                                    service3.on_command(&object).await;
+                                }
+                                Err(RecvError::Lagged(count)) => {
+                                    log::warn!("Command receiver lagged by {} messages", count);
+                                }
+                                Err(RecvError::Closed) => {
+                                    break;
+                                }
+                            }
                         }
-                        log::error!("Command receiver closed");
                     } => {}
                     _ = shutdown.recv() => {}
                 }
