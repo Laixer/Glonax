@@ -29,9 +29,7 @@ enum ObjectFilter {
     /// Engine.
     Engine,
     /// GNSS.
-    Gnss,
-    /// Host.
-    Host,
+    Gnss, // TODO: can be removed
     /// Motion.
     Motion,
     /// Target.
@@ -194,19 +192,6 @@ async fn main() -> anyhow::Result<()> {
                         log::info!("{}", engine);
                     }
                 }
-                // glonax::core::Host::MESSAGE_TYPE => {
-                //     let host = client
-                //         .recv_packet::<glonax::core::Host>(frame.payload_length)
-                //         .await?;
-
-                //     if let Some(filter) = filter {
-                //         if filter == ObjectFilter::Host {
-                //             log::info!("{}", host);
-                //         }
-                //     } else {
-                //         log::info!("{}", host);
-                //     }
-                // }
                 glonax::core::Gnss::MESSAGE_TYPE => {
                     let gnss = client
                         .recv_packet::<glonax::core::Gnss>(frame.payload_length)
