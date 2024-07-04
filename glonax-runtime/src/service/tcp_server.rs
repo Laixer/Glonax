@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 
 use tokio::{net::TcpListener, sync::Semaphore};
 
@@ -25,12 +25,6 @@ impl TcpServerConfig {
     fn default_max_connections() -> usize {
         10
     }
-}
-
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct UnixServerConfig {
-    /// Unix domain socket path to listen on.
-    pub path: PathBuf,
 }
 
 enum TcpError {

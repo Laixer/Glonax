@@ -6,29 +6,24 @@ use crate::{
 };
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
-pub struct TcpServerConfig {
-    /// Network address to listen on.
-    #[serde(default = "TcpServerConfig::default_listen")]
-    pub listen: String,
-    /// Maximum number of connections.
-    #[serde(default = "TcpServerConfig::default_max_connections")]
-    pub max_connections: usize,
-}
-
-impl TcpServerConfig {
-    fn default_listen() -> String {
-        "127.0.0.1:30051".to_owned()
-    }
-
-    fn default_max_connections() -> usize {
-        10
-    }
-}
-
-#[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct UnixServerConfig {
     /// Unix domain socket path to listen on.
+    #[serde(default = "UnixServerConfig::default_path")]
     pub path: PathBuf,
+}
+
+impl UnixServerConfig {
+    fn default_path() -> PathBuf {
+        PathBuf::from("/tmp/glonax.sock")
+    }
+}
+
+impl Default for UnixServerConfig {
+    fn default() -> Self {
+        Self {
+            path: Self::default_path(),
+        }
+    }
 }
 
 enum TcpError {
@@ -56,7 +51,7 @@ impl std::fmt::Display for TcpError {
 
 // TODO: Rename to Server
 pub struct UnixServer {
-    // config: TcpServerConfig,
+    config: UnixServerConfig,
     listener: tokio::net::UnixListener,
 }
 
@@ -265,28 +260,25 @@ impl UnixServer {
     }
 }
 
-impl Service<crate::runtime::NullConfig> for UnixServer {
-    fn new(_config: crate::runtime::NullConfig) -> Self
+impl Service<UnixServerConfig> for UnixServer {
+    fn new(config: UnixServerConfig) -> Self
     where
         Self: Sized,
     {
-        // "/run/glonax/glonax.sock"
-
-        let socket_path = std::path::Path::new("/tmp/glonax.sock"); // TODO: Get from config
-        if socket_path.exists() {
-            std::fs::remove_file(socket_path).unwrap();
+        if config.path.exists() {
+            std::fs::remove_file(&config.path).unwrap();
         }
 
-        let listener = tokio::net::UnixListener::bind(socket_path).unwrap();
+        let listener = tokio::net::UnixListener::bind(&config.path).unwrap();
 
-        Self {
-            // config,
-            listener,
-        }
+        Self { config, listener }
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::with_address("unix_server", "/tmp/glonax.sock")
+        ServiceContext::with_address(
+            "unix_server",
+            self.config.path.to_string_lossy().to_string(),
+        )
     }
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, signal_rx: SignalReceiver) {
