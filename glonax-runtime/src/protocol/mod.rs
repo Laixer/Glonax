@@ -4,6 +4,9 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 pub mod client;
 pub mod frame;
 
+// TODO: Maybe move up
+pub use client::{connect, connect_safe, unix_connect, unix_connect_safe};
+
 /// The protocol header.
 ///
 /// This is used to identify the protocol. The header is always the same and is

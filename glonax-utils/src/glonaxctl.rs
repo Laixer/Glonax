@@ -124,15 +124,11 @@ async fn main() -> anyhow::Result<()> {
 
     log::debug!("Waiting for connection to {}", address);
 
-    let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(
-        address.to_owned(),
-        format!("{}/{}", bin_name, glonax::consts::VERSION),
-    )
-    .control(true)
-    .command(true)
-    .stream(true)
-    .connect()
-    .await?;
+    let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
+    let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(user_agent)
+        .stream(true)
+        .connect(address.to_owned())
+        .await?;
 
     println!("Connected to {}", address);
     println!("{}", instance);

@@ -302,6 +302,7 @@ pub async fn connect_safe(
         .await
 }
 
+// TODO: Add docs
 pub async fn unix_connect(
     path: impl AsRef<std::path::Path>,
     session_name: impl ToString,
@@ -309,6 +310,7 @@ pub async fn unix_connect(
     ClientBuilder::new(session_name).unix_connect(path).await
 }
 
+// TODO: Add docs
 pub async fn unix_connect_safe(
     path: impl AsRef<std::path::Path>,
     session_name: impl ToString,

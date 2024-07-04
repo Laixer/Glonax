@@ -27,12 +27,12 @@ enum ControlMode {
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
-    /// Remote network address.
-    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
-    address: String,
+    /// Socket path.
+    #[arg(short = 'c', long = "connect", default_value = "/tmp/glonax.sock")]
+    path: std::path::PathBuf,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
-    device: String,
+    device: String, // TODO: Why not use pathbuf?
     /// Configure failsafe mode.
     #[arg(short, long)]
     fail_safe: bool,
@@ -96,18 +96,9 @@ async fn main() -> anyhow::Result<()> {
 async fn run(args: Args) -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
-    let mut address = args.address.clone();
-
-    if !address.contains(':') {
-        address.push(':');
-        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
-    }
-
-    let address = std::net::ToSocketAddrs::to_socket_addrs(&address)?
-        .next()
-        .unwrap();
-
     let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
+
+    log::debug!("Using joystick {}", args.device);
 
     let mut input_device: Box<dyn crate::gamepad::InputDevice> = match args.mode {
         ControlMode::Xbox => Box::<gamepad::XboxController>::default(),
@@ -136,19 +127,13 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
     log::info!("Starting {}", bin_name);
     log::debug!("Runtime version: {}", glonax::consts::VERSION);
-    log::debug!("Waiting for connection to {}", address);
 
-    let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(
-        address.to_owned(),
-        format!("{}/{}", bin_name, glonax::consts::VERSION),
-    )
-    .control(true)
-    .command(true)
-    .failsafe(args.fail_safe)
-    .connect()
-    .await?;
+    // TODO: Only use safe mode if requested
+    let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
+    let (mut client, instance) =
+        glonax::protocol::unix_connect_safe(&args.path, user_agent).await?;
 
-    log::info!("Connected to {}", address);
+    log::debug!("Connected to {}", args.path.display());
     log::info!("{}", instance);
 
     if !glonax::is_compatibile(instance.version()) {
