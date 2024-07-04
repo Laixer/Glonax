@@ -79,10 +79,9 @@ impl ClientBuilder {
     /// ```rust
     /// use glonax::protocol::client::ClientBuilder;
     ///
-    /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
     ///
-    /// let builder = ClientBuilder::new(address, session_name)
+    /// let builder = ClientBuilder::new(session_name)
     ///     .control(true);
     /// ```
     pub fn control(mut self, control: bool) -> Self {
@@ -101,10 +100,9 @@ impl ClientBuilder {
     /// ```rust
     /// use glonax::protocol::client::ClientBuilder;
     ///
-    /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
     ///
-    /// let builder = ClientBuilder::new(address, session_name)
+    /// let builder = ClientBuilder::new(session_name)
     ///     .command(true);
     /// ```
     pub fn command(mut self, command: bool) -> Self {
@@ -123,10 +121,9 @@ impl ClientBuilder {
     /// ```rust
     /// use glonax::protocol::client::ClientBuilder;
     ///
-    /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
     ///
-    /// let builder = ClientBuilder::new(address, session_name)
+    /// let builder = ClientBuilder::new(session_name)
     ///     .failsafe(false);
     /// ```
     pub fn failsafe(mut self, failsafe: bool) -> Self {
@@ -145,10 +142,9 @@ impl ClientBuilder {
     /// ```rust
     /// use glonax::protocol::client::ClientBuilder;
     ///
-    /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
     ///
-    /// let builder = ClientBuilder::new(address, session_name)
+    /// let builder = ClientBuilder::new(session_name)
     ///     .stream(false);
     /// ```
     pub fn stream(mut self, stream: bool) -> Self {
@@ -172,8 +168,8 @@ impl ClientBuilder {
     ///     let address = "127.0.0.1:8080";
     ///     let session_name = "my_session";
     ///
-    ///     let (stream, instance) = ClientBuilder::new(address, session_name)
-    ///         .connect()
+    ///     let (stream, instance) = ClientBuilder::new(session_name)
+    ///         .connect(address)
     ///         .await?;
     ///
     ///     // Use the `stream` and `instance` here...
