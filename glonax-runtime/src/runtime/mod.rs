@@ -294,7 +294,7 @@ impl Runtime {
                                     service3.on_command(&object).await;
                                 }
                                 Err(RecvError::Lagged(count)) => {
-                                    log::warn!("Command receiver lagged by {} commands", count);
+                                    log::warn!("Command receiver lagged by {} objects", count);
                                 }
                                 Err(RecvError::Closed) => {
                                     break;

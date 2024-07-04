@@ -118,7 +118,8 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
     let mut runtime = glonax::Runtime::default();
     runtime.register_shutdown_signal();
 
-    runtime.schedule_io_sub_service::<service::TcpServer, _>(config.clone().tcp_server);
+    // runtime.schedule_io_sub_service::<service::TcpServer, _>(config.clone().tcp_server);
+    runtime.schedule_io_sub_service::<service::UnixServer, _>(config.clone().unix_listener);
     runtime.schedule_io_sub_service::<service::Director, _>(glonax::runtime::NullConfig {});
 
     for j1939_net_config in &config.j1939 {

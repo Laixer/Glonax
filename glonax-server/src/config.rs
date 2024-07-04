@@ -46,8 +46,9 @@ pub struct Config {
     pub mode: OperationMode,
     /// Machine instance.
     pub machine: MachineConfig,
-    /// TCP Server configuration.
-    pub tcp_server: glonax::service::TcpServerConfig,
+    /// Unix socket listener configuration.
+    #[serde(default)]
+    pub unix_listener: glonax::service::UnixServerConfig,
     /// J1939 network configuration.
     #[serde(default)]
     pub j1939: Vec<glonax::service::NetworkConfig>,
