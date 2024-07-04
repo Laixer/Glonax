@@ -81,12 +81,7 @@ impl UnixServer {
                     .map_err(TcpError::Io)?;
 
                 let mut flags = Vec::new();
-                // if session.is_control() {
-                //     flags.push("control")
-                // }
-                // if session.is_command() {
-                //     flags.push("command")
-                // }
+
                 if session.is_stream() {
                     flags.push("stream")
                 }
@@ -95,7 +90,7 @@ impl UnixServer {
                 }
 
                 log::info!(
-                    "Session started for {} with {}",
+                    "Session upgrade for {} with {}",
                     session.name(),
                     flags.join(", ")
                 );
@@ -223,7 +218,7 @@ impl UnixServer {
                     match frame_rs {
                         Ok(frame) => {
                             if let Err(e) = Self::parse(&mut client, &frame, command_tx.clone(), &mut session).await {
-                                log::warn!("Failed to parse frame: {}", e);
+                                log::warn!("Failed to process frame: {}", e);
                             }
                         },
                         Err(e) => {
@@ -296,8 +291,6 @@ impl Service<crate::runtime::NullConfig> for UnixServer {
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, signal_rx: SignalReceiver) {
         let (stream, _) = self.listener.accept().await.unwrap();
-
-        log::debug!("Accepted local connection");
 
         tokio::spawn(Self::spawn_client_session(stream, command_tx, signal_rx));
     }
