@@ -78,6 +78,7 @@ impl<T> Stream<T> {
 }
 
 impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
+    // TODO: Remove this in the future
     pub async fn probe(&mut self) -> std::io::Result<std::time::Duration> {
         let random_number = rand::random::<i32>();
 
@@ -121,7 +122,7 @@ impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
         session_name: impl ToString,
         flags: u8,
     ) -> std::io::Result<crate::core::Instance> {
-        self.probe().await?;
+        self.probe().await?; // TODO: Remove this in the future
 
         self.send_packet(&frame::Session::new(flags, session_name.to_string()))
             .await?;
@@ -156,8 +157,6 @@ impl<T: AsyncWrite + Unpin> Stream<T> {
     pub async fn send_request(&mut self, frame_message: u8) -> std::io::Result<()> {
         self.send_packet(&frame::Request::new(frame_message)).await
     }
-
-    // TODO: Maybe add send_shutdown()?
 }
 
 impl<T: AsyncRead + Unpin> Stream<T> {

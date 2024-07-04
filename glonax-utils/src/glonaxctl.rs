@@ -11,9 +11,9 @@ use clap::{Parser, ValueEnum};
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
-    /// Remote network address.
-    #[arg(short = 'c', long = "connect", default_value = "127.0.0.1")]
-    address: String,
+    /// Socket path.
+    #[arg(short = 'c', long = "connect", default_value = "/tmp/glonax.sock")]
+    path: std::path::PathBuf,
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
@@ -113,25 +113,20 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
-    let mut address = args.address.clone();
+    glonax::log_system();
 
-    log::debug!("Connecting to {}", address);
+    log::info!("Starting {}", bin_name);
+    log::debug!("Runtime version: {}", glonax::consts::VERSION);
 
-    if !address.contains(':') {
-        address.push(':');
-        address.push_str(&glonax::consts::DEFAULT_NETWORK_PORT.to_string());
-    }
-
-    log::debug!("Waiting for connection to {}", address);
-
+    // TODO: Only use safe mode if requested
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
     let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(user_agent)
         .stream(true)
-        .connect(address.to_owned())
+        .unix_connect(&args.path)
         .await?;
 
-    println!("Connected to {}", address);
-    println!("{}", instance);
+    log::debug!("Connected to {}", args.path.display());
+    log::info!("{}", instance);
 
     if !glonax::is_compatibile(instance.version()) {
         return Err(anyhow::anyhow!("Incompatible runtime version"));
