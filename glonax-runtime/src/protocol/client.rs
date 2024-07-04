@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use tokio::net::{TcpStream, ToSocketAddrs};
+use tokio::net::{TcpStream, ToSocketAddrs, UnixStream};
 
 use crate::protocol::{frame, Stream};
 
@@ -20,12 +20,12 @@ use crate::protocol::{frame, Stream};
 ///     let address = "127.0.0.1:8080";
 ///     let session_name = "my_session";
 ///
-///     let (stream, instance) = ClientBuilder::new(address, session_name)
+///     let (stream, instance) = ClientBuilder::new(session_name)
 ///         .control(true)
 ///         .command(true)
 ///         .failsafe(false)
 ///         .stream(false)
-///         .connect()
+///         .connect(address)
 ///         .await?;
 ///
 ///     // Use the `stream` and `instance` here...
@@ -33,8 +33,7 @@ use crate::protocol::{frame, Stream};
 ///     Ok(())
 /// }
 /// ```
-pub struct ClientBuilder<A: ToSocketAddrs> {
-    address: A,
+pub struct ClientBuilder {
     session_name: String,
     control: bool,
     command: bool,
@@ -42,7 +41,7 @@ pub struct ClientBuilder<A: ToSocketAddrs> {
     stream: bool,
 }
 
-impl<A: ToSocketAddrs> ClientBuilder<A> {
+impl ClientBuilder {
     /// Creates a new `ClientBuilder` with the specified address and session name.
     ///
     /// # Arguments
@@ -55,14 +54,12 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     /// ```rust
     /// use glonax::protocol::client::ClientBuilder;
     ///
-    /// let address = "127.0.0.1:8080";
     /// let session_name = "my_session";
     ///
-    /// let builder = ClientBuilder::new(address, session_name);
+    /// let builder = ClientBuilder::new(session_name);
     /// ```
-    pub fn new(address: A, session_name: impl ToString) -> Self {
+    pub fn new(session_name: impl ToString) -> Self {
         Self {
-            address,
             session_name: session_name.to_string(),
             control: false,
             command: false,
@@ -184,7 +181,10 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
     ///     Ok(())
     /// }
     /// ```
-    pub async fn connect(self) -> std::io::Result<(Stream<TcpStream>, crate::core::Instance)> {
+    pub async fn connect(
+        self,
+        address: impl ToSocketAddrs,
+    ) -> std::io::Result<(Stream<TcpStream>, crate::core::Instance)> {
         let mut flags = 0;
 
         if self.control {
@@ -211,7 +211,7 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
             flags &= !frame::Session::MODE_STREAM;
         }
 
-        let stream = tokio::net::TcpStream::connect(self.address).await?;
+        let stream = TcpStream::connect(address).await?;
 
         let sock_ref = socket2::SockRef::from(&stream);
 
@@ -222,6 +222,32 @@ impl<A: ToSocketAddrs> ClientBuilder<A> {
         sock_ref.set_tcp_keepalive(&keep_alive)?;
         sock_ref.set_nodelay(true)?;
 
+        let mut client = Stream::new(stream);
+
+        let instance = client.handshake(self.session_name, flags).await?;
+
+        Ok((client, instance))
+    }
+
+    pub async fn unix_connect(
+        self,
+        path: impl AsRef<std::path::Path>,
+    ) -> std::io::Result<(Stream<UnixStream>, crate::core::Instance)> {
+        let mut flags = 0;
+
+        if self.failsafe {
+            flags |= frame::Session::MODE_FAILSAFE;
+        } else {
+            flags &= !frame::Session::MODE_FAILSAFE;
+        }
+
+        if self.stream {
+            flags |= frame::Session::MODE_STREAM;
+        } else {
+            flags &= !frame::Session::MODE_STREAM;
+        }
+
+        let stream = UnixStream::connect(path).await?;
         let mut client = Stream::new(stream);
 
         let instance = client.handshake(self.session_name, flags).await?;
@@ -262,5 +288,33 @@ pub async fn connect(
     address: impl ToSocketAddrs,
     session_name: impl ToString,
 ) -> std::io::Result<(Stream<TcpStream>, crate::core::Instance)> {
-    ClientBuilder::new(address, session_name).connect().await
+    ClientBuilder::new(session_name).connect(address).await
+}
+
+// TODO: Add docs
+pub async fn connect_safe(
+    address: impl ToSocketAddrs,
+    session_name: impl ToString,
+) -> std::io::Result<(Stream<TcpStream>, crate::core::Instance)> {
+    ClientBuilder::new(session_name)
+        .failsafe(true)
+        .connect(address)
+        .await
+}
+
+pub async fn unix_connect(
+    path: impl AsRef<std::path::Path>,
+    session_name: impl ToString,
+) -> std::io::Result<(Stream<UnixStream>, crate::core::Instance)> {
+    ClientBuilder::new(session_name).unix_connect(path).await
+}
+
+pub async fn unix_connect_safe(
+    path: impl AsRef<std::path::Path>,
+    session_name: impl ToString,
+) -> std::io::Result<(Stream<UnixStream>, crate::core::Instance)> {
+    ClientBuilder::new(session_name)
+        .failsafe(true)
+        .unix_connect(path)
+        .await
 }
