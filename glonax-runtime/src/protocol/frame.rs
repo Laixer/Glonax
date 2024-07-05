@@ -296,6 +296,7 @@ impl super::Packetize for Request {
     }
 }
 
+// TODO: Can be removed in the future
 pub struct Echo {
     pub payload: i32,
 }

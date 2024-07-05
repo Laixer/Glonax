@@ -113,6 +113,8 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
+    // TODO: Wrap into run function
+
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);

@@ -34,7 +34,7 @@ struct Args {
     #[arg(value_hint = ValueHint::FilePath)]
     device: String, // TODO: Why not use pathbuf?
     /// Configure failsafe mode.
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = true)]
     fail_safe: bool,
     /// Input commands will translate to the full motion range.
     #[arg(long)]
@@ -114,6 +114,9 @@ async fn run(args: Args) -> anyhow::Result<()> {
         engine_rpm: 0,
     };
 
+    if args.fail_safe {
+        log::info!("Failsafe mode is enabled");
+    }
     if input_state.limit_motion {
         log::info!("Motion range is limited");
     } else {
@@ -128,10 +131,12 @@ async fn run(args: Args) -> anyhow::Result<()> {
     log::info!("Starting {}", bin_name);
     log::debug!("Runtime version: {}", glonax::consts::VERSION);
 
-    // TODO: Only use safe mode if requested
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
-    let (mut client, instance) =
-        glonax::protocol::unix_connect_safe(&args.path, user_agent).await?;
+    let (mut client, instance) = if args.fail_safe {
+        glonax::protocol::unix_connect_safe(&args.path, user_agent).await?
+    } else {
+        glonax::protocol::unix_connect(&args.path, user_agent).await?
+    };
 
     log::debug!("Connected to {}", args.path.display());
     log::info!("{}", instance);
