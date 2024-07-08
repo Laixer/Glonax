@@ -120,7 +120,6 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Starting {}", bin_name);
     log::debug!("Runtime version: {}", glonax::consts::VERSION);
 
-    // TODO: Only use safe mode if requested
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
     let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(user_agent)
         .stream(true)
