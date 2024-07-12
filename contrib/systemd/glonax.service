@@ -40,10 +40,14 @@ ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectKernelLogs=true
 ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_CAN
 
 MemoryDenyWriteExecute=true
 SystemCallArchitectures=native
 LimitMEMLOCK=infinity
+NoNewPrivileges=true
+RestrictSUIDSGID=true
 
 [Install]
 WantedBy=multi-user.target
