@@ -82,6 +82,7 @@ fn string_to_bool(s: &str) -> Option<bool> {
     }
 }
 
+// TODO: Put into own crate
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME").to_string();

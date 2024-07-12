@@ -3,7 +3,7 @@ use std::time::Duration;
 use j1939::protocol;
 
 use crate::{
-    core::Object,
+    core::{ModuleStatus, Object},
     net::ControlNetwork,
     runtime::{J1939Unit, J1939UnitError, NetDriverContext, NetworkService, SignalSender},
 };
@@ -75,6 +75,7 @@ struct NetDriverItem {
     driver: Box<dyn J1939Unit>,
     context: NetDriverContext,
     rx_timeout: Option<Duration>,
+    last_status: Option<ModuleStatus>,
 }
 
 impl NetDriverItem {
@@ -83,6 +84,7 @@ impl NetDriverItem {
             driver,
             context: NetDriverContext::default(),
             rx_timeout,
+            last_status: None,
         }
     }
 
@@ -175,6 +177,7 @@ impl Clone for NetworkAuthority {
                 driver: net_driver.unwrap(),
                 context: driver.context.clone(),
                 rx_timeout: driver.rx_timeout,
+                last_status: driver.last_status.clone(),
             });
         }
 
@@ -325,22 +328,42 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
-            let mut module_status = crate::core::ModuleStatus::healthy(driver.driver.name());
+            let mut module_status = ModuleStatus::healthy(driver.driver.name());
 
             if let Err(e) = driver.tick(&mut tx_queue) {
-                error!("[{}] {}: {}", self.network.interface(), driver, e);
-
-                module_status = crate::core::ModuleStatus::faulty(driver.driver.name(), e.into());
+                module_status = ModuleStatus::faulty(driver.driver.name(), e.into());
             }
 
             if driver.is_rx_timeout() {
                 let e = J1939UnitError::MessageTimeout;
-                error!("[{}] {}: {}", self.network.interface(), driver, e);
-
-                module_status = crate::core::ModuleStatus::faulty(driver.driver.name(), e.into());
+                module_status = ModuleStatus::faulty(driver.driver.name(), e.into());
             }
 
-            if interval_decimation(Duration::from_millis(10), self.tick, 100) {
+            let status_changed = if driver.last_status != Some(module_status.clone()) {
+                driver.last_status = Some(module_status.clone());
+                true
+            } else {
+                false
+            };
+
+            if status_changed {
+                if module_status.is_healthy() {
+                    debug!(
+                        "[{}] Status change: {}",
+                        self.network.interface(),
+                        module_status
+                    );
+                } else {
+                    error!(
+                        "[{}] Status change: {}",
+                        self.network.interface(),
+                        module_status
+                    );
+                }
+            }
+
+            // TODO: Send the signal every 100ms or when there is a change in the module status
+            if interval_decimation(Duration::from_millis(10), self.tick, 100) || status_changed {
                 if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
                     error!(
                         "[{}] {}: Failed to send signal: {}",

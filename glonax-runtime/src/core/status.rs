@@ -91,6 +91,11 @@ impl ModuleStatus {
             error: Some(error),
         }
     }
+
+    /// Returns true if the module is healthy.
+    pub fn is_healthy(&self) -> bool {
+        self.state == ModuleState::Healthy
+    }
 }
 
 impl TryFrom<Vec<u8>> for ModuleStatus {

@@ -26,6 +26,7 @@ impl Default for UnixServerConfig {
     }
 }
 
+// TODO: Rename to something other than 'TCPError'
 enum TcpError {
     Io(std::io::Error),
     UnknownMessage(u8),
