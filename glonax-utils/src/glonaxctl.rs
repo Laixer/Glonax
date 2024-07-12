@@ -142,13 +142,13 @@ async fn main() -> anyhow::Result<()> {
             // TODO: Offer: async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
             match frame.message {
                 // TODO: Error messages are never sent
-                glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
-                    let error = client
-                        .recv_packet::<glonax::protocol::frame::SessionError>(frame.payload_length)
-                        .await?;
+                // glonax::protocol::frame::SessionError::MESSAGE_TYPE => {
+                //     let error = client
+                //         .recv_packet::<glonax::protocol::frame::SessionError>(frame.payload_length)
+                //         .await?;
 
-                    log::error!("{:?}", error);
-                }
+                //     log::error!("{:?}", error);
+                // }
                 glonax::core::ModuleStatus::MESSAGE_TYPE => {
                     let status = client
                         .recv_packet::<glonax::core::ModuleStatus>(frame.payload_length)
