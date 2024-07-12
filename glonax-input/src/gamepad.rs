@@ -4,6 +4,15 @@ use crate::{
 };
 
 pub trait InputDevice {
+    /// Maps the given event to a scancode.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The event to be mapped.
+    ///
+    /// # Returns
+    ///
+    /// An optional scancode if the event can be mapped, or `None` otherwise.
     fn map(&mut self, event: &Event) -> Option<Scancode>;
 }
 
@@ -14,6 +23,15 @@ pub struct XboxController {
 }
 
 impl InputDevice for XboxController {
+    /// Maps the given `Event` to a corresponding `Scancode`.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The input event to be mapped.
+    ///
+    /// # Returns
+    ///
+    /// An optional `Scancode` representing the mapped input event, or `None` if the event does not match any mapping.
     fn map(&mut self, event: &Event) -> Option<Scancode> {
         match event {
             Event {
@@ -127,6 +145,15 @@ impl LogitechJoystick {
 }
 
 impl InputDevice for LogitechJoystick {
+    /// Maps the given `Event` to a corresponding `Scancode`.
+    ///
+    /// # Arguments
+    ///
+    /// * `event` - The input event to be mapped.
+    ///
+    /// # Returns
+    ///
+    /// An optional `Scancode` representing the mapped input event, or `None` if the event does not match any mapping.
     fn map(&mut self, event: &Event) -> Option<Scancode> {
         match event {
             Event {

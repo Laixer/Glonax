@@ -1,4 +1,4 @@
-use glonax::core::{Actuator, Motion, Object};
+use glonax::core::{Actuator, Engine, Motion, Object};
 
 /// Level trait.
 pub trait Level {
@@ -192,28 +192,22 @@ impl InputState {
                 }
             }
             Scancode::Up(ButtonState::Pressed) => {
-                // TODO: Move somwhere else
                 if !self.motion_lock {
                     return None;
                 }
 
                 self.engine_rpm = (self.engine_rpm + 100).clamp(900, 2_100);
-                Some(Object::Engine(glonax::core::Engine::from_rpm(
-                    self.engine_rpm,
-                )))
+                Some(Object::Engine(Engine::from_rpm(self.engine_rpm)))
             }
             Scancode::Down(ButtonState::Pressed) => {
-                // TODO: Move somwhere else
                 if self.engine_rpm <= 900 {
                     self.engine_rpm = 0;
 
-                    return Some(Object::Engine(glonax::core::Engine::shutdown()));
+                    return Some(Object::Engine(Engine::shutdown()));
                 }
 
                 self.engine_rpm = (self.engine_rpm - 100).clamp(900, 2_100);
-                Some(Object::Engine(glonax::core::Engine::from_rpm(
-                    self.engine_rpm,
-                )))
+                Some(Object::Engine(Engine::from_rpm(self.engine_rpm)))
             }
             Scancode::Abort(ButtonState::Pressed) => {
                 self.motion_lock = true;
