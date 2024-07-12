@@ -16,7 +16,6 @@ Description=Glonax Input Event Handler
 BindsTo=glonax.service
 After=glonax.service
 ConditionPathExists=/dev/input/js0
-ConditionPathExists=/run/glonax/glonax.sock
 
 StartLimitIntervalSec=5
 StartLimitBurst=5
@@ -27,7 +26,7 @@ CPUSchedulingPolicy=fifo
 CPUSchedulingPriority=20
 IOSchedulingClass=best-effort
 IOSchedulingPriority=0
-ExecStart=/usr/local/bin/glonax-input -c /run/glonax/glonax.sock /dev/input/js0 --mode xbox
+ExecStart=/usr/local/bin/glonax-input /dev/input/js0 --mode xbox
 PrivateTmp=true
 
 #ProtectClock=true
