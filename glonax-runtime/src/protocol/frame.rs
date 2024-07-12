@@ -302,12 +302,12 @@ mod tests {
 
     #[test]
     fn test_frame() {
-        let frame = Frame::new(FrameMessage::Echo as u8, 4);
+        let frame = Frame::new(FrameMessage::Session as u8, 4);
         let bytes = frame.as_ref();
 
         let frame = Frame::try_from(bytes).unwrap();
 
-        assert_eq!(frame.message, FrameMessage::Echo as u8);
+        assert_eq!(frame.message, FrameMessage::Session as u8);
         assert_eq!(frame.payload_length, 4);
     }
 
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_frame_version_mismatch() {
-        let mut frame = Frame::new(FrameMessage::Echo as u8, 4);
+        let mut frame = Frame::new(FrameMessage::Session as u8, 4);
         frame.buffer[3] = 0xff;
 
         let frame = Frame::try_from(frame.as_ref());
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_frame_payload_empty() {
-        let mut frame = Frame::new(FrameMessage::Echo as u8, 4);
+        let mut frame = Frame::new(FrameMessage::Session as u8, 4);
         frame.buffer[5] = 0;
         frame.buffer[6] = 0;
 
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_frame_excessive_payload_length() {
-        let frame = Frame::new(FrameMessage::Echo as u8, MAX_PAYLOAD_SIZE + 1);
+        let frame = Frame::new(FrameMessage::Session as u8, MAX_PAYLOAD_SIZE + 1);
 
         let frame = Frame::try_from(frame.as_ref());
 
@@ -360,7 +360,7 @@ mod tests {
 
     #[test]
     fn test_frame_invalid_padding() {
-        let mut frame = Frame::new(FrameMessage::Echo as u8, 4);
+        let mut frame = Frame::new(FrameMessage::Session as u8, 4);
         frame.buffer[7] = 0xff;
 
         let frame = Frame::try_from(frame.as_ref());
