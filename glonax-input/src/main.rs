@@ -6,6 +6,7 @@
 
 use clap::{Parser, ValueEnum, ValueHint};
 
+mod config;
 mod gamepad;
 mod input;
 mod joystick;
@@ -27,9 +28,23 @@ enum ControlMode {
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
+    /// Configuration file.
+    #[arg(
+        short = 'c',
+        long = "config",
+        alias = "conf",
+        default_value = "/etc/glonax.conf",
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath
+    )]
+    config: std::path::PathBuf,
     /// Socket path.
-    #[arg(short = 'c', long = "connect", default_value = "/tmp/glonax.sock")]
-    path: std::path::PathBuf,
+    #[arg(
+        short = 's',
+        long = "socket",
+        value_hint = ValueHint::FilePath
+    )]
+    path: Option<std::path::PathBuf>,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
     device: String, // TODO: Why not use pathbuf?
@@ -57,10 +72,15 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     use log::LevelFilter;
 
-    let args = Args::parse();
+    let mut args = Args::parse();
+
+    let config: config::Config = glonax::from_file(&args.config)?;
+
+    if args.path.is_none() {
+        args.path = Some(config.unix_listener.path.clone());
+    }
 
     let is_daemon = std::env::var("INVOCATION_ID").is_ok() || args.daemon;
-
     if is_daemon {
         log::set_max_level(LevelFilter::Debug);
         log::set_boxed_logger(Box::new(glonax::logger::SystemdLogger))?;
@@ -90,9 +110,12 @@ async fn main() -> anyhow::Result<()> {
         log::info!("Running service as daemon");
     }
 
+    log::trace!("{:#?}", config);
+
     run(args).await
 }
 
+// TODO: Pass both config and args to run
 async fn run(args: Args) -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
@@ -132,13 +155,14 @@ async fn run(args: Args) -> anyhow::Result<()> {
     log::debug!("Runtime version: {}", glonax::consts::VERSION);
 
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
+    let unix_socket = args.path.unwrap_or_else(|| "/tmp/glonax.sock".into());
     let (mut client, instance) = if args.fail_safe {
-        glonax::protocol::unix_connect_safe(&args.path, user_agent).await?
+        glonax::protocol::unix_connect_safe(&unix_socket, user_agent).await?
     } else {
-        glonax::protocol::unix_connect(&args.path, user_agent).await?
+        glonax::protocol::unix_connect(&unix_socket, user_agent).await?
     };
 
-    log::debug!("Connected to {}", args.path.display());
+    log::debug!("Connected to {}", unix_socket.display());
     log::info!("{}", instance);
 
     if !glonax::is_compatibile(instance.version()) {

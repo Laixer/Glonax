@@ -84,6 +84,7 @@ async fn main() -> anyhow::Result<()> {
     run(config).await
 }
 
+// TODO: Pass both config and args to run
 async fn run(config: config::Config) -> anyhow::Result<()> {
     use glonax::consts::*;
     use glonax::service;

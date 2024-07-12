@@ -393,6 +393,8 @@ dependencies = [
  "clap",
  "glonax",
  "log",
+ "serde",
+ "serde_derive",
  "simplelog",
  "tokio",
 ]
