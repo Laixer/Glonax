@@ -63,10 +63,7 @@ impl UnixServer {
         command_tx: CommandSender,
         session: &mut crate::protocol::frame::Session,
     ) -> Result<(), TcpError> {
-        use crate::protocol::{
-            frame::{Echo, Session},
-            Packetize,
-        };
+        use crate::protocol::{frame::Session, Packetize};
 
         match frame.message {
             crate::protocol::frame::Session::MESSAGE_TYPE => {
@@ -94,15 +91,6 @@ impl UnixServer {
                     .send_packet(crate::global::instance())
                     .await
                     .map_err(TcpError::Io)?;
-            }
-            // TODO: Maybe we dont need echo anymore
-            crate::protocol::frame::Echo::MESSAGE_TYPE => {
-                let echo = client
-                    .recv_packet::<Echo>(frame.payload_length)
-                    .await
-                    .map_err(TcpError::Io)?;
-
-                client.send_packet(&echo).await.map_err(TcpError::Io)?;
             }
             Engine::MESSAGE_TYPE => {
                 let engine = client

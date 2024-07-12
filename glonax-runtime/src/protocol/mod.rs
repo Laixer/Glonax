@@ -78,52 +78,11 @@ impl<T> Stream<T> {
 }
 
 impl<T: AsyncWrite + AsyncRead + Unpin> Stream<T> {
-    // TODO: Remove this in the future
-    pub async fn probe(&mut self) -> std::io::Result<std::time::Duration> {
-        let random_number = rand::random::<i32>();
-
-        let now = std::time::Instant::now();
-
-        self.send_packet(&frame::Echo {
-            payload: random_number,
-        })
-        .await?;
-
-        let frame = loop {
-            let frame = self.read_frame().await?;
-            if frame.message == frame::Echo::MESSAGE_TYPE {
-                break frame;
-            }
-
-            // FUTURE: Move this to a separate function, there are many situations in which
-            // we want to read a frame and check the message type
-            let payload_buffer = &mut vec![0u8; frame.payload_length];
-            self.inner.read_exact(payload_buffer).await?;
-        };
-
-        let time_elapsed = now.elapsed();
-
-        let echo = self
-            .recv_packet::<frame::Echo>(frame.payload_length)
-            .await?;
-
-        if random_number != echo.payload {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Invalid echo response from server",
-            ));
-        }
-
-        Ok(time_elapsed)
-    }
-
     pub async fn handshake(
         &mut self,
         session_name: impl ToString,
         flags: u8,
     ) -> std::io::Result<crate::core::Instance> {
-        self.probe().await?; // TODO: Remove this in the future
-
         self.send_packet(&frame::Session::new(flags, session_name.to_string()))
             .await?;
 

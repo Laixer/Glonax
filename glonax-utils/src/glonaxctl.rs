@@ -68,8 +68,6 @@ enum Command {
         /// On or off.
         toggle: String,
     },
-    /// Ping the server.
-    Ping,
     /// Queue target.
     Target { x: f32, y: f32, z: f32 },
 }
@@ -282,13 +280,6 @@ async fn main() -> anyhow::Result<()> {
             let control = glonax::core::Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
         }
-        Command::Ping => loop {
-            let time_elapsed = client.probe().await?;
-
-            log::info!("Echo response time: {} ms", time_elapsed.as_millis());
-
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        },
         Command::Target { x, y, z } => {
             let target = glonax::core::Target::from_point(x, y, z);
 

@@ -48,7 +48,7 @@ impl std::fmt::Display for FrameError {
 
 enum FrameMessage {
     Error = 0x0,
-    Echo = 0x1,
+    _Echo = 0x1,
     Session = 0x10,
     _Shutdown = 0x11,
     Request = 0x12,
@@ -293,34 +293,6 @@ impl super::Packetize for Request {
 
     fn to_bytes(&self) -> Vec<u8> {
         vec![self.message]
-    }
-}
-
-// TODO: Can be removed in the future
-pub struct Echo {
-    pub payload: i32,
-}
-
-impl TryFrom<Vec<u8>> for Echo {
-    type Error = FrameError;
-
-    fn try_from(buffer: Vec<u8>) -> Result<Self, Self::Error> {
-        if buffer.len() != std::mem::size_of::<i32>() {
-            Err(FrameError::FrameTooSmall)?
-        }
-
-        Ok(Self {
-            payload: i32::from_be_bytes([buffer[0], buffer[1], buffer[2], buffer[3]]),
-        })
-    }
-}
-
-impl super::Packetize for Echo {
-    const MESSAGE_TYPE: u8 = FrameMessage::Echo as u8;
-    const MESSAGE_SIZE: Option<usize> = Some(std::mem::size_of::<i32>());
-
-    fn to_bytes(&self) -> Vec<u8> {
-        self.payload.to_be_bytes().to_vec()
     }
 }
 
