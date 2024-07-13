@@ -26,7 +26,7 @@ CPUSchedulingPolicy=fifo
 CPUSchedulingPriority=20
 IOSchedulingClass=best-effort
 IOSchedulingPriority=0
-ExecStart=/usr/local/bin/glonax-input /dev/input/js0 --mode xbox
+ExecStart=/usr/local/bin/glonax-input /dev/input/js0 --daemon --mode xbox
 PrivateTmp=true
 
 #ProtectClock=true
