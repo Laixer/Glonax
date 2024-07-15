@@ -47,15 +47,6 @@ group_add "$GROUPNAME"
 user_add "$USERNAME_DAEMON" "$GROUPNAME"
 user_add "$USERNAME_INPUT" "$GROUPNAME"
 
-# Create a shared directory for the group (optional)
-SHARED_DIR="/opt/glonaxshare"
-if [ ! -d "$SHARED_DIR" ]; then
-  mkdir -p "$SHARED_DIR"
-  chown root:"$GROUPNAME" "$SHARED_DIR"
-  chmod 2775 "$SHARED_DIR"
-  echo "Created shared directory $SHARED_DIR for group $GROUPNAME"
-fi
-
 # Reload the udev rules
 if command -v udevadm &> /dev/null; then
   echo -n "Reloading udev rules.."
@@ -83,6 +74,5 @@ if [ -d /run/systemd/system ]; then
 
   # systemd_start_service glonax.service
 fi
-
 
 exit 0
