@@ -254,16 +254,16 @@ impl Service<UnixServerConfig> for UnixServer {
     where
         Self: Sized,
     {
-        use std::os::unix::fs::PermissionsExt;
+        // use std::os::unix::fs::PermissionsExt;
 
         if config.path.exists() {
-            std::fs::remove_file(&config.path).unwrap();
+            fs::remove_file(&config.path).unwrap();
         }
 
         let listener = tokio::net::UnixListener::bind(&config.path).unwrap();
 
-        let permissions = fs::Permissions::from_mode(0o760);
-        fs::set_permissions(&config.path, permissions).unwrap();
+        // let permissions = fs::Permissions::from_mode(0o760);
+        // fs::set_permissions(&config.path, permissions).unwrap();
 
         Self { config, listener }
     }

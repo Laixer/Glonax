@@ -35,6 +35,7 @@ Group=glonax
 SupplementaryGroups=tty dialout
 ExecStart=/usr/local/bin/glonaxd --daemon
 RuntimeDirectory=glonax
+RuntimeDirectoryMode=0770
 ConfigurationDirectory=glonax
 
 ProtectClock=true
