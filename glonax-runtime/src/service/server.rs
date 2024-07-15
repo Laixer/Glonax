@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use crate::{
     core::{Control, Engine, Motion, Object, Target},
@@ -254,7 +254,6 @@ impl Service<UnixServerConfig> for UnixServer {
     where
         Self: Sized,
     {
-        use std::fs;
         use std::os::unix::fs::PermissionsExt;
 
         if config.path.exists() {

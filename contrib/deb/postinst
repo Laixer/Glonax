@@ -5,6 +5,57 @@
 
 set -e
 
+USERNAME_DAEMON="glonaxd"
+USERNAME_INPUT="glonax-input"
+GROUPNAME="glonax"
+
+group_add() {
+  local GROUPNAME="$1"
+
+  if getent group "$GROUPNAME" &>/dev/null; then
+    echo "Group $GROUPNAME already exists. Skipping group creation."
+  else
+    groupadd "$GROUPNAME" --system
+    if [ $? -eq 0 ]; then
+      echo "Group $GROUPNAME has been successfully created."
+    else
+      echo "Failed to create group $GROUPNAME. Please check system logs for more information."
+      exit 1
+    fi
+  fi
+}
+
+user_add() {
+  local USERNAME="$1"
+  local GROUPNAME="$2"
+
+  if id "$USERNAME" &>/dev/null; then
+    echo "User $USERNAME already exists. Skipping user creation."
+  else
+    useradd --system --no-create-home --shell /usr/sbin/nologin --gid "$GROUPNAME" "$USERNAME"
+    if [ $? -eq 0 ]; then
+      echo "User $USERNAME has been successfully created and added to group $GROUPNAME."
+    else
+      echo "Failed to create user $USERNAME. Please check system logs for more information."
+      exit 1
+    fi
+  fi
+}
+
+# Add the glonax group
+group_add "$GROUPNAME"
+user_add "$USERNAME_DAEMON" "$GROUPNAME"
+user_add "$USERNAME_INPUT" "$GROUPNAME"
+
+# Create a shared directory for the group (optional)
+SHARED_DIR="/opt/glonaxshare"
+if [ ! -d "$SHARED_DIR" ]; then
+  mkdir -p "$SHARED_DIR"
+  chown root:"$GROUPNAME" "$SHARED_DIR"
+  chmod 2775 "$SHARED_DIR"
+  echo "Created shared directory $SHARED_DIR for group $GROUPNAME"
+fi
+
 # Reload the udev rules
 if command -v udevadm &> /dev/null; then
   echo -n "Reloading udev rules.."
@@ -32,3 +83,6 @@ if [ -d /run/systemd/system ]; then
 
   # systemd_start_service glonax.service
 fi
+
+
+exit 0
