@@ -21,6 +21,9 @@ StartLimitIntervalSec=5
 StartLimitBurst=5
 
 [Service]
+User=glonax-input
+Group=glonax
+
 Nice=-10
 CPUSchedulingPolicy=fifo
 CPUSchedulingPriority=20
