@@ -5,6 +5,8 @@ use crate::{
     runtime::{CommandSender, Service, ServiceContext, SignalReceiver},
 };
 
+const UNIX_SOCKET_PERMISSIONS: u32 = 0o660;
+
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
 pub struct UnixServerConfig {
     /// Unix domain socket path to listen on.
@@ -254,7 +256,7 @@ impl Service<UnixServerConfig> for UnixServer {
     where
         Self: Sized,
     {
-        // use std::os::unix::fs::PermissionsExt;
+        use std::os::unix::fs::PermissionsExt;
 
         if config.path.exists() {
             fs::remove_file(&config.path).unwrap();
@@ -262,8 +264,8 @@ impl Service<UnixServerConfig> for UnixServer {
 
         let listener = tokio::net::UnixListener::bind(&config.path).unwrap();
 
-        // let permissions = fs::Permissions::from_mode(0o760);
-        // fs::set_permissions(&config.path, permissions).unwrap();
+        let permissions = fs::Permissions::from_mode(UNIX_SOCKET_PERMISSIONS);
+        fs::set_permissions(&config.path, permissions).unwrap();
 
         Self { config, listener }
     }
