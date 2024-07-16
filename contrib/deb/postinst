@@ -9,43 +9,43 @@ USERNAME_DAEMON="glonaxd"
 USERNAME_INPUT="glonax-input"
 GROUPNAME="glonax"
 
-group_add() {
-  local GROUPNAME="$1"
-
-  if getent group "$GROUPNAME" &>/dev/null; then
-    echo "Group $GROUPNAME already exists. Skipping group creation."
+create_group() {
+  local group_name="$1"
+  if getent group "$group_name" &>/dev/null; then
+    echo "Group $group_name already exists. Skipping group creation."
   else
-    groupadd "$GROUPNAME" --system
+    groupadd "$group_name" --system
     if [ $? -eq 0 ]; then
-      echo "Group $GROUPNAME has been successfully created."
+      echo "Group $group_name has been successfully created."
     else
-      echo "Failed to create group $GROUPNAME. Please check system logs for more information."
-      exit 1
+      echo "Failed to create group $group_name. Please check system logs for more information."
+      return 1
     fi
   fi
+  return 0
 }
 
-user_add() {
-  local USERNAME="$1"
-  local GROUPNAME="$2"
-
-  if id "$USERNAME" &>/dev/null; then
-    echo "User $USERNAME already exists. Skipping user creation."
+create_user() {
+  local user_name="$1"
+  local group_name="$2"
+  if id "$user_name" &>/dev/null; then
+    echo "User $user_name already exists. Skipping user creation."
   else
-    useradd --system --no-create-home --shell /usr/sbin/nologin --gid "$GROUPNAME" "$USERNAME"
+    useradd --system --no-create-home --shell /usr/sbin/nologin --gid "$group_name" "$user_name"
     if [ $? -eq 0 ]; then
-      echo "User $USERNAME has been successfully created and added to group $GROUPNAME."
+      echo "User $user_name has been successfully created and added to group $group_name."
     else
-      echo "Failed to create user $USERNAME. Please check system logs for more information."
-      exit 1
+      echo "Failed to create user $user_name. Please check system logs for more information."
+      return 1
     fi
   fi
+  return 0
 }
 
 # Add the glonax group
-group_add "$GROUPNAME"
-user_add "$USERNAME_DAEMON" "$GROUPNAME"
-user_add "$USERNAME_INPUT" "$GROUPNAME"
+create_group "$GROUPNAME" || exit 1
+create_user "$USERNAME_DAEMON" "$GROUPNAME" || exit 1
+create_user "$USERNAME_INPUT" "$GROUPNAME" || exit 1
 
 # Reload the udev rules
 if command -v udevadm &> /dev/null; then
