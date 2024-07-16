@@ -380,6 +380,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "glonax-control"
+version = "1.0.0"
+dependencies = [
+ "ansi_term",
+ "anyhow",
+ "chrono",
+ "clap",
+ "glonax",
+ "hex",
+ "log",
+ "serde",
+ "serde_derive",
+ "simplelog",
+ "tokio",
+]
+
+[[package]]
 name = "glonax-input"
 version = "1.0.0"
 dependencies = [

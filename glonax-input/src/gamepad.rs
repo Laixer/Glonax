@@ -125,18 +125,21 @@ pub struct LogitechJoystick {
 }
 
 impl LogitechJoystick {
+    /// Creates a new instance of LogitechJoystick in solo mode.
     pub fn solo_mode() -> Self {
         Self {
             mode: LogitechJoystickMode::Solo,
         }
     }
 
+    /// Creates a new instance of LogitechJoystick in left mode.
     pub fn left_mode() -> Self {
         Self {
             mode: LogitechJoystickMode::Left,
         }
     }
 
+    /// Creates a new instance of LogitechJoystick in right mode.
     pub fn right_mode() -> Self {
         Self {
             mode: LogitechJoystickMode::Right,

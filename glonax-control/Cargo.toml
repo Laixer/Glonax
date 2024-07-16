@@ -1,5 +1,5 @@
 [package]
-name = "glonax-utils"
+name = "glonax-control"
 version = "1.0.0"
 authors = ["Laixer Equipment B.V. <info@laixer.com>"]
 edition = "2021"
@@ -13,10 +13,12 @@ anyhow = "1.0"
 tokio = { version = "1.38", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
 simplelog = "0.12"
+serde = "1.0"
+serde_derive = "1.0"
 ansi_term = "0.12"
 hex = "0.4"
 chrono = "0.4"
 
 [[bin]]
-name = "glonax-netctl"
-path = "src/netctl.rs"
+name = "glonaxctl"
+path = "src/main.rs"

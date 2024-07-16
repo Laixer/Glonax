@@ -119,6 +119,11 @@ async fn main() -> anyhow::Result<()> {
 async fn run(args: Args) -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
+    glonax::log_system();
+
+    log::info!("Starting {}", bin_name);
+    log::debug!("Runtime version: {}", glonax::consts::VERSION);
+
     let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
 
     log::debug!("Using joystick {}", args.device);
@@ -148,11 +153,6 @@ async fn run(args: Args) -> anyhow::Result<()> {
     if input_state.motion_lock {
         log::info!("Motion is locked on startup");
     }
-
-    glonax::log_system();
-
-    log::info!("Starting {}", bin_name);
-    log::debug!("Runtime version: {}", glonax::consts::VERSION);
 
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
     let unix_socket = args.path.unwrap_or_else(|| "/tmp/glonax.sock".into());

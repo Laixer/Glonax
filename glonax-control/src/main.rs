@@ -4,16 +4,32 @@
 // This software may be modified and distributed under the terms
 // of the included license.  See the LICENSE file for details.
 
-use clap::{Parser, ValueEnum};
+use clap::{Parser, ValueEnum, ValueHint};
+
+mod config;
 
 #[derive(Parser)]
 #[command(author = "Copyright (C) 2024 Laixer Equipment B.V.")]
 #[command(version, propagate_version = true)]
 #[command(about = "Glonax input daemon", long_about = None)]
 struct Args {
+    /// Configuration file.
+    #[arg(
+        short = 'c',
+        long = "config",
+        alias = "conf",
+        default_value = "/etc/glonax.conf",
+        value_name = "FILE",
+        value_hint = ValueHint::FilePath
+    )]
+    config: std::path::PathBuf,
     /// Socket path.
-    #[arg(short = 'c', long = "connect", default_value = "/tmp/glonax.sock")]
-    path: std::path::PathBuf,
+    #[arg(
+        short = 's',
+        long = "socket",
+        value_hint = ValueHint::FilePath
+    )]
+    path: Option<std::path::PathBuf>,
     /// Level of verbosity.
     #[arg(short, long, action = clap::ArgAction::Count)]
     verbose: u8,
@@ -85,11 +101,15 @@ fn string_to_bool(s: &str) -> Option<bool> {
 // TODO: Put into own crate
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let bin_name = env!("CARGO_BIN_NAME").to_string();
-
     use log::LevelFilter;
 
-    let args = Args::parse();
+    let mut args = Args::parse();
+
+    let config: config::Config = glonax::from_file(&args.config)?;
+
+    if args.path.is_none() {
+        args.path = Some(config.unix_listener.path.clone());
+    }
 
     let mut log_config = simplelog::ConfigBuilder::new();
     log_config.set_time_level(log::LevelFilter::Off);
@@ -112,7 +132,14 @@ async fn main() -> anyhow::Result<()> {
         simplelog::ColorChoice::Auto,
     )?;
 
-    // TODO: Wrap into run function
+    log::trace!("{:#?}", config);
+
+    run(args).await
+}
+
+// TODO: Pass both config and args to run
+async fn run(args: Args) -> anyhow::Result<()> {
+    let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     glonax::log_system();
 
@@ -120,12 +147,13 @@ async fn main() -> anyhow::Result<()> {
     log::debug!("Runtime version: {}", glonax::consts::VERSION);
 
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
+    let unix_socket = args.path.unwrap_or_else(|| "/tmp/glonax.sock".into());
     let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(user_agent)
         .stream(true)
-        .unix_connect(&args.path)
+        .unix_connect(&unix_socket)
         .await?;
 
-    log::debug!("Connected to {}", args.path.display());
+    log::debug!("Connected to {}", unix_socket.display());
     log::info!("{}", instance);
 
     if !glonax::is_compatibile(instance.version()) {
