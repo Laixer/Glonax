@@ -185,10 +185,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Status {
-                            log::info!("{}", status);
+                            log::info!("Status: {}", status);
                         }
                     } else {
-                        log::info!("{}", status);
+                        log::info!("Status: {}", status);
                     }
                 }
                 glonax::core::Instance::MESSAGE_TYPE => {
@@ -205,10 +205,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Engine {
-                            log::info!("{}", engine);
+                            log::info!("Engine: {}", engine);
                         }
                     } else {
-                        log::info!("{}", engine);
+                        log::info!("Engine: {}", engine);
                     }
                 }
                 glonax::core::Gnss::MESSAGE_TYPE => {
@@ -218,10 +218,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Gnss {
-                            log::info!("{}", gnss);
+                            log::info!("GNSS: {}", gnss);
                         }
                     } else {
-                        log::info!("{}", gnss);
+                        log::info!("GNSS: {}", gnss);
                     }
                 }
                 glonax::core::Motion::MESSAGE_TYPE => {
@@ -231,10 +231,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Motion {
-                            log::info!("{}", motion);
+                            log::info!("Motion: {}", motion);
                         }
                     } else {
-                        log::info!("{}", motion);
+                        log::info!("Motion: {}", motion);
                     }
                 }
                 glonax::core::Rotator::MESSAGE_TYPE => {
@@ -244,10 +244,10 @@ async fn run(args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Rotator {
-                            log::info!("{}", rotator);
+                            log::info!("Rotator: {}", rotator);
                         }
                     } else {
-                        log::info!("{}", rotator);
+                        log::info!("Rotator: {}", rotator);
                     }
                 }
                 glonax::world::Actor::MESSAGE_TYPE => {
