@@ -103,13 +103,9 @@ fn string_to_bool(s: &str) -> Option<bool> {
 async fn main() -> anyhow::Result<()> {
     use log::LevelFilter;
 
-    let mut args = Args::parse();
+    let args = Args::parse();
 
     let config: config::Config = glonax::from_file(&args.config)?;
-
-    if args.path.is_none() {
-        args.path = Some(config.unix_listener.path.clone());
-    }
 
     let mut log_config = simplelog::ConfigBuilder::new();
     log_config.set_time_level(log::LevelFilter::Off);
@@ -134,27 +130,35 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    run(args).await
+    run(config, args).await
 }
 
-// TODO: Pass both config and args to run
-async fn run(args: Args) -> anyhow::Result<()> {
+async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
+    use glonax::consts::*;
+
     let bin_name = env!("CARGO_BIN_NAME").to_string();
+
+    let socket_path = args
+        .path
+        .unwrap_or_else(|| config.unix_listener.path.clone());
 
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);
-    log::debug!("Runtime version: {}", glonax::consts::VERSION);
+    log::debug!("Runtime version: {}", VERSION);
 
-    let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
-    let unix_socket = args.path.unwrap_or_else(|| "/tmp/glonax.sock".into());
+    let user_agent = format!("{}/{}", bin_name, VERSION);
     let (mut client, instance) = glonax::protocol::client::ClientBuilder::new(user_agent)
         .stream(true)
-        .unix_connect(&unix_socket)
+        .unix_connect(&socket_path)
         .await?;
 
-    log::debug!("Connected to {}", unix_socket.display());
+    log::debug!("Connected to {}", socket_path.display());
     log::info!("{}", instance);
+
+    if instance.id().is_nil() {
+        log::warn!("Instance ID is not set or invalid");
+    }
 
     if !glonax::is_compatibile(instance.version()) {
         return Err(anyhow::anyhow!("Incompatible runtime version"));

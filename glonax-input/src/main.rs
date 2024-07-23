@@ -112,6 +112,8 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
+    use glonax::consts::*;
+
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
     let socket_path = args
@@ -121,7 +123,8 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);
-    log::debug!("Runtime version: {}", glonax::consts::VERSION);
+    log::debug!("Runtime version: {}", VERSION);
+    log::debug!("Socket path: {}", socket_path.display());
 
     let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
 
@@ -153,7 +156,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
         log::info!("Motion is locked on startup");
     }
 
-    let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
+    let user_agent = format!("{}/{}", bin_name, VERSION);
     let (mut client, instance) = if args.fail_safe {
         glonax::protocol::unix_connect_safe(&socket_path, user_agent).await?
     } else {
@@ -162,6 +165,10 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
     log::debug!("Connected to {}", socket_path.display());
     log::info!("{}", instance);
+
+    if instance.id().is_nil() {
+        log::warn!("Instance ID is not set or invalid");
+    }
 
     if !glonax::is_compatibile(instance.version()) {
         return Err(anyhow::anyhow!("Incompatible runtime version"));
