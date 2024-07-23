@@ -43,11 +43,7 @@ async fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    let mut config: config::Config = glonax::from_file(args.config)?;
-
-    if args.pilot_only {
-        config.mode = config::OperationMode::PilotRestrict;
-    }
+    let config: config::Config = glonax::from_file(&args.config)?;
 
     let is_daemon = args.daemon;
     if is_daemon {
@@ -81,11 +77,10 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    run(config).await
+    run(config, args).await
 }
 
-// TODO: Pass both config and args to run
-async fn run(config: config::Config) -> anyhow::Result<()> {
+async fn run(config: config::Config, _args: Args) -> anyhow::Result<()> {
     use glonax::consts::*;
     use glonax::service;
 
@@ -103,11 +98,17 @@ async fn run(config: config::Config) -> anyhow::Result<()> {
         machine.serial.clone(),
     );
 
+    let mode = if _args.pilot_only {
+        config::OperationMode::PilotRestrict
+    } else {
+        config.mode
+    };
+
     glonax::log_system();
 
     log::info!("Starting {}", bin_name);
     log::info!("Runtime version: {}", VERSION);
-    log::info!("Running in operation mode: {}", config.mode);
+    log::info!("Running in operation mode: {}", mode);
     log::info!("{}", instance);
 
     if instance.id().is_nil() {
