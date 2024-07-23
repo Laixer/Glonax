@@ -72,13 +72,9 @@ struct Args {
 async fn main() -> anyhow::Result<()> {
     use log::LevelFilter;
 
-    let mut args = Args::parse();
+    let args = Args::parse();
 
     let config: config::Config = glonax::from_file(&args.config)?;
-
-    if args.path.is_none() {
-        args.path = Some(config.unix_listener.path.clone());
-    }
 
     let is_daemon = args.daemon;
     if is_daemon {
@@ -112,12 +108,15 @@ async fn main() -> anyhow::Result<()> {
 
     log::trace!("{:#?}", config);
 
-    run(args).await
+    run(config, args).await
 }
 
-// TODO: Pass both config and args to run
-async fn run(args: Args) -> anyhow::Result<()> {
+async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
     let bin_name = env!("CARGO_BIN_NAME").to_string();
+
+    let socket_path = args
+        .path
+        .unwrap_or_else(|| config.unix_listener.path.clone());
 
     glonax::log_system();
 
@@ -155,14 +154,13 @@ async fn run(args: Args) -> anyhow::Result<()> {
     }
 
     let user_agent = format!("{}/{}", bin_name, glonax::consts::VERSION);
-    let unix_socket = args.path.unwrap_or_else(|| "/tmp/glonax.sock".into());
     let (mut client, instance) = if args.fail_safe {
-        glonax::protocol::unix_connect_safe(&unix_socket, user_agent).await?
+        glonax::protocol::unix_connect_safe(&socket_path, user_agent).await?
     } else {
-        glonax::protocol::unix_connect(&unix_socket, user_agent).await?
+        glonax::protocol::unix_connect(&socket_path, user_agent).await?
     };
 
-    log::debug!("Connected to {}", unix_socket.display());
+    log::debug!("Connected to {}", socket_path.display());
     log::info!("{}", instance);
 
     if !glonax::is_compatibile(instance.version()) {

@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
     run(config, args).await
 }
 
-async fn run(config: config::Config, _args: Args) -> anyhow::Result<()> {
+async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
     use glonax::consts::*;
     use glonax::service;
 
@@ -98,7 +98,7 @@ async fn run(config: config::Config, _args: Args) -> anyhow::Result<()> {
         machine.serial.clone(),
     );
 
-    let mode = if _args.pilot_only {
+    let mode = if args.pilot_only {
         config::OperationMode::PilotRestrict
     } else {
         config.mode
