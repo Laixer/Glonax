@@ -35,16 +35,40 @@ impl Instance {
         }
     }
 
+    /// Retrieve the instance unique identifier.
+    #[inline]
+    pub fn id(&self) -> &uuid::Uuid {
+        &self.id
+    }
+
+    /// Retrieve the instance model.
+    #[inline]
+    pub fn model(&self) -> &str {
+        &self.model
+    }
+
+    /// Retrieve the instance type.
+    #[inline]
+    pub fn ty(&self) -> MachineType {
+        self.ty
+    }
+
     /// Retrieve the instance version.
     #[inline]
     pub fn version(&self) -> (u8, u8, u8) {
         self.version
     }
 
-    /// Retrieve the instance unique identifier.
+    /// Retrieve the instance version as a string.
     #[inline]
-    pub fn id(&self) -> &uuid::Uuid {
-        &self.id
+    pub fn version_string(&self) -> String {
+        format!("{}.{}.{}", self.version.0, self.version.1, self.version.2)
+    }
+
+    /// Retrieve the instance serial number.
+    #[inline]
+    pub fn serial_number(&self) -> &str {
+        &self.serial_number
     }
 }
 
@@ -52,13 +76,11 @@ impl std::fmt::Display for Instance {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Instance ID: {}, Model: {}, Type: {:?}, Version: {}.{}.{}; Serial: {}",
+            "Instance ID: {}, Model: {}, Type: {:?}, Version: {}; Serial: {}",
             self.id,
             self.model,
             self.ty,
-            self.version.0,
-            self.version.1,
-            self.version.2,
+            self.version_string(),
             self.serial_number
         )
     }

@@ -88,6 +88,8 @@ enum Command {
     },
     /// Queue target.
     Target { x: f32, y: f32, z: f32 },
+    /// Instance information.
+    Info,
 }
 
 fn string_to_bool(s: &str) -> Option<bool> {
@@ -326,6 +328,16 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             log::info!("Queue target: {}", target);
 
             client.send_packet(&target).await?;
+        }
+        Command::Info => {
+            println!(
+                "{} {} {:?} {} {}",
+                instance.id(),
+                instance.model(),
+                instance.ty(),
+                instance.version_string(),
+                instance.serial_number()
+            );
         }
     }
 
