@@ -6,19 +6,13 @@ use crate::{
     runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
-use super::vecraft::{VecraftConfigMessage, VecraftStatusMessage};
-
-const STATUS_PGN: u32 = 65_288;
-
-pub enum VehicleMessage {
-    VecraftConfig(VecraftConfigMessage),
+pub enum ECUMessage {
     SoftwareIdentification((u8, u8, u8)),
     AddressClaim(Name),
-    Status(VecraftStatusMessage),
 }
 
 #[derive(Clone)]
-pub struct VehicleControlUnit {
+pub struct ElectronicControlUnit {
     /// Network interface.
     interface: String,
     /// Destination address.
@@ -27,8 +21,7 @@ pub struct VehicleControlUnit {
     source_address: u8,
 }
 
-impl VehicleControlUnit {
-    /// Construct a new vehicle service.
+impl ElectronicControlUnit {
     pub fn new(interface: &str, da: u8, sa: u8) -> Self {
         Self {
             interface: interface.to_string(),
@@ -38,8 +31,8 @@ impl VehicleControlUnit {
     }
 }
 
-impl Parsable<VehicleMessage> for VehicleControlUnit {
-    fn parse(&self, frame: &Frame) -> Option<VehicleMessage> {
+impl Parsable<ECUMessage> for ElectronicControlUnit {
+    fn parse(&self, frame: &Frame) -> Option<ECUMessage> {
         if let Some(destination_address) = frame.id().destination_address() {
             if destination_address != self.destination_address && destination_address != 0xff {
                 return None;
@@ -47,19 +40,6 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
         }
 
         match frame.id().pgn() {
-            PGN::ProprietarilyConfigurableMessage1 => {
-                if frame.pdu()[0..2] != [b'Z', b'C'] {
-                    return None;
-                }
-
-                Some(VehicleMessage::VecraftConfig(
-                    VecraftConfigMessage::from_frame(
-                        self.destination_address,
-                        self.source_address,
-                        frame,
-                    ),
-                ))
-            }
             PGN::SoftwareIdentification => {
                 if frame.id().source_address() != self.destination_address {
                     return None;
@@ -83,9 +63,7 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                             patch = frame.pdu()[3];
                         }
 
-                        Some(VehicleMessage::SoftwareIdentification((
-                            major, minor, patch,
-                        )))
+                        Some(ECUMessage::SoftwareIdentification((major, minor, patch)))
                     } else {
                         None
                     }
@@ -98,17 +76,8 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
                     return None;
                 }
 
-                Some(VehicleMessage::AddressClaim(Name::from_bytes(
+                Some(ECUMessage::AddressClaim(Name::from_bytes(
                     frame.pdu().try_into().unwrap(),
-                )))
-            }
-            PGN::ProprietaryB(STATUS_PGN) => {
-                if frame.id().source_address() != self.destination_address {
-                    return None;
-                }
-
-                Some(VehicleMessage::Status(VecraftStatusMessage::from_frame(
-                    frame,
                 )))
             }
             _ => None,
@@ -116,13 +85,13 @@ impl Parsable<VehicleMessage> for VehicleControlUnit {
     }
 }
 
-impl J1939Unit for VehicleControlUnit {
+impl J1939Unit for ElectronicControlUnit {
     fn vendor(&self) -> &'static str {
-        "laixer"
+        "j1939"
     }
 
     fn product(&self) -> &'static str {
-        "vcu"
+        "ecu"
     }
 
     fn destination(&self) -> u8 {
@@ -165,8 +134,7 @@ impl J1939Unit for VehicleControlUnit {
     ) -> Result<(), J1939UnitError> {
         if let Some(message) = self.parse(frame) {
             match message {
-                VehicleMessage::VecraftConfig(_config) => {}
-                VehicleMessage::SoftwareIdentification(version) => {
+                ECUMessage::SoftwareIdentification(version) => {
                     debug!(
                         "[{}] {}: Firmware version: {}.{}.{}",
                         self.interface,
@@ -180,7 +148,7 @@ impl J1939Unit for VehicleControlUnit {
 
                     return Ok(());
                 }
-                VehicleMessage::AddressClaim(name) => {
+                ECUMessage::AddressClaim(name) => {
                     debug!(
                         "[{}] {}: Address claimed: {}",
                         self.interface,
@@ -192,27 +160,7 @@ impl J1939Unit for VehicleControlUnit {
 
                     return Ok(());
                 }
-                VehicleMessage::Status(status) => {
-                    ctx.rx_mark();
-
-                    status.into_error()?;
-
-                    return Ok(());
-                }
             }
-        }
-
-        Ok(())
-    }
-
-    fn trigger(
-        &self,
-        _ctx: &mut NetDriverContext,
-        _tx_queue: &mut Vec<j1939::Frame>,
-        object: &Object,
-    ) -> Result<(), J1939UnitError> {
-        if let Object::Control(control) = object {
-            trace!("[{}] {}: Control: {}", self.interface, self.name(), control);
         }
 
         Ok(())
