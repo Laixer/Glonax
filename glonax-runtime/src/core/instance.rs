@@ -41,6 +41,11 @@ impl Instance {
         &self.id
     }
 
+    /// Retrieve the instance unique identifier as a short string.
+    pub fn id_short(&self) -> String {
+        self.id.to_string().chars().take(8).collect()
+    }
+
     /// Retrieve the instance model.
     #[inline]
     pub fn model(&self) -> &str {
