@@ -270,6 +270,8 @@ impl J1939Unit for KueblerInclinometer {
                         name
                     );
 
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
                 InclinoMessage::ProcessData(process_data) => {

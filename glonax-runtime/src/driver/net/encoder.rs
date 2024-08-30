@@ -293,6 +293,8 @@ impl J1939Unit for KueblerEncoder {
                         name
                     );
 
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
                 EncoderMessage::ProcessData(process_data) => {

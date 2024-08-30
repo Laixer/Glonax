@@ -408,9 +408,13 @@ impl J1939Unit for EngineManagementSystem {
                 EngineMessage::Shutdown(_shutdown) => {
                     // TODO: Handle shutdown message, set state to stopping
 
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
                 _ => {
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
             }

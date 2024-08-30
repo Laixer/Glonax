@@ -492,6 +492,8 @@ impl J1939Unit for HydraulicControlUnit {
                         version.2
                     );
 
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
                 HydraulicMessage::AddressClaim(name) => {
@@ -501,6 +503,8 @@ impl J1939Unit for HydraulicControlUnit {
                         self.name(),
                         name
                     );
+
+                    ctx.rx_mark();
 
                     return Ok(());
                 }

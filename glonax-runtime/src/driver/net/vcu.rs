@@ -159,7 +159,7 @@ impl J1939Unit for VehicleControlUnit {
 
     fn try_recv(
         &self,
-        _ctx: &mut NetDriverContext,
+        ctx: &mut NetDriverContext,
         frame: &j1939::Frame,
         _rx_queue: &mut Vec<Object>,
     ) -> Result<(), J1939UnitError> {
@@ -176,6 +176,8 @@ impl J1939Unit for VehicleControlUnit {
                         version.2
                     );
 
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
                 VehicleMessage::AddressClaim(name) => {
@@ -186,9 +188,13 @@ impl J1939Unit for VehicleControlUnit {
                         name
                     );
 
+                    ctx.rx_mark();
+
                     return Ok(());
                 }
                 VehicleMessage::Status(status) => {
+                    ctx.rx_mark();
+
                     status.into_error()?;
 
                     return Ok(());
