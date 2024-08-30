@@ -118,8 +118,9 @@ async fn main() -> anyhow::Result<()> {
     log_config.add_filter_ignore_str("mio");
 
     let log_level = match args.verbose {
-        0 => LevelFilter::Info,
-        1 => LevelFilter::Debug,
+        0 => LevelFilter::Error,
+        1 => LevelFilter::Info,
+        2 => LevelFilter::Debug,
         _ => LevelFilter::Trace,
     };
 
