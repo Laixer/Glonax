@@ -139,6 +139,7 @@ impl Director {
                 let rotation = rotator.rotator;
 
                 let (roll, pitch, yaw) = rotation.euler_angles();
+                #[allow(clippy::if_same_then_else)]
                 if roll == 0.0 && pitch > 60.0_f32.to_radians() && yaw == 0.0 {
                     log::warn!("Boom pitch angle is out of range");
                     return DirectorLocslState::UnboundKinematics;
