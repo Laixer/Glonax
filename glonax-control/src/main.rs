@@ -69,6 +69,8 @@ enum Command {
         /// RPM
         rpm: u16,
     },
+    /// Shutdown engine.
+    Shutdown,
     /// Lights commands.
     Lights {
         /// On or off.
@@ -275,12 +277,16 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
         Command::Engine { rpm } => {
             log::info!("Requesting engine RPM: {}", rpm);
 
-            let engine = if rpm > 0 {
-                glonax::core::Engine::from_rpm(rpm)
-            } else {
-                glonax::core::Engine::shutdown()
-            };
+            // TODO: Clap should have a way to validate this
+            if rpm > 0 && rpm <= 10_000 {
+                let engine = glonax::core::Engine::from_rpm(rpm);
+                client.send_packet(&engine).await?;
+            }
+        }
+        Command::Shutdown => {
+            log::info!("Shutting down engine");
 
+            let engine = glonax::core::Engine::shutdown();
             client.send_packet(&engine).await?;
         }
         Command::Lights { toggle } => {
