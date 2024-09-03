@@ -390,11 +390,6 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
             }
 
-            if driver.is_rx_timeout() {
-                let e = J1939UnitError::MessageTimeout;
-                error!("[{}] {}: {}", self.network.interface(), driver, e);
-            }
-
             if let Err(e) = self.network.send_vectored(&tx_queue).await {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
             };
