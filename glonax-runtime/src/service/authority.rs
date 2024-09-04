@@ -317,6 +317,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 driver.context.rx_mark();
                 if driver.last_status.is_none() {
                     driver.last_status = Some(ModuleStatus::healthy(driver.driver.name()));
+                    debug!(
+                        "[{}] Initial status: {}",
+                        self.network.interface(),
+                        driver.last_status.as_ref().unwrap()
+                    );
                 }
                 break;
             }
