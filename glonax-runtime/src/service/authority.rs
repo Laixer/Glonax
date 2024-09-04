@@ -214,7 +214,12 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                     driver.timeout.map(Duration::from_millis),
                 ));
             } else {
-                error!("Unknown driver: {} {}", driver.vendor, driver.product);
+                error!(
+                    "[{}] Unknown driver: {} {}",
+                    network.interface(),
+                    driver.vendor,
+                    driver.product
+                );
             }
         }
 
@@ -231,13 +236,21 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         let frame = &protocol::address_claimed(self.default_address, self.network.name());
 
         if let Err(e) = self.network.send(frame).await {
-            error!("Failed to send address claimed: {}", e);
+            error!(
+                "[{}] Failed to send address claimed: {}",
+                self.network.interface(),
+                e
+            );
         }
     }
 
     async fn recv(&mut self, signal_tx: SignalSender) {
         if let Err(e) = self.network.recv().await {
-            error!("Failed to receive from router: {}", e);
+            error!(
+                "[{}] Failed to receive from network: {}",
+                self.network.interface(),
+                e
+            );
         }
 
         let frame = self.network.frame().unwrap();
@@ -253,7 +266,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                         protocol::address_claimed(self.default_address, self.network.name());
 
                     if let Err(e) = self.network.send(&frame).await {
-                        error!("Failed to send address claimed: {}", e);
+                        error!(
+                            "[{}] Failed to send address claimed: {}",
+                            self.network.interface(),
+                            e
+                        );
                     }
                 }
                 j1939::PGN::SoftwareIdentification => {
@@ -271,7 +288,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                         .build();
 
                     if let Err(e) = self.network.send(&frame).await {
-                        error!("Failed to send software identification: {}", e);
+                        error!(
+                            "[{}] Failed to send software identification: {}",
+                            self.network.interface(),
+                            e
+                        );
                     }
                 }
                 j1939::PGN::TimeDate => {
@@ -286,7 +307,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                         .build();
 
                     if let Err(e) = self.network.send(&frame).await {
-                        error!("Failed to send time date: {}", e);
+                        error!(
+                            "[{}] Failed to send time date: {}",
+                            self.network.interface(),
+                            e
+                        );
                     }
                 }
                 _ => (),
@@ -315,6 +340,8 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
             if !rx_queue.is_empty() {
                 driver.context.rx_mark();
+
+                // TODO: Move to tick
                 if driver.last_status.is_none() {
                     driver.last_status = Some(ModuleStatus::healthy(driver.driver.name()));
                     debug!(
@@ -354,20 +381,22 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             };
 
             if is_status_changed {
-                driver.last_status = Some(module_status.clone());
                 if module_status.is_healthy() {
                     debug!(
-                        "[{}] Status change: {}",
+                        "[{}] Status change: {} => {}",
                         self.network.interface(),
+                        driver.last_status.as_ref().unwrap(),
                         module_status
                     );
                 } else {
                     error!(
-                        "[{}] Status change: {}",
+                        "[{}] Status change: {} => {}",
                         self.network.interface(),
+                        driver.last_status.as_ref().unwrap(),
                         module_status
                     );
                 }
+                driver.last_status = Some(module_status.clone());
             }
 
             // TODO: Send the signal every 100ms or when there is a change in the module status
