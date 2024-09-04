@@ -323,8 +323,10 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut rx_queue = Vec::new();
 
+            // TODO: try_recv needs to return a result with state instructions
             if let Err(e) = driver.try_recv(frame, &mut rx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
+                // TODO: Set the unit error as driver status
             }
 
             for object in &rx_queue {
@@ -340,16 +342,6 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
             if !rx_queue.is_empty() {
                 driver.context.rx_mark();
-
-                // TODO: Move to tick
-                if driver.last_status.is_none() {
-                    driver.last_status = Some(ModuleStatus::healthy(driver.driver.name()));
-                    debug!(
-                        "[{}] Initial status: {}",
-                        self.network.interface(),
-                        driver.last_status.as_ref().unwrap()
-                    );
-                }
                 break;
             }
         }
@@ -363,51 +355,72 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
-            let mut module_status = ModuleStatus::healthy(driver.driver.name());
+
+            let mut module_status: Option<ModuleStatus> = None;
+
+            if driver.last_status.is_none() {
+                module_status = Some(ModuleStatus::healthy(driver.driver.name()));
+            }
 
             if let Err(e) = driver.tick(&mut tx_queue) {
-                module_status = ModuleStatus::faulty(driver.driver.name(), e.into());
+                module_status = Some(ModuleStatus::faulty(driver.driver.name(), e.into()));
             }
 
             if driver.is_rx_timeout() {
                 let e = J1939UnitError::MessageTimeout;
-                module_status = ModuleStatus::faulty(driver.driver.name(), e.into());
+                module_status = Some(ModuleStatus::faulty(driver.driver.name(), e.into()));
             }
 
-            let is_status_changed = if let Some(last_status) = &driver.last_status {
-                last_status != &module_status
+            let is_status_changed = if let Some(module_status) = &module_status {
+                let is_changed = driver.last_status.as_ref() != Some(module_status);
+
+                if is_changed {
+                    if driver.last_status.is_some() {
+                        if module_status.is_healthy() {
+                            debug!(
+                                "[{}] Status change: {} => {}",
+                                self.network.interface(),
+                                driver.last_status.as_ref().unwrap(),
+                                module_status
+                            );
+                        } else {
+                            error!(
+                                "[{}] Status change: {} => {}",
+                                self.network.interface(),
+                                driver.last_status.as_ref().unwrap(),
+                                module_status
+                            );
+                        }
+                    } else {
+                        debug!(
+                            "[{}] Initial status: {}",
+                            self.network.interface(),
+                            module_status
+                        );
+                    }
+
+                    driver.last_status = Some(module_status.clone());
+                }
+
+                is_changed
             } else {
                 false
             };
 
-            if is_status_changed {
-                if module_status.is_healthy() {
-                    debug!(
-                        "[{}] Status change: {} => {}",
-                        self.network.interface(),
-                        driver.last_status.as_ref().unwrap(),
-                        module_status
-                    );
-                } else {
-                    error!(
-                        "[{}] Status change: {} => {}",
-                        self.network.interface(),
-                        driver.last_status.as_ref().unwrap(),
-                        module_status
-                    );
-                }
-                driver.last_status = Some(module_status.clone());
-            }
-
-            // TODO: Send the signal every 100ms or when there is a change in the module status
-            if interval_decimation(Duration::from_millis(10), self.tick, 100) || is_status_changed {
-                if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
-                    error!(
-                        "[{}] {}: Failed to send signal: {}",
-                        self.network.interface(),
-                        driver,
-                        e
-                    );
+            if let Some(last_status) = &driver.last_status {
+                // TODO: Limit the signal rate further up the chain
+                // TODO: Send the signal every 100ms or when there is a change in the module status
+                if interval_decimation(Duration::from_millis(10), self.tick, 100)
+                    || is_status_changed
+                {
+                    if let Err(e) = signal_tx.send(Object::ModuleStatus(last_status.clone())) {
+                        error!(
+                            "[{}] {}: Failed to send signal: {}",
+                            self.network.interface(),
+                            driver,
+                            e
+                        );
+                    }
                 }
             }
 
