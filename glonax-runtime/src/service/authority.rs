@@ -315,6 +315,9 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
 
             if !rx_queue.is_empty() {
                 driver.context.rx_mark();
+                if driver.last_status.is_none() {
+                    driver.last_status = Some(ModuleStatus::healthy(driver.driver.name()));
+                }
                 break;
             }
         }
@@ -339,14 +342,14 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 module_status = ModuleStatus::faulty(driver.driver.name(), e.into());
             }
 
-            let status_changed = if driver.last_status != Some(module_status.clone()) {
-                driver.last_status = Some(module_status.clone());
-                true
+            let is_status_changed = if let Some(last_status) = &driver.last_status {
+                last_status != &module_status
             } else {
                 false
             };
 
-            if status_changed {
+            if is_status_changed {
+                driver.last_status = Some(module_status.clone());
                 if module_status.is_healthy() {
                     debug!(
                         "[{}] Status change: {}",
@@ -363,7 +366,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
             }
 
             // TODO: Send the signal every 100ms or when there is a change in the module status
-            if interval_decimation(Duration::from_millis(10), self.tick, 100) || status_changed {
+            if interval_decimation(Duration::from_millis(10), self.tick, 100) || is_status_changed {
                 if let Err(e) = signal_tx.send(Object::ModuleStatus(module_status)) {
                     error!(
                         "[{}] {}: Failed to send signal: {}",
