@@ -356,11 +356,8 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
-            let mut module_status: Option<ModuleStatus> = None;
-
-            if driver.last_status.is_none() {
-                module_status = Some(ModuleStatus::healthy(driver.driver.name()));
-            }
+            let mut module_status: Option<ModuleStatus> =
+                Some(ModuleStatus::healthy(driver.driver.name()));
 
             if let Err(e) = driver.tick(&mut tx_queue) {
                 module_status = Some(ModuleStatus::faulty(driver.driver.name(), e.into()));
