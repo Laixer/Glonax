@@ -259,6 +259,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 return;
             }
 
+            // TODO: Move this to a separate function
             let pgn = protocol::request_from_pdu(frame.pdu());
             match pgn {
                 j1939::PGN::AddressClaimed => {
@@ -323,7 +324,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut rx_queue = Vec::new();
 
-            // TODO: try_recv needs to return a result with state instructions
+            // TODO: try_recv needs to return a result with state instructions (healthy, faulty, unknown)
             if let Err(e) = driver.try_recv(frame, &mut rx_queue) {
                 error!("[{}] {}: {}", self.network.interface(), driver, e);
                 // TODO: Set the unit error as driver status
@@ -356,8 +357,11 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
         for driver in self.drivers.iter_mut() {
             let mut tx_queue = Vec::new();
 
-            let mut module_status: Option<ModuleStatus> =
-                Some(ModuleStatus::healthy(driver.driver.name()));
+            let mut module_status: Option<ModuleStatus> = if driver.context.rx_count() > 0 {
+                Some(ModuleStatus::healthy(driver.driver.name()))
+            } else {
+                None
+            };
 
             if let Err(e) = driver.tick(&mut tx_queue) {
                 module_status = Some(ModuleStatus::faulty(driver.driver.name(), e.into()));
@@ -374,7 +378,7 @@ impl NetworkService<NetworkConfig> for NetworkAuthority {
                 if is_changed {
                     if driver.last_status.is_some() {
                         if module_status.is_healthy() {
-                            debug!(
+                            info!(
                                 "[{}] Status change: {} => {}",
                                 self.network.interface(),
                                 driver.last_status.as_ref().unwrap(),

@@ -8,12 +8,16 @@ use crate::core::{ModuleError, Object, ObjectMessage};
 use super::SignalSender;
 
 pub struct NetDriverContextDetail {
+    /// Number of messages sent.
+    _tx_count: u64,
     /// Last message sent.
     tx_last_message: Option<ObjectMessage>,
-    /// Last time a message was received.
-    rx_last: Instant,
+    /// Number of messages received.
+    rx_count: u64,
     /// Last message received.
     rx_last_message: Option<ObjectMessage>,
+    /// Last time a message was received.
+    rx_last: Instant,
 }
 
 impl NetDriverContextDetail {
@@ -24,6 +28,7 @@ impl NetDriverContextDetail {
 
     /// Mark the last time a message was received.
     fn rx_mark(&mut self) {
+        self.rx_count += 1; // TODO: Increment the number of messages received.
         self.rx_last = Instant::now();
     }
 }
@@ -31,9 +36,11 @@ impl NetDriverContextDetail {
 impl Default for NetDriverContextDetail {
     fn default() -> Self {
         Self {
+            _tx_count: 0,
             tx_last_message: None,
-            rx_last: Instant::now(),
+            rx_count: 0,
             rx_last_message: None,
+            rx_last: Instant::now(),
         }
     }
 }
@@ -72,6 +79,10 @@ impl NetDriverContext {
 
     pub fn rx_last_message(&self) -> Option<ObjectMessage> {
         self.detail.lock().unwrap().rx_last_message.clone()
+    }
+
+    pub fn rx_count(&self) -> u64 {
+        self.detail.lock().unwrap().rx_count
     }
 }
 
