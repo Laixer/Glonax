@@ -73,24 +73,155 @@ pub mod consts {
     use std::time::Duration;
 
     /// Glonax runtime version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::VERSION;
+    ///
+    /// println!("Glonax runtime version: {}", VERSION);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the version of the Glonax runtime.
     pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
     /// Glonax runtime major version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::VERSION_MAJOR;
+    ///
+    /// println!("Glonax runtime major version: {}", VERSION_MAJOR);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the major version of the Glonax runtime.
     pub const VERSION_MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
+
     /// Glonax runtime minor version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::VERSION_MINOR;
+    ///
+    /// println!("Glonax runtime minor version: {}", VERSION_MINOR);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the minor version of the Glonax runtime.
     pub const VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
+
     /// Glonax runtime patch version.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::VERSION_PATCH;
+    ///
+    /// println!("Glonax runtime patch version: {}", VERSION_PATCH);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the patch version of the Glonax runtime.
     pub const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
+
     /// Glonax default network port for both TCP.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::DEFAULT_NETWORK_PORT;
+    ///
+    /// println!("Glonax default network port: {}", DEFAULT_NETWORK_PORT);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the default network port for both TCP in the Glonax runtime.
     pub const DEFAULT_NETWORK_PORT: u16 = 30_051;
+
     /// Glonax default queue size for commands.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::QUEUE_SIZE_COMMAND;
+    ///
+    /// println!("Glonax default queue size for commands: {}", QUEUE_SIZE_COMMAND);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the default queue size for commands in the Glonax runtime.
     pub const QUEUE_SIZE_COMMAND: usize = 16;
+
     /// Glonax default queue size for signals.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::QUEUE_SIZE_SIGNAL;
+    ///
+    /// println!("Glonax default queue size for signals: {}", QUEUE_SIZE_SIGNAL);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the default queue size for signals in the Glonax runtime.
     pub const QUEUE_SIZE_SIGNAL: usize = 16;
+
     /// Glonax network maximum number of clients.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::NETWORK_MAX_CLIENTS;
+    ///
+    /// println!("Glonax network maximum number of clients: {}", NETWORK_MAX_CLIENTS);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the maximum number of clients in the Glonax network.
     pub const NETWORK_MAX_CLIENTS: usize = 16;
+
     /// Glonax component delay threshold.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::COMPONENT_DELAY_THRESHOLD;
+    /// use std::time::Duration;
+    ///
+    /// println!("Glonax component delay threshold: {:?}", COMPONENT_DELAY_THRESHOLD);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the delay threshold for Glonax components.
     pub const COMPONENT_DELAY_THRESHOLD: Duration = Duration::from_millis(1);
+
     /// Glonax service pipeline interval.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use glonax_runtime::consts::SERVICE_PIPELINE_INTERVAL;
+    /// use std::time::Duration;
+    ///
+    /// println!("Glonax service pipeline interval: {:?}", SERVICE_PIPELINE_INTERVAL);
+    /// ```
+    ///
+    /// # Remarks
+    ///
+    /// This constant represents the interval for the Glonax service pipeline.
     pub const SERVICE_PIPELINE_INTERVAL: Duration = Duration::from_millis(10);
 }
 
