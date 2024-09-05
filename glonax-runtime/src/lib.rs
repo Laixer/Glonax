@@ -77,7 +77,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::VERSION;
+    /// use glonax::consts::VERSION;
     ///
     /// println!("Glonax runtime version: {}", VERSION);
     /// ```
@@ -92,7 +92,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::VERSION_MAJOR;
+    /// use glonax::consts::VERSION_MAJOR;
     ///
     /// println!("Glonax runtime major version: {}", VERSION_MAJOR);
     /// ```
@@ -107,7 +107,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::VERSION_MINOR;
+    /// use glonax::consts::VERSION_MINOR;
     ///
     /// println!("Glonax runtime minor version: {}", VERSION_MINOR);
     /// ```
@@ -122,7 +122,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::VERSION_PATCH;
+    /// use glonax::consts::VERSION_PATCH;
     ///
     /// println!("Glonax runtime patch version: {}", VERSION_PATCH);
     /// ```
@@ -137,7 +137,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::DEFAULT_NETWORK_PORT;
+    /// use glonax::consts::DEFAULT_NETWORK_PORT;
     ///
     /// println!("Glonax default network port: {}", DEFAULT_NETWORK_PORT);
     /// ```
@@ -152,7 +152,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::QUEUE_SIZE_COMMAND;
+    /// use glonax::consts::QUEUE_SIZE_COMMAND;
     ///
     /// println!("Glonax default queue size for commands: {}", QUEUE_SIZE_COMMAND);
     /// ```
@@ -167,7 +167,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::QUEUE_SIZE_SIGNAL;
+    /// use glonax::consts::QUEUE_SIZE_SIGNAL;
     ///
     /// println!("Glonax default queue size for signals: {}", QUEUE_SIZE_SIGNAL);
     /// ```
@@ -182,7 +182,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::NETWORK_MAX_CLIENTS;
+    /// use glonax::consts::NETWORK_MAX_CLIENTS;
     ///
     /// println!("Glonax network maximum number of clients: {}", NETWORK_MAX_CLIENTS);
     /// ```
@@ -197,7 +197,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::COMPONENT_DELAY_THRESHOLD;
+    /// use glonax::consts::COMPONENT_DELAY_THRESHOLD;
     /// use std::time::Duration;
     ///
     /// println!("Glonax component delay threshold: {:?}", COMPONENT_DELAY_THRESHOLD);
@@ -213,7 +213,7 @@ pub mod consts {
     /// # Example
     ///
     /// ```
-    /// use glonax_runtime::consts::SERVICE_PIPELINE_INTERVAL;
+    /// use glonax::consts::SERVICE_PIPELINE_INTERVAL;
     /// use std::time::Duration;
     ///
     /// println!("Glonax service pipeline interval: {:?}", SERVICE_PIPELINE_INTERVAL);
