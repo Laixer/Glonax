@@ -66,41 +66,177 @@ impl Instance {
     }
 
     /// Retrieve the instance unique identifier.
+    ///
+    /// # Returns
+    ///
+    /// The unique identifier of the instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.id().to_string(), "2c56e802-fd6b-4401-8f3e-89383f408dec");
+    /// ```
     #[inline]
     pub fn id(&self) -> &uuid::Uuid {
         &self.id
     }
 
     /// Retrieve the instance unique identifier as a short string.
+    ///
+    /// # Returns
+    ///
+    /// The unique identifier of the instance as a short string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.id_short(), "2c56e802");
+    /// ```
     pub fn id_short(&self) -> String {
         self.id.to_string().chars().take(8).collect()
     }
 
     /// Retrieve the instance model.
+    ///
+    /// # Returns
+    ///
+    /// The model of the instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.model(), "Model XYZ");
     #[inline]
     pub fn model(&self) -> &str {
         &self.model
     }
 
     /// Retrieve the instance type.
+    ///
+    /// # Returns
+    ///
+    /// The type of the instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.ty(), MachineType::WheelLoader);
     #[inline]
     pub fn ty(&self) -> MachineType {
         self.ty
     }
 
     /// Retrieve the instance version.
+    ///
+    /// # Returns
+    ///
+    /// The version of the instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.version(), (1, 2, 3));
+    /// ```
     #[inline]
     pub fn version(&self) -> (u8, u8, u8) {
         self.version
     }
 
     /// Retrieve the instance version as a string.
+    ///
+    /// # Returns
+    ///
+    /// The version of the instance as a string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.version_string(), "1.2.3");
     #[inline]
     pub fn version_string(&self) -> String {
         format!("{}.{}.{}", self.version.0, self.version.1, self.version.2)
     }
 
     /// Retrieve the instance serial number.
+    ///
+    /// # Returns
+    ///
+    /// The serial number of the instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///    "Model XYZ",
+    ///    MachineType::WheelLoader,
+    ///    (1, 2, 3),
+    ///    "ABC123"
+    /// );
+    ///
+    /// assert_eq!(instance.serial_number(), "ABC123");
     #[inline]
     pub fn serial_number(&self) -> &str {
         &self.serial_number
