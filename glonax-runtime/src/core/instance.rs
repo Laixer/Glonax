@@ -3,6 +3,10 @@ use serde_derive::Deserialize;
 
 use super::MachineType;
 
+/// Represents an instance of a machine.
+///
+/// This struct holds information about a machine instance, including its unique identifier,
+/// model, type, version, and serial number.
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Instance {
     /// Instance unique identifier.
@@ -19,6 +23,32 @@ pub struct Instance {
 
 impl Instance {
     /// Construct new instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `id` - The unique identifier of the instance.
+    /// * `model` - The model of the instance.
+    /// * `ty` - The type of the instance.
+    /// * `version` - The version of the instance.
+    /// * `serial_number` - The serial number of the instance.
+    ///
+    /// # Returns
+    ///
+    /// A new `Instance` object.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::core::{Instance, MachineType};
+    ///
+    /// let instance = Instance::new(
+    ///     "2c56e802-fd6b-4401-8f3e-89383f408dec",
+    ///     "Model XYZ",
+    ///     MachineType::WheelLoader,
+    ///     (1, 2, 3),
+    ///     "ABC123"
+    /// );
+    /// ```
     pub fn new(
         id: impl ToString,
         model: impl ToString,
