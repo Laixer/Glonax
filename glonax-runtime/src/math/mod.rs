@@ -11,6 +11,25 @@ mod lin;
 mod pid;
 
 /// Calculate the shortest rotation between two points on a circle
+///
+/// # Arguments
+///
+/// * `distance` - The distance between the two points
+///
+/// # Returns
+///
+/// The shortest rotation between the two points
+///
+/// # Examples
+///
+/// ```
+/// use glonax::math::shortest_rotation;
+///
+/// let distance = 45.0_f32.to_radians();
+/// let rotation = shortest_rotation(distance);
+///
+/// assert!(rotation < 46.0_f32.to_radians());
+/// ```
 pub fn shortest_rotation(distance: f32) -> f32 {
     let dist_normal = (distance + (2.0 * PI)) % (2.0 * PI);
 
@@ -22,6 +41,29 @@ pub fn shortest_rotation(distance: f32) -> f32 {
 }
 
 /// Calculate the angle of a triangle using the law of cosines
+///
+/// # Arguments
+///
+/// * `a` - The length of side a
+/// * `b` - The length of side b
+/// * `c` - The length of side c
+///
+/// # Returns
+///
+/// The angle of the triangle
+///
+/// # Examples
+///
+/// ```
+/// use glonax::math::law_of_cosines;
+///
+/// let a = 3.0;
+/// let b = 4.0;
+/// let c = 5.0;
+/// let angle = law_of_cosines(a, b, c);
+///
+/// assert_eq!(angle, 1.5707964);
+/// ```
 pub fn law_of_cosines(a: f32, b: f32, c: f32) -> f32 {
     let a2 = a.powi(2);
     let b2 = b.powi(2);
