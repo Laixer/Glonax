@@ -3,12 +3,8 @@ use std::f32::consts::PI;
 pub use geometry::*;
 pub use lin::*;
 
-#[allow(unused_imports)]
-pub use pid::*;
-
 mod geometry;
 mod lin;
-mod pid;
 
 /// Calculate the shortest rotation between two points on a circle
 ///
@@ -110,6 +106,31 @@ pub fn linear_motion(
 }
 
 /// Linear interpolation.
+///
+/// This function calculates the linear interpolation between two values.
+///
+/// # Arguments
+///
+/// * `a` - The start value
+/// * `b` - The end value
+/// * `t` - The interpolation factor
+///
+/// # Returns
+///
+/// The interpolated value
+///
+/// # Examples
+///
+/// ```
+/// use glonax::math::lerp;
+///
+/// let a = 0.0;
+/// let b = 1.0;
+/// let t = 0.5;
+/// let value = lerp(a, b, t);
+///
+/// assert_eq!(value, 0.5);
+/// ```
 #[inline]
 pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a + (b - a) * t
