@@ -28,7 +28,6 @@
 /// The `Operand` struct represents the operand, which is the current state of the machine.
 /// It includes the machine state and a governor for the engine. It provides methods for
 /// determining the governor mode and the status of the machine.
-// pub mod components;
 pub mod core;
 pub mod driver;
 pub mod logger;
@@ -252,6 +251,29 @@ pub fn log_system() {
 }
 
 /// Check if the runtime version is compatible.
+///
+/// # Arguments
+///
+/// * `version` - A tuple containing the major, minor, and patch version.
+///
+/// # Returns
+///
+/// A boolean indicating if the runtime version is compatible.
+///
+/// # Example
+///
+/// ```
+/// use glonax::is_compatibile;
+///
+/// let version = (1, 0, 0);
+/// let is_compatibile = is_compatibile(version);
+///
+/// println!("Is compatible: {}", is_compatibile);
+/// ```
+///
+/// # Remarks
+///
+/// This function checks if the runtime version is compatible with the specified version.
 pub fn is_compatibile(version: (u8, u8, u8)) -> bool {
     let (major, minor, _) = version;
 
