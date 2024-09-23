@@ -185,10 +185,10 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Status {
-                            log::info!("Status: {}", status);
+                            println!("Status: {}", status);
                         }
                     } else {
-                        log::info!("Status: {}", status);
+                        println!("Status: {}", status);
                     }
                 }
                 glonax::core::Instance::MESSAGE_TYPE => {
@@ -196,7 +196,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::Instance>(frame.payload_length)
                         .await?;
 
-                    log::info!("{}", instance);
+                    println!("{}", instance);
                 }
                 glonax::core::Engine::MESSAGE_TYPE => {
                     let engine = client
@@ -205,25 +205,25 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Engine {
-                            log::info!("Engine: {}", engine);
+                            println!("Engine: {}", engine);
                         }
                     } else {
-                        log::info!("Engine: {}", engine);
+                        println!("Engine: {}", engine);
                     }
                 }
-                glonax::core::Gnss::MESSAGE_TYPE => {
-                    let gnss = client
-                        .recv_packet::<glonax::core::Gnss>(frame.payload_length)
-                        .await?;
+                // glonax::core::Gnss::MESSAGE_TYPE => {
+                //     let gnss = client
+                //         .recv_packet::<glonax::core::Gnss>(frame.payload_length)
+                //         .await?;
 
-                    if let Some(filter) = filter {
-                        if filter == ObjectFilter::Gnss {
-                            log::info!("GNSS: {}", gnss);
-                        }
-                    } else {
-                        log::info!("GNSS: {}", gnss);
-                    }
-                }
+                //     if let Some(filter) = filter {
+                //         if filter == ObjectFilter::Gnss {
+                //             println!("GNSS: {}", gnss);
+                //         }
+                //     } else {
+                //         println!("GNSS: {}", gnss);
+                //     }
+                // }
                 glonax::core::Motion::MESSAGE_TYPE => {
                     let motion = client
                         .recv_packet::<glonax::core::Motion>(frame.payload_length)
@@ -231,10 +231,10 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Motion {
-                            log::info!("Motion: {}", motion);
+                            println!("Motion: {}", motion);
                         }
                     } else {
-                        log::info!("Motion: {}", motion);
+                        println!("Motion: {}", motion);
                     }
                 }
                 glonax::core::Rotator::MESSAGE_TYPE => {
@@ -244,10 +244,10 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Rotator {
-                            log::info!("Rotator: {}", rotator);
+                            println!("Rotator: {}", rotator);
                         }
                     } else {
-                        log::info!("Rotator: {}", rotator);
+                        println!("Rotator: {}", rotator);
                     }
                 }
                 glonax::world::Actor::MESSAGE_TYPE => {
@@ -256,15 +256,13 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         .await?;
 
                     let bucket_world_location = actor.world_location("bucket");
-                    log::info!(
+                    println!(
                         "Bucket: world location: X={:.2} Y={:.2} Z={:.2}",
-                        bucket_world_location.x,
-                        bucket_world_location.y,
-                        bucket_world_location.z
+                        bucket_world_location.x, bucket_world_location.y, bucket_world_location.z
                     );
                 }
                 _ => {
-                    log::error!("Unknown message type: 0x{:X}", frame.message);
+                    eprintln!("Unknown message type: 0x{:X}", frame.message);
                 }
             }
         },
