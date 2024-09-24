@@ -184,12 +184,14 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Status {
-                            println!("{}", status);
-                            // if let Some(error) = &status.error {
-                            //     println!("name={} state={} error={}", status.name, status.state, error);
-                            // } else {
-                            //     println!("name={} state={}", status.name, status.state);
-                            // }
+                            if let Some(error) = &status.error {
+                                println!(
+                                    "name={} state={} error={}",
+                                    status.name, status.state, error
+                                );
+                            } else {
+                                println!("name={} state={}", status.name, status.state);
+                            }
                         }
                     } else {
                         println!("Status: {}", status);
@@ -209,7 +211,13 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Engine {
-                            println!("{}", engine);
+                            println!(
+                                "driver_demand={} actual_engine={} rpm={} state={:?}",
+                                engine.driver_demand,
+                                engine.actual_engine,
+                                engine.rpm,
+                                engine.state
+                            );
                         }
                     } else {
                         println!("Engine: {}", engine);
