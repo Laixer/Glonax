@@ -44,8 +44,8 @@ enum ObjectFilter {
     Control,
     /// Engine.
     Engine,
-    /// GNSS.
-    Gnss, // TODO: can be removed
+    // /// GNSS.
+    // Gnss, // TODO: can be removed
     /// Motion.
     Motion,
     /// Target.
@@ -174,7 +174,6 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             let frame = client.read_frame().await?;
 
-            // TODO: Filter objects
             // TODO: If possible, convert back into an object
             // TODO: Offer: async fn wait_io_sub(&mut self, command_tx: CommandSender, mut signal_rx: SignalReceiver) {
             match frame.message {
@@ -185,7 +184,12 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Status {
-                            println!("Status: {}", status);
+                            println!("{}", status);
+                            // if let Some(error) = &status.error {
+                            //     println!("name={} state={} error={}", status.name, status.state, error);
+                            // } else {
+                            //     println!("name={} state={}", status.name, status.state);
+                            // }
                         }
                     } else {
                         println!("Status: {}", status);
@@ -205,7 +209,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Engine {
-                            println!("Engine: {}", engine);
+                            println!("{}", engine);
                         }
                     } else {
                         println!("Engine: {}", engine);
@@ -218,7 +222,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                 //     if let Some(filter) = filter {
                 //         if filter == ObjectFilter::Gnss {
-                //             println!("GNSS: {}", gnss);
+                //             println!("{}", gnss);
                 //         }
                 //     } else {
                 //         println!("GNSS: {}", gnss);
@@ -231,7 +235,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Motion {
-                            println!("Motion: {}", motion);
+                            println!("{}", motion);
                         }
                     } else {
                         println!("Motion: {}", motion);
@@ -244,7 +248,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Rotator {
-                            println!("Rotator: {}", rotator);
+                            println!("{}", rotator);
                         }
                     } else {
                         println!("Rotator: {}", rotator);
