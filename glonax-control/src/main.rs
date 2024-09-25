@@ -71,6 +71,11 @@ enum Command {
     },
     /// Shutdown engine.
     Shutdown,
+    /// Motion lock commands.
+    MotionLock {
+        /// On or off.
+        toggle: String,
+    },
     /// Lights commands.
     Lights {
         /// On or off.
@@ -94,6 +99,7 @@ enum Command {
 
 fn string_to_bool(s: &str) -> Option<bool> {
     match s.to_lowercase().as_str() {
+        "1" => Some(true),
         "on" => Some(true),
         "true" => Some(true),
         "off" => Some(false),
@@ -292,6 +298,20 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             let engine = glonax::core::Engine::shutdown();
             client.send_packet(&engine).await?;
+        }
+        Command::MotionLock { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for motion lock"))?;
+
+            log::info!("Setting motion lock: {}", if toggle { "on" } else { "off" });
+
+            let motion = if toggle {
+                glonax::core::Motion::StopAll
+            } else {
+                glonax::core::Motion::ResumeAll
+            };
+
+            client.send_packet(&motion).await?;
         }
         Command::Lights { toggle } => {
             let toggle = string_to_bool(&toggle)
