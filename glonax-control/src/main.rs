@@ -102,6 +102,7 @@ fn string_to_bool(s: &str) -> Option<bool> {
         "1" => Some(true),
         "on" => Some(true),
         "true" => Some(true),
+        "0" => Some(false),
         "off" => Some(false),
         "false" => Some(false),
         _ => None,
