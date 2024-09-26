@@ -76,8 +76,23 @@ enum Command {
         /// On or off.
         toggle: String,
     },
+    /// Illumination commands.
+    Illumination {
+        /// On or off.
+        toggle: String,
+    },
     /// Lights commands.
     Lights {
+        /// On or off.
+        toggle: String,
+    },
+    /// Strobe light commands.
+    StrobeLight {
+        /// On or off.
+        toggle: String,
+    },
+    /// Travel alarm commands.
+    TravelAlarm {
         /// On or off.
         toggle: String,
     },
@@ -321,13 +336,49 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             client.send_packet(&motion).await?;
         }
+        Command::Illumination { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for illumination"))?;
+
+            log::info!(
+                "Setting illumination: {}",
+                if toggle { "on" } else { "off" }
+            );
+
+            let control = glonax::core::Control::MachineIllumination(toggle);
+            client.send_packet(&control).await?;
+        }
         Command::Lights { toggle } => {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for lights"))?;
 
             log::info!("Setting lights: {}", if toggle { "on" } else { "off" });
 
-            let control = glonax::core::Control::MachineIllumination(toggle);
+            let control = glonax::core::Control::MachineLights(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::StrobeLight { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for strobe light"))?;
+
+            log::info!(
+                "Setting strobe light: {}",
+                if toggle { "on" } else { "off" }
+            );
+
+            let control = glonax::core::Control::MachineStrobeLight(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::TravelAlarm { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for travel alarm"))?;
+
+            log::info!(
+                "Setting travel alarm: {}",
+                if toggle { "on" } else { "off" }
+            );
+
+            let control = glonax::core::Control::MachineTravelAlarm(toggle);
             client.send_packet(&control).await?;
         }
         Command::Horn { toggle } => {
