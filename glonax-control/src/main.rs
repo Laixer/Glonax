@@ -263,7 +263,14 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
                     if let Some(filter) = filter {
                         if filter == ObjectFilter::Rotator {
-                            println!("{}", rotator);
+                            println!(
+                                "source={} reference={:?} roll={:.2} pitch={:.2} yaw={:.2}",
+                                rotator.source,
+                                rotator.reference,
+                                rotator.rotator.euler_angles().0.to_degrees(),
+                                rotator.rotator.euler_angles().1.to_degrees(),
+                                rotator.rotator.euler_angles().2.to_degrees()
+                            );
                         }
                     } else {
                         println!("Rotator: {}", rotator);
