@@ -245,19 +245,6 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         println!("Engine: {}", engine);
                     }
                 }
-                // glonax::core::Gnss::MESSAGE_TYPE => {
-                //     let gnss = client
-                //         .recv_packet::<glonax::core::Gnss>(frame.payload_length)
-                //         .await?;
-
-                //     if let Some(filter) = filter {
-                //         if filter == ObjectFilter::Gnss {
-                //             println!("{}", gnss);
-                //         }
-                //     } else {
-                //         println!("GNSS: {}", gnss);
-                //     }
-                // }
                 glonax::core::Motion::MESSAGE_TYPE => {
                     let motion = client
                         .recv_packet::<glonax::core::Motion>(frame.payload_length)
