@@ -68,7 +68,7 @@ enum Command {
         rpm: u16,
     },
     /// Shutdown engine.
-    Shutdown,
+    EngineShutdown,
     /// Motion lock command.
     MotionLock {
         /// On or off.
@@ -324,7 +324,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let engine = Engine::from_rpm(rpm);
             client.send_packet(&engine).await?;
         }
-        Command::Shutdown => {
+        Command::EngineShutdown => {
             log::info!("Shutting down engine");
 
             let engine = Engine::shutdown();
@@ -347,10 +347,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic quick disconnect"))?;
 
-            log::info!(
-                "Setting hydraulic quick disconnect: {}",
-                bool_to_string(toggle)
-            );
+            log::info!("Hydraulic quick disconnect: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
@@ -359,7 +356,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic lock"))?;
 
-            log::info!("Setting hydraulic lock: {}", bool_to_string(toggle));
+            log::info!("Hydraulic lock: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicLock(toggle);
             client.send_packet(&control).await?;
@@ -368,7 +365,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boost"))?;
 
-            log::info!("Setting hydraulic boost: {}", bool_to_string(toggle));
+            log::info!("Hydraulic boost: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicBoost(toggle);
             client.send_packet(&control).await?;
@@ -377,7 +374,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boom conflux"))?;
 
-            log::info!("Setting hydraulic boom conflux: {}", bool_to_string(toggle));
+            log::info!("Hydraulic boom conflux: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicBoomConflux(toggle);
             client.send_packet(&control).await?;
@@ -386,7 +383,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic arm conflux"))?;
 
-            log::info!("Setting hydraulic arm conflux: {}", bool_to_string(toggle));
+            log::info!("Hydraulic arm conflux: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicArmConflux(toggle);
             client.send_packet(&control).await?;
@@ -395,7 +392,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boom float"))?;
 
-            log::info!("Setting hydraulic boom float: {}", bool_to_string(toggle));
+            log::info!("Hydraulic boom float: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicBoomFloat(toggle);
             client.send_packet(&control).await?;
@@ -404,7 +401,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for illumination"))?;
 
-            log::info!("Setting illumination: {}", bool_to_string(toggle));
+            log::info!("Machine illumination: {}", bool_to_string(toggle));
 
             let control = Control::MachineIllumination(toggle);
             client.send_packet(&control).await?;
@@ -413,7 +410,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for lights"))?;
 
-            log::info!("Setting lights: {}", bool_to_string(toggle));
+            log::info!("Machine lights: {}", bool_to_string(toggle));
 
             let control = Control::MachineLights(toggle);
             client.send_packet(&control).await?;
@@ -422,7 +419,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle =
                 string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
 
-            log::info!("Setting horn: {}", bool_to_string(toggle));
+            log::info!("Machine horn: {}", bool_to_string(toggle));
 
             let control = Control::MachineHorn(toggle);
             client.send_packet(&control).await?;
@@ -431,7 +428,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for strobe light"))?;
 
-            log::info!("Setting strobe light: {}", bool_to_string(toggle));
+            log::info!("Machine strobe light: {}", bool_to_string(toggle));
 
             let control = Control::MachineStrobeLight(toggle);
             client.send_packet(&control).await?;
@@ -440,7 +437,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for travel alarm"))?;
 
-            log::info!("Setting travel alarm: {}", bool_to_string(toggle));
+            log::info!("Machine travel alarm: {}", bool_to_string(toggle));
 
             let control = Control::MachineTravelAlarm(toggle);
             client.send_packet(&control).await?;
