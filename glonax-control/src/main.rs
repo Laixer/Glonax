@@ -110,6 +110,7 @@ enum Command {
     Info,
 }
 
+/// Convert string to boolean.
 fn string_to_bool(s: &str) -> Option<bool> {
     match s.to_lowercase().as_str() {
         "1" => Some(true),
@@ -122,6 +123,7 @@ fn string_to_bool(s: &str) -> Option<bool> {
     }
 }
 
+/// Convert boolean to string.
 fn bool_to_string(b: bool) -> &'static str {
     if b {
         "on"
@@ -167,6 +169,7 @@ async fn main() -> anyhow::Result<()> {
 
 async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
     use glonax::consts::*;
+    use glonax::core::*;
 
     let bin_name = env!("CARGO_BIN_NAME").to_string();
 
@@ -293,13 +296,13 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
         Command::Engine { rpm } => {
             log::info!("Requesting engine RPM: {}", rpm);
 
-            let engine = glonax::core::Engine::from_rpm(rpm);
+            let engine = Engine::from_rpm(rpm);
             client.send_packet(&engine).await?;
         }
         Command::Shutdown => {
             log::info!("Shutting down engine");
 
-            let engine = glonax::core::Engine::shutdown();
+            let engine = Engine::shutdown();
             client.send_packet(&engine).await?;
         }
         Command::MotionLock { toggle } => {
@@ -309,11 +312,10 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             log::info!("Setting motion lock: {}", bool_to_string(toggle));
 
             let motion = if toggle {
-                glonax::core::Motion::StopAll
+                Motion::StopAll
             } else {
-                glonax::core::Motion::ResumeAll
+                Motion::ResumeAll
             };
-
             client.send_packet(&motion).await?;
         }
         Command::Illumination { toggle } => {
@@ -322,7 +324,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             log::info!("Setting illumination: {}", bool_to_string(toggle));
 
-            let control = glonax::core::Control::MachineIllumination(toggle);
+            let control = Control::MachineIllumination(toggle);
             client.send_packet(&control).await?;
         }
         Command::Lights { toggle } => {
@@ -331,7 +333,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             log::info!("Setting lights: {}", bool_to_string(toggle));
 
-            let control = glonax::core::Control::MachineLights(toggle);
+            let control = Control::MachineLights(toggle);
             client.send_packet(&control).await?;
         }
         Command::StrobeLight { toggle } => {
@@ -340,7 +342,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             log::info!("Setting strobe light: {}", bool_to_string(toggle));
 
-            let control = glonax::core::Control::MachineStrobeLight(toggle);
+            let control = Control::MachineStrobeLight(toggle);
             client.send_packet(&control).await?;
         }
         Command::TravelAlarm { toggle } => {
@@ -349,7 +351,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             log::info!("Setting travel alarm: {}", bool_to_string(toggle));
 
-            let control = glonax::core::Control::MachineTravelAlarm(toggle);
+            let control = Control::MachineTravelAlarm(toggle);
             client.send_packet(&control).await?;
         }
         Command::Horn { toggle } => {
@@ -358,7 +360,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             log::info!("Setting horn: {}", bool_to_string(toggle));
 
-            let control = glonax::core::Control::MachineHorn(toggle);
+            let control = Control::MachineHorn(toggle);
             client.send_packet(&control).await?;
         }
         Command::QuickDisconnect { toggle } => {
@@ -367,11 +369,11 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
             log::info!("Setting quick disconnect: {}", bool_to_string(toggle));
 
-            let control = glonax::core::Control::HydraulicQuickDisconnect(toggle);
+            let control = Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
         }
         Command::Target { x, y, z } => {
-            let target = glonax::core::Target::from_point(x, y, z);
+            let target = Target::from_point(x, y, z);
 
             log::info!("Queue target: {}", target);
 
