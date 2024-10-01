@@ -369,7 +369,7 @@ checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
 
 [[package]]
 name = "glonax"
-version = "3.5.12"
+version = "3.5.13"
 dependencies = [
  "bytes",
  "chrono",
