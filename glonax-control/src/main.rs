@@ -44,8 +44,6 @@ enum ObjectFilter {
     Control,
     /// Engine.
     Engine,
-    // /// GNSS.
-    // Gnss, // TODO: can be removed
     /// Motion.
     Motion,
     /// Target.
@@ -204,16 +202,15 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::ModuleStatus>(frame.payload_length)
                         .await?;
 
-                    if let Some(filter) = filter {
-                        if filter == ObjectFilter::Status {
-                            if let Some(error) = &status.error {
-                                println!(
-                                    "name={} state={} error={}",
-                                    status.name, status.state, error
-                                );
-                            } else {
-                                println!("name={} state={}", status.name, status.state);
-                            }
+                    if let Some(ObjectFilter::Status) = filter {
+                        if let Some(error) = &status.error {
+                            // TODO: Move the display logic to the object
+                            println!(
+                                "name={} state={} error={}",
+                                status.name, status.state, error
+                            );
+                        } else {
+                            println!("name={} state={}", status.name, status.state);
                         }
                     } else {
                         println!("Status: {}", status);
@@ -231,16 +228,11 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::Engine>(frame.payload_length)
                         .await?;
 
-                    if let Some(filter) = filter {
-                        if filter == ObjectFilter::Engine {
-                            println!(
-                                "driver_demand={} actual_engine={} rpm={} state={:?}",
-                                engine.driver_demand,
-                                engine.actual_engine,
-                                engine.rpm,
-                                engine.state
-                            );
-                        }
+                    if let Some(ObjectFilter::Engine) = filter {
+                        println!(
+                            "driver_demand={} actual_engine={} rpm={} state={:?}",
+                            engine.driver_demand, engine.actual_engine, engine.rpm, engine.state
+                        );
                     } else {
                         println!("Engine: {}", engine);
                     }
@@ -250,10 +242,8 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::Motion>(frame.payload_length)
                         .await?;
 
-                    if let Some(filter) = filter {
-                        if filter == ObjectFilter::Motion {
-                            println!("{}", motion);
-                        }
+                    if let Some(ObjectFilter::Motion) = filter {
+                        println!("{}", motion);
                     } else {
                         println!("Motion: {}", motion);
                     }
@@ -263,17 +253,15 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
                         .recv_packet::<glonax::core::Rotator>(frame.payload_length)
                         .await?;
 
-                    if let Some(filter) = filter {
-                        if filter == ObjectFilter::Rotator {
-                            println!(
-                                "source={} reference={:?} roll={:.2} pitch={:.2} yaw={:.2}",
-                                rotator.source,
-                                rotator.reference,
-                                rotator.rotator.euler_angles().0.to_degrees(),
-                                rotator.rotator.euler_angles().1.to_degrees(),
-                                rotator.rotator.euler_angles().2.to_degrees()
-                            );
-                        }
+                    if let Some(ObjectFilter::Rotator) = filter {
+                        println!(
+                            "source={} reference={:?} roll={:.2} pitch={:.2} yaw={:.2}",
+                            rotator.source,
+                            rotator.reference,
+                            rotator.rotator.euler_angles().0.to_degrees(),
+                            rotator.rotator.euler_angles().1.to_degrees(),
+                            rotator.rotator.euler_angles().2.to_degrees()
+                        );
                     } else {
                         println!("Rotator: {}", rotator);
                     }
