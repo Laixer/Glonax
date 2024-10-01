@@ -122,6 +122,14 @@ fn string_to_bool(s: &str) -> Option<bool> {
     }
 }
 
+fn bool_to_string(b: bool) -> &'static str {
+    if b {
+        "on"
+    } else {
+        "off"
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     use log::LevelFilter;
@@ -285,11 +293,8 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
         Command::Engine { rpm } => {
             log::info!("Requesting engine RPM: {}", rpm);
 
-            // TODO: Clap should have a way to validate this
-            if rpm > 0 && rpm <= 10_000 {
-                let engine = glonax::core::Engine::from_rpm(rpm);
-                client.send_packet(&engine).await?;
-            }
+            let engine = glonax::core::Engine::from_rpm(rpm);
+            client.send_packet(&engine).await?;
         }
         Command::Shutdown => {
             log::info!("Shutting down engine");
@@ -301,7 +306,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for motion lock"))?;
 
-            log::info!("Setting motion lock: {}", if toggle { "on" } else { "off" });
+            log::info!("Setting motion lock: {}", bool_to_string(toggle));
 
             let motion = if toggle {
                 glonax::core::Motion::StopAll
@@ -315,10 +320,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for illumination"))?;
 
-            log::info!(
-                "Setting illumination: {}",
-                if toggle { "on" } else { "off" }
-            );
+            log::info!("Setting illumination: {}", bool_to_string(toggle));
 
             let control = glonax::core::Control::MachineIllumination(toggle);
             client.send_packet(&control).await?;
@@ -327,7 +329,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for lights"))?;
 
-            log::info!("Setting lights: {}", if toggle { "on" } else { "off" });
+            log::info!("Setting lights: {}", bool_to_string(toggle));
 
             let control = glonax::core::Control::MachineLights(toggle);
             client.send_packet(&control).await?;
@@ -336,10 +338,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for strobe light"))?;
 
-            log::info!(
-                "Setting strobe light: {}",
-                if toggle { "on" } else { "off" }
-            );
+            log::info!("Setting strobe light: {}", bool_to_string(toggle));
 
             let control = glonax::core::Control::MachineStrobeLight(toggle);
             client.send_packet(&control).await?;
@@ -348,10 +347,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for travel alarm"))?;
 
-            log::info!(
-                "Setting travel alarm: {}",
-                if toggle { "on" } else { "off" }
-            );
+            log::info!("Setting travel alarm: {}", bool_to_string(toggle));
 
             let control = glonax::core::Control::MachineTravelAlarm(toggle);
             client.send_packet(&control).await?;
@@ -360,7 +356,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle =
                 string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
 
-            log::info!("Setting horn: {}", if toggle { "on" } else { "off" });
+            log::info!("Setting horn: {}", bool_to_string(toggle));
 
             let control = glonax::core::Control::MachineHorn(toggle);
             client.send_packet(&control).await?;
@@ -369,10 +365,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for quick disconnect"))?;
 
-            log::info!(
-                "Setting quick disconnect: {}",
-                if toggle { "on" } else { "off" }
-            );
+            log::info!("Setting quick disconnect: {}", bool_to_string(toggle));
 
             let control = glonax::core::Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
