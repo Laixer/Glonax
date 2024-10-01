@@ -52,7 +52,6 @@ impl std::fmt::Display for TcpError {
     }
 }
 
-// TODO: Rename to Server
 pub struct UnixServer {
     config: UnixServerConfig,
     listener: tokio::net::UnixListener,
