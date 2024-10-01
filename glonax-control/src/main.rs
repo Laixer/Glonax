@@ -62,45 +62,70 @@ enum Command {
         #[arg(short, long)]
         filter: Option<ObjectFilter>,
     },
-    /// Engine commands.
+    /// Engine command.
     Engine {
         /// RPM
         rpm: u16,
     },
     /// Shutdown engine.
     Shutdown,
-    /// Motion lock commands.
+    /// Motion lock command.
     MotionLock {
         /// On or off.
         toggle: String,
     },
-    /// Illumination commands.
+    /// Quick disconnect command.
+    HydraulicQuickDisconnect {
+        /// On or off.
+        toggle: String,
+    },
+    /// Hydraulic quick disconnect command.
+    HydraulicLock {
+        /// On or off.
+        toggle: String,
+    },
+    /// Hydraulic boost command.
+    HydraulicBoost {
+        /// On or off.
+        toggle: String,
+    },
+    /// Hydraulic boom conflux command.
+    HydraulicBoomConflux {
+        /// On or off.
+        toggle: String,
+    },
+    /// Hydraulic arm conflux command.
+    HydraulicArmConflux {
+        /// On or off.
+        toggle: String,
+    },
+    /// Hydraulic boom float command.
+    HydraulicBoomFloat {
+        /// On or off.
+        toggle: String,
+    },
+    /// Illumination command.
     Illumination {
         /// On or off.
         toggle: String,
     },
-    /// Lights commands.
+    /// Lights command.
     Lights {
         /// On or off.
         toggle: String,
     },
-    /// Strobe light commands.
-    StrobeLight {
-        /// On or off.
-        toggle: String,
-    },
-    /// Travel alarm commands.
-    TravelAlarm {
-        /// On or off.
-        toggle: String,
-    },
-    /// Horn commands.
+    /// Horn command.
     Horn {
         /// On or off.
         toggle: String,
     },
-    /// Quick disconnect commands.
-    QuickDisconnect {
+    /// Strobe light command.
+    StrobeLight {
+        /// On or off.
+        toggle: String,
+    },
+    /// Travel alarm command.
+    TravelAlarm {
         /// On or off.
         toggle: String,
     },
@@ -318,6 +343,63 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             };
             client.send_packet(&motion).await?;
         }
+        Command::HydraulicQuickDisconnect { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic quick disconnect"))?;
+
+            log::info!(
+                "Setting hydraulic quick disconnect: {}",
+                bool_to_string(toggle)
+            );
+
+            let control = Control::HydraulicQuickDisconnect(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::HydraulicLock { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic lock"))?;
+
+            log::info!("Setting hydraulic lock: {}", bool_to_string(toggle));
+
+            let control = Control::HydraulicLock(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::HydraulicBoost { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boost"))?;
+
+            log::info!("Setting hydraulic boost: {}", bool_to_string(toggle));
+
+            let control = Control::HydraulicBoost(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::HydraulicBoomConflux { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boom conflux"))?;
+
+            log::info!("Setting hydraulic boom conflux: {}", bool_to_string(toggle));
+
+            let control = Control::HydraulicBoomConflux(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::HydraulicArmConflux { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic arm conflux"))?;
+
+            log::info!("Setting hydraulic arm conflux: {}", bool_to_string(toggle));
+
+            let control = Control::HydraulicArmConflux(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::HydraulicBoomFloat { toggle } => {
+            let toggle = string_to_bool(&toggle)
+                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boom float"))?;
+
+            log::info!("Setting hydraulic boom float: {}", bool_to_string(toggle));
+
+            let control = Control::HydraulicBoomFloat(toggle);
+            client.send_packet(&control).await?;
+        }
         Command::Illumination { toggle } => {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for illumination"))?;
@@ -336,6 +418,15 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             let control = Control::MachineLights(toggle);
             client.send_packet(&control).await?;
         }
+        Command::Horn { toggle } => {
+            let toggle =
+                string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
+
+            log::info!("Setting horn: {}", bool_to_string(toggle));
+
+            let control = Control::MachineHorn(toggle);
+            client.send_packet(&control).await?;
+        }
         Command::StrobeLight { toggle } => {
             let toggle = string_to_bool(&toggle)
                 .ok_or_else(|| anyhow::anyhow!("Invalid value for strobe light"))?;
@@ -352,24 +443,6 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             log::info!("Setting travel alarm: {}", bool_to_string(toggle));
 
             let control = Control::MachineTravelAlarm(toggle);
-            client.send_packet(&control).await?;
-        }
-        Command::Horn { toggle } => {
-            let toggle =
-                string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
-
-            log::info!("Setting horn: {}", bool_to_string(toggle));
-
-            let control = Control::MachineHorn(toggle);
-            client.send_packet(&control).await?;
-        }
-        Command::QuickDisconnect { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for quick disconnect"))?;
-
-            log::info!("Setting quick disconnect: {}", bool_to_string(toggle));
-
-            let control = Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
         }
         Command::Target { x, y, z } => {
