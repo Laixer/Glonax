@@ -104,6 +104,8 @@ enum Command {
         /// On or off.
         toggle: String,
     },
+    /// Machine shutdown command.
+    MachineShutdown,
     /// Illumination command.
     Illumination {
         /// On or off.
@@ -395,6 +397,12 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             log::info!("Hydraulic boom float: {}", bool_to_string(toggle));
 
             let control = Control::HydraulicBoomFloat(toggle);
+            client.send_packet(&control).await?;
+        }
+        Command::MachineShutdown => {
+            log::info!("Machine shutdown");
+
+            let control = Control::MachineShutdown;
             client.send_packet(&control).await?;
         }
         Command::Illumination { toggle } => {
