@@ -6,6 +6,7 @@ const CONTROL_TYPE_HYDRAULIC_BOOST: u8 = 0x7;
 const CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX: u8 = 0x8;
 const CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX: u8 = 0x9;
 const CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT: u8 = 0xA;
+const CONTROL_TYPE_HYDRAULIC_RESET: u8 = 0xB;
 const CONTROL_TYPE_MACHINE_SHUTDOWN: u8 = 0x1B;
 const CONTROL_TYPE_MACHINE_ILLUMINATION: u8 = 0x1C;
 const CONTROL_TYPE_MACHINE_LIGHTS: u8 = 0x2D;
@@ -27,6 +28,8 @@ pub enum Control {
     HydraulicArmConflux(bool),
     /// Hydraulic boom float.
     HydraulicBoomFloat(bool),
+    /// Hydraulic reset.
+    HydraulicReset,
     /// Machine shutdown.
     MachineShutdown,
     /// Machine illumination.
@@ -68,6 +71,7 @@ impl std::fmt::Display for Control {
             Control::HydraulicBoomFloat(on) => {
                 write!(f, "Hydraulic boom float: {}", bool_to_on_off(*on))
             }
+            Control::HydraulicReset => write!(f, "Hydraulic reset"),
             Control::MachineShutdown => write!(f, "Robot shutdown"),
             Control::MachineIllumination(on) => {
                 write!(f, "Machine illumination: {}", bool_to_on_off(*on))
@@ -100,6 +104,7 @@ impl TryFrom<Vec<u8>> for Control {
             CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX => Ok(Control::HydraulicBoomConflux(on)),
             CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX => Ok(Control::HydraulicArmConflux(on)),
             CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT => Ok(Control::HydraulicBoomFloat(on)),
+            CONTROL_TYPE_HYDRAULIC_RESET => Ok(Control::HydraulicReset),
             CONTROL_TYPE_MACHINE_SHUTDOWN => Ok(Control::MachineShutdown),
             CONTROL_TYPE_MACHINE_ILLUMINATION => Ok(Control::MachineIllumination(on)),
             CONTROL_TYPE_MACHINE_LIGHTS => Ok(Control::MachineLights(on)),
@@ -142,6 +147,10 @@ impl crate::protocol::Packetize for Control {
             Control::HydraulicBoomFloat(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT);
                 buf.put_u8(if *on { 1 } else { 0 });
+            }
+            Control::HydraulicReset => {
+                buf.put_u8(CONTROL_TYPE_HYDRAULIC_RESET);
+                buf.put_u8(1);
             }
             Control::MachineShutdown => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_SHUTDOWN);
