@@ -26,8 +26,8 @@ pub enum Object {
     Control(Control),
     /// Engine.
     Engine(Engine),
-    /// GNSS.
-    GNSS(Gnss),
+    // /// GNSS.
+    // GNSS(Gnss),
     /// Motion.
     Motion(Motion),
     /// Target.

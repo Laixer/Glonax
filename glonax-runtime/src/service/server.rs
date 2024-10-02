@@ -5,6 +5,7 @@ use crate::{
     runtime::{CommandSender, Service, ServiceContext, SignalReceiver},
 };
 
+const UNIX_SOCKET_PATH: &str = "/tmp/glonax.sock";
 const UNIX_SOCKET_PERMISSIONS: u32 = 0o660;
 
 #[derive(Clone, Debug, serde_derive::Deserialize, PartialEq, Eq)]
@@ -16,7 +17,7 @@ pub struct UnixServerConfig {
 
 impl UnixServerConfig {
     fn default_path() -> PathBuf {
-        PathBuf::from("/tmp/glonax.sock")
+        PathBuf::from(UNIX_SOCKET_PATH)
     }
 }
 
@@ -52,6 +53,16 @@ impl std::fmt::Display for TcpError {
     }
 }
 
+/// Represents a Unix domain socket server.
+///
+/// The `UnixServer` struct encapsulates the configuration and the listener
+/// for a Unix domain socket server. It is used to handle incoming connections
+/// on a Unix domain socket.
+///
+/// # Fields
+///
+/// * `config` - Configuration settings for the Unix server.
+/// * `listener` - The `tokio::net::UnixListener` that listens for incoming connections.
 pub struct UnixServer {
     config: UnixServerConfig,
     listener: tokio::net::UnixListener,
@@ -148,6 +159,7 @@ impl UnixServer {
         Ok(())
     }
 
+    // TODO: This method is barely readable. Refactor it.
     async fn spawn_client_session<T: tokio::io::AsyncWrite + tokio::io::AsyncRead + Unpin>(
         stream: T,
         command_tx: CommandSender,
@@ -171,11 +183,6 @@ impl UnixServer {
                                         error!("Failed to send engine: {}", e);
                                     }
                                 }
-                                Object::GNSS(gnss) => {
-                                    if let Err(e) = client.send_packet(&gnss).await {
-                                        error!("Failed to send GNSS: {}", e);
-                                    }
-                                }
                                 Object::Motion(motion) => {
                                     if let Err(e) = client.send_packet(&motion).await {
                                         error!("Failed to send motion: {}", e);
@@ -191,7 +198,16 @@ impl UnixServer {
                                         error!("Failed to send status: {}", e);
                                     }
                                 }
-                                _ => {}
+                                Object::Control(control) => {
+                                    if let Err(e) = client.send_packet(&control).await {
+                                        error!("Failed to send control: {}", e);
+                                    }
+                                }
+                                Object::Target(target) => {
+                                    if let Err(e) = client.send_packet(&target).await {
+                                        error!("Failed to send target: {}", e);
+                                    }
+                                }
                             }
                         }
                     } else if let Err(tokio::sync::broadcast::error::RecvError::Closed) = signal {
@@ -278,7 +294,6 @@ impl Service<UnixServerConfig> for UnixServer {
 
     async fn wait_io_sub(&mut self, command_tx: CommandSender, signal_rx: SignalReceiver) {
         let (stream, _) = self.listener.accept().await.unwrap();
-
         tokio::spawn(Self::spawn_client_session(stream, command_tx, signal_rx));
     }
 }
