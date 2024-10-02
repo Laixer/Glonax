@@ -1,4 +1,4 @@
-use std::{io, os::unix::prelude::*};
+use std::{io, mem::MaybeUninit, os::unix::prelude::*};
 
 use socket2::SockAddr;
 use tokio::io::unix::AsyncFd;
@@ -31,8 +31,7 @@ impl SockAddrJ1939 {
 
 impl From<&SockAddrJ1939> for SockAddr {
     fn from(value: &SockAddrJ1939) -> SockAddr {
-        let mut sockaddr_can =
-            unsafe { std::mem::MaybeUninit::<libc::sockaddr_can>::zeroed().assume_init() };
+        let mut sockaddr_can = unsafe { MaybeUninit::<libc::sockaddr_can>::zeroed().assume_init() };
         sockaddr_can.can_family = libc::AF_CAN as u16;
         sockaddr_can.can_addr.j1939.addr = value.addr;
         sockaddr_can.can_addr.j1939.name = value.name;
@@ -42,7 +41,7 @@ impl From<&SockAddrJ1939> for SockAddr {
             sockaddr_can.can_ifindex = ifindex;
         }
 
-        let mut storage = std::mem::MaybeUninit::<libc::sockaddr_storage>::zeroed();
+        let mut storage = MaybeUninit::<libc::sockaddr_storage>::zeroed();
         unsafe { (storage.as_mut_ptr() as *mut libc::sockaddr_can).write(sockaddr_can) };
 
         unsafe {
@@ -83,12 +82,11 @@ impl SockAddrCAN {
 
 impl From<&SockAddrCAN> for SockAddr {
     fn from(value: &SockAddrCAN) -> SockAddr {
-        let mut sockaddr_can =
-            unsafe { std::mem::MaybeUninit::<libc::sockaddr_can>::zeroed().assume_init() };
+        let mut sockaddr_can = unsafe { MaybeUninit::<libc::sockaddr_can>::zeroed().assume_init() };
         sockaddr_can.can_family = libc::AF_CAN as u16;
         sockaddr_can.can_ifindex = value.ifindex;
 
-        let mut storage = std::mem::MaybeUninit::<libc::sockaddr_storage>::zeroed();
+        let mut storage = MaybeUninit::<libc::sockaddr_storage>::zeroed();
         unsafe { (storage.as_mut_ptr() as *mut libc::sockaddr_can).write(sockaddr_can) };
 
         unsafe {
@@ -164,9 +162,7 @@ impl CANSocket {
         loop {
             let mut guard = self.0.writable().await?;
 
-            let mut can_frame =
-                unsafe { std::mem::MaybeUninit::<libc::can_frame>::zeroed().assume_init() };
-
+            let mut can_frame = unsafe { MaybeUninit::<libc::can_frame>::zeroed().assume_init() };
             can_frame.can_id = frame.id().as_raw() | 0x80000000;
             can_frame.can_dlc = frame.len() as u8;
             can_frame.data[..frame.len()].copy_from_slice(frame.pdu());
@@ -203,7 +199,7 @@ impl CANSocket {
 
             let buf_uninit = unsafe {
                 std::slice::from_raw_parts_mut(
-                    buf.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
+                    buf.as_mut_ptr() as *mut MaybeUninit<u8>,
                     std::mem::size_of_val(buf),
                 )
             };
@@ -221,11 +217,11 @@ impl CANSocket {
         loop {
             let mut guard = self.0.readable().await?;
 
-            let mut storage = std::mem::MaybeUninit::<libc::can_frame>::zeroed();
+            let mut storage = MaybeUninit::<libc::can_frame>::zeroed();
 
             let buf_uninit = unsafe {
                 std::slice::from_raw_parts_mut(
-                    storage.as_mut_ptr() as *mut std::mem::MaybeUninit<u8>,
+                    storage.as_mut_ptr() as *mut MaybeUninit<u8>,
                     std::mem::size_of::<libc::can_frame>(),
                 )
             };

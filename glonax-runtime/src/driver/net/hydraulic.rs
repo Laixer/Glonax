@@ -535,6 +535,23 @@ impl J1939Unit for HydraulicControlUnit {
         tx_queue: &mut Vec<j1939::Frame>,
         object: &Object,
     ) -> Result<(), J1939UnitError> {
+        // if let Object::Control(crate::core::Control::HydraulicLock(lock)) = object {
+        //     trace!(
+        //         "[{}] {}: Hydraulic lock: {}",
+        //         self.interface,
+        //         self.name(),
+        //         lock
+        //     );
+
+        //     ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
+
+        //     if *lock {
+        //         tx_queue.push(self.lock());
+        //     } else {
+        //         tx_queue.push(self.unlock());
+        //     }
+        // }
+
         if let Object::Motion(motion) = object {
             trace!(
                 "[{}] {}: Hydraulic: {}",
@@ -545,6 +562,7 @@ impl J1939Unit for HydraulicControlUnit {
 
             ctx.set_tx_last_message(ObjectMessage::command(object.clone()));
 
+            // TODO: StopAll, ResumeAll, ResetAll should be moved into Control::HydraulicXXX
             match motion {
                 Motion::StopAll => {
                     tx_queue.push(self.lock());

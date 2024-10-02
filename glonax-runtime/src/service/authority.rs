@@ -8,6 +8,7 @@ use crate::{
     runtime::{J1939Unit, J1939UnitError, NetDriverContext, NetworkService, SignalSender},
 };
 
+// TODO: Move this to a separate module
 fn interval_decimation(interval: Duration, tick: u64, decimation: u64) -> bool {
     tick as u128 % (decimation as u128 / interval.as_millis()) == 0
 }
@@ -192,6 +193,8 @@ impl Clone for NetworkAuthority {
 }
 
 impl NetworkService<NetworkConfig> for NetworkAuthority {
+    // TODO: Check if the network interface exists
+    // TODO: Return an error if the network interface does not exist
     fn new(config: NetworkConfig) -> Self
     where
         Self: Sized,

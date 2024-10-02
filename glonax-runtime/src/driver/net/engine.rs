@@ -6,13 +6,28 @@ use crate::{
     runtime::{J1939Unit, J1939UnitError, NetDriverContext},
 };
 
+/// The `Engine` trait defines the basic operations for controlling an engine.
+///
+/// # Methods
+///
+/// * `request(&self, speed: u16) -> Frame`
+///   - Requests speed control for the engine.
+///   - `speed`: The desired speed to request.
+///
+/// * `start(&self, speed: u16) -> Frame`
+///   - Starts the engine with the specified speed.
+///   - `speed`: The initial speed to start the engine with.
+///
+/// * `stop(&self, _speed: u16) -> Frame`
+///   - Stops the engine.
+///   - `speed`: The speed parameter is ignored when stopping the engine.
 pub trait Engine {
     /// Request speed control
     fn request(&self, speed: u16) -> Frame;
     /// Start the engine
     fn start(&self, speed: u16) -> Frame;
     /// Stop the engine
-    fn stop(&self, _speed: u16) -> Frame;
+    fn stop(&self, speed: u16) -> Frame;
 }
 
 pub enum EngineMessage {

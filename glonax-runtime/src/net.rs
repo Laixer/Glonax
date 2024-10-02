@@ -210,6 +210,7 @@ impl ControlNetwork {
         &self.name
     }
 
+    /// Return the interface of the control network.
     #[inline]
     pub fn interface(&self) -> &str {
         &self.interface
