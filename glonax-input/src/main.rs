@@ -47,7 +47,7 @@ struct Args {
     path: Option<std::path::PathBuf>,
     /// Gamepad input device.
     #[arg(value_hint = ValueHint::FilePath)]
-    device: String, // TODO: Why not use pathbuf?
+    device: std::path::PathBuf,
     /// Configure failsafe mode.
     #[arg(short, long, default_value_t = true)]
     fail_safe: bool,
@@ -126,9 +126,9 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
     log::debug!("Runtime version: {}", VERSION);
     log::debug!("Socket path: {}", socket_path.display());
 
-    let mut joystick = joystick::Joystick::open(std::path::Path::new(&args.device)).await?;
+    let mut joystick = joystick::Joystick::open(&args.device).await?;
 
-    log::debug!("Using joystick {}", args.device);
+    log::debug!("Using joystick {}", args.device.display());
 
     let mut input_device: Box<dyn crate::gamepad::InputDevice> = match args.mode {
         ControlMode::Xbox => Box::<gamepad::XboxController>::default(),
