@@ -7,10 +7,32 @@ use super::MachineType;
 ///
 /// This struct holds information about a machine instance, including its unique identifier,
 /// model, type, version, and serial number.
+///
+/// # Fields
+///
+/// * `id` - The unique identifier of the instance.
+/// * `model` - The model of the instance.
+/// * `ty` - The type of the instance.
+/// * `version` - The version of the instance.
+/// * `serial_number` - The serial number of the instance.
+///
+/// # Examples
+///
+/// ```rust
+/// use glonax::core::{Instance, MachineType};
+///
+/// let instance = Instance::new(
+///    "2c56e802-fd6b-4401-8f3e-89383f408dec",
+///    "Model XYZ",
+///    MachineType::WheelLoader,
+///    (1, 2, 3),
+///    "ABC123"
+/// );
+/// ```
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 pub struct Instance {
     /// Instance unique identifier.
-    id: uuid::Uuid,
+    id: uuid::Uuid, // TODO: Change to `Uuid` to String
     /// Machine model.
     model: String,
     /// Machine machine type.
@@ -38,7 +60,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -73,7 +95,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -99,7 +121,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -124,7 +146,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -149,7 +171,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -174,7 +196,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -200,7 +222,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
@@ -225,7 +247,7 @@ impl Instance {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use glonax::core::{Instance, MachineType};
     ///
     /// let instance = Instance::new(
