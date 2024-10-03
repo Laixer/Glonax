@@ -12,7 +12,7 @@ pub trait OnOffExt {
 /// # Examples
 ///
 /// ```
-/// use your_crate::OnOffExt;
+/// use glonax::util::OnOffExt;;
 ///
 /// assert_eq!(true.as_on_off_str(), "on");
 /// assert_eq!(false.as_on_off_str(), "off");
@@ -24,5 +24,37 @@ impl OnOffExt for bool {
         } else {
             "off"
         }
+    }
+}
+
+/// Converts a string into a boolean value.
+///
+/// # Arguments
+///
+/// * `value` - The string value to convert.
+///
+/// # Returns
+///
+/// Returns a `Result` containing the converted boolean value if the conversion is successful,
+/// or an `Err` value if the conversion fails.
+///
+/// # Examples
+///
+/// ```
+/// use glonax::util::string_try_into_bool;
+///
+/// let value = "on";
+/// let result = string_try_into_bool(value);
+/// assert_eq!(result, Ok(true));
+/// ```
+pub fn string_try_into_bool(value: &str) -> Result<bool, ()> {
+    match value.to_lowercase().as_str() {
+        "1" => Ok(true),
+        "on" => Ok(true),
+        "true" => Ok(true),
+        "0" => Ok(false),
+        "off" => Ok(false),
+        "false" => Ok(false),
+        _ => Err(()),
     }
 }

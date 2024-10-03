@@ -6,6 +6,8 @@
 
 use clap::{Parser, ValueEnum, ValueHint};
 
+use glonax::util::*;
+
 mod config;
 
 #[derive(Parser)]
@@ -135,28 +137,6 @@ enum Command {
     Target { x: f32, y: f32, z: f32 },
     /// Instance information.
     Info,
-}
-
-/// Convert string to boolean.
-fn string_to_bool(s: &str) -> Option<bool> {
-    match s.to_lowercase().as_str() {
-        "1" => Some(true),
-        "on" => Some(true),
-        "true" => Some(true),
-        "0" => Some(false),
-        "off" => Some(false),
-        "false" => Some(false),
-        _ => None,
-    }
-}
-
-/// Convert boolean to string.
-fn bool_to_string(b: bool) -> &'static str {
-    if b {
-        "on"
-    } else {
-        "off"
-    }
 }
 
 #[tokio::main]
@@ -333,10 +313,10 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             client.send_packet(&engine).await?;
         }
         Command::MotionLock { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for motion lock"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for motion lock"))?;
 
-            log::info!("Setting motion lock: {}", bool_to_string(toggle));
+            log::info!("Setting motion lock: {}", toggle.as_on_off_str());
 
             let motion = if toggle {
                 Motion::StopAll
@@ -346,55 +326,55 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             client.send_packet(&motion).await?;
         }
         Command::HydraulicQuickDisconnect { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic quick disconnect"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for hydraulic quick disconnect"))?;
 
-            log::info!("Hydraulic quick disconnect: {}", bool_to_string(toggle));
+            log::info!("Hydraulic quick disconnect: {}", toggle.as_on_off_str());
 
             let control = Control::HydraulicQuickDisconnect(toggle);
             client.send_packet(&control).await?;
         }
         Command::HydraulicLock { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic lock"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for hydraulic lock"))?;
 
-            log::info!("Hydraulic lock: {}", bool_to_string(toggle));
+            log::info!("Hydraulic lock: {}", toggle.as_on_off_str());
 
             let control = Control::HydraulicLock(toggle);
             client.send_packet(&control).await?;
         }
         Command::HydraulicBoost { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boost"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for hydraulic boost"))?;
 
-            log::info!("Hydraulic boost: {}", bool_to_string(toggle));
+            log::info!("Hydraulic boost: {}", toggle.as_on_off_str());
 
             let control = Control::HydraulicBoost(toggle);
             client.send_packet(&control).await?;
         }
         Command::HydraulicBoomConflux { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boom conflux"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for hydraulic boom conflux"))?;
 
-            log::info!("Hydraulic boom conflux: {}", bool_to_string(toggle));
+            log::info!("Hydraulic boom conflux: {}", toggle.as_on_off_str());
 
             let control = Control::HydraulicBoomConflux(toggle);
             client.send_packet(&control).await?;
         }
         Command::HydraulicArmConflux { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic arm conflux"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for hydraulic arm conflux"))?;
 
-            log::info!("Hydraulic arm conflux: {}", bool_to_string(toggle));
+            log::info!("Hydraulic arm conflux: {}", toggle.as_on_off_str());
 
             let control = Control::HydraulicArmConflux(toggle);
             client.send_packet(&control).await?;
         }
         Command::HydraulicBoomFloat { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for hydraulic boom float"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for hydraulic boom float"))?;
 
-            log::info!("Hydraulic boom float: {}", bool_to_string(toggle));
+            log::info!("Hydraulic boom float: {}", toggle.as_on_off_str());
 
             let control = Control::HydraulicBoomFloat(toggle);
             client.send_packet(&control).await?;
@@ -406,46 +386,46 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
             client.send_packet(&control).await?;
         }
         Command::Illumination { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for illumination"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for illumination"))?;
 
-            log::info!("Machine illumination: {}", bool_to_string(toggle));
+            log::info!("Machine illumination: {}", toggle.as_on_off_str());
 
             let control = Control::MachineIllumination(toggle);
             client.send_packet(&control).await?;
         }
         Command::Lights { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for lights"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for lights"))?;
 
-            log::info!("Machine lights: {}", bool_to_string(toggle));
+            log::info!("Machine lights: {}", toggle.as_on_off_str());
 
             let control = Control::MachineLights(toggle);
             client.send_packet(&control).await?;
         }
         Command::Horn { toggle } => {
-            let toggle =
-                string_to_bool(&toggle).ok_or_else(|| anyhow::anyhow!("Invalid value for horn"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for horn"))?;
 
-            log::info!("Machine horn: {}", bool_to_string(toggle));
+            log::info!("Machine horn: {}", toggle.as_on_off_str());
 
             let control = Control::MachineHorn(toggle);
             client.send_packet(&control).await?;
         }
         Command::StrobeLight { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for strobe light"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for strobe light"))?;
 
-            log::info!("Machine strobe light: {}", bool_to_string(toggle));
+            log::info!("Machine strobe light: {}", toggle.as_on_off_str());
 
             let control = Control::MachineStrobeLight(toggle);
             client.send_packet(&control).await?;
         }
         Command::TravelAlarm { toggle } => {
-            let toggle = string_to_bool(&toggle)
-                .ok_or_else(|| anyhow::anyhow!("Invalid value for travel alarm"))?;
+            let toggle = string_try_into_bool(&toggle)
+                .map_err(|_| anyhow::anyhow!("Invalid value for travel alarm"))?;
 
-            log::info!("Machine travel alarm: {}", bool_to_string(toggle));
+            log::info!("Machine travel alarm: {}", toggle.as_on_off_str());
 
             let control = Control::MachineTravelAlarm(toggle);
             client.send_packet(&control).await?;
