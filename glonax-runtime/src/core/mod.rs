@@ -26,8 +26,6 @@ pub enum Object {
     Control(Control),
     /// Engine.
     Engine(Engine),
-    // /// GNSS.
-    // GNSS(Gnss),
     /// Motion.
     Motion(Motion),
     /// Target.
@@ -47,7 +45,16 @@ pub enum ObjectType {
     Signal,
 }
 
-/// Represents a message containing an object.
+/// Represents a message associated with an object in the system.
+///
+/// This struct contains information about the object, its type, and the timestamp
+/// indicating when the message was queued.
+///
+/// # Fields
+///
+/// * `object` - The object associated with the message.
+/// * `object_type` - The type of the object.
+/// * `timestamp` - The timestamp of when the message was queued.
 #[derive(Clone, Debug)]
 pub struct ObjectMessage {
     /// The object associated with the message.

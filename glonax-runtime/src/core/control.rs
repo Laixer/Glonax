@@ -1,5 +1,7 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
+use crate::util::OnOffExt;
+
 const CONTROL_TYPE_HYDRAULIC_QUICK_DISCONNECT: u8 = 0x5;
 const CONTROL_TYPE_HYDRAULIC_LOCK: u8 = 0x6;
 const CONTROL_TYPE_HYDRAULIC_BOOST: u8 = 0x7;
@@ -46,43 +48,33 @@ pub enum Control {
 
 impl std::fmt::Display for Control {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO: Use a macro to avoid repeating this code.
-        // TOOD: Move
-        fn bool_to_on_off(b: bool) -> &'static str {
-            if b {
-                "on"
-            } else {
-                "off"
-            }
-        }
-
         match self {
             Control::HydraulicQuickDisconnect(on) => {
-                write!(f, "Hydraulic quick disconnect: {}", bool_to_on_off(*on))
+                write!(f, "Hydraulic quick disconnect: {}", on.as_on_off_str())
             }
-            Control::HydraulicLock(on) => write!(f, "Hydraulic lock: {}", bool_to_on_off(*on)),
-            Control::HydraulicBoost(on) => write!(f, "Hydraulic boost: {}", bool_to_on_off(*on)),
+            Control::HydraulicLock(on) => write!(f, "Hydraulic lock: {}", on.as_on_off_str()),
+            Control::HydraulicBoost(on) => write!(f, "Hydraulic boost: {}", on.as_on_off_str()),
             Control::HydraulicBoomConflux(on) => {
-                write!(f, "Hydraulic boom conflux: {}", bool_to_on_off(*on))
+                write!(f, "Hydraulic boom conflux: {}", on.as_on_off_str())
             }
             Control::HydraulicArmConflux(on) => {
-                write!(f, "Hydraulic arm conflux: {}", bool_to_on_off(*on))
+                write!(f, "Hydraulic arm conflux: {}", on.as_on_off_str())
             }
             Control::HydraulicBoomFloat(on) => {
-                write!(f, "Hydraulic boom float: {}", bool_to_on_off(*on))
+                write!(f, "Hydraulic boom float: {}", on.as_on_off_str())
             }
             Control::HydraulicReset => write!(f, "Hydraulic reset"),
             Control::MachineShutdown => write!(f, "Robot shutdown"),
             Control::MachineIllumination(on) => {
-                write!(f, "Machine illumination: {}", bool_to_on_off(*on))
+                write!(f, "Machine illumination: {}", on.as_on_off_str())
             }
-            Control::MachineLights(on) => write!(f, "Machine lights: {}", bool_to_on_off(*on)),
-            Control::MachineHorn(on) => write!(f, "Machine horn: {}", bool_to_on_off(*on)),
+            Control::MachineLights(on) => write!(f, "Machine lights: {}", on.as_on_off_str()),
+            Control::MachineHorn(on) => write!(f, "Machine horn: {}", on.as_on_off_str()),
             Control::MachineStrobeLight(on) => {
-                write!(f, "Machine strobe light: {}", bool_to_on_off(*on))
+                write!(f, "Machine strobe light: {}", on.as_on_off_str())
             }
             Control::MachineTravelAlarm(on) => {
-                write!(f, "Machine travel alarm: {}", bool_to_on_off(*on))
+                write!(f, "Machine travel alarm: {}", on.as_on_off_str())
             }
         }
     }
@@ -126,27 +118,27 @@ impl crate::protocol::Packetize for Control {
         match self {
             Control::HydraulicQuickDisconnect(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_QUICK_DISCONNECT);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::HydraulicLock(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_LOCK);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::HydraulicBoost(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOST);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::HydraulicBoomConflux(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOM_CONFLUX);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::HydraulicArmConflux(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_ARM_CONFLUX);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::HydraulicBoomFloat(on) => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_BOOM_FLOAT);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::HydraulicReset => {
                 buf.put_u8(CONTROL_TYPE_HYDRAULIC_RESET);
@@ -158,23 +150,23 @@ impl crate::protocol::Packetize for Control {
             }
             Control::MachineIllumination(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_ILLUMINATION);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::MachineLights(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_LIGHTS);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::MachineHorn(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_HORN);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::MachineStrobeLight(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_STROBE_LIGHT);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
             Control::MachineTravelAlarm(on) => {
                 buf.put_u8(CONTROL_TYPE_MACHINE_TRAVEL_ALARM);
-                buf.put_u8(if *on { 1 } else { 0 });
+                buf.put_u8(u8::from(*on));
             }
         }
 

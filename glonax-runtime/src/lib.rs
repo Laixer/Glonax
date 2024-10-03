@@ -35,6 +35,7 @@ pub mod math;
 pub mod net;
 pub mod protocol;
 pub mod service;
+pub mod util;
 pub mod world;
 
 mod can;
