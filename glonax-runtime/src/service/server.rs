@@ -255,14 +255,14 @@ impl UnixServer {
         }
 
         if session.is_failsafe() {
-            log::info!("Enacting failsafe for: {}", session.name());
+            info!("Enacting failsafe for: {}", session.name());
 
             if let Err(e) = command_tx.send(Object::Motion(Motion::StopAll)) {
-                log::error!("Failed to command failsafe: {}", e);
+                error!("Failed to command failsafe: {}", e);
             }
         }
 
-        log::info!("Session shutdown for: {}", session.name());
+        info!("Session shutdown for: {}", session.name());
     }
 }
 
@@ -286,12 +286,11 @@ impl Service<UnixServerConfig> for UnixServer {
     }
 
     fn ctx(&self) -> ServiceContext {
-        ServiceContext::with_address(
-            "unix_server",
-            self.config.path.to_string_lossy().to_string(),
-        )
+        let address = format!("unix://{}", self.config.path.to_string_lossy());
+        ServiceContext::with_address("unix_server", &address)
     }
 
+    // TODO: Return a Result instead of panicking.
     async fn wait_io_sub(&mut self, command_tx: CommandSender, signal_rx: SignalReceiver) {
         let (stream, _) = self.listener.accept().await.unwrap();
         tokio::spawn(Self::spawn_client_session(stream, command_tx, signal_rx));

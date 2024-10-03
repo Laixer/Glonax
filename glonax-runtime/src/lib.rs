@@ -242,23 +242,21 @@ pub mod consts {
 pub fn log_system() {
     use sysinfo::System;
 
-    log::debug!("System name: {}", System::name().unwrap_or_default());
-    log::debug!(
-        "System kernel version: {}",
-        System::kernel_version().unwrap_or_default()
-    );
-    log::debug!(
-        "System OS version: {}",
-        System::os_version().unwrap_or_default()
-    );
-    log::debug!(
-        "System architecture: {}",
-        System::cpu_arch().unwrap_or_default()
-    );
-    log::debug!(
-        "System host name: {}",
-        System::host_name().unwrap_or_default()
-    );
+    if let Some(name) = System::name() {
+        debug!("System name: {}", name);
+    }
+    if let Some(kernel_version) = System::kernel_version() {
+        debug!("System kernel version: {}", kernel_version);
+    }
+    if let Some(os_version) = System::os_version() {
+        debug!("System OS version: {}", os_version);
+    }
+    if let Some(host_name) = System::host_name() {
+        debug!("System host name: {}", host_name);
+    }
+    if let Some(cpu_arch) = System::cpu_arch() {
+        debug!("System architecture: {}", cpu_arch);
+    }
 }
 
 /// Check if the runtime version is compatible.

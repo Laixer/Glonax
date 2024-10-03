@@ -65,32 +65,32 @@ impl Director {
     fn command_emergency(command_tx: &CommandSender) {
         let control_command = Control::HydraulicLock(true);
         if let Err(e) = command_tx.send(Object::Control(control_command)) {
-            log::error!("Failed to send control command: {}", e);
+            error!("Failed to send control command: {}", e);
         }
 
         let motion_command = Motion::StopAll;
         if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-            log::error!("Failed to send motion command: {}", e);
+            error!("Failed to send motion command: {}", e);
         }
 
         let control_command = Control::HydraulicBoost(false);
         if let Err(e) = command_tx.send(Object::Control(control_command)) {
-            log::error!("Failed to send control command: {}", e);
+            error!("Failed to send control command: {}", e);
         }
 
         let control_command = Control::MachineTravelAlarm(true);
         if let Err(e) = command_tx.send(Object::Control(control_command)) {
-            log::error!("Failed to send control command: {}", e);
+            error!("Failed to send control command: {}", e);
         }
 
         let control_command = Control::MachineStrobeLight(true);
         if let Err(e) = command_tx.send(Object::Control(control_command)) {
-            log::error!("Failed to send control command: {}", e);
+            error!("Failed to send control command: {}", e);
         }
 
         let engine_command = Engine::shutdown();
         if let Err(e) = command_tx.send(Object::Engine(engine_command)) {
-            log::error!("Failed to send engine command: {}", e);
+            error!("Failed to send engine command: {}", e);
         }
     }
 
@@ -141,10 +141,10 @@ impl Director {
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 #[allow(clippy::if_same_then_else)]
                 if roll == 0.0 && pitch > 60.0_f32.to_radians() && yaw == 0.0 {
-                    log::warn!("Boom pitch angle is out of range");
+                    warn!("Boom pitch angle is out of range");
                     return DirectorLocslState::UnboundKinematics;
                 } else if roll == 0.0 && pitch < -45.0_f32.to_radians() && yaw == 0.0 {
-                    log::warn!("Boom pitch angle is out of range");
+                    warn!("Boom pitch angle is out of range");
                     return DirectorLocslState::UnboundKinematics;
                 }
             }
@@ -153,7 +153,7 @@ impl Director {
 
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if roll == 0.0 && pitch > -40.0_f32.to_radians() && yaw == 0.0 {
-                    log::warn!("Arm pitch angle is out of range");
+                    warn!("Arm pitch angle is out of range");
                     return DirectorLocslState::UnboundKinematics;
                 }
             }
@@ -162,7 +162,7 @@ impl Director {
 
                 // TODO: Not going to work, quaternion will roll over
                 if rotation.euler_angles().1 > 178.0_f32.to_radians() {
-                    log::warn!("Attachment pitch angle is out of range");
+                    warn!("Attachment pitch angle is out of range");
                     return DirectorLocslState::UnboundKinematics;
                 }
             }
@@ -171,12 +171,12 @@ impl Director {
 
                 let (roll, pitch, yaw) = rotation.euler_angles();
                 if (roll > 35.0_f32.to_radians() || pitch > 35.0_f32.to_radians()) && yaw == 0.0 {
-                    log::warn!("Machine is in an unusual attitude");
+                    warn!("Machine is in an unusual attitude");
                     return DirectorLocslState::UnboundKinematics;
                 } else if (roll > 45.0_f32.to_radians() || pitch > 45.0_f32.to_radians())
                     && yaw == 0.0
                 {
-                    log::warn!("Machine is in an emergency stop condition");
+                    warn!("Machine is in an emergency stop condition");
                     return DirectorLocslState::Emergency;
                 }
             }
@@ -194,7 +194,7 @@ impl Director {
         if engine.rpm < 900 {
             return DirectorLocslState::Inhibited;
         } else if engine.rpm > 2_200 {
-            log::warn!("Engine RPM is too high");
+            warn!("Engine RPM is too high");
             return DirectorLocslState::Emergency;
         }
 
@@ -206,21 +206,21 @@ impl Director {
         // TODO: Calculate this from the actor
         const MAX_KINEMATIC_DISTANCE: f32 = 700.0;
 
-        log::debug!("Objective target: {}", target.location());
+        debug!("Objective target: {}", target.location());
 
         let actor_target_distance = nalgebra::distance(&actor.location(), &target.location());
-        log::debug!("Actor target distance: {:.2}", actor_target_distance);
+        debug!("Actor target distance: {:.2}", actor_target_distance);
 
         let boom_point = actor.segment_location("boom").unwrap();
         let kinematic_target_distance =
             nalgebra::distance(&actor.location(), &(target.location() - boom_point.coords));
-        log::debug!(
+        debug!(
             "Kinematic target distance: {:.2}",
             kinematic_target_distance
         );
 
         if kinematic_target_distance > MAX_KINEMATIC_DISTANCE {
-            log::warn!("Target is out of reach");
+            warn!("Target is out of reach");
         }
     }
 
@@ -230,22 +230,22 @@ impl Director {
         actuator_error: &mut Vec<(Actuator, f32)>,
     ) {
         let boom_length = actor.segment_location("arm").unwrap().x;
-        // log::debug!("Boom length: {:?}", boom_length);
+        // debug!("Boom length: {:?}", boom_length);
 
         let arm_length = actor.segment_location("attachment").unwrap().x;
-        // log::debug!("Arm length: {:?}", arm_length);
+        // debug!("Arm length: {:?}", arm_length);
 
         let boom_world_location = actor.world_location("boom");
 
         let target_distance = nalgebra::distance(&boom_world_location, &target.location());
-        log::debug!("Tri-Arm target distance: {:.2}", target_distance);
+        debug!("Tri-Arm target distance: {:.2}", target_distance);
 
         let target_direction = (target.location().coords - boom_world_location.coords).normalize();
 
         /////////////// SLEW YAW ANGLE ///////////////
 
         let slew_angle = target_direction.y.atan2(target_direction.x);
-        log::debug!(
+        debug!(
             "  Slew angle: {:.3}rad {:.2}deg",
             slew_angle,
             slew_angle.to_degrees()
@@ -259,13 +259,13 @@ impl Director {
         let pitch = target_direction
             .z
             .atan2((target_direction.x.powi(2) + target_direction.y.powi(2)).sqrt());
-        // log::debug!("Pitch: {}deg", pitch.to_degrees());
+        // debug!("Pitch: {}deg", pitch.to_degrees());
 
         let theta1 = crate::math::law_of_cosines(boom_length, target_distance, arm_length);
-        // log::debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
+        // debug!("Theta1: {}rad {}deg", theta1, theta1.to_degrees());
 
         let boom_angle = theta1 + pitch;
-        log::debug!(
+        debug!(
             "  Boom angle: {:.3}rad {:.2}deg",
             boom_angle,
             boom_angle.to_degrees()
@@ -277,10 +277,10 @@ impl Director {
         /////////////// ARM PITCH ANGLE ///////////////
 
         let theta0 = crate::math::law_of_cosines(boom_length, arm_length, target_distance);
-        // log::debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
+        // debug!("Theta0: {}rad {}deg", theta0, theta0.to_degrees());
 
         let arm_angle = -(std::f32::consts::PI - theta0);
-        log::debug!(
+        debug!(
             "  Arm angle: {:.3}rad {:.2}deg",
             arm_angle,
             arm_angle.to_degrees()
@@ -301,11 +301,9 @@ impl Director {
             .map(|(_, error)| *error);
 
         if let Some(event) = self.frame_state.update(frame_error) {
-            log::debug!(
+            debug!(
                 "{:?} error: {}, value: {}",
-                event.actuator,
-                event.error,
-                event.value
+                event.actuator, event.error, event.value
             );
 
             actuator_motion.push((event.actuator, event.value));
@@ -317,11 +315,9 @@ impl Director {
             .map(|(_, error)| *error);
 
         if let Some(event) = self.boom_state.update(boom_error) {
-            log::debug!(
+            debug!(
                 "{:?} error: {}, value: {}",
-                event.actuator,
-                event.error,
-                event.value
+                event.actuator, event.error, event.value
             );
 
             actuator_motion.push((event.actuator, event.value));
@@ -333,11 +329,9 @@ impl Director {
             .map(|(_, error)| *error);
 
         if let Some(event) = self.arm_state.update(arm_error) {
-            log::debug!(
+            debug!(
                 "{:?} error: {}, value: {}",
-                event.actuator,
-                event.error,
-                event.value
+                event.actuator, event.error, event.value
             );
 
             actuator_motion.push((event.actuator, event.value));
@@ -349,11 +343,9 @@ impl Director {
             .map(|(_, error)| *error);
 
         if let Some(event) = self.attachment_state.update(attachment_error) {
-            log::debug!(
+            debug!(
                 "{:?} error: {}, value: {}",
-                event.actuator,
-                event.error,
-                event.value
+                event.actuator, event.error, event.value
             );
 
             actuator_motion.push((event.actuator, event.value));
@@ -490,7 +482,7 @@ impl Service<NullConfig> for Director {
                     if self.operation == DirectorOperation::Autonomous {
                         let motion_command = Motion::StopAll;
                         if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                            log::error!("Failed to send motion command: {}", e);
+                            error!("Failed to send motion command: {}", e);
                         }
                     }
                 }
@@ -514,7 +506,7 @@ impl Service<NullConfig> for Director {
                     {
                         let motion_command = Motion::from_iter(actuator_motion);
                         if let Err(e) = command_tx.send(Object::Motion(motion_command)) {
-                            log::error!("Failed to send motion command: {}", e);
+                            error!("Failed to send motion command: {}", e);
                         }
                     }
                 }

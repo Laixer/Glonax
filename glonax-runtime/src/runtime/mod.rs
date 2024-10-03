@@ -154,8 +154,8 @@ impl Runtime {
             let sigterm = binding.recv();
 
             tokio::select! {
-                _ = sigint => log::debug!("Received SIGINT"),
-                _ = sigterm => log::debug!("Received SIGTERM"),
+                _ = sigint => debug!("Received SIGINT"),
+                _ = sigterm => debug!("Received SIGTERM"),
             }
 
             info!("Termination requested");
@@ -187,7 +187,7 @@ impl Runtime {
 
         let mut service = S::new(config.clone());
 
-        log::debug!("Schedule IO service: {}", service.ctx());
+        debug!("Schedule IO service: {}", service.ctx());
 
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
@@ -217,7 +217,7 @@ impl Runtime {
 
         let mut service = S::new(config.clone());
 
-        log::debug!("Schedule IO service: {}", service.ctx());
+        debug!("Schedule IO service: {}", service.ctx());
 
         if self.shutdown.1.is_empty() {
             self.spawn(async move {
@@ -294,7 +294,7 @@ impl Runtime {
                                     service3.on_command(&object).await;
                                 }
                                 Err(RecvError::Lagged(count)) => {
-                                    log::warn!("Command receiver lagged by {} objects", count);
+                                    warn!("Command receiver lagged by {} objects", count);
                                 }
                                 Err(RecvError::Closed) => {
                                     break;
