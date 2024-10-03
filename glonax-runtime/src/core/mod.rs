@@ -153,3 +153,19 @@ impl TryFrom<u8> for MachineType {
         }
     }
 }
+
+#[repr(C)]
+pub struct Repository {
+    /// Instance.
+    instance: Instance,
+    /// Machine type.
+    machine_type: MachineType,
+    /// Engine.
+    engine: Engine,
+    /// Control.
+    control: Vec<Control>,
+    /// Rotator.
+    rotator: Vec<Rotator>,
+    /// Module status.
+    module_status: Vec<ModuleStatus>,
+}

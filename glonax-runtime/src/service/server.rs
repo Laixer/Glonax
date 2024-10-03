@@ -87,6 +87,7 @@ impl UnixServer {
 
                 let mut flags = Vec::new();
 
+                // TODO: Stream will become obsolete. Remove it.
                 if session.is_stream() {
                     flags.push("stream")
                 }

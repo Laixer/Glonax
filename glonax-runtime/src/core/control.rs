@@ -16,6 +16,7 @@ const CONTROL_TYPE_MACHINE_HORN: u8 = 0x1E;
 const CONTROL_TYPE_MACHINE_STROBE_LIGHT: u8 = 0x1F;
 const CONTROL_TYPE_MACHINE_TRAVEL_ALARM: u8 = 0x20;
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Control {
     /// Hydraulic quick disconnect.

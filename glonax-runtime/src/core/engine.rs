@@ -26,6 +26,7 @@ impl TryFrom<u8> for EngineState {
     }
 }
 
+#[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Engine {
     /// Engine Driver Demand in percent.

@@ -234,19 +234,27 @@ impl ControlNetwork {
         self.socket.send_vectored(frames).await
     }
 
-    // TODO: Refactor into a single expression.
-    // TODO: This is a mess, split logic.
     /// Listen for incoming packets.
+    ///
+    /// This method will block until a frame is received. The frame is stored in the control network
+    /// and can be accessed using the `frame` method. The frame can be parsed using the `try_accept`
+    /// method. Any frame that does not match the filter will be ignored.
+    ///
+    /// # Returns
+    ///
+    /// Returns `Ok(())` if a frame is received successfully. Returns an error if the frame cannot be
+    /// received.
     pub async fn recv(&mut self) -> io::Result<()> {
         loop {
             let frame = self.socket.recv().await?;
+
             if self.filter.matches(frame.id()) {
-                self.frame = Some(
-                    FrameBuilder::new(*frame.id())
-                        .copy_from_slice(frame.as_ref())
-                        .set_len(8)
-                        .build(),
-                );
+                let frame_fixed = FrameBuilder::new(*frame.id())
+                    .copy_from_slice(frame.as_ref())
+                    .set_len(8)
+                    .build();
+
+                self.frame = Some(frame_fixed);
                 break;
             }
         }
@@ -258,6 +266,14 @@ impl ControlNetwork {
     ///
     /// This method will return `None` if the frame is not accepted. Otherwise, it will return
     /// `Some` with the resulting message.
+    ///
+    /// # Arguments
+    ///
+    /// * `service` - The service to parse the frame.
+    ///
+    /// # Returns
+    ///
+    /// Returns `None` if the frame is not accepted. Returns `Some(T)` if the frame is accepted
     pub fn try_accept<T>(&self, service: &mut impl Parsable<T>) -> Option<T> {
         self.frame.and_then(|frame| service.parse(&frame))
     }
@@ -441,6 +457,10 @@ pub struct Filter {
 /// Represents a filter used for accepting or rejecting items.
 impl Filter {
     /// Creates a new filter that accepts items.
+    ///
+    /// # Returns
+    ///
+    /// A new filter that accepts items.
     pub fn accept() -> Self {
         Self {
             items: vec![],
@@ -449,6 +469,10 @@ impl Filter {
     }
 
     /// Creates a new filter that rejects items.
+    ///
+    /// # Returns
+    ///
+    /// A new filter that rejects items.
     pub fn reject() -> Self {
         Self {
             items: vec![],
@@ -457,26 +481,29 @@ impl Filter {
     }
 
     /// Pushes a filter item to the filter.
+    ///
+    /// # Arguments
+    ///
+    /// * `item` - The filter item to push.
+    #[inline]
     pub fn push(&mut self, item: FilterItem) {
         self.items.push(item);
     }
 
     /// Checks if the filter matches the given ID.
     ///
-    /// Returns `true` if the filter matches the ID, `false` otherwise.
+    /// # Arguments
+    ///
+    /// * `id` - The ID to match against.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the filter matches the ID, `false` otherwise.
     pub fn matches(&self, id: &Id) -> bool {
         let match_items = self.items.iter().any(|item| item.matches(id));
-        if self.accept {
-            if !self.items.is_empty() {
-                match_items
-            } else {
-                true
-            }
-        } else if !self.items.is_empty() {
-            !match_items
-        } else {
-            true
-        }
+
+        (self.accept && (self.items.is_empty() || match_items))
+            || (!self.accept && (self.items.is_empty() || !match_items))
     }
 }
 

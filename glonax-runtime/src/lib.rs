@@ -239,6 +239,14 @@ pub mod consts {
 ///
 /// This function logs system information including the system name, kernel version,
 /// OS version, and host name.
+///
+/// # Example
+///
+/// ```
+/// use glonax::log_system;
+///
+/// log_system();
+/// ```
 pub fn log_system() {
     use sysinfo::System;
 
