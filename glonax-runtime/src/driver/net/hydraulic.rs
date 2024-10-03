@@ -509,6 +509,13 @@ impl J1939Unit for HydraulicControlUnit {
                     return Ok(());
                 }
                 HydraulicMessage::Status(status) => {
+                    // let object =
+                    //     Object::Control(crate::core::Control::HydraulicLock(status.locked));
+
+                    // ctx.set_rx_last_message(ObjectMessage::signal(object.clone()));
+
+                    // rx_queue.push(object);
+
                     let motion = if status.locked {
                         Motion::StopAll
                     } else {

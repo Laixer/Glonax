@@ -57,11 +57,21 @@ pub use self::runtime::Runtime;
 static INSTANCE: std::sync::OnceLock<core::Instance> = std::sync::OnceLock::new();
 
 pub mod global {
+    /// Get the Glonax runtime instance.
+    ///
+    /// # Returns
+    ///
+    /// Returns a reference to the Glonax runtime instance.
     #[inline]
     pub fn instance() -> &'static crate::core::Instance {
         crate::INSTANCE.get().unwrap()
     }
 
+    /// Set the Glonax runtime instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `instance` - The Glonax runtime instance to set.
     #[inline]
     pub fn set_instance(instance: crate::core::Instance) {
         crate::INSTANCE.set(instance).unwrap();

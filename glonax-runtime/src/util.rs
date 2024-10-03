@@ -3,6 +3,20 @@
 /// This trait provides a method to convert a type into a static string slice representing its
 /// "on" or "off" state.
 pub trait OnOffExt {
+    /// Converts the type into a string representation of "on" or "off".
+    ///
+    /// # Returns
+    ///
+    /// Returns a static string slice representing the "on" or "off" state of the type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use glonax::util::OnOffExt;
+    ///
+    /// let value = true;
+    /// assert_eq!(value.as_on_off_str(), "on");
+    /// ```
     fn as_on_off_str(&self) -> &'static str;
 }
 
