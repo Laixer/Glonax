@@ -1,3 +1,7 @@
+use std::path::Path;
+
+use serde::de::DeserializeOwned;
+
 pub struct Error {
     /// Error kind.
     kind: ErrorKind,
@@ -40,9 +44,15 @@ impl std::error::Error for Error {
 ///
 /// This can be any file and any data structure that
 /// implements `serde::de::DeserializeOwned`.
-pub fn from_file<T: serde::de::DeserializeOwned>(
-    path: impl AsRef<std::path::Path>,
-) -> std::result::Result<T, Error> {
+///
+/// # Arguments
+///
+/// * `path` - The path to the configuration file.
+///
+/// # Returns
+///
+/// Returns the configuration structure.
+pub fn from_file<T: DeserializeOwned>(path: impl AsRef<Path>) -> Result<T, Error> {
     use std::io::Read;
 
     let mut contents = String::new();

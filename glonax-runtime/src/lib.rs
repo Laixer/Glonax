@@ -248,8 +248,8 @@ pub fn log_system() {
     if let Some(kernel_version) = System::kernel_version() {
         debug!("System kernel version: {}", kernel_version);
     }
-    if let Some(os_version) = System::os_version() {
-        debug!("System OS version: {}", os_version);
+    if let Some(long_os_version) = System::long_os_version() {
+        debug!("System OS version: {}", long_os_version);
     }
     if let Some(host_name) = System::host_name() {
         debug!("System host name: {}", host_name);
