@@ -26,6 +26,26 @@ impl TryFrom<u8> for EngineState {
     }
 }
 
+/// Represents the state of an engine.
+///
+/// This struct holds information about the state of an engine, including the driver demand, actual engine,
+/// revolutions per minute (RPM), and state.
+///
+/// # Fields
+///
+/// * `driver_demand` - The engine driver demand in percent.
+/// * `actual_engine` - The engine actual engine in percent.
+/// * `rpm` - The engine RPM.
+/// * `state` - The engine state.
+///
+/// # Examples
+///
+/// ```rust
+/// use glonax::core::Engine;
+///
+/// let engine = Engine::from_rpm(1000);
+/// assert_eq!(engine.rpm, 1000);
+/// ```
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Engine {
@@ -49,6 +69,15 @@ impl Engine {
     /// # Returns
     ///
     /// A new `Engine` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use glonax::core::Engine;
+    ///
+    /// let engine = Engine::from_rpm(1000);
+    /// assert_eq!(engine.rpm, 1000);
+    /// ```
     pub fn from_rpm(rpm: u16) -> Self {
         Self {
             rpm,
@@ -62,6 +91,15 @@ impl Engine {
     /// # Returns
     ///
     /// A new `Engine` instance with the state set to `EngineState::NoRequest`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use glonax::core::{Engine, EngineState};
+    ///
+    /// let engine = Engine::shutdown();
+    /// assert_eq!(engine.state, EngineState::NoRequest);
+    /// ```
     pub fn shutdown() -> Self {
         Self {
             state: EngineState::NoRequest,
@@ -74,6 +112,15 @@ impl Engine {
     /// # Returns
     ///
     /// `true` if the engine is running, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use glonax::core::Engine;
+    ///
+    /// let engine = Engine::from_rpm(1000);
+    /// assert!(engine.is_running());
+    /// ```
     #[inline]
     pub fn is_running(&self) -> bool {
         self.state == EngineState::Request && (self.actual_engine > 0 || self.rpm > 0)

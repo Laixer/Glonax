@@ -161,31 +161,24 @@ pub struct Repository {
     /// Machine type.
     machine_type: MachineType,
     /// Engine.
-    engine: Engine,
+    pub engine: Engine,
     /// Control.
-    control: Vec<Control>,
+    pub control: Vec<Control>,
     /// Rotator.
-    rotator: Vec<Rotator>,
+    pub rotator: Vec<Rotator>,
     /// Module status.
-    module_status: Vec<ModuleStatus>,
+    pub module_status: Vec<ModuleStatus>,
 }
 
 impl Repository {
-    pub fn new(
-        instance: Instance,
-        machine_type: MachineType,
-        engine: Engine,
-        control: Vec<Control>,
-        rotator: Vec<Rotator>,
-        module_status: Vec<ModuleStatus>,
-    ) -> Self {
+    pub fn new(instance: Instance, machine_type: MachineType) -> Self {
         Self {
             instance,
             machine_type,
-            engine,
-            control,
-            rotator,
-            module_status,
+            engine: Engine::default(),
+            control: Vec::new(),
+            rotator: Vec::new(),
+            module_status: Vec::new(),
         }
     }
 
@@ -197,25 +190,5 @@ impl Repository {
     #[inline]
     pub fn machine_type(&self) -> MachineType {
         self.machine_type
-    }
-
-    #[inline]
-    pub fn engine(&self) -> &Engine {
-        &self.engine
-    }
-
-    #[inline]
-    pub fn control(&self) -> &[Control] {
-        &self.control
-    }
-
-    #[inline]
-    pub fn rotator(&self) -> &[Rotator] {
-        &self.rotator
-    }
-
-    #[inline]
-    pub fn module_status(&self) -> &[ModuleStatus] {
-        &self.module_status
     }
 }
