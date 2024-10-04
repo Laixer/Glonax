@@ -122,6 +122,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
 
     runtime.schedule_io_sub_service::<service::UnixServer, _>(config.clone().unix_listener);
     runtime.schedule_io_sub_service::<service::Director, _>(glonax::runtime::NullConfig {});
+    runtime.schedule_io_sub_service::<service::Distributor, _>(glonax::runtime::NullConfig {});
 
     for j1939_net_config in &config.j1939 {
         runtime.schedule_net_service::<service::NetworkAuthority, _>(
