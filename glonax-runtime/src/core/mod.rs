@@ -163,11 +163,11 @@ pub struct Repository {
     /// Engine.
     pub engine: Engine,
     /// Control.
-    pub control: Vec<Control>,
+    pub control: std::collections::HashSet<Control>,
     /// Rotator.
-    pub rotator: Vec<Rotator>,
+    pub rotator: std::collections::HashMap<u8, Rotator>,
     /// Module status.
-    pub module_status: Vec<ModuleStatus>,
+    pub module_status: std::collections::HashMap<String, ModuleStatus>,
 }
 
 impl Repository {
@@ -176,9 +176,9 @@ impl Repository {
             instance,
             machine_type,
             engine: Engine::default(),
-            control: Vec::new(),
-            rotator: Vec::new(),
-            module_status: Vec::new(),
+            control: std::collections::HashSet::new(),
+            rotator: std::collections::HashMap::new(),
+            module_status: std::collections::HashMap::new(),
         }
     }
 

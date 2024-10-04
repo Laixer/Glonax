@@ -287,7 +287,7 @@ impl Service<UnixServerConfig> for UnixServer {
     }
 
     fn ctx(&self) -> ServiceContext {
-        let address = format!("unix://{}", self.config.path.to_string_lossy());
+        let address = format!("unix:/{}", self.config.path.to_string_lossy());
         ServiceContext::with_address("unix_server", &address)
     }
 

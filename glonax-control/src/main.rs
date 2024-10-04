@@ -303,14 +303,12 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
         Command::Engine { rpm } => {
             log::info!("Requesting engine RPM: {}", rpm);
 
-            let engine = Engine::from_rpm(rpm);
-            client.send_packet(&engine).await?;
+            client.send_packet(&Engine::from_rpm(rpm)).await?;
         }
         Command::EngineShutdown => {
             log::info!("Shutting down engine");
 
-            let engine = Engine::shutdown();
-            client.send_packet(&engine).await?;
+            client.send_packet(&Engine::shutdown()).await?;
         }
         Command::MotionLock { toggle } => {
             let toggle = string_try_into_bool(&toggle)
@@ -382,8 +380,7 @@ async fn run(config: config::Config, args: Args) -> anyhow::Result<()> {
         Command::MachineShutdown => {
             log::info!("Machine shutdown");
 
-            let control = Control::MachineShutdown;
-            client.send_packet(&control).await?;
+            client.send_packet(&Control::MachineShutdown).await?;
         }
         Command::Illumination { toggle } => {
             let toggle = string_try_into_bool(&toggle)
