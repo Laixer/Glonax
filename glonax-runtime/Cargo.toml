@@ -11,7 +11,7 @@ categories = ["hardware", "machine", "controller", "heavy", "equipment"]
 keywords = ["hardware", "machine", "controller", "glonax"]
 
 [dependencies]
-rand = "0.8"
+rand = "0.9"
 chrono = "0.4"
 bytes = "1.6"
 uuid = { version = "1.10", features = ["serde", "v4"] }
